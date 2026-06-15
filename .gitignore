@@ -1,0 +1,21 @@
+.DS_Store
+node_modules/
+bin/
+
+# Historial local y PDFs generados
+cotizaciones.sqlite
+cotizaciones.sqlite-shm
+cotizaciones.sqlite-wal
+cotizaciones-generadas/
+cotizador-servidor.log
+
+# Paquetes generados o copiados
+dist/
+*.zip
+*.dmg
+*.exe
+*.app/
+
+# Archivos temporales
+*.tmp
+*.log

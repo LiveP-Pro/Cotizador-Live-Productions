@@ -1,0 +1,16 @@
+COTIZADOR LIVE PRODUCTIONS PARA WINDOWS
+
+1. Extraiga completamente el archivo ZIP dentro de Documentos.
+2. Abra la carpeta Cotizador Live Productions Windows.
+3. Haga doble clic en Iniciar Cotizador.bat.
+4. El cotizador se abrira en su navegador.
+
+No necesita instalar Node.js. El paquete incluye el motor oficial de Node.js.
+
+Si esta carpeta fue clonada desde GitHub y Git esta instalado, Iniciar Cotizador.bat intentara actualizar los cambios automaticamente antes de abrir.
+
+Los PDF y el historial se guardan dentro de esta misma carpeta:
+- cotizaciones-generadas
+- cotizaciones.sqlite
+
+No mueva ni elimine esos elementos si desea conservar el historial.

@@ -1,0 +1,12 @@
+{
+  "name": "cotizador-live-productions",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node --no-warnings server.js",
+    "start:web": "NODE_ENV=production HOST=0.0.0.0 node --no-warnings server.js"
+  }
+}

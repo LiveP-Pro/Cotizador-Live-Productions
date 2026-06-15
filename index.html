@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cotizador Live Productions</title>
+    <link rel="stylesheet" href="styles.css?v=20260612-04" />
+    <script src="app.js?v=20260612-04" defer></script>
+  </head>
+  <body>
+    <header class="topbar no-print">
+      <div>
+        <p class="eyebrow">Live Productions</p>
+        <h1>Cotizador</h1>
+      </div>
+      <nav class="topbar-actions" aria-label="Acciones principales">
+        <button id="topBatchQuotesButton" type="button">Cotizaciones múltiples</button>
+        <button id="topVatButton" type="button" aria-pressed="false">IVA</button>
+        <div class="topbar-discount-action">
+          <button id="topDiscountButton" type="button" aria-pressed="false">Descuento</button>
+          <div id="topDiscountPanel" class="topbar-discount-panel is-hidden">
+            <label>
+              Monto de descuento
+              <input id="discountAmount" type="number" min="0" step="0.01" inputmode="decimal" />
+            </label>
+          </div>
+        </div>
+        <button id="topSaveButton" type="button">Guardar cotización</button>
+        <button id="topPrintButton" type="button">Imprimir PDF</button>
+        <button id="topNewQuoteButton" type="button">Nueva cotización</button>
+        <button id="topLanguageButton" type="button" aria-pressed="false">English</button>
+      </nav>
+      <p class="source-note">Fuente: servicios y precios.docx</p>
+    </header>
+
+    <main id="appShell" class="app-shell">
+      <section class="control-panel no-print" aria-label="Controles de cotización">
+        <div class="panel-section service-picker-section">
+          <span class="field-label">Servicio</span>
+          <label id="servicePickerButton" class="service-picker-button" for="packageSelect">
+            Seleccione el tipo de servicios
+          </label>
+          <p id="selectedServiceSummary" class="selected-service-summary"></p>
+          <select id="packageSelect"></select>
+          <div id="servicePicker" class="service-picker"></div>
+        </div>
+
+        <div id="manualServiceEditor" class="panel-section manual-service-editor is-hidden">
+          <div class="section-heading">
+            <span>Edición manual</span>
+            <small>Servicio, cantidades y montos</small>
+          </div>
+          <label>
+            Nombre del servicio
+            <input id="manualServiceName" type="text" autocomplete="off" />
+          </label>
+          <label id="manualServicePriceField">
+            Monto del servicio
+            <input id="manualServicePrice" type="number" min="0" step="0.01" inputmode="decimal" />
+          </label>
+          <div id="manualServiceItems" class="manual-service-items"></div>
+        </div>
+
+        <div class="panel-section">
+          <label>
+            Moneda
+            <select id="currencySelect">
+              <option value="Q">Q Quetzales</option>
+              <option value="$">$ Dólares</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="panel-section two-columns">
+          <label>
+            Cliente
+            <input id="clientName" type="text" autocomplete="organization" />
+          </label>
+          <label>
+            Número telefónico
+            <input id="clientPhone" type="tel" inputmode="tel" />
+          </label>
+        </div>
+
+        <div class="panel-section two-columns">
+          <label>
+            Evento
+            <input id="eventName" type="text" />
+          </label>
+          <label>
+            Fecha de cotización
+            <input id="quoteDate" type="date" readonly />
+          </label>
+          <label>
+            Fecha del evento
+            <input id="eventDate" type="date" />
+          </label>
+        </div>
+
+        <div class="panel-section">
+          <label>
+            Lugar
+            <input id="eventPlace" type="text" />
+          </label>
+        </div>
+
+        <div class="panel-section">
+          <label>
+            Cantidad de invitados
+            <input id="guestCount" type="number" min="0" inputmode="numeric" />
+          </label>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-heading">
+            <span>Extras</span>
+            <small id="extrasScope"></small>
+          </div>
+          <label class="extras-search-field">
+            Buscar extra
+            <input id="extrasSearch" type="search" placeholder="Escriba el nombre del extra" autocomplete="off" />
+          </label>
+          <div id="extrasList" class="extras-list"></div>
+        </div>
+
+        <div class="panel-section">
+          <label>
+            Notas
+            <textarea id="notes" rows="4"></textarea>
+          </label>
+        </div>
+
+        <p id="driveSaveStatus" class="drive-status" role="status"></p>
+        <p class="filename-note">Nombre PDF: <strong id="pdfFileName"></strong></p>
+
+        <div class="panel-section history-panel">
+          <div class="section-heading">
+            <span>Historial</span>
+            <small>SQLite local</small>
+          </div>
+          <label>
+            Buscar cotizaciones
+            <input id="historySearch" type="search" placeholder="Cliente, número o fecha" />
+          </label>
+          <div class="history-actions">
+            <button id="historySearchButton" class="secondary-button" type="button">Buscar</button>
+            <button id="historyRefreshButton" class="secondary-button" type="button">Recientes</button>
+          </div>
+          <p id="historyStatus" class="history-status" role="status"></p>
+          <div id="historyResults" class="history-results"></div>
+        </div>
+      </section>
+
+      <section class="preview-panel" aria-label="Vista previa de la cotización">
+        <div id="quoteDocument" class="quote-document-set">
+          <article class="quote-document quote-page quote-main-page">
+          <div class="quote-page-content">
+          <header class="quote-header">
+            <div>
+              <p id="quoteLabel" class="quote-label">Cotización</p>
+              <h2 id="quotePackageTitle"></h2>
+              <p class="quote-code-pill">
+                <span id="quoteNumberLabel">Número de cotización</span>
+                <strong id="quoteCode"></strong>
+              </p>
+            </div>
+            <img class="quote-logo" src="assets/logo-live-productions.png" alt="Live Productions" />
+          </header>
+
+          <section class="quote-info-grid" aria-label="Datos generales">
+            <div>
+              <span class="info-icon info-icon-calendar" aria-hidden="true"></span>
+              <span class="info-copy">
+                <span id="quoteDateLabel">Fecha de emisión</span>
+                <strong id="docQuoteDate"></strong>
+              </span>
+            </div>
+            <div>
+              <span class="info-icon info-icon-clock" aria-hidden="true"></span>
+              <span class="info-copy">
+                <span id="eventDateLabel">Fecha del evento</span>
+                <strong id="docEventDate"></strong>
+              </span>
+            </div>
+            <div>
+              <span class="info-icon info-icon-location" aria-hidden="true"></span>
+              <span class="info-copy">
+                <span id="eventPlaceLabel">Lugar del evento</span>
+                <strong id="docPlace"></strong>
+              </span>
+            </div>
+          </section>
+
+          <section class="intro-message">
+            <p id="introMessage">
+              Reciba un cordial saludo de parte de Live Productions, deseándole éxitos en sus labores.
+              A continuación, se desglosa la cotización por la presentación de servicios solicitada.
+            </p>
+          </section>
+
+          <section class="quote-section service-detail-card">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th id="packageQuantityHeader" class="qty-column">Cantidad</th>
+                    <th id="packageDescriptionHeader">Detalle de equipo y servicios</th>
+                    <th id="packagePriceHeader" class="price-column is-hidden">Precio</th>
+                  </tr>
+                </thead>
+                <tbody id="packageItems"></tbody>
+              </table>
+            </div>
+            <div id="servicePriceRow" class="service-price-row">
+              <span id="servicePriceLabel">Precio</span>
+              <strong id="packagePriceBadge" class="price-badge"></strong>
+            </div>
+          </section>
+
+          <section id="selectedExtrasSection" class="quote-section is-hidden">
+            <h3 id="selectedExtrasTitle">Extras seleccionados</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th id="extrasQuantityHeader" class="qty-column">Cantidad</th>
+                    <th id="extrasDescriptionHeader">Descripción</th>
+                    <th id="extrasPriceHeader" class="price-column">Precio</th>
+                  </tr>
+                </thead>
+                <tbody id="selectedExtras"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <div id="quoteBottomGrid" class="quote-bottom-grid">
+            <section class="quote-section payment-conditions">
+              <span class="payment-icon" aria-hidden="true"></span>
+              <div>
+                <h3 id="paymentTitle">Condiciones de Pago:</h3>
+                <p id="paymentConditionsText"></p>
+                <p id="requirementText" class="requirement-text">
+                  <strong>Requerimiento:</strong> El equipo debe quedar siempre bajo techo en un lugar seguro o toldo para la protección del equipo.
+                </p>
+              </div>
+            </section>
+
+            <section id="totalsBox" class="totals-box" aria-label="Totales">
+              <div id="baseTotalRow">
+                <span id="packageTotalLabel">Paquete</span>
+                <strong id="baseTotal"></strong>
+              </div>
+              <div id="extrasTotalRow">
+                <span id="extrasTotalLabel">Extras</span>
+                <strong id="extrasTotal"></strong>
+              </div>
+              <div id="discountTotalRow" class="is-hidden">
+                <span id="discountTotalLabel">Descuento</span>
+                <strong id="discountTotal"></strong>
+              </div>
+              <div id="vatTotalRow" class="is-hidden">
+                <span id="vatTotalLabel">IVA 12%</span>
+                <strong id="vatTotal"></strong>
+              </div>
+              <div class="grand-total">
+                <span id="grandTotalLabel">Total</span>
+                <strong id="grandTotal"></strong>
+              </div>
+            </section>
+          </div>
+
+          <section id="notesSection" class="quote-section notes-section is-hidden">
+            <h3 id="notesTitle">Notas</h3>
+            <p id="docNotes"></p>
+          </section>
+
+          <footer class="quote-footer">
+            <div class="footer-divider" aria-hidden="true"></div>
+            <p class="signature-line"><span class="footer-icon footer-icon-signature" aria-hidden="true"></span><strong id="signatureLabel">Firma:</strong> Ing Jose Jorge Merida Godoy</p>
+            <div class="contact-row">
+              <p><span class="footer-icon footer-icon-location" aria-hidden="true"></span><strong id="addressLabel">Direccion:</strong> 16 avenida A 28-76 zona 13 elgin 2</p>
+              <p><span class="footer-icon footer-icon-phone" aria-hidden="true"></span><strong id="phoneLabel">Telefono:</strong> +502 30903172</p>
+            </div>
+          </footer>
+          </div>
+          </article>
+
+          <article class="quote-document quote-page mounting-page">
+            <header class="mounting-page-header">
+              <div>
+                <p class="quote-label">Live Productions</p>
+                <h2 id="mountingPageTitle">Tipos de Montaje</h2>
+                <p id="mountingPageSubtitle">Opciones de presentación del equipo para su evento</p>
+              </div>
+              <img class="quote-logo" src="assets/logo-live-productions.png" alt="Live Productions" />
+            </header>
+
+            <section class="mounting-option">
+              <div class="mounting-option-heading">
+                <span id="mountingOptionOneLabel">Opción 01</span>
+                <h3 id="whiteMountingTitle">Forrado de Blanco</h3>
+              </div>
+              <img
+                class="mounting-image"
+                src="assets/montaje-forrado-blanco.jpeg"
+                alt="Equipo de Live Productions forrado de blanco"
+              />
+            </section>
+
+            <section class="mounting-option">
+              <div class="mounting-option-heading">
+                <span id="mountingOptionTwoLabel">Opción 02</span>
+                <h3 id="blackMountingTitle">Forrado de Negro</h3>
+              </div>
+              <img
+                class="mounting-image"
+                src="assets/montaje-forrado-negro.jpeg"
+                alt="Equipo de Live Productions forrado de negro"
+              />
+            </section>
+
+            <footer class="mounting-page-footer">
+              <span>Live Productions</span>
+              <strong id="mountingFooterText">Montajes profesionales para cada ambiente</strong>
+            </footer>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="batchDialog" class="batch-dialog no-print">
+      <section class="batch-modal" aria-labelledby="batchDialogTitle">
+        <header class="batch-modal-header">
+          <div>
+            <p class="eyebrow">Live Productions</p>
+            <h2 id="batchDialogTitle">Cotizaciones múltiples</h2>
+          </div>
+          <div class="batch-header-actions" aria-label="Acciones de cotizaciones múltiples">
+            <button id="batchModeButton" type="button">Cotizaciones múltiples</button>
+            <button id="batchHeaderVatButton" type="button" aria-pressed="false">IVA</button>
+            <button id="batchSaveButton" type="button">Guardar cotización</button>
+            <button id="batchHeaderPrintButton" type="button">Imprimir PDF</button>
+            <button id="batchHeaderNewQuoteButton" type="button">Nueva cotización</button>
+          </div>
+          <button id="batchCloseButton" class="batch-close-button" type="button" aria-label="Cerrar">
+            ×
+          </button>
+        </header>
+
+        <div id="batchSetup" class="batch-setup">
+          <label>
+            Cantidad de cotizaciones
+            <input id="batchQuantity" type="number" min="2" step="1" inputmode="numeric" value="2" />
+          </label>
+          <button id="batchCreateButton" class="primary-button" type="button">
+            Crear cotizaciones
+          </button>
+        </div>
+
+        <div id="batchWorkspace" class="batch-workspace is-hidden">
+          <aside class="batch-sidebar">
+            <div class="batch-sidebar-heading">
+              <div>
+                <span>Cotizaciones</span>
+                <small id="batchSequenceSummary"></small>
+              </div>
+            </div>
+            <div id="batchDraftList" class="batch-draft-list"></div>
+          </aside>
+
+          <section class="batch-editor">
+            <div class="batch-toolbar">
+              <label>
+                Servicio de esta cotización
+                <select id="batchServiceSelect"></select>
+              </label>
+              <div class="batch-toolbar-actions">
+                <button id="batchCopyClientButton" class="secondary-button" type="button">
+                  Copiar datos del cliente a todas
+                </button>
+                <button id="batchExitButton" class="secondary-button" type="button">Salir</button>
+              </div>
+            </div>
+            <p id="batchStatus" class="drive-status" role="status"></p>
+            <div id="batchEditorHost" class="batch-editor-host"></div>
+            <div id="batchSavedResults" class="batch-saved-results is-hidden"></div>
+          </section>
+        </div>
+      </section>
+    </dialog>
+  </body>
+</html>

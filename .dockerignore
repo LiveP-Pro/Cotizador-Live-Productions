@@ -1,0 +1,10 @@
+cotizaciones.sqlite
+cotizaciones.sqlite-shm
+cotizaciones.sqlite-wal
+cotizaciones-generadas
+cotizador-servidor.log
+.DS_Store
+node_modules
+*.zip
+bin
+packaging
