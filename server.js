@@ -276,6 +276,8 @@ class ReusablePdfEngine {
     const profileDir = await fsp.mkdtemp(path.join(os.tmpdir(), "cotizador-live-browser-"));
     const args = [
       "--headless=new",
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
       "--disable-gpu",
       "--disable-dev-shm-usage",
       "--disable-extensions",
@@ -433,6 +435,8 @@ async function resetPdfEngine() {
 function runBrowserPrint(browserPath, htmlPath, pdfPath, profileDir) {
   const args = [
     "--headless=new",
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
     "--disable-gpu",
     "--disable-dev-shm-usage",
     "--no-first-run",
