@@ -587,8 +587,15 @@ button,
 .history-actions,
 .history-item-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
   gap: 8px;
+}
+
+.last-saved-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 8px;
+  margin: 8px 0 10px;
 }
 
 .history-status {
@@ -938,6 +945,19 @@ button,
   color: var(--ink);
   font-size: 12px;
   font-weight: 700;
+}
+
+.batch-saved-result-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-saved-result-actions button {
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 12px;
 }
 
 .preview-panel {

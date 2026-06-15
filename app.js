@@ -532,6 +532,7 @@ const elements = {
   topNewQuoteButton: document.querySelector("#topNewQuoteButton"),
   topLanguageButton: document.querySelector("#topLanguageButton"),
   driveSaveStatus: document.querySelector("#driveSaveStatus"),
+  lastSavedActions: document.querySelector("#lastSavedActions"),
   pdfFileName: document.querySelector("#pdfFileName"),
   historySearch: document.querySelector("#historySearch"),
   historySearchButton: document.querySelector("#historySearchButton"),
@@ -949,6 +950,72 @@ function setDriveStatus(message, type = "") {
   elements.driveSaveStatus.textContent = message;
   elements.driveSaveStatus.classList.toggle("is-error", type === "error");
   elements.driveSaveStatus.classList.toggle("is-success", type === "success");
+}
+
+function absoluteAppUrl(pathOrUrl) {
+  if (!pathOrUrl) return "";
+  try {
+    return new URL(pathOrUrl, window.location.origin).href;
+  } catch {
+    return String(pathOrUrl || "");
+  }
+}
+
+function whatsappPhone(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length === 8) return `502${digits}`;
+  if (digits.startsWith("00")) return digits.slice(2);
+  return digits;
+}
+
+function whatsappQuoteMessage(record) {
+  const quoteNumber = record.quoteNumber ? ` ${record.quoteNumber}` : "";
+  const service = record.serviceName || record.packageName || "";
+  const serviceText = service ? ` de ${service}` : "";
+  const pdfUrl = absoluteAppUrl(record.pdfUrl);
+  return `Hola, le comparto la cotización${quoteNumber}${serviceText} de Live Productions:\n${pdfUrl}`;
+}
+
+function whatsappShareUrl(record) {
+  const text = encodeURIComponent(whatsappQuoteMessage(record));
+  const phone = whatsappPhone(record.clientPhone);
+  return phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
+}
+
+function openPdf(record) {
+  if (record.pdfUrl) window.open(absoluteAppUrl(record.pdfUrl), "_blank", "noopener");
+}
+
+function openWhatsapp(record) {
+  if (!record.pdfUrl) {
+    setHistoryStatus("Esta cotización no tiene PDF para enviar por WhatsApp.", "error");
+    return;
+  }
+  window.open(whatsappShareUrl(record), "_blank", "noopener");
+}
+
+function buttonElement(text, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "secondary-button";
+  button.textContent = text;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function clearLastSavedActions() {
+  clearNode(elements.lastSavedActions);
+  elements.lastSavedActions.classList.add("is-hidden");
+}
+
+function renderLastSavedActions(record) {
+  clearNode(elements.lastSavedActions);
+  elements.lastSavedActions.append(
+    buttonElement("Abrir PDF", () => openPdf(record)),
+    buttonElement("Enviar por WhatsApp", () => openWhatsapp(record))
+  );
+  elements.lastSavedActions.classList.remove("is-hidden");
 }
 
 function readCssText() {
@@ -1643,7 +1710,13 @@ function renderBatchSavedResults(results) {
     link.rel = "noopener";
     link.textContent = "Abrir PDF";
 
-    row.append(name, link);
+    const actions = document.createElement("div");
+    actions.className = "batch-saved-result-actions";
+
+    const whatsappButton = buttonElement("WhatsApp", () => openWhatsapp(result));
+
+    actions.append(link, whatsappButton);
+    row.append(name, actions);
     elements.batchSavedResults.appendChild(row);
   });
   elements.batchSavedResults.classList.remove("is-hidden");
@@ -1713,7 +1786,14 @@ async function saveBatchQuotes() {
       body: JSON.stringify({ quotes })
     });
 
-    batchState.results = result.quotes || [];
+    batchState.results = (result.quotes || []).map((savedResult, index) => ({
+      ...savedResult,
+      clientName: batchState.drafts[index]?.data.clientName || "",
+      clientPhone: batchState.drafts[index]?.data.clientPhone || "",
+      packageName: batchState.drafts[index]?.data.packageName || "",
+      serviceName: batchState.drafts[index]?.data.packageName || "",
+      total: batchState.drafts[index]?.data.totals?.grandTotal || 0
+    }));
     batchState.results.forEach((savedResult, index) => {
       if (batchState.drafts[index]) batchState.drafts[index].savedResult = savedResult;
     });
@@ -1771,6 +1851,7 @@ async function saveQuoteToFolder() {
   }
 
   setDriveStatus("Preparando PDF...");
+  clearLastSavedActions();
   elements.topSaveButton.disabled = true;
 
   try {
@@ -1788,7 +1869,13 @@ async function saveQuoteToFolder() {
       `Guardado: ${result.fileName} en ${result.folder || "cotizaciones-generadas"}`,
       "success"
     );
-    if (result.pdfUrl) window.open(result.pdfUrl, "_blank", "noopener");
+    renderLastSavedActions({
+      ...payload.quoteData,
+      ...result,
+      serviceName: payload.quoteData.packageName,
+      total: payload.quoteData.totals?.grandTotal || 0
+    });
+    if (result.pdfUrl) openPdf(result);
     const nextNumber = parseStoredNumber(result.nextNumber);
     if (nextNumber) {
       writeStoredValue(quoteStorageKeys.currentNumber, nextNumber.toString());
@@ -2704,6 +2791,7 @@ function resetQuote() {
   extrasSearchTerm = "";
   elements.extrasSearch.value = "";
   clearStoredPackage();
+  clearLastSavedActions();
   renderExtrasPicker();
   renderQuote();
 }
@@ -2746,21 +2834,11 @@ function renderHistoryResults(records) {
     const actions = document.createElement("div");
     actions.className = "history-item-actions";
 
-    const loadButton = document.createElement("button");
-    loadButton.type = "button";
-    loadButton.className = "secondary-button";
-    loadButton.textContent = "Cargar";
-    loadButton.addEventListener("click", () => loadQuoteFromHistory(record.id));
+    const loadButton = buttonElement("Cargar", () => loadQuoteFromHistory(record.id));
+    const openButton = buttonElement("Abrir PDF", () => openPdf(record));
+    const whatsappButton = buttonElement("WhatsApp", () => openWhatsapp(record));
 
-    const openButton = document.createElement("button");
-    openButton.type = "button";
-    openButton.className = "secondary-button";
-    openButton.textContent = "Abrir PDF";
-    openButton.addEventListener("click", () => {
-      if (record.pdfUrl) window.open(record.pdfUrl, "_blank", "noopener");
-    });
-
-    actions.append(loadButton, openButton);
+    actions.append(loadButton, openButton, whatsappButton);
     item.append(title, details, actions);
     elements.historyResults.appendChild(item);
   });
@@ -2868,6 +2946,7 @@ async function loadQuoteFromHistory(id) {
       headers: {}
     });
     applyQuoteData(result.quoteData || {});
+    clearLastSavedActions();
     setDriveStatus(`Cotización ${result.record?.quoteNumber || ""} cargada desde historial.`, "success");
   } catch (error) {
     setHistoryStatus(error.message, "error");
