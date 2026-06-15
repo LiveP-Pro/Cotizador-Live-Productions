@@ -686,6 +686,17 @@ async function saveQuote(payload, response) {
     return;
   }
 
+  const expectedNumber = nextQuoteNumber();
+  const quoteNumber = String(quoteData.quoteNumber || "");
+  if (quoteNumber !== expectedNumber) {
+    errorResponse(
+      response,
+      409,
+      `El correlativo cambió. El siguiente número disponible es ${expectedNumber}. Revise la cotización y vuelva a guardar.`
+    );
+    return;
+  }
+
   const { fileName, target } = uniquePdfTarget(payload.fileName || quoteData.fileName);
   quoteData.fileName = fileName;
   await generatePdf(html, target);
