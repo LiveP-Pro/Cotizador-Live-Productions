@@ -600,6 +600,7 @@ const quoteStorageKeys = {
 };
 let currentQuoteNumber = quoteSequenceStart;
 let currentQuoteDate = "";
+let editingQuoteId = null;
 const appShellHome = {
   parent: elements.appShell.parentNode,
   nextSibling: elements.appShell.nextSibling
@@ -905,6 +906,25 @@ function setQuoteSequence(number) {
   currentQuoteNumber = number;
   currentQuoteDate = todayIso();
   storeQuoteSequence();
+}
+
+function clearEditingQuote() {
+  editingQuoteId = null;
+}
+
+function setEditingQuote(record) {
+  editingQuoteId = Number(record?.id) || null;
+}
+
+async function startFreshQuoteSequence() {
+  clearEditingQuote();
+  if (isLocalServerAvailable() && !requestedQuoteNumber && !batchState.started) {
+    const number = await fetchNextQuoteNumber();
+    setQuoteSequence(number);
+    return;
+  }
+
+  startNewQuoteSequence();
 }
 
 function cleanFilePart(value, fallback) {
@@ -1522,6 +1542,7 @@ async function createBatchQuotes() {
   elements.batchQuantity.value = String(quantity);
   elements.batchCreateButton.disabled = true;
   setBatchStatus("Preparando borradores...");
+  clearEditingQuote();
 
   try {
     const baseNumber = await fetchNextQuoteNumber();
@@ -1839,11 +1860,13 @@ async function saveBatchQuotes() {
 }
 
 async function saveQuoteToFolder() {
-  await syncQuoteSequenceFromServer();
+  if (!editingQuoteId) await syncQuoteSequenceFromServer();
 
+  const isEditing = Boolean(editingQuoteId);
   const confirmed = window.confirm(
-    `¿Está seguro que desea guardar la cotización ${quoteCode()}?\n\n` +
-      "Aceptar guardará el PDF y avanzará el correlativo. Cancelar conservará el mismo número."
+    isEditing
+      ? `¿Está seguro que desea actualizar la cotización ${quoteCode()}?\n\nAceptar reemplazará el PDF de esta cotización sin cambiar el correlativo.`
+      : `¿Está seguro que desea guardar la cotización ${quoteCode()}?\n\nAceptar guardará el PDF y avanzará el correlativo. Cancelar conservará el mismo número.`
   );
   if (!confirmed) {
     setDriveStatus(`Guardado cancelado. El correlativo ${currentQuoteNumber} no cambió.`);
@@ -1860,13 +1883,13 @@ async function saveQuoteToFolder() {
       html: await buildPdfHtml(),
       quoteData: buildQuoteData()
     };
-    setDriveStatus("Guardando PDF en carpeta local...");
-    const result = await apiRequest("/api/cotizaciones", {
-      method: "POST",
+    setDriveStatus(isEditing ? "Actualizando PDF guardado..." : "Guardando PDF en carpeta local...");
+    const result = await apiRequest(isEditing ? `/api/cotizaciones/${editingQuoteId}` : "/api/cotizaciones", {
+      method: isEditing ? "PUT" : "POST",
       body: JSON.stringify(payload)
     });
     setDriveStatus(
-      `Guardado: ${result.fileName} en ${result.folder || "cotizaciones-generadas"}`,
+      `${isEditing ? "Actualizado" : "Guardado"}: ${result.fileName} en ${result.folder || "cotizaciones-generadas"}`,
       "success"
     );
     renderLastSavedActions({
@@ -2767,8 +2790,13 @@ function renderQuote() {
   writeStoredPackage(pkg.id);
 }
 
-function resetQuote() {
-  startNewQuoteSequence();
+async function resetQuote() {
+  try {
+    await startFreshQuoteSequence();
+  } catch {
+    clearEditingQuote();
+    startNewQuoteSequence();
+  }
   selectedExtras.clear();
   extraQuantities.clear();
   extraPrices.clear();
@@ -2945,6 +2973,7 @@ async function loadQuoteFromHistory(id) {
       method: "GET",
       headers: {}
     });
+    setEditingQuote(result.record);
     applyQuoteData(result.quoteData || {});
     clearLastSavedActions();
     setDriveStatus(`Cotización ${result.record?.quoteNumber || ""} cargada desde historial.`, "success");
@@ -2954,7 +2983,7 @@ async function loadQuoteFromHistory(id) {
 }
 
 async function syncQuoteSequenceFromServer() {
-  if (!isLocalServerAvailable() || requestedQuoteNumber || batchState.started) return;
+  if (!isLocalServerAvailable() || requestedQuoteNumber || batchState.started || editingQuoteId) return;
 
   try {
     const result = await apiRequest("/api/secuencia", {

@@ -100,6 +100,28 @@ function uniquePdfTarget(fileName) {
   return { fileName: candidate, target };
 }
 
+function pdfUrl(fileName) {
+  return `/cotizaciones-generadas/${encodeURIComponent(fileName)}`;
+}
+
+function existingPdfPath(row) {
+  const storedPath = path.resolve(String(row?.pdf_path || ""));
+  if (storedPath.startsWith(pdfDir)) return storedPath;
+  return path.join(pdfDir, row.file_name);
+}
+
+function updatePdfTarget(row, requestedName) {
+  const requestedFileName = cleanFileName(requestedName || row.file_name);
+  if (requestedFileName === row.file_name) {
+    return {
+      fileName: row.file_name,
+      target: existingPdfPath(row)
+    };
+  }
+
+  return uniquePdfTarget(requestedFileName);
+}
+
 function browserCandidates() {
   const candidates = [];
   if (process.env.CHROME_PATH) candidates.push(process.env.CHROME_PATH);
@@ -545,7 +567,7 @@ function rowToRecord(row) {
     serviceName: row.service_name,
     total: row.total,
     fileName: row.file_name,
-    pdfUrl: `/cotizaciones-generadas/${encodeURIComponent(row.file_name)}`,
+    pdfUrl: pdfUrl(row.file_name),
     createdAt: row.created_at
   };
 }
@@ -677,6 +699,41 @@ function insertQuoteRecord(quoteData, fileName, target) {
     );
 }
 
+function updateQuoteRecord(id, quoteData, fileName, target) {
+  return db
+    .prepare(`
+      UPDATE quotes
+      SET quote_code = ?,
+          quote_date = ?,
+          event_date = ?,
+          client_name = ?,
+          client_phone = ?,
+          event_place = ?,
+          package_name = ?,
+          service_name = ?,
+          total = ?,
+          file_name = ?,
+          pdf_path = ?,
+          quote_data = ?
+      WHERE id = ?
+    `)
+    .run(
+      quoteData.quoteCode || "",
+      quoteData.quoteDate || "",
+      quoteData.eventDate || "",
+      quoteData.clientName || "",
+      quoteData.clientPhone || "",
+      quoteData.eventPlace || "",
+      quoteData.packageName || "",
+      selectedServiceName(quoteData),
+      Number(quoteData.totals?.grandTotal || 0),
+      fileName,
+      target,
+      JSON.stringify(quoteData),
+      id
+    );
+}
+
 async function saveQuote(payload, response) {
   const html = String(payload.html || "");
   const quoteData = payload.quoteData || {};
@@ -705,10 +762,59 @@ async function saveQuote(payload, response) {
   jsonResponse(response, 201, {
     id: Number(result.lastInsertRowid),
     fileName,
-    pdfUrl: `/cotizaciones-generadas/${encodeURIComponent(fileName)}`,
+    pdfUrl: pdfUrl(fileName),
     folder: pdfDir,
     nextNumber: nextQuoteNumber()
   });
+}
+
+async function updateQuote(id, payload, response) {
+  const html = String(payload.html || "");
+  const quoteData = payload.quoteData || {};
+  const existing = db.prepare("SELECT * FROM quotes WHERE id = ?").get(id);
+
+  if (!existing) {
+    errorResponse(response, 404, "No se encontró la cotización para actualizar.");
+    return;
+  }
+
+  if (!html.includes("quote-document")) {
+    errorResponse(response, 400, "No se recibió el HTML de la cotización.");
+    return;
+  }
+
+  const quoteNumber = String(quoteData.quoteNumber || "");
+  if (quoteNumber !== String(existing.quote_number || "")) {
+    errorResponse(
+      response,
+      409,
+      `Esta cotización cargada conserva el correlativo ${existing.quote_number}. Use Nueva cotización para crear otro correlativo.`
+    );
+    return;
+  }
+
+  const oldTarget = existingPdfPath(existing);
+  const { fileName, target } = updatePdfTarget(existing, payload.fileName || quoteData.fileName);
+  const tempTarget = path.join(pdfDir, `.tmp-${Date.now()}-${Math.random().toString(16).slice(2)}.pdf`);
+
+  try {
+    quoteData.fileName = fileName;
+    await generatePdf(html, tempTarget);
+    await fsp.rename(tempTarget, target);
+    updateQuoteRecord(id, quoteData, fileName, target);
+    if (oldTarget !== target) await fsp.rm(oldTarget, { force: true }).catch(() => {});
+
+    jsonResponse(response, 200, {
+      id,
+      fileName,
+      pdfUrl: pdfUrl(fileName),
+      folder: pdfDir,
+      nextNumber: nextQuoteNumber()
+    });
+  } catch (error) {
+    await fsp.rm(tempTarget, { force: true }).catch(() => {});
+    throw error;
+  }
 }
 
 async function saveQuoteBatch(payload, response) {
@@ -758,7 +864,7 @@ async function saveQuoteBatch(payload, response) {
           id: Number(result.lastInsertRowid),
           quoteNumber: String(quoteData.quoteNumber || ""),
           fileName,
-          pdfUrl: `/cotizaciones-generadas/${encodeURIComponent(fileName)}`
+          pdfUrl: pdfUrl(fileName)
         });
       });
       db.exec("COMMIT");
@@ -837,6 +943,12 @@ async function handleRequest(request, response) {
       const quote = getQuote(Number(quoteMatch[1]));
       if (!quote) errorResponse(response, 404, "No se encontró la cotización.");
       else jsonResponse(response, 200, quote);
+      return;
+    }
+
+    if (request.method === "PUT" && quoteMatch) {
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => updateQuote(Number(quoteMatch[1]), payload, response));
       return;
     }
 
