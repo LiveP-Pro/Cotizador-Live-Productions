@@ -20,6 +20,7 @@ const dataDir = process.env.COTIZADOR_DATA_DIR
   ? path.resolve(process.env.COTIZADOR_DATA_DIR)
   : defaultDataDir;
 const pdfDir = path.join(dataDir, "cotizaciones-generadas");
+const backupDir = path.join(dataDir, "respaldo-cotizaciones");
 const dbPath = path.join(dataDir, "cotizaciones.sqlite");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10667n;
@@ -40,6 +41,7 @@ const mimeTypes = {
 };
 
 fs.mkdirSync(pdfDir, { recursive: true });
+fs.mkdirSync(backupDir, { recursive: true });
 
 const authConfigPath = path.join(dataDir, "cotizador-auth.json");
 const defaultPasswordHash = {
@@ -128,6 +130,42 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_quotes_quote_date ON quotes (quote_date);
   CREATE INDEX IF NOT EXISTS idx_quotes_event_date ON quotes (event_date);
 `);
+
+function sqlLiteral(value) {
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+function writeDatabaseBackup(backupPath) {
+  const tempPath = path.join(
+    backupDir,
+    `.tmp-${path.basename(backupPath)}-${process.pid}-${Date.now()}`
+  );
+  try {
+    db.exec(`VACUUM INTO ${sqlLiteral(tempPath)}`);
+    fs.renameSync(tempPath, backupPath);
+  } catch (error) {
+    try {
+      fs.rmSync(tempPath, { force: true });
+    } catch {}
+    throw error;
+  }
+}
+
+function createDailyDatabaseBackup() {
+  try {
+    const total = db.prepare("SELECT COUNT(*) AS total FROM quotes").get().total;
+    if (!total) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const backupPath = path.join(backupDir, `cotizaciones-${today}.sqlite`);
+    if (!fs.existsSync(backupPath)) writeDatabaseBackup(backupPath);
+    writeDatabaseBackup(path.join(backupDir, "cotizaciones-ultima.sqlite"));
+  } catch (error) {
+    console.warn(`No se pudo crear respaldo de cotizaciones: ${error.message}`);
+  }
+}
+
+createDailyDatabaseBackup();
 
 function jsonResponse(response, statusCode, data) {
   response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
@@ -274,16 +312,11 @@ function existingPdfPath(row) {
   return path.join(pdfDir, row.file_name);
 }
 
-function updatePdfTarget(row, requestedName) {
-  const requestedFileName = cleanFileName(requestedName || row.file_name);
-  if (requestedFileName === row.file_name) {
-    return {
-      fileName: row.file_name,
-      target: existingPdfPath(row)
-    };
-  }
-
-  return uniquePdfTarget(requestedFileName);
+function updatePdfTarget(row) {
+  return {
+    fileName: row.file_name,
+    target: existingPdfPath(row)
+  };
 }
 
 function browserCandidates() {
@@ -977,6 +1010,7 @@ async function saveQuote(payload, response) {
     result = insertQuoteRecord(quoteData, fileName, target);
     advanceQuoteSequenceFrom(quoteNumber, 1);
     db.exec("COMMIT");
+    createDailyDatabaseBackup();
   } catch (error) {
     db.exec("ROLLBACK");
     await fsp.rm(target, { force: true }).catch(() => {});
@@ -1018,7 +1052,7 @@ async function updateQuote(id, payload, response) {
   }
 
   const oldTarget = existingPdfPath(existing);
-  const { fileName, target } = updatePdfTarget(existing, payload.fileName || quoteData.fileName);
+  const { fileName, target } = updatePdfTarget(existing);
   const tempTarget = path.join(pdfDir, `.tmp-${Date.now()}-${Math.random().toString(16).slice(2)}.pdf`);
 
   try {
@@ -1027,6 +1061,7 @@ async function updateQuote(id, payload, response) {
     await fsp.rename(tempTarget, target);
     updateQuoteRecord(id, quoteData, fileName, target);
     if (oldTarget !== target) await fsp.rm(oldTarget, { force: true }).catch(() => {});
+    createDailyDatabaseBackup();
 
     jsonResponse(response, 200, {
       id,
@@ -1117,6 +1152,7 @@ async function saveQuoteBatch(payload, response) {
       });
       advanceQuoteSequenceFrom(expectedStart, generated.length);
       db.exec("COMMIT");
+      createDailyDatabaseBackup();
     } catch (error) {
       db.exec("ROLLBACK");
       throw error;
@@ -1277,6 +1313,7 @@ server.listen(port, host, () => {
   console.log(`Cotizador Live Productions listo en http://${visibleHost}:${port}/index.html`);
   console.log(`PDFs: ${pdfDir}`);
   console.log(`SQLite: ${dbPath}`);
+  console.log(`Respaldos SQLite: ${backupDir}`);
 
   const browserPath = findBrowserExecutable();
   if (browserPath) getPdfEngine(browserPath).catch(() => {});
