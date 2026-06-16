@@ -4,10 +4,91 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cotizador Live Productions</title>
-    <link rel="stylesheet" href="styles.css?v=20260612-04" />
-    <script src="app.js?v=20260612-04" defer></script>
+    <link rel="icon" type="image/png" href="assets/logo-live-productions.png" />
+    <link rel="apple-touch-icon" href="assets/logo-live-productions.png" />
+    <link rel="stylesheet" href="styles.css?v=20260615-01" />
+    <script src="app.js?v=20260615-01" defer></script>
   </head>
   <body>
+    <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
+      <form id="loginForm" class="login-card">
+        <img src="assets/logo-live-productions.png" alt="Live Productions" />
+        <p class="eyebrow">Acceso privado</p>
+        <h1 id="loginTitle">Cotizador Live Productions</h1>
+        <label>
+          Usuario
+          <input id="loginUser" type="text" autocomplete="username" required />
+        </label>
+        <label>
+          Contraseña
+          <input id="loginPassword" type="password" autocomplete="current-password" required />
+        </label>
+        <button type="submit">Entrar</button>
+        <p id="loginStatus" class="login-status" role="status"></p>
+      </form>
+    </section>
+
+    <div id="siteApp" class="site-app is-hidden">
+      <header class="site-header no-print">
+        <a class="site-brand" href="#inicio" data-page-link="inicio" aria-label="Inicio Live Productions">
+          <img src="assets/logo-live-productions.png" alt="Live Productions" />
+        </a>
+        <nav class="site-menu" aria-label="Menú principal">
+          <button type="button" data-page-link="inicio">Inicio</button>
+          <button type="button" data-page-link="quienes">Quiénes somos</button>
+          <button type="button" data-page-link="cotizador">Cotizador Live Productions</button>
+          <button type="button" data-page-link="requerimientos">Requerimientos</button>
+        </nav>
+        <button id="logoutButton" class="logout-button" type="button">Salir</button>
+      </header>
+
+      <section id="inicioPage" class="site-page no-print" data-page="inicio">
+        <div class="site-page-card">
+          <img class="page-logo" src="assets/logo-live-productions.png" alt="Live Productions" />
+          <p class="eyebrow">Live Productions</p>
+          <h1>Producciones en vivo para eventos memorables</h1>
+          <p>
+            Audio profesional, iluminación, entretenimiento y soluciones técnicas para eventos sociales,
+            corporativos y experiencias privadas.
+          </p>
+        </div>
+      </section>
+
+      <section id="quienesPage" class="site-page no-print" data-page="quienes">
+        <div class="site-page-card">
+          <img class="page-logo" src="assets/logo-live-productions.png" alt="Live Productions" />
+          <p class="eyebrow">Quiénes somos</p>
+          <h1>Live Productions</h1>
+          <div class="about-grid">
+            <article>
+              <h2>Misión</h2>
+              <p>Crear experiencias de alto impacto con producción técnica, musical y visual de calidad.</p>
+            </article>
+            <article>
+              <h2>Visión</h2>
+              <p>Ser una referencia en producción de eventos en Guatemala por servicio, innovación y confianza.</p>
+            </article>
+            <article>
+              <h2>Valores</h2>
+              <p>Responsabilidad, puntualidad, excelencia, innovación, compromiso y atención personalizada.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="requerimientosPage" class="site-page no-print" data-page="requerimientos">
+        <div class="site-page-card">
+          <img class="page-logo" src="assets/logo-live-productions.png" alt="Live Productions" />
+          <p class="eyebrow">Requerimientos</p>
+          <h1>Requerimientos del evento</h1>
+          <p>
+            El equipo debe quedar siempre bajo techo en un lugar seguro o toldo para la protección del equipo.
+          </p>
+          <p>Esta sección queda lista para agregar más requerimientos operativos.</p>
+        </div>
+      </section>
+
+      <section id="cotizadorPage" class="site-page site-page-cotizador" data-page="cotizador">
     <header class="topbar no-print">
       <div>
         <p class="eyebrow">Live Productions</p>
@@ -328,6 +409,7 @@
         </div>
       </section>
     </main>
+      </section>
 
     <dialog id="batchDialog" class="batch-dialog no-print">
       <section class="batch-modal" aria-labelledby="batchDialogTitle">
@@ -389,5 +471,6 @@
         </div>
       </section>
     </dialog>
+    </div>
   </body>
 </html>

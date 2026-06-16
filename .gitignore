@@ -7,6 +7,7 @@ cotizaciones.sqlite
 cotizaciones.sqlite-shm
 cotizaciones.sqlite-wal
 cotizaciones-generadas/
+cotizador-auth.json
 cotizador-servidor.log
 
 # Paquetes generados o copiados

@@ -1,4 +1,5 @@
 const http = require("node:http");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
 const os = require("node:os");
@@ -40,6 +41,63 @@ const mimeTypes = {
 
 fs.mkdirSync(pdfDir, { recursive: true });
 
+const authConfigPath = path.join(dataDir, "cotizador-auth.json");
+const defaultPasswordHash = {
+  algorithm: "pbkdf2-sha256",
+  iterations: 210000,
+  salt: "4735e732b458c196f2d378103a6102da",
+  hash: "982f65163a62c92be2eeada89a8a42284a594e7e5391bc11fb13c0d32581fe10"
+};
+
+function hashPassword(password, salt, iterations = defaultPasswordHash.iterations) {
+  return crypto.pbkdf2Sync(String(password || ""), salt, iterations, 32, "sha256").toString("hex");
+}
+
+function newPasswordHash(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  return {
+    algorithm: "pbkdf2-sha256",
+    iterations: defaultPasswordHash.iterations,
+    salt,
+    hash: hashPassword(password, salt)
+  };
+}
+
+function loadAuthConfig() {
+  const envPassword = process.env.COTIZADOR_ADMIN_PASSWORD;
+  const envHash = process.env.COTIZADOR_ADMIN_PASSWORD_HASH;
+  const envSalt = process.env.COTIZADOR_ADMIN_PASSWORD_SALT;
+  const envIterations = Number.parseInt(process.env.COTIZADOR_ADMIN_PASSWORD_ITERATIONS || "", 10);
+  const envConfig = {
+    username: process.env.COTIZADOR_ADMIN_USER || "LiveAdmon",
+    password: envPassword
+      ? newPasswordHash(envPassword)
+      : envHash && envSalt
+        ? {
+            algorithm: "pbkdf2-sha256",
+            iterations: Number.isFinite(envIterations) && envIterations > 0 ? envIterations : defaultPasswordHash.iterations,
+            salt: envSalt,
+            hash: envHash
+          }
+        : defaultPasswordHash,
+    sessionSecret: process.env.COTIZADOR_SESSION_SECRET || crypto.randomBytes(32).toString("hex")
+  };
+
+  try {
+    const stored = JSON.parse(fs.readFileSync(authConfigPath, "utf8"));
+    return {
+      username: String(stored.username || envConfig.username),
+      password: stored.password?.hash ? stored.password : envConfig.password,
+      sessionSecret: String(stored.sessionSecret || envConfig.sessionSecret)
+    };
+  } catch {
+    fs.writeFileSync(authConfigPath, JSON.stringify(envConfig, null, 2), { mode: 0o600 });
+    return envConfig;
+  }
+}
+
+const authConfig = loadAuthConfig();
+
 const db = new DatabaseSync(dbPath);
 db.exec(`
   CREATE TABLE IF NOT EXISTS quotes (
@@ -73,6 +131,107 @@ function jsonResponse(response, statusCode, data) {
 
 function errorResponse(response, statusCode, message) {
   jsonResponse(response, statusCode, { error: message });
+}
+
+function base64UrlEncode(value) {
+  return Buffer.from(value)
+    .toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+function base64UrlDecode(value) {
+  const normalized = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+  return Buffer.from(normalized, "base64").toString("utf8");
+}
+
+function timingSafeTextEqual(left, right) {
+  const leftBuffer = Buffer.from(String(left || ""), "utf8");
+  const rightBuffer = Buffer.from(String(right || ""), "utf8");
+  if (leftBuffer.length !== rightBuffer.length) return false;
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function parseCookies(request) {
+  return String(request.headers.cookie || "")
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .reduce((cookies, item) => {
+      const separator = item.indexOf("=");
+      if (separator === -1) return cookies;
+      cookies[decodeURIComponent(item.slice(0, separator))] = decodeURIComponent(item.slice(separator + 1));
+      return cookies;
+    }, {});
+}
+
+function signSession(payload) {
+  const body = base64UrlEncode(JSON.stringify(payload));
+  const signature = crypto
+    .createHmac("sha256", authConfig.sessionSecret)
+    .update(body)
+    .digest("base64url");
+  return `${body}.${signature}`;
+}
+
+function verifySessionToken(token) {
+  const [body, signature] = String(token || "").split(".");
+  if (!body || !signature) return null;
+  const expected = crypto
+    .createHmac("sha256", authConfig.sessionSecret)
+    .update(body)
+    .digest("base64url");
+  if (!timingSafeTextEqual(signature, expected)) return null;
+
+  try {
+    const payload = JSON.parse(base64UrlDecode(body));
+    if (!payload.exp || payload.exp < Date.now()) return null;
+    if (payload.user !== authConfig.username) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function authenticatedUser(request) {
+  const cookies = parseCookies(request);
+  const session = verifySessionToken(cookies.cotizador_session);
+  return session?.user || "";
+}
+
+function sessionCookie(request, token) {
+  const secure =
+    request.headers["x-forwarded-proto"] === "https" ||
+    request.socket.encrypted ||
+    process.env.NODE_ENV === "production";
+  return [
+    `cotizador_session=${encodeURIComponent(token)}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    "Max-Age=604800",
+    secure ? "Secure" : ""
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
+function expiredSessionCookie() {
+  return "cotizador_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
+}
+
+function verifyCredentials(username, password) {
+  if (String(username || "") !== authConfig.username) return false;
+  const passwordConfig = authConfig.password || defaultPasswordHash;
+  const candidate = hashPassword(password, passwordConfig.salt, passwordConfig.iterations);
+  return timingSafeTextEqual(candidate, passwordConfig.hash);
+}
+
+function requireAuth(request, response) {
+  if (authenticatedUser(request)) return true;
+  errorResponse(response, 401, "Inicie sesión para continuar.");
+  return false;
 }
 
 function cleanFileName(value) {
@@ -916,30 +1075,68 @@ async function handleRequest(request, response) {
   const url = new URL(request.url, `http://${request.headers.host || "127.0.0.1"}`);
 
   try {
+    if (request.method === "GET" && url.pathname === "/api/sesion") {
+      const user = authenticatedUser(request);
+      jsonResponse(response, 200, { authenticated: Boolean(user), user });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/login") {
+      const payload = await readJsonBody(request);
+      if (!verifyCredentials(payload.username, payload.password)) {
+        errorResponse(response, 401, "Usuario o contraseña incorrectos.");
+        return;
+      }
+      const token = signSession({
+        user: authConfig.username,
+        exp: Date.now() + 7 * 24 * 60 * 60 * 1000
+      });
+      response.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Set-Cookie": sessionCookie(request, token)
+      });
+      response.end(JSON.stringify({ authenticated: true, user: authConfig.username }));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/logout") {
+      response.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Set-Cookie": expiredSessionCookie()
+      });
+      response.end(JSON.stringify({ authenticated: false }));
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/api/cotizaciones") {
+      if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
       await enqueueSave(() => saveQuote(payload, response));
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/api/cotizaciones/lote") {
+      if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
       await enqueueSave(() => saveQuoteBatch(payload, response));
       return;
     }
 
     if (request.method === "GET" && url.pathname === "/api/cotizaciones") {
+      if (!requireAuth(request, response)) return;
       jsonResponse(response, 200, { records: listQuotes(url.searchParams.get("search")) });
       return;
     }
 
     if (request.method === "GET" && url.pathname === "/api/secuencia") {
+      if (!requireAuth(request, response)) return;
       jsonResponse(response, 200, { nextNumber: nextQuoteNumber() });
       return;
     }
 
     const quoteMatch = url.pathname.match(/^\/api\/cotizaciones\/(\d+)$/);
     if (request.method === "GET" && quoteMatch) {
+      if (!requireAuth(request, response)) return;
       const quote = getQuote(Number(quoteMatch[1]));
       if (!quote) errorResponse(response, 404, "No se encontró la cotización.");
       else jsonResponse(response, 200, quote);
@@ -947,6 +1144,7 @@ async function handleRequest(request, response) {
     }
 
     if (request.method === "PUT" && quoteMatch) {
+      if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
       await enqueueSave(() => updateQuote(Number(quoteMatch[1]), payload, response));
       return;

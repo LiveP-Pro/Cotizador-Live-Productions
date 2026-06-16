@@ -485,6 +485,15 @@ const extras = {
 };
 
 const elements = {
+  siteApp: document.querySelector("#siteApp"),
+  loginView: document.querySelector("#loginView"),
+  loginForm: document.querySelector("#loginForm"),
+  loginUser: document.querySelector("#loginUser"),
+  loginPassword: document.querySelector("#loginPassword"),
+  loginStatus: document.querySelector("#loginStatus"),
+  logoutButton: document.querySelector("#logoutButton"),
+  siteMenuButtons: [...document.querySelectorAll("[data-page-link]")],
+  sitePages: [...document.querySelectorAll("[data-page]")],
   appShell: document.querySelector("#appShell"),
   packageSelect: document.querySelector("#packageSelect"),
   servicePickerButton: document.querySelector("#servicePickerButton"),
@@ -601,6 +610,7 @@ const quoteStorageKeys = {
 let currentQuoteNumber = quoteSequenceStart;
 let currentQuoteDate = "";
 let editingQuoteId = null;
+let quoteAppStarted = false;
 const appShellHome = {
   parent: elements.appShell.parentNode,
   nextSibling: elements.appShell.nextSibling
@@ -1225,6 +1235,7 @@ function isLocalServerAvailable() {
 async function readApiJson(response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401) showLogin("Inicie sesión para continuar.");
     throw new Error(data.error || "No se pudo completar la operación.");
   }
   return data;
@@ -1240,6 +1251,63 @@ async function apiRequest(path, options = {}) {
     ...options
   });
   return readApiJson(response);
+}
+
+function setActivePage(page) {
+  const validPage = elements.sitePages.some((section) => section.dataset.page === page)
+    ? page
+    : "cotizador";
+  elements.sitePages.forEach((section) => {
+    section.classList.toggle("is-active", section.dataset.page === validPage);
+  });
+  elements.siteMenuButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.pageLink === validPage);
+  });
+  if (window.location.hash !== `#${validPage}`) {
+    window.history.replaceState(null, "", `#${validPage}`);
+  }
+}
+
+function showLogin(message = "") {
+  elements.siteApp.classList.add("is-hidden");
+  elements.loginView.classList.remove("is-hidden");
+  elements.loginStatus.textContent = message;
+  elements.loginPassword.value = "";
+  window.setTimeout(() => elements.loginUser.focus(), 50);
+}
+
+function showApp() {
+  elements.loginView.classList.add("is-hidden");
+  elements.siteApp.classList.remove("is-hidden");
+  const requestedPage = window.location.hash.replace("#", "");
+  setActivePage(requestedPage || "cotizador");
+}
+
+async function submitLogin(event) {
+  event.preventDefault();
+  elements.loginStatus.textContent = "Validando acceso...";
+
+  try {
+    const response = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: elements.loginUser.value,
+        password: elements.loginPassword.value
+      })
+    });
+    await readApiJson(response);
+    elements.loginStatus.textContent = "";
+    showApp();
+    startQuoteApp();
+  } catch (error) {
+    elements.loginStatus.textContent = error.message;
+  }
+}
+
+async function logout() {
+  await fetch("/api/logout", { method: "POST" }).catch(() => {});
+  showLogin("Sesión cerrada.");
 }
 
 function selectedExtrasForQuote() {
@@ -3097,22 +3165,68 @@ function bindEvents() {
   preparePdfAssets(warmPdfAssets);
 }
 
-const requestedQuoteNumber = quoteNumberFromUrl();
-const shouldStartNewQuote = shouldStartNewQuoteFromUrl() && !requestedQuoteNumber;
-if (shouldStartNewQuote || requestedQuoteNumber) clearStoredPackage();
-buildPackageSelect();
-populateBatchServiceSelect();
-initializeQuoteSequence();
-if (requestedQuoteNumber) {
-  setQuoteSequence(requestedQuoteNumber);
-  cleanNewQuoteUrl();
-} else if (shouldStartNewQuote) {
-  startNewQuoteSequence();
-  cleanNewQuoteUrl();
+function bindSiteEvents() {
+  elements.loginForm.addEventListener("submit", submitLogin);
+  elements.logoutButton.addEventListener("click", logout);
+  elements.siteMenuButtons.forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      setActivePage(button.dataset.pageLink);
+    });
+  });
+  window.addEventListener("hashchange", () => {
+    if (!elements.siteApp.classList.contains("is-hidden")) {
+      setActivePage(window.location.hash.replace("#", "") || "cotizador");
+    }
+  });
 }
-elements.fields.quoteDate.value = currentQuoteDate;
-bindEvents();
-renderExtrasPicker();
-renderQuote();
-syncQuoteSequenceFromServer();
-fetchHistory("");
+
+function startQuoteApp() {
+  if (quoteAppStarted) return;
+  quoteAppStarted = true;
+
+  const requestedQuoteNumber = quoteNumberFromUrl();
+  const shouldStartNewQuote = shouldStartNewQuoteFromUrl() && !requestedQuoteNumber;
+  if (shouldStartNewQuote || requestedQuoteNumber) clearStoredPackage();
+  buildPackageSelect();
+  populateBatchServiceSelect();
+  initializeQuoteSequence();
+  if (requestedQuoteNumber) {
+    setQuoteSequence(requestedQuoteNumber);
+    cleanNewQuoteUrl();
+  } else if (shouldStartNewQuote) {
+    startNewQuoteSequence();
+    cleanNewQuoteUrl();
+  }
+  elements.fields.quoteDate.value = currentQuoteDate;
+  bindEvents();
+  renderExtrasPicker();
+  renderQuote();
+  syncQuoteSequenceFromServer();
+  fetchHistory("");
+}
+
+async function initializeAccess() {
+  bindSiteEvents();
+
+  if (!isLocalServerAvailable()) {
+    showApp();
+    startQuoteApp();
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/sesion");
+    const session = await readApiJson(response);
+    if (session.authenticated) {
+      showApp();
+      startQuoteApp();
+    } else {
+      showLogin();
+    }
+  } catch {
+    showLogin("No se pudo validar la sesión. Revise el servidor.");
+  }
+}
+
+initializeAccess();
