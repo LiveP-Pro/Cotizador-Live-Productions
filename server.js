@@ -118,6 +118,11 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS app_state (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_quotes_quote_number ON quotes (quote_number);
   CREATE INDEX IF NOT EXISTS idx_quotes_client_name ON quotes (client_name);
   CREATE INDEX IF NOT EXISTS idx_quotes_quote_date ON quotes (quote_date);
@@ -775,25 +780,75 @@ function getQuote(id) {
   };
 }
 
-function nextQuoteNumber() {
+function quoteBigInt(value) {
+  const text = String(value || "").trim();
+  if (!/^\d+$/.test(text)) return null;
+
+  try {
+    return BigInt(text);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeNextQuoteNumber(value) {
+  const number = quoteBigInt(value);
+  return number && number >= quoteSequenceStart ? number : quoteSequenceStart;
+}
+
+function highestStoredQuoteNextNumber() {
   const row = db
     .prepare(`
       SELECT quote_number
       FROM quotes
-      WHERE quote_number GLOB '[0-9]*'
+      WHERE quote_number <> ''
+        AND quote_number NOT GLOB '*[^0-9]*'
       ORDER BY length(quote_number) DESC, quote_number DESC
       LIMIT 1
     `)
     .get();
 
-  if (!row?.quote_number) return quoteSequenceStart.toString();
+  const lastNumber = quoteBigInt(row?.quote_number);
+  if (!lastNumber) return quoteSequenceStart;
+  const nextNumber = lastNumber + 1n;
+  return nextNumber > quoteSequenceStart ? nextNumber : quoteSequenceStart;
+}
 
-  try {
-    const next = BigInt(row.quote_number) + 1n;
-    return (next > quoteSequenceStart ? next : quoteSequenceStart).toString();
-  } catch {
-    return quoteSequenceStart.toString();
+function storedNextQuoteNumber() {
+  const row = db.prepare("SELECT value FROM app_state WHERE key = ?").get("next_quote_number");
+  if (!row?.value) return null;
+  return normalizeNextQuoteNumber(row.value);
+}
+
+function saveNextQuoteNumber(value) {
+  const nextNumber = normalizeNextQuoteNumber(value).toString();
+  db.prepare(`
+    INSERT INTO app_state (key, value)
+    VALUES ('next_quote_number', ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `).run(nextNumber);
+  return nextNumber;
+}
+
+function nextQuoteNumber() {
+  const storedNext = storedNextQuoteNumber();
+  const recordNext = highestStoredQuoteNextNumber();
+  const nextNumber = storedNext && storedNext > recordNext ? storedNext : recordNext;
+
+  if (!storedNext || nextNumber !== storedNext) {
+    return saveNextQuoteNumber(nextNumber);
   }
+
+  return nextNumber.toString();
+}
+
+function advanceQuoteSequenceFrom(startNumber, count = 1) {
+  const baseNumber = quoteBigInt(startNumber);
+  if (!baseNumber) return nextQuoteNumber();
+  const proposedNext = baseNumber + BigInt(Math.max(1, Number(count) || 1));
+  const currentNext = normalizeNextQuoteNumber(nextQuoteNumber());
+  const nextNumber = proposedNext > currentNext ? proposedNext : currentNext;
+  return saveNextQuoteNumber(nextNumber);
 }
 
 async function readJsonBody(request) {
@@ -916,7 +971,17 @@ async function saveQuote(payload, response) {
   const { fileName, target } = uniquePdfTarget(payload.fileName || quoteData.fileName);
   quoteData.fileName = fileName;
   await generatePdf(html, target);
-  const result = insertQuoteRecord(quoteData, fileName, target);
+  let result;
+  try {
+    db.exec("BEGIN IMMEDIATE");
+    result = insertQuoteRecord(quoteData, fileName, target);
+    advanceQuoteSequenceFrom(quoteNumber, 1);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    await fsp.rm(target, { force: true }).catch(() => {});
+    throw error;
+  }
 
   jsonResponse(response, 201, {
     id: Number(result.lastInsertRowid),
@@ -976,6 +1041,30 @@ async function updateQuote(id, payload, response) {
   }
 }
 
+async function deleteQuote(id, response) {
+  const existing = db.prepare("SELECT * FROM quotes WHERE id = ?").get(id);
+  if (!existing) {
+    errorResponse(response, 404, "No se encontró la cotización para eliminar.");
+    return;
+  }
+
+  try {
+    db.exec("BEGIN IMMEDIATE");
+    db.prepare("DELETE FROM quotes WHERE id = ?").run(id);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+
+  await fsp.rm(existingPdfPath(existing), { force: true }).catch(() => {});
+  jsonResponse(response, 200, {
+    id,
+    fileName: existing.file_name,
+    nextNumber: nextQuoteNumber()
+  });
+}
+
 async function saveQuoteBatch(payload, response) {
   const quotes = Array.isArray(payload.quotes) ? payload.quotes : [];
   if (quotes.length < 2) {
@@ -1026,6 +1115,7 @@ async function saveQuoteBatch(payload, response) {
           pdfUrl: pdfUrl(fileName)
         });
       });
+      advanceQuoteSequenceFrom(expectedStart, generated.length);
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
@@ -1147,6 +1237,12 @@ async function handleRequest(request, response) {
       if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
       await enqueueSave(() => updateQuote(Number(quoteMatch[1]), payload, response));
+      return;
+    }
+
+    if (request.method === "DELETE" && quoteMatch) {
+      if (!requireAuth(request, response)) return;
+      await enqueueSave(() => deleteQuote(Number(quoteMatch[1]), response));
       return;
     }
 

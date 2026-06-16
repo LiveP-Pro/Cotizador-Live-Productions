@@ -4,15 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cotizador Live Productions</title>
-    <link rel="icon" type="image/png" href="assets/logo-live-productions.png" />
-    <link rel="apple-touch-icon" href="assets/logo-live-productions.png" />
-    <link rel="stylesheet" href="styles.css?v=20260615-01" />
-    <script src="app.js?v=20260615-01" defer></script>
+    <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
+    <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
+    <link rel="stylesheet" href="styles.css?v=20260616-01" />
+    <script src="app.js?v=20260616-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
       <form id="loginForm" class="login-card">
-        <img src="assets/logo-live-productions.png" alt="Live Productions" />
+        <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
         <p class="eyebrow">Acceso privado</p>
         <h1 id="loginTitle">Cotizador Live Productions</h1>
         <label>
@@ -30,21 +30,44 @@
 
     <div id="siteApp" class="site-app is-hidden">
       <header class="site-header no-print">
+        <button
+          id="menuToggleButton"
+          class="menu-toggle-button"
+          type="button"
+          aria-label="Abrir menú"
+          aria-controls="siteSideMenu"
+          aria-expanded="false"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
         <a class="site-brand" href="#inicio" data-page-link="inicio" aria-label="Inicio Live Productions">
-          <img src="assets/logo-live-productions.png" alt="Live Productions" />
+          <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
         </a>
-        <nav class="site-menu" aria-label="Menú principal">
+        <button id="logoutButton" class="logout-button" type="button">Salir</button>
+      </header>
+
+      <div id="menuBackdrop" class="menu-backdrop no-print is-hidden"></div>
+      <aside id="siteSideMenu" class="site-side-menu no-print" aria-label="Menú principal">
+        <div class="side-menu-brand">
+          <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
+          <div>
+            <strong>Live Productions</strong>
+            <span>OPERATIONS</span>
+          </div>
+        </div>
+        <nav class="site-menu">
           <button type="button" data-page-link="inicio">Inicio</button>
           <button type="button" data-page-link="quienes">Quiénes somos</button>
           <button type="button" data-page-link="cotizador">Cotizador Live Productions</button>
           <button type="button" data-page-link="requerimientos">Requerimientos</button>
         </nav>
-        <button id="logoutButton" class="logout-button" type="button">Salir</button>
-      </header>
+      </aside>
 
       <section id="inicioPage" class="site-page no-print" data-page="inicio">
         <div class="site-page-card">
-          <img class="page-logo" src="assets/logo-live-productions.png" alt="Live Productions" />
+          <img class="page-logo" src="assets/logo-live-productions.jpeg" alt="Live Productions" />
           <p class="eyebrow">Live Productions</p>
           <h1>Producciones en vivo para eventos memorables</h1>
           <p>
@@ -56,7 +79,7 @@
 
       <section id="quienesPage" class="site-page no-print" data-page="quienes">
         <div class="site-page-card">
-          <img class="page-logo" src="assets/logo-live-productions.png" alt="Live Productions" />
+          <img class="page-logo" src="assets/logo-live-productions.jpeg" alt="Live Productions" />
           <p class="eyebrow">Quiénes somos</p>
           <h1>Live Productions</h1>
           <div class="about-grid">
@@ -78,7 +101,7 @@
 
       <section id="requerimientosPage" class="site-page no-print" data-page="requerimientos">
         <div class="site-page-card">
-          <img class="page-logo" src="assets/logo-live-productions.png" alt="Live Productions" />
+          <img class="page-logo" src="assets/logo-live-productions.jpeg" alt="Live Productions" />
           <p class="eyebrow">Requerimientos</p>
           <h1>Requerimientos del evento</h1>
           <p>

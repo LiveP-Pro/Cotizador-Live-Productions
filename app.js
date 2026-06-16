@@ -492,6 +492,9 @@ const elements = {
   loginPassword: document.querySelector("#loginPassword"),
   loginStatus: document.querySelector("#loginStatus"),
   logoutButton: document.querySelector("#logoutButton"),
+  menuToggleButton: document.querySelector("#menuToggleButton"),
+  menuBackdrop: document.querySelector("#menuBackdrop"),
+  siteSideMenu: document.querySelector("#siteSideMenu"),
   siteMenuButtons: [...document.querySelectorAll("[data-page-link]")],
   sitePages: [...document.querySelectorAll("[data-page]")],
   appShell: document.querySelector("#appShell"),
@@ -609,6 +612,7 @@ const quoteStorageKeys = {
 };
 let currentQuoteNumber = quoteSequenceStart;
 let currentQuoteDate = "";
+let requestedQuoteNumber = null;
 let editingQuoteId = null;
 let quoteAppStarted = false;
 const appShellHome = {
@@ -1048,6 +1052,30 @@ function renderLastSavedActions(record) {
   elements.lastSavedActions.classList.remove("is-hidden");
 }
 
+async function deleteQuoteFromHistory(record) {
+  const confirmed = window.confirm(
+    `¿Estás totalmente seguro que deseas eliminar esta cotización?\n\n${historySummary(record)}`
+  );
+  if (!confirmed) return;
+
+  try {
+    setHistoryStatus("Eliminando cotización...");
+    const result = await apiRequest(`/api/cotizaciones/${record.id}`, {
+      method: "DELETE",
+      headers: {}
+    });
+
+    if (editingQuoteId === Number(record.id)) {
+      await resetQuote();
+    }
+
+    setHistoryStatus(`Cotización ${record.quoteNumber || result.id} eliminada.`, "success");
+    fetchHistory(elements.historySearch.value.trim());
+  } catch (error) {
+    setHistoryStatus(error.message, "error");
+  }
+}
+
 function readCssText() {
   if (pdfCssTextCache) return pdfCssTextCache;
   pdfCssTextCache = [...document.styleSheets]
@@ -1266,6 +1294,20 @@ function setActivePage(page) {
   if (window.location.hash !== `#${validPage}`) {
     window.history.replaceState(null, "", `#${validPage}`);
   }
+  setMenuOpen(false);
+}
+
+function setMenuOpen(isOpen) {
+  if (!elements.siteSideMenu || !elements.menuBackdrop || !elements.menuToggleButton) return;
+  elements.siteSideMenu.classList.toggle("is-open", isOpen);
+  elements.menuBackdrop.classList.toggle("is-hidden", !isOpen);
+  elements.menuToggleButton.setAttribute("aria-expanded", String(isOpen));
+  elements.menuToggleButton.setAttribute("aria-label", isOpen ? "Cerrar menú" : "Abrir menú");
+}
+
+function toggleMenu() {
+  const isOpen = elements.siteSideMenu?.classList.contains("is-open");
+  setMenuOpen(!isOpen);
 }
 
 function showLogin(message = "") {
@@ -2933,8 +2975,11 @@ function renderHistoryResults(records) {
     const loadButton = buttonElement("Cargar", () => loadQuoteFromHistory(record.id));
     const openButton = buttonElement("Abrir PDF", () => openPdf(record));
     const whatsappButton = buttonElement("WhatsApp", () => openWhatsapp(record));
+    const deleteButton = buttonElement("X", () => deleteQuoteFromHistory(record));
+    deleteButton.classList.add("history-delete-button");
+    deleteButton.setAttribute("aria-label", `Eliminar cotización ${record.quoteNumber || ""}`);
 
-    actions.append(loadButton, openButton, whatsappButton);
+    actions.append(loadButton, openButton, whatsappButton, deleteButton);
     item.append(title, details, actions);
     elements.historyResults.appendChild(item);
   });
@@ -3168,11 +3213,16 @@ function bindEvents() {
 function bindSiteEvents() {
   elements.loginForm.addEventListener("submit", submitLogin);
   elements.logoutButton.addEventListener("click", logout);
+  elements.menuToggleButton?.addEventListener("click", toggleMenu);
+  elements.menuBackdrop?.addEventListener("click", () => setMenuOpen(false));
   elements.siteMenuButtons.forEach((button) => {
     button.addEventListener("click", (event) => {
       event.preventDefault();
       setActivePage(button.dataset.pageLink);
     });
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setMenuOpen(false);
   });
   window.addEventListener("hashchange", () => {
     if (!elements.siteApp.classList.contains("is-hidden")) {
@@ -3185,7 +3235,7 @@ function startQuoteApp() {
   if (quoteAppStarted) return;
   quoteAppStarted = true;
 
-  const requestedQuoteNumber = quoteNumberFromUrl();
+  requestedQuoteNumber = quoteNumberFromUrl();
   const shouldStartNewQuote = shouldStartNewQuoteFromUrl() && !requestedQuoteNumber;
   if (shouldStartNewQuote || requestedQuoteNumber) clearStoredPackage();
   buildPackageSelect();
@@ -3203,6 +3253,7 @@ function startQuoteApp() {
   renderExtrasPicker();
   renderQuote();
   syncQuoteSequenceFromServer();
+  requestedQuoteNumber = null;
   fetchHistory("");
 }
 
