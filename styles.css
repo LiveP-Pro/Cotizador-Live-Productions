@@ -618,13 +618,17 @@ button:focus-visible {
   background: #111111;
 }
 
-.manual-service-section-item.has-subtotal {
-  grid-template-columns: minmax(0, 1fr) 96px 34px;
-}
-
+.manual-service-subtotal-item,
 .manual-service-total-item {
   grid-template-columns: minmax(0, 1fr) 34px;
   align-items: center;
+}
+
+.manual-service-subtotal-item {
+  background: #ffffff;
+}
+
+.manual-service-total-item {
   background: #111111;
   color: #ffffff;
 }
@@ -749,6 +753,12 @@ button:focus-visible {
   border-color: #111111;
 }
 
+.manual-service-subtotal-button {
+  background: #ffffff;
+  color: #111111;
+  border-color: var(--accent);
+}
+
 .manual-service-total-button {
   background: #111111;
   color: #ffffff;
@@ -757,6 +767,8 @@ button:focus-visible {
 
 .manual-service-subtitle-button:hover,
 .manual-service-subtitle-button:focus-visible,
+.manual-service-subtotal-button:hover,
+.manual-service-subtotal-button:focus-visible,
 .manual-service-total-button:hover,
 .manual-service-total-button:focus-visible {
   background: #2a2a2a;

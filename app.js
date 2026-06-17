@@ -509,6 +509,7 @@ const elements = {
   manualServiceItems: document.querySelector("#manualServiceItems"),
   manualServiceAddItem: document.querySelector("#manualServiceAddItem"),
   manualServiceAddSubtitle: document.querySelector("#manualServiceAddSubtitle"),
+  manualServiceAddSubtotal: document.querySelector("#manualServiceAddSubtotal"),
   manualServiceAddTotal: document.querySelector("#manualServiceAddTotal"),
   currencySelect: document.querySelector("#currencySelect"),
   extrasScope: document.querySelector("#extrasScope"),
@@ -848,6 +849,13 @@ function isPackageSectionItem(item) {
   return normalizePackageItemMeta(item?.[4]).type === "section";
 }
 
+function isPackageSubtotalItem(item) {
+  const metaType = normalizePackageItemMeta(item?.[4]).type;
+  if (metaType === "subtotal") return true;
+  const normalizedDescription = normalizedSearchText(item?.[1]).replace(/\s+/g, "");
+  return normalizedDescription === "subtotal";
+}
+
 function isPackageTotalItem(item) {
   return normalizePackageItemMeta(item?.[4]).type === "total";
 }
@@ -902,33 +910,10 @@ function packageItemPrice(item) {
 
 function packageItemsTotal(pkg) {
   if (pkg.hideTotal) return packageDisplayPriceValue(pkg);
-  let total = 0;
-  let sectionItem = null;
-  let sectionTotal = 0;
-
-  const closeSection = () => {
-    if (!sectionItem) return;
-    const manualSubtotal = packageItemPrice(sectionItem);
-    total += manualSubtotal > 0 ? manualSubtotal : sectionTotal;
-    sectionItem = null;
-    sectionTotal = 0;
-  };
-
-  packageDisplayItems(pkg).forEach((item) => {
-    if (isPackageTotalItem(item)) return;
-    if (isPackageSectionItem(item)) {
-      closeSection();
-      sectionItem = item;
-      sectionTotal = 0;
-      return;
-    }
-
-    if (sectionItem) sectionTotal += packageItemPrice(item);
-    else total += packageItemPrice(item);
-  });
-
-  closeSection();
-  return total;
+  return packageDisplayItems(pkg).reduce((sum, item) => {
+    if (isPackageSectionItem(item) || isPackageTotalItem(item)) return sum;
+    return sum + packageItemPrice(item);
+  }, 0);
 }
 
 function packageItemPriceLabel(value) {
@@ -939,42 +924,30 @@ function packageItemPriceLabel(value) {
 function packageItemDisplayRows(pkg) {
   const includePrices = packageUsesItemPrices(pkg);
   const rows = [];
-  let sectionSubtotal = 0;
-  let openSection = null;
-
-  const addSubtotal = () => {
-    if (!includePrices || !openSection) return;
-    const manualSubtotal = packageItemPrice(openSection);
-    const subtotal = manualSubtotal > 0 ? manualSubtotal : sectionSubtotal;
-    if (subtotal <= 0) return;
-    rows.push({
-      type: "subtotal",
-      qty: "",
-      description: quoteLanguage === "en" ? "SUBTOTAL" : "SUB TOTAL",
-      price: subtotal
-    });
-    sectionSubtotal = 0;
-  };
 
   packageDisplayItems(pkg).forEach((item) => {
     const [qty, description, itemPrice, measurements = []] = item;
     if (isPackageTotalItem(item)) {
-      addSubtotal();
       rows.push({
         type: "total",
         description: quoteLanguage === "en" ? "TOTAL" : "TOTAL",
         price: packageItemsTotal(pkg)
       });
-      openSection = null;
-      sectionSubtotal = 0;
       return;
     }
 
     if (isPackageSectionItem(item)) {
-      addSubtotal();
       rows.push({ type: "section", description });
-      openSection = item;
-      sectionSubtotal = 0;
+      return;
+    }
+
+    if (isPackageSubtotalItem(item)) {
+      rows.push({
+        type: "subtotal",
+        qty: "",
+        description: quoteLanguage === "en" ? "SUBTOTAL" : "SUB TOTAL",
+        price: packageItemPrice(item)
+      });
       return;
     }
 
@@ -1001,10 +974,7 @@ function packageItemDisplayRows(pkg) {
       });
     }
 
-    if (includePrices && openSection) sectionSubtotal += price;
   });
-
-  addSubtotal();
   return rows;
 }
 
@@ -1045,6 +1015,12 @@ function setPackageItemsOverride(packageId, rows) {
       normalizePackageItemMeta(meta)
     ])
   );
+}
+
+function insertBeforePackageTotal(rows, row) {
+  const totalIndex = rows.findIndex((item) => isPackageTotalItem(item));
+  if (totalIndex === -1) rows.push(row);
+  else rows.splice(totalIndex, 0, row);
 }
 
 function todayIso() {
@@ -2948,6 +2924,46 @@ function renderManualServiceEditor(pkg, options = {}) {
 
     const itemMeta = normalizePackageItemMeta(meta);
 
+    if (itemMeta.type === "subtotal" || isPackageSubtotalItem([qty, description, itemPrice, measurements, meta])) {
+      row.className = "manual-service-item manual-service-subtotal-item";
+      const subtotalInput = makeManualServiceInput({
+        type: "number",
+        value: Number.parseFloat(itemPrice) || 0,
+        className: "manual-service-price",
+        min: "0",
+        step: "0.01"
+      });
+      subtotalInput.addEventListener("input", () => {
+        const rows = packageEditorItems(pkg);
+        rows[index] = [
+          "",
+          "SUB TOTAL",
+          Math.max(0, Number.parseFloat(subtotalInput.value) || 0),
+          [],
+          { type: "subtotal" }
+        ];
+        setPackageItemsOverride(pkg.id, rows);
+        renderQuote();
+      });
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "manual-service-delete";
+      deleteButton.type = "button";
+      deleteButton.textContent = "X";
+      deleteButton.setAttribute("aria-label", "Eliminar sub total");
+      deleteButton.addEventListener("click", () => {
+        const rows = packageEditorItems(pkg);
+        rows.splice(index, 1);
+        setPackageItemsOverride(pkg.id, rows);
+        renderManualServiceEditor(pkg, { force: true });
+        renderQuote();
+      });
+
+      row.append(makeManualServiceField(subtotalLabel, subtotalInput), deleteButton);
+      elements.manualServiceItems.appendChild(row);
+      return;
+    }
+
     if (itemMeta.type === "total") {
       row.className = "manual-service-item manual-service-total-item";
       const totalPreview = document.createElement("strong");
@@ -2972,24 +2988,15 @@ function renderManualServiceEditor(pkg, options = {}) {
     }
 
     if (itemMeta.type === "section") {
-      row.className = usesItemPrices
-        ? "manual-service-item manual-service-section-item has-subtotal"
-        : "manual-service-item manual-service-section-item";
+      row.className = "manual-service-item manual-service-section-item";
       const titleInput = makeManualServiceInput({
         type: "text",
         value: description,
         className: "manual-service-description"
       });
-      let subtotalInput = null;
       titleInput.addEventListener("input", () => {
         const rows = packageEditorItems(pkg);
-        rows[index] = [
-          "",
-          titleInput.value,
-          usesItemPrices ? Math.max(0, Number.parseFloat(subtotalInput?.value ?? itemPrice) || 0) : undefined,
-          [],
-          { type: "section" }
-        ];
+        rows[index] = ["", titleInput.value, undefined, [], { type: "section" }];
         setPackageItemsOverride(pkg.id, rows);
         renderQuote();
       });
@@ -3008,30 +3015,6 @@ function renderManualServiceEditor(pkg, options = {}) {
       });
 
       row.append(makeManualServiceField(subtitleLabel, titleInput));
-
-      if (usesItemPrices) {
-        subtotalInput = makeManualServiceInput({
-          type: "number",
-          value: Number.parseFloat(itemPrice) || 0,
-          className: "manual-service-price",
-          min: "0",
-          step: "0.01"
-        });
-        subtotalInput.addEventListener("input", () => {
-          const rows = packageEditorItems(pkg);
-          rows[index] = [
-            "",
-            titleInput.value,
-            Math.max(0, Number.parseFloat(subtotalInput.value) || 0),
-            [],
-            { type: "section" }
-          ];
-          setPackageItemsOverride(pkg.id, rows);
-          renderQuote();
-        });
-        row.append(makeManualServiceField(subtotalLabel, subtotalInput));
-      }
-
       row.append(deleteButton);
       elements.manualServiceItems.appendChild(row);
       return;
@@ -3635,7 +3618,7 @@ function bindEvents() {
   elements.manualServiceAddItem.addEventListener("click", () => {
     const pkg = currentPackage();
     const rows = packageEditorItems(pkg);
-    rows.push(["1", "", packageUsesItemPrices(pkg) ? 0 : undefined, [], {}]);
+    insertBeforePackageTotal(rows, ["1", "", packageUsesItemPrices(pkg) ? 0 : undefined, [], {}]);
     setPackageItemsOverride(pkg.id, rows);
     renderManualServiceEditor(pkg, { force: true });
     renderQuote();
@@ -3643,7 +3626,21 @@ function bindEvents() {
   elements.manualServiceAddSubtitle.addEventListener("click", () => {
     const pkg = currentPackage();
     const rows = packageEditorItems(pkg);
-    rows.push(["", quoteLanguage === "en" ? "SECTION" : "SUBTÍTULO", 0, [], { type: "section" }]);
+    insertBeforePackageTotal(rows, [
+      "",
+      quoteLanguage === "en" ? "SECTION" : "SUBTÍTULO",
+      undefined,
+      [],
+      { type: "section" }
+    ]);
+    setPackageItemsOverride(pkg.id, rows);
+    renderManualServiceEditor(pkg, { force: true });
+    renderQuote();
+  });
+  elements.manualServiceAddSubtotal.addEventListener("click", () => {
+    const pkg = currentPackage();
+    const rows = packageEditorItems(pkg);
+    insertBeforePackageTotal(rows, ["", "SUB TOTAL", 0, [], { type: "subtotal" }]);
     setPackageItemsOverride(pkg.id, rows);
     renderManualServiceEditor(pkg, { force: true });
     renderQuote();
