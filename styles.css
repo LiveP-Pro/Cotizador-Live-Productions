@@ -618,6 +618,23 @@ button:focus-visible {
   background: #111111;
 }
 
+.manual-service-section-item.has-subtotal {
+  grid-template-columns: minmax(0, 1fr) 96px 34px;
+}
+
+.manual-service-total-item {
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: center;
+  background: #111111;
+  color: #ffffff;
+}
+
+.manual-service-total-item strong {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .manual-service-section-item .manual-service-field {
   color: #ffffff;
 }
@@ -732,8 +749,16 @@ button:focus-visible {
   border-color: #111111;
 }
 
+.manual-service-total-button {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+}
+
 .manual-service-subtitle-button:hover,
-.manual-service-subtitle-button:focus-visible {
+.manual-service-subtitle-button:focus-visible,
+.manual-service-total-button:hover,
+.manual-service-total-button:focus-visible {
   background: #2a2a2a;
   color: #ffffff;
   border-color: #2a2a2a;
@@ -1511,6 +1536,10 @@ button,
   text-transform: capitalize;
 }
 
+.quote-header h2.is-empty {
+  display: none;
+}
+
 .quote-code-pill {
   display: inline-flex;
   align-items: center;
@@ -1926,9 +1955,12 @@ td.price-column {
 }
 
 .package-section-row td {
+  font-weight: 800;
+}
+
+.package-section-row .package-section-title {
   color: #ffffff;
   background: #111111;
-  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1937,9 +1969,22 @@ td.price-column {
   font-weight: 800;
 }
 
-.package-subtotal-row td:first-child {
+.package-subtotal-row td:nth-child(2) {
   text-align: right;
   letter-spacing: 0.08em;
+}
+
+.package-total-row td {
+  color: #ffffff;
+  background: #111111;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.package-total-row td:nth-child(2),
+.package-total-row .price-column {
+  text-align: right;
 }
 
 .totals-box {
