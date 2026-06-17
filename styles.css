@@ -612,6 +612,24 @@ button:focus-visible {
   grid-template-columns: 72px minmax(0, 1fr) 96px 34px;
 }
 
+.manual-service-section-item {
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: end;
+  background: #111111;
+}
+
+.manual-service-section-item .manual-service-field {
+  color: #ffffff;
+}
+
+.manual-service-section-item input {
+  border-color: #2f2f2f;
+  background: #111111;
+  color: #ffffff;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .manual-service-items-heading {
   color: var(--muted);
   font-size: 10px;
@@ -670,7 +688,6 @@ button:focus-visible {
 .manual-service-dimensions {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: 8px;
   padding-top: 4px;
 }
@@ -681,6 +698,16 @@ button:focus-visible {
 
 .manual-service-measurement {
   text-align: left;
+}
+
+.manual-service-measurement-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.manual-service-measurement-qty {
+  text-align: center;
 }
 
 .manual-service-add-button {
@@ -697,6 +724,19 @@ button:focus-visible {
 .manual-service-add-button:focus-visible {
   border-color: #8b6f35;
   background: #fff2d5;
+}
+
+.manual-service-subtitle-button {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+}
+
+.manual-service-subtitle-button:hover,
+.manual-service-subtitle-button:focus-visible {
+  background: #2a2a2a;
+  color: #ffffff;
+  border-color: #2a2a2a;
 }
 
 .extras-list {
@@ -1883,6 +1923,23 @@ td.qty-column {
 
 td.price-column {
   font-weight: 700;
+}
+
+.package-section-row td {
+  color: #ffffff;
+  background: #111111;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.package-subtotal-row td {
+  font-weight: 800;
+}
+
+.package-subtotal-row td:first-child {
+  text-align: right;
+  letter-spacing: 0.08em;
 }
 
 .totals-box {
