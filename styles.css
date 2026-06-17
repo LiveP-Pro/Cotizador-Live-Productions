@@ -597,9 +597,19 @@ button:focus-visible {
   align-items: end;
 }
 
+.manual-service-items-heading.has-actions,
+.manual-service-item.has-actions {
+  grid-template-columns: 72px minmax(0, 1fr) 34px;
+}
+
 .manual-service-items-heading.has-price,
 .manual-service-item.has-price {
   grid-template-columns: 72px minmax(0, 1fr) 96px;
+}
+
+.manual-service-items-heading.has-price.has-actions,
+.manual-service-item.has-price.has-actions {
+  grid-template-columns: 72px minmax(0, 1fr) 96px 34px;
 }
 
 .manual-service-items-heading {
@@ -636,6 +646,57 @@ button:focus-visible {
 .manual-service-qty,
 .manual-service-price {
   text-align: center;
+}
+
+.manual-service-delete {
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.manual-service-delete:hover,
+.manual-service-delete:focus-visible {
+  border-color: #c0392b;
+  color: #c0392b;
+}
+
+.manual-service-dimensions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.manual-service-dimensions.is-hidden {
+  display: none;
+}
+
+.manual-service-measurement {
+  text-align: left;
+}
+
+.manual-service-add-button {
+  min-height: 40px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.manual-service-add-button:hover,
+.manual-service-add-button:focus-visible {
+  border-color: #8b6f35;
+  background: #fff2d5;
 }
 
 .extras-list {
@@ -703,6 +764,11 @@ button:focus-visible {
 
 .extra-option input.extra-capacity-input {
   width: 138px;
+  text-align: left;
+}
+
+.extra-option input.extra-manual-description-input {
+  width: min(100%, 210px);
   text-align: left;
 }
 

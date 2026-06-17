@@ -507,6 +507,7 @@ const elements = {
   manualServicePriceField: document.querySelector("#manualServicePriceField"),
   manualServicePrice: document.querySelector("#manualServicePrice"),
   manualServiceItems: document.querySelector("#manualServiceItems"),
+  manualServiceAddItem: document.querySelector("#manualServiceAddItem"),
   currencySelect: document.querySelector("#currencySelect"),
   extrasScope: document.querySelector("#extrasScope"),
   extrasSearch: document.querySelector("#extrasSearch"),
@@ -591,6 +592,7 @@ const selectedExtras = new Set();
 const extraQuantities = new Map();
 const extraPrices = new Map();
 const extraDimensions = new Map();
+const extraManualDescriptions = new Map();
 const extraComplimentary = new Map();
 const extraGeneratorDetails = new Map();
 const packageNameOverrides = new Map();
@@ -803,14 +805,40 @@ function translateQuoteText(value) {
 }
 
 function clonePackageItems(items) {
-  return (items || []).map(([qty, description, price]) => [String(qty ?? ""), String(description ?? ""), price]);
+  return (items || []).map((item) => {
+    const [qty, description, price, measurements] = Array.isArray(item) ? item : [];
+    return [
+      String(qty ?? ""),
+      String(description ?? ""),
+      price,
+      Array.isArray(measurements) ? measurements.map((value) => String(value ?? "")) : []
+    ];
+  });
+}
+
+function isScreenLedItem(description) {
+  const normalized = normalizedSearchText(description);
+  return normalized.includes("pantalla led") || normalized.includes("led screen");
+}
+
+function packageItemDescription(item) {
+  const [, description, , measurements = []] = item;
+  const cleanMeasurements = Array.isArray(measurements)
+    ? measurements.map((value) => String(value || "").trim()).filter(Boolean)
+    : [];
+  if (isScreenLedItem(description) && cleanMeasurements.length) {
+    const label = quoteLanguage === "en" ? "Measurements" : "Medidas";
+    return `${description} - ${label}: ${cleanMeasurements.join(", ")}`;
+  }
+  return description;
 }
 
 function defaultPackageItemsForLanguage(pkg) {
-  return clonePackageItems(pkg.items).map(([qty, description, price]) => [
+  return clonePackageItems(pkg.items).map(([qty, description, price, measurements]) => [
     qty,
     translateQuoteText(description),
-    price
+    price,
+    measurements
   ]);
 }
 
@@ -854,7 +882,12 @@ function setPackagePriceOverride(packageId, value) {
 function setPackageItemsOverride(packageId, rows) {
   packageItemOverrides.set(
     packageId,
-    rows.map(([qty, description, price]) => [String(qty ?? ""), String(description ?? ""), price])
+    rows.map(([qty, description, price, measurements]) => [
+      String(qty ?? ""),
+      String(description ?? ""),
+      price,
+      Array.isArray(measurements) ? measurements.map((value) => String(value ?? "")) : []
+    ])
   );
 }
 
@@ -1353,9 +1386,14 @@ async function logout() {
 }
 
 function selectedExtrasForQuote() {
-  return currentExtrasList()
+  const selected = currentExtrasList()
     .map(normalizeExtra)
     .filter((extra) => selectedExtras.has(extra.id));
+  const customExtra = manualExtra();
+  if (selectedExtras.has(customExtra.id) && extraManualDescription(customExtra.id)) {
+    selected.unshift(customExtra);
+  }
+  return selected;
 }
 
 function calculateTotals(pkg, selected) {
@@ -1402,6 +1440,7 @@ function buildQuoteData() {
     extraQuantities: Object.fromEntries(extraQuantities),
     extraPrices: Object.fromEntries(extraPrices),
     extraDimensions: Object.fromEntries(extraDimensions),
+    extraManualDescriptions: Object.fromEntries(extraManualDescriptions),
     extraComplimentary: Object.fromEntries(extraComplimentary),
     extraGeneratorDetails: Object.fromEntries(extraGeneratorDetails),
     selectedExtras: selected.map((extra) => ({
@@ -1473,6 +1512,7 @@ function emptyQuoteData(number, quoteDate = todayIso()) {
     extraQuantities: {},
     extraPrices: {},
     extraDimensions: {},
+    extraManualDescriptions: {},
     extraComplimentary: {},
     extraGeneratorDetails: {},
     selectedExtras: [],
@@ -2065,8 +2105,38 @@ function normalizeExtra(row) {
     allowComplimentary: Boolean(settings.allowComplimentary),
     complimentaryLabel: settings.complimentaryLabel || "Cortesía",
     generator: Boolean(settings.generator),
-    confettiNote: Boolean(settings.confettiNote)
+    confettiNote: Boolean(settings.confettiNote),
+    manual: Boolean(settings.manual)
   };
+}
+
+function manualExtraRow() {
+  const id = "extra-manual";
+  return [
+    id,
+    "1",
+    extraManualDescriptions.get(id) || "",
+    0,
+    {
+      manual: true,
+      priceMode: "unit",
+      quantityLabel: "Cantidad",
+      priceLabel: "Monto",
+      unitSuffix: "c/u"
+    }
+  ];
+}
+
+function manualExtra() {
+  return normalizeExtra(manualExtraRow());
+}
+
+function extraManualDescription(extraId) {
+  return String(extraManualDescriptions.get(extraId) || "").trim();
+}
+
+function setExtraManualDescription(extraId, value) {
+  extraManualDescriptions.set(extraId, String(value || ""));
 }
 
 function defaultGeneratorDetails() {
@@ -2148,6 +2218,10 @@ function setExtraDimension(extraId, value) {
 }
 
 function extraDescription(extra) {
+  if (extra.manual) {
+    return translateQuoteText(extraManualDescription(extra.id) || (quoteLanguage === "en" ? "Manual extra" : "Extra manual"));
+  }
+
   if (extra.generator) {
     const details = generatorDetails(extra);
     const isEnglish = quoteLanguage === "en";
@@ -2338,12 +2412,17 @@ function makeExtraField(labelText, input) {
 }
 
 function renderExtrasPicker() {
-  const allExtras = currentExtrasList().map(normalizeExtra);
+  const customExtra = manualExtra();
+  const allExtras = [customExtra, ...currentExtrasList().map(normalizeExtra)];
   const availableIds = new Set(allExtras.map((item) => item.id));
   const search = normalizedSearchText(extrasSearchTerm);
-  const availableExtras = search
-    ? allExtras.filter((extra) => normalizedSearchText(extra.description).includes(search))
-    : allExtras;
+  const regularExtras = allExtras.filter((extra) => !extra.manual);
+  const availableExtras = [
+    customExtra,
+    ...(search
+      ? regularExtras.filter((extra) => normalizedSearchText(extra.description).includes(search))
+      : regularExtras)
+  ];
 
   [...selectedExtras].forEach((id) => {
     if (!availableIds.has(id)) {
@@ -2351,6 +2430,7 @@ function renderExtrasPicker() {
       extraQuantities.delete(id);
       extraPrices.delete(id);
       extraDimensions.delete(id);
+      extraManualDescriptions.delete(id);
       extraComplimentary.delete(id);
       extraGeneratorDetails.delete(id);
     }
@@ -2375,6 +2455,7 @@ function renderExtrasPicker() {
       extraQuantities.clear();
       extraPrices.clear();
       extraDimensions.clear();
+      extraManualDescriptions.clear();
       extraComplimentary.clear();
       extraGeneratorDetails.clear();
       renderExtrasPicker();
@@ -2455,14 +2536,16 @@ function renderExtrasPicker() {
     copy.className = "extra-option-copy";
 
     const name = document.createElement("strong");
-    name.textContent = extra.description;
+    name.textContent = extra.manual ? "Extra manual" : extra.description;
 
     const note = document.createElement("span");
-    note.textContent = extra.generator
-      ? "Capacidad, horas y costos editables"
-      : extra.priceMode === "unit"
-        ? "Cantidad y precio unitario editables"
-        : "Cantidad y precio editables";
+    note.textContent = extra.manual
+      ? "Descripción, cantidad y monto editables"
+      : extra.generator
+        ? "Capacidad, horas y costos editables"
+        : extra.priceMode === "unit"
+          ? "Cantidad y precio unitario editables"
+          : "Cantidad y precio editables";
 
     const controls = document.createElement("span");
     controls.className = "extra-controls";
@@ -2521,6 +2604,27 @@ function renderExtrasPicker() {
         addGeneratorInput("Precio día anterior", "dayBeforePrice", details.dayBeforePrice);
       }
     } else {
+      if (extra.manual) {
+        const descriptionInput = document.createElement("input");
+        descriptionInput.className = "extra-control-input extra-manual-description-input";
+        descriptionInput.type = "text";
+        descriptionInput.placeholder = "Escriba el extra";
+        descriptionInput.value = extraManualDescription(extra.id);
+        descriptionInput.addEventListener("input", () => {
+          setExtraManualDescription(extra.id, descriptionInput.value);
+          if (descriptionInput.value.trim()) {
+            selectedExtras.add(extra.id);
+            checkbox.checked = true;
+          } else {
+            selectedExtras.delete(extra.id);
+            checkbox.checked = false;
+          }
+          renderQuote();
+          updatePriceSummary();
+        });
+        controls.appendChild(makeExtraField("Extra", descriptionInput));
+      }
+
       const quantityInput = document.createElement("input");
       quantityInput.className = "extra-control-input extra-quantity-input";
       quantityInput.type = "number";
@@ -2588,9 +2692,10 @@ function renderPackageTable(pkg) {
   clearNode(elements.packageItems);
   elements.packagePriceHeader.classList.toggle("is-hidden", !pkg.pricedItems);
 
-  packageDisplayItems(pkg).forEach(([qty, description, itemPrice]) => {
+  packageDisplayItems(pkg).forEach((item) => {
+    const [qty, , itemPrice] = item;
     const row = document.createElement("tr");
-    row.append(makeCell(qty, "qty-column"), makeCell(description));
+    row.append(makeCell(qty, "qty-column"), makeCell(packageItemDescription(item)));
     if (pkg.pricedItems) row.append(makeCell(formatMoney(itemPrice), "price-column"));
     elements.packageItems.appendChild(row);
   });
@@ -2616,16 +2721,17 @@ function makeManualServiceInput({ type = "text", value = "", className = "", min
   return input;
 }
 
-function renderManualServiceEditor(pkg) {
+function renderManualServiceEditor(pkg, options = {}) {
   const visible = pkg.id !== "ninguno";
   elements.manualServiceEditor.classList.toggle("is-hidden", !visible);
   if (!visible) return;
 
-  if (elements.manualServiceEditor.contains(document.activeElement)) return;
+  if (!options.force && elements.manualServiceEditor.contains(document.activeElement)) return;
 
   const quantityLabel = quoteLanguage === "en" ? "Quantity" : "Cantidad";
   const serviceLabel = quoteLanguage === "en" ? "Service" : "Servicio";
   const amountLabel = quoteLanguage === "en" ? "Amount" : "Monto";
+  const measurementsLabel = quoteLanguage === "en" ? "Measurements" : "Medidas";
 
   elements.manualServiceName.value = packageDisplayName(pkg);
   elements.manualServicePrice.value = packageDisplayPrice(pkg);
@@ -2634,18 +2740,18 @@ function renderManualServiceEditor(pkg) {
 
   const heading = document.createElement("div");
   heading.className = pkg.pricedItems
-    ? "manual-service-items-heading has-price"
-    : "manual-service-items-heading";
+    ? "manual-service-items-heading has-price has-actions"
+    : "manual-service-items-heading has-actions";
   heading.innerHTML = pkg.pricedItems
-    ? `<span>${quantityLabel}</span><span>${serviceLabel}</span><span>${amountLabel}</span>`
-    : `<span>${quantityLabel}</span><span>${serviceLabel}</span>`;
+    ? `<span>${quantityLabel}</span><span>${serviceLabel}</span><span>${amountLabel}</span><span></span>`
+    : `<span>${quantityLabel}</span><span>${serviceLabel}</span><span></span>`;
   elements.manualServiceItems.appendChild(heading);
 
-  packageEditorItems(pkg).forEach(([qty, description, itemPrice], index) => {
+  packageEditorItems(pkg).forEach(([qty, description, itemPrice, measurements = []], index) => {
     const row = document.createElement("div");
     row.className = pkg.pricedItems
-      ? "manual-service-item has-price"
-      : "manual-service-item";
+      ? "manual-service-item has-price has-actions"
+      : "manual-service-item has-actions";
 
     const quantityInput = makeManualServiceInput({
       type: "text",
@@ -2657,21 +2763,61 @@ function renderManualServiceEditor(pkg) {
       value: description,
       className: "manual-service-description"
     });
+    let priceInput = null;
+    const dimensionsBox = document.createElement("div");
+    dimensionsBox.className = "manual-service-dimensions";
+    let dimensionInputs = [];
 
-    const updateRow = () => {
+    const currentMeasurements = () =>
+      dimensionInputs.map((input) => input.value.trim()).filter(Boolean);
+
+    const saveRow = () => {
       const rows = packageEditorItems(pkg);
       const current = rows[index] || ["", "", 0];
       rows[index] = [
         quantityInput.value,
         descriptionInput.value,
-        pkg.pricedItems ? current[2] : undefined
+        pkg.pricedItems
+          ? Math.max(0, Number.parseFloat(priceInput?.value ?? current[2]) || 0)
+          : undefined,
+        currentMeasurements()
       ];
       setPackageItemsOverride(pkg.id, rows);
       renderQuote();
     };
 
-    quantityInput.addEventListener("input", updateRow);
-    descriptionInput.addEventListener("input", updateRow);
+    const renderMeasurementInputs = () => {
+      const existingValues = dimensionInputs.length
+        ? currentMeasurements()
+        : (Array.isArray(measurements) ? measurements : []);
+      const quantity = Math.max(0, Number.parseInt(quantityInput.value, 10) || 0);
+      const shouldShow = isScreenLedItem(descriptionInput.value) && quantity > 0;
+      clearNode(dimensionsBox);
+      dimensionInputs = [];
+      dimensionsBox.classList.toggle("is-hidden", !shouldShow);
+      if (!shouldShow) return;
+
+      for (let itemIndex = 0; itemIndex < quantity; itemIndex += 1) {
+        const input = makeManualServiceInput({
+          type: "text",
+          value: existingValues[itemIndex] || "",
+          className: "manual-service-measurement"
+        });
+        input.placeholder = `${itemIndex + 1}. 3 x 2 metros`;
+        input.addEventListener("input", saveRow);
+        dimensionInputs.push(input);
+        dimensionsBox.appendChild(makeManualServiceField(`${measurementsLabel} ${itemIndex + 1}`, input));
+      }
+    };
+
+    quantityInput.addEventListener("input", () => {
+      renderMeasurementInputs();
+      saveRow();
+    });
+    descriptionInput.addEventListener("input", () => {
+      renderMeasurementInputs();
+      saveRow();
+    });
 
     row.append(
       makeManualServiceField(quantityLabel, quantityInput),
@@ -2679,7 +2825,7 @@ function renderManualServiceEditor(pkg) {
     );
 
     if (pkg.pricedItems) {
-      const priceInput = makeManualServiceInput({
+      priceInput = makeManualServiceInput({
         type: "number",
         value: Number.parseFloat(itemPrice) || 0,
         className: "manual-service-price",
@@ -2687,18 +2833,27 @@ function renderManualServiceEditor(pkg) {
         step: "0.01"
       });
       priceInput.addEventListener("input", () => {
-        const rows = packageEditorItems(pkg);
-        rows[index] = [
-          quantityInput.value,
-          descriptionInput.value,
-          Math.max(0, Number.parseFloat(priceInput.value) || 0)
-        ];
-        setPackageItemsOverride(pkg.id, rows);
-        renderQuote();
+        saveRow();
       });
       row.append(makeManualServiceField(amountLabel, priceInput));
     }
 
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "manual-service-delete";
+    deleteButton.type = "button";
+    deleteButton.textContent = "X";
+    deleteButton.setAttribute("aria-label", "Eliminar equipo");
+    deleteButton.addEventListener("click", () => {
+      const rows = packageEditorItems(pkg);
+      rows.splice(index, 1);
+      setPackageItemsOverride(pkg.id, rows);
+      renderManualServiceEditor(pkg, { force: true });
+      renderQuote();
+    });
+    row.append(deleteButton);
+
+    renderMeasurementInputs();
+    row.appendChild(dimensionsBox);
     elements.manualServiceItems.appendChild(row);
   });
 }
@@ -2911,6 +3066,7 @@ async function resetQuote() {
   extraQuantities.clear();
   extraPrices.clear();
   extraDimensions.clear();
+  extraManualDescriptions.clear();
   extraComplimentary.clear();
   extraGeneratorDetails.clear();
   packageNameOverrides.clear();
@@ -3051,6 +3207,7 @@ function applyQuoteData(data) {
   restoreMap(extraQuantities, data.extraQuantities);
   restoreMap(extraPrices, data.extraPrices);
   restoreMap(extraDimensions, data.extraDimensions);
+  restoreMap(extraManualDescriptions, data.extraManualDescriptions);
   restoreMap(extraComplimentary, data.extraComplimentary);
   restoreObjectMap(extraGeneratorDetails, data.extraGeneratorDetails);
   restoreMap(packageNameOverrides, data.packageNameOverrides);
@@ -3159,6 +3316,15 @@ function bindEvents() {
   });
   elements.manualServicePrice.addEventListener("input", () => {
     setPackagePriceOverride(currentPackage().id, elements.manualServicePrice.value);
+    renderQuote();
+  });
+  elements.manualServiceAddItem.addEventListener("click", () => {
+    const pkg = currentPackage();
+    if (pkg.id === "ninguno") return;
+    const rows = packageEditorItems(pkg);
+    rows.push(["1", "", pkg.pricedItems ? 0 : undefined, []]);
+    setPackageItemsOverride(pkg.id, rows);
+    renderManualServiceEditor(pkg, { force: true });
     renderQuote();
   });
   elements.batchCloseButton.addEventListener("click", closeBatchDialog);
