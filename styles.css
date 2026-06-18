@@ -849,6 +849,43 @@ button:focus-visible {
   text-align: left;
 }
 
+.manual-extras-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin: 12px 0;
+}
+
+.manual-extras-toolbar label {
+  margin: 0;
+}
+
+.manual-extras-toolbar input {
+  margin-top: 6px;
+}
+
+.manual-extras-toolbar button,
+.extra-manual-remove {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--ink);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.manual-extras-toolbar button {
+  min-height: 42px;
+  padding: 0 14px;
+}
+
+.extra-manual-remove {
+  min-width: 40px;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
 .extra-option strong {
   display: block;
   font-size: 13px;

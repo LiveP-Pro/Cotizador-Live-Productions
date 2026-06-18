@@ -7,6 +7,23 @@ const packages = [
     items: []
   },
   {
+    id: "extras-erp",
+    category: "Servicios",
+    name: "EXTRAS - ERP",
+    price: 0,
+    pricedItems: true,
+    items: [
+      ["", "EXTRAS", undefined, [], { type: "section" }],
+      ["1", "Audio para cotel", 750],
+      ["1", "Audio para ceremonia", 1250],
+      ["12", "Luces móviles beam en Truss forrado", 6000],
+      ["12", "Luces pares led matriz", 1800],
+      ["2", "Horas extras de DJ", 4000],
+      ["1", "Presentación Saxofonic Solo show (1 hora)", 3000],
+      ["", "", undefined, [], { type: "total" }]
+    ]
+  },
+  {
     id: "entretenimiento-local",
     category: "Servicios de entretenimiento",
     name: "SERVICIOS DE ENTRETENIMIENTO LOCAL",
@@ -514,6 +531,8 @@ const elements = {
   currencySelect: document.querySelector("#currencySelect"),
   extrasScope: document.querySelector("#extrasScope"),
   extrasSearch: document.querySelector("#extrasSearch"),
+  manualExtrasCount: document.querySelector("#manualExtrasCount"),
+  manualExtrasAddButton: document.querySelector("#manualExtrasAddButton"),
   extrasList: document.querySelector("#extrasList"),
   quotePackageTitle: document.querySelector("#quotePackageTitle"),
   quoteCode: document.querySelector("#quoteCode"),
@@ -598,6 +617,8 @@ const extraDimensions = new Map();
 const extraManualDescriptions = new Map();
 const extraComplimentary = new Map();
 const extraGeneratorDetails = new Map();
+const manualExtraBaseId = "extra-manual";
+let manualExtraIds = [manualExtraBaseId];
 const packageNameOverrides = new Map();
 const packagePriceOverrides = new Map();
 const packageItemOverrides = new Map();
@@ -610,7 +631,7 @@ let quoteCurrency = "Q";
 let pdfCssTextCache = "";
 const pdfImageDataUriCache = new Map();
 const defaultPackageId = "sunday-funday-completo";
-const quoteSequenceStart = 10667n;
+const quoteSequenceStart = 10757n;
 const quoteStorageKeys = {
   currentNumber: "liveQuoteCurrentNumber",
   currentDate: "liveQuoteCurrentDate"
@@ -891,6 +912,14 @@ function packageDisplayName(pkg) {
   const customName = packageNameOverrides.get(pkg.id);
   if (customName !== undefined && String(customName).trim()) return String(customName).trim();
   return translateQuoteText(pkg.name);
+}
+
+function isDefaultNonePackageTitle(pkg) {
+  if (pkg.id !== "ninguno") return false;
+  const customName = packageNameOverrides.get(pkg.id);
+  if (customName === undefined) return true;
+  const normalized = normalizedSearchText(customName).replace(/\s+/g, "");
+  return !normalized || normalized === "ninguno" || normalized === "none";
 }
 
 function packageDisplayPriceValue(pkg) {
@@ -1521,10 +1550,10 @@ function selectedExtrasForQuote() {
   const selected = currentExtrasList()
     .map(normalizeExtra)
     .filter((extra) => selectedExtras.has(extra.id));
-  const customExtra = manualExtra();
-  if (selectedExtras.has(customExtra.id) && extraManualDescription(customExtra.id)) {
-    selected.unshift(customExtra);
-  }
+  const customExtras = manualExtras().filter(
+    (extra) => selectedExtras.has(extra.id) && extraManualDescription(extra.id)
+  );
+  selected.unshift(...customExtras);
   return selected;
 }
 
@@ -1573,6 +1602,7 @@ function buildQuoteData() {
     extraPrices: Object.fromEntries(extraPrices),
     extraDimensions: Object.fromEntries(extraDimensions),
     extraManualDescriptions: Object.fromEntries(extraManualDescriptions),
+    manualExtraIds: [...manualExtraIds],
     extraComplimentary: Object.fromEntries(extraComplimentary),
     extraGeneratorDetails: Object.fromEntries(extraGeneratorDetails),
     selectedExtras: selected.map((extra) => ({
@@ -1645,6 +1675,7 @@ function emptyQuoteData(number, quoteDate = todayIso()) {
     extraPrices: {},
     extraDimensions: {},
     extraManualDescriptions: {},
+    manualExtraIds: [manualExtraBaseId],
     extraComplimentary: {},
     extraGeneratorDetails: {},
     selectedExtras: [],
@@ -2238,12 +2269,57 @@ function normalizeExtra(row) {
     complimentaryLabel: settings.complimentaryLabel || "Cortesía",
     generator: Boolean(settings.generator),
     confettiNote: Boolean(settings.confettiNote),
-    manual: Boolean(settings.manual)
+    manual: Boolean(settings.manual),
+    manualIndex: settings.manualIndex || 1
   };
 }
 
-function manualExtraRow() {
-  const id = "extra-manual";
+function isManualExtraId(extraId) {
+  return extraId === manualExtraBaseId || /^extra-manual-\d+$/.test(String(extraId || ""));
+}
+
+function manualExtraNumber(extraId) {
+  if (extraId === manualExtraBaseId) return 1;
+  const match = String(extraId || "").match(/^extra-manual-(\d+)$/);
+  return match ? Number.parseInt(match[1], 10) : 1;
+}
+
+function resetManualExtras(ids = []) {
+  const nextIds = [manualExtraBaseId];
+  ids.filter(isManualExtraId).forEach((id) => {
+    if (!nextIds.includes(id)) nextIds.push(id);
+  });
+  manualExtraIds = nextIds.sort((first, second) => manualExtraNumber(first) - manualExtraNumber(second));
+}
+
+function removeManualExtra(extraId) {
+  if (extraId === manualExtraBaseId) return;
+  manualExtraIds = manualExtraIds.filter((id) => id !== extraId);
+  selectedExtras.delete(extraId);
+  extraQuantities.delete(extraId);
+  extraPrices.delete(extraId);
+  extraDimensions.delete(extraId);
+  extraManualDescriptions.delete(extraId);
+  extraComplimentary.delete(extraId);
+  extraGeneratorDetails.delete(extraId);
+}
+
+function nextManualExtraId() {
+  const maxNumber = manualExtraIds.reduce(
+    (max, id) => Math.max(max, manualExtraNumber(id)),
+    1
+  );
+  return `${manualExtraBaseId}-${maxNumber + 1}`;
+}
+
+function ensureManualExtraSlotCount(count) {
+  const total = Math.max(1, Math.min(50, Number.parseInt(count, 10) || 1));
+  while (manualExtraIds.length < total) {
+    manualExtraIds.push(nextManualExtraId());
+  }
+}
+
+function manualExtraRow(id = manualExtraBaseId, index = 1) {
   return [
     id,
     "1",
@@ -2251,6 +2327,7 @@ function manualExtraRow() {
     0,
     {
       manual: true,
+      manualIndex: index,
       priceMode: "total",
       quantityLabel: "Cantidad",
       priceLabel: "Monto",
@@ -2259,8 +2336,12 @@ function manualExtraRow() {
   ];
 }
 
+function manualExtras() {
+  return manualExtraIds.map((id, index) => normalizeExtra(manualExtraRow(id, index + 1)));
+}
+
 function manualExtra() {
-  return normalizeExtra(manualExtraRow());
+  return manualExtras()[0];
 }
 
 function extraManualDescription(extraId) {
@@ -2544,17 +2625,20 @@ function makeExtraField(labelText, input) {
 }
 
 function renderExtrasPicker() {
-  const customExtra = manualExtra();
-  const allExtras = [customExtra, ...currentExtrasList().map(normalizeExtra)];
+  const customExtras = manualExtras();
+  const allExtras = [...customExtras, ...currentExtrasList().map(normalizeExtra)];
   const availableIds = new Set(allExtras.map((item) => item.id));
   const search = normalizedSearchText(extrasSearchTerm);
   const regularExtras = allExtras.filter((extra) => !extra.manual);
   const availableExtras = [
-    customExtra,
+    ...customExtras,
     ...(search
       ? regularExtras.filter((extra) => normalizedSearchText(extra.description).includes(search))
       : regularExtras)
   ];
+  if (elements.manualExtrasCount && document.activeElement !== elements.manualExtrasCount) {
+    elements.manualExtrasCount.value = String(manualExtraIds.length);
+  }
 
   [...selectedExtras].forEach((id) => {
     if (!availableIds.has(id)) {
@@ -2563,6 +2647,7 @@ function renderExtrasPicker() {
       extraPrices.delete(id);
       extraDimensions.delete(id);
       extraManualDescriptions.delete(id);
+      if (isManualExtraId(id)) removeManualExtra(id);
       extraComplimentary.delete(id);
       extraGeneratorDetails.delete(id);
     }
@@ -2588,6 +2673,7 @@ function renderExtrasPicker() {
       extraPrices.clear();
       extraDimensions.clear();
       extraManualDescriptions.clear();
+      resetManualExtras();
       extraComplimentary.clear();
       extraGeneratorDetails.clear();
       renderExtrasPicker();
@@ -2659,7 +2745,7 @@ function renderExtrasPicker() {
     });
     checkbox.addEventListener("change", () => setExtraSelection(checkbox.checked));
     label.addEventListener("click", (event) => {
-      if (event.target.closest("input") || event.target.closest(".extra-field")) return;
+      if (event.target.closest("input") || event.target.closest(".extra-field") || event.target.closest("button")) return;
       checkbox.checked = !checkbox.checked;
       setExtraSelection(checkbox.checked);
     });
@@ -2668,7 +2754,7 @@ function renderExtrasPicker() {
     copy.className = "extra-option-copy";
 
     const name = document.createElement("strong");
-    name.textContent = extra.manual ? "Extra manual" : extra.description;
+    name.textContent = extra.manual ? `Extra manual ${extra.manualIndex}` : extra.description;
 
     const note = document.createElement("span");
     note.textContent = extra.manual
@@ -2810,6 +2896,21 @@ function renderExtrasPicker() {
         });
         controls.appendChild(makeExtraField(extra.complimentaryLabel, complimentaryInput));
       }
+    }
+
+    if (extra.manual && extra.id !== manualExtraBaseId) {
+      const removeButton = document.createElement("button");
+      removeButton.className = "extra-manual-remove";
+      removeButton.type = "button";
+      removeButton.textContent = "X";
+      removeButton.setAttribute("aria-label", `Eliminar extra manual ${extra.manualIndex}`);
+      removeButton.addEventListener("click", () => {
+        removeManualExtra(extra.id);
+        if (elements.manualExtrasCount) elements.manualExtrasCount.value = String(manualExtraIds.length);
+        renderExtrasPicker();
+        renderQuote();
+      });
+      controls.appendChild(removeButton);
     }
 
     copy.append(name, note, controls);
@@ -3321,13 +3422,11 @@ function renderQuote() {
   const pkg = currentPackage();
   const selected = selectedExtrasForQuote();
   const hasServiceDetail = pkg.id !== "ninguno" || packageDisplayItems(pkg).length > 0;
-  const hidePackageHeaderTitle = pkg.id === "ninguno";
+  const hidePackageHeaderTitle = isDefaultNonePackageTitle(pkg);
 
   elements.quotePackageTitle.textContent = hidePackageHeaderTitle
     ? ""
-    : hasServiceDetail
-    ? packageDisplayName(pkg)
-    : translateQuoteText("COTIZACIÓN DE EXTRAS");
+    : packageDisplayName(pkg) || (hasServiceDetail ? "" : translateQuoteText("COTIZACIÓN DE EXTRAS"));
   elements.quotePackageTitle.classList.toggle("is-empty", hidePackageHeaderTitle);
   elements.packagePriceBadge.textContent = formatMoney(packageDisplayPrice(pkg));
   elements.serviceDetailCard.classList.toggle("is-hidden", !hasServiceDetail);
@@ -3364,6 +3463,7 @@ async function resetQuote() {
   extraPrices.clear();
   extraDimensions.clear();
   extraManualDescriptions.clear();
+  resetManualExtras();
   extraComplimentary.clear();
   extraGeneratorDetails.clear();
   packageNameOverrides.clear();
@@ -3482,6 +3582,17 @@ function restorePackageItemsMap(map, values) {
   });
 }
 
+function manualExtraIdsFromQuoteData(data) {
+  const ids = [
+    ...(Array.isArray(data.manualExtraIds) ? data.manualExtraIds : []),
+    ...(Array.isArray(data.selectedExtraIds) ? data.selectedExtraIds : []),
+    ...Object.keys(data.extraManualDescriptions || {}),
+    ...Object.keys(data.extraQuantities || {}),
+    ...Object.keys(data.extraPrices || {})
+  ];
+  return ids.filter(isManualExtraId);
+}
+
 function applyQuoteData(data) {
   const savedNumber = parseStoredNumber(data.quoteNumber);
   if (savedNumber) currentQuoteNumber = savedNumber;
@@ -3505,6 +3616,7 @@ function applyQuoteData(data) {
   restoreMap(extraPrices, data.extraPrices);
   restoreMap(extraDimensions, data.extraDimensions);
   restoreMap(extraManualDescriptions, data.extraManualDescriptions);
+  resetManualExtras(manualExtraIdsFromQuoteData(data));
   restoreMap(extraComplimentary, data.extraComplimentary);
   restoreObjectMap(extraGeneratorDetails, data.extraGeneratorDetails);
   restoreMap(packageNameOverrides, data.packageNameOverrides);
@@ -3684,6 +3796,12 @@ function bindEvents() {
   elements.extrasSearch.addEventListener("input", () => {
     extrasSearchTerm = elements.extrasSearch.value;
     renderExtrasPicker();
+  });
+  elements.manualExtrasAddButton.addEventListener("click", () => {
+    ensureManualExtraSlotCount(elements.manualExtrasCount.value);
+    elements.manualExtrasCount.value = String(manualExtraIds.length);
+    renderExtrasPicker();
+    renderQuote();
   });
 
   elements.discountAmount.addEventListener("input", renderQuote);

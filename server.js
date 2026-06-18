@@ -23,7 +23,7 @@ const pdfDir = path.join(dataDir, "cotizaciones-generadas");
 const backupDir = path.join(dataDir, "respaldo-cotizaciones");
 const dbPath = path.join(dataDir, "cotizaciones.sqlite");
 const maxBodyBytes = 100 * 1024 * 1024;
-const quoteSequenceStart = 10667n;
+const quoteSequenceStart = 10757n;
 let saveQueue = Promise.resolve();
 let cachedBrowserPath;
 let pdfEnginePromise;

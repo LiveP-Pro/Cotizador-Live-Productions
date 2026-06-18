@@ -6,8 +6,8 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260617-03" />
-    <script src="app.js?v=20260617-03" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260618-01" />
+    <script src="app.js?v=20260618-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -236,6 +236,13 @@
             Buscar extra
             <input id="extrasSearch" type="search" placeholder="Escriba el nombre del extra" autocomplete="off" />
           </label>
+          <div class="manual-extras-toolbar">
+            <label>
+              Cantidad de extras manuales
+              <input id="manualExtrasCount" type="number" min="1" max="50" step="1" value="1" />
+            </label>
+            <button id="manualExtrasAddButton" type="button">Preparar extras manuales</button>
+          </div>
           <div id="extrasList" class="extras-list"></div>
         </div>
 
