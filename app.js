@@ -1966,6 +1966,7 @@ function copyFirstQuoteClientData() {
   const clientFields = [
     "clientName",
     "clientPhone",
+    "eventName",
     "eventDate",
     "eventPlace",
     "guestCount"
