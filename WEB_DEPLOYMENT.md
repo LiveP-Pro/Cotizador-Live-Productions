@@ -39,7 +39,12 @@ HOST=0.0.0.0
 PORT=8787
 COTIZADOR_DATA_DIR=/data
 CHROME_PATH=/usr/bin/chromium
+WHATSAPP_ACCESS_TOKEN=TOKEN_DE_META
+WHATSAPP_PHONE_NUMBER_ID=ID_DEL_NUMERO_DE_WHATSAPP
+WHATSAPP_API_VERSION=v23.0
 ```
+
+Las variables de WhatsApp permiten enviar las cotizaciones guardadas como PDF por WhatsApp Business Platform. No las escribas dentro del codigo ni las compartas por chat; deben ir solo en Environment Variables del hosting.
 
 ## Disco persistente
 

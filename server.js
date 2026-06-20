@@ -24,6 +24,11 @@ const backupDir = path.join(dataDir, "respaldo-cotizaciones");
 const dbPath = path.join(dataDir, "cotizaciones.sqlite");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10757n;
+const whatsappConfig = {
+  apiVersion: process.env.WHATSAPP_API_VERSION || "v23.0",
+  phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
+  accessToken: process.env.WHATSAPP_ACCESS_TOKEN || ""
+};
 let saveQueue = Promise.resolve();
 let cachedBrowserPath;
 let pdfEnginePromise;
@@ -304,6 +309,19 @@ function uniquePdfTarget(fileName) {
 
 function pdfUrl(fileName) {
   return `/cotizaciones-generadas/${encodeURIComponent(fileName)}`;
+}
+
+function publicOrigin(request) {
+  const hostHeader = request.headers["x-forwarded-host"] || request.headers.host || "";
+  const protoHeader = request.headers["x-forwarded-proto"] || "";
+  const proto = protoHeader ? String(protoHeader).split(",")[0].trim() : request.socket.encrypted ? "https" : "http";
+  const hostName = String(hostHeader).split(",")[0].trim();
+  return hostName ? `${proto}://${hostName}` : "";
+}
+
+function absolutePdfUrl(request, fileName) {
+  const origin = publicOrigin(request);
+  return origin ? new URL(pdfUrl(fileName), origin).href : pdfUrl(fileName);
 }
 
 function existingPdfPath(row) {
@@ -813,6 +831,65 @@ function getQuote(id) {
   };
 }
 
+function normalizeWhatsappPhone(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length === 8) return `502${digits}`;
+  if (digits.startsWith("00")) return digits.slice(2);
+  return digits;
+}
+
+function whatsappIsConfigured() {
+  return Boolean(whatsappConfig.phoneNumberId && whatsappConfig.accessToken);
+}
+
+async function readWhatsappResponse(response) {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+}
+
+async function sendWhatsappDocument({ to, pdfLink, fileName, caption }) {
+  if (!whatsappIsConfigured()) {
+    throw new Error(
+      "WhatsApp PDF no esta configurado. Agregue WHATSAPP_ACCESS_TOKEN y WHATSAPP_PHONE_NUMBER_ID en Render."
+    );
+  }
+
+  const endpoint = `https://graph.facebook.com/${whatsappConfig.apiVersion}/${whatsappConfig.phoneNumberId}/messages`;
+  const payload = {
+    messaging_product: "whatsapp",
+    to,
+    type: "document",
+    document: {
+      link: pdfLink,
+      filename: fileName,
+      caption
+    }
+  };
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${whatsappConfig.accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await readWhatsappResponse(response);
+
+  if (!response.ok) {
+    const message = data?.error?.message || data?.error?.error_user_msg || "WhatsApp no pudo enviar el PDF.";
+    throw new Error(message);
+  }
+
+  return data;
+}
+
 function quoteBigInt(value) {
   const text = String(value || "").trim();
   if (!/^\d+$/.test(text)) return null;
@@ -1100,6 +1177,59 @@ async function deleteQuote(id, response) {
   });
 }
 
+async function sendQuoteByWhatsapp(id, payload, request, response) {
+  const existing = db.prepare("SELECT * FROM quotes WHERE id = ?").get(id);
+  if (!existing) {
+    errorResponse(response, 404, "No se encontró la cotización para enviar.");
+    return;
+  }
+
+  const target = existingPdfPath(existing);
+  if (!fs.existsSync(target)) {
+    errorResponse(response, 404, "No se encontró el PDF guardado para esta cotización.");
+    return;
+  }
+
+  const phone = normalizeWhatsappPhone(payload.phone || existing.client_phone);
+  if (!phone) {
+    errorResponse(response, 400, "Agregue el número telefónico del cliente para enviar el PDF por WhatsApp.");
+    return;
+  }
+
+  const pdfLink = absolutePdfUrl(request, existing.file_name);
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(?::|\/)/i.test(pdfLink)) {
+    errorResponse(
+      response,
+      400,
+      "Para enviar el PDF como documento por WhatsApp use la página publicada en internet, no localhost."
+    );
+    return;
+  }
+
+  const captionParts = ["Cotización"];
+  if (existing.quote_number) captionParts.push(existing.quote_number);
+  const serviceName = existing.service_name || existing.package_name;
+  if (serviceName) captionParts.push(serviceName);
+  captionParts.push("Live Productions");
+
+  const data = await sendWhatsappDocument({
+    to: phone,
+    pdfLink,
+    fileName: existing.file_name,
+    caption: captionParts.join(" - ")
+  });
+
+  jsonResponse(response, 200, {
+    id,
+    quoteNumber: existing.quote_number,
+    fileName: existing.file_name,
+    phone,
+    pdfUrl: pdfUrl(existing.file_name),
+    whatsappMessageId: data?.messages?.[0]?.id || "",
+    status: "sent"
+  });
+}
+
 async function saveQuoteBatch(payload, response) {
   const quotes = Array.isArray(payload.quotes) ? payload.quotes : [];
   if (quotes.length < 2) {
@@ -1279,6 +1409,14 @@ async function handleRequest(request, response) {
     if (request.method === "DELETE" && quoteMatch) {
       if (!requireAuth(request, response)) return;
       await enqueueSave(() => deleteQuote(Number(quoteMatch[1]), response));
+      return;
+    }
+
+    const whatsappQuoteMatch = url.pathname.match(/^\/api\/cotizaciones\/(\d+)\/whatsapp$/);
+    if (request.method === "POST" && whatsappQuoteMatch) {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await sendQuoteByWhatsapp(Number(whatsappQuoteMatch[1]), payload, request, response);
       return;
     }
 

@@ -1197,30 +1197,55 @@ function whatsappPhone(value) {
   return digits;
 }
 
-function whatsappQuoteMessage(record) {
-  const quoteNumber = record.quoteNumber ? ` ${record.quoteNumber}` : "";
-  const service = record.serviceName || record.packageName || "";
-  const serviceText = service ? ` de ${service}` : "";
-  const pdfUrl = absoluteAppUrl(record.pdfUrl);
-  return `Hola, le comparto la cotización${quoteNumber}${serviceText} de Live Productions:\n${pdfUrl}`;
-}
-
-function whatsappShareUrl(record) {
-  const text = encodeURIComponent(whatsappQuoteMessage(record));
-  const phone = whatsappPhone(record.clientPhone);
-  return phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
-}
-
 function openPdf(record) {
   if (record.pdfUrl) window.open(absoluteAppUrl(record.pdfUrl), "_blank", "noopener");
 }
 
-function openWhatsapp(record) {
+async function sendWhatsappPdf(record, setStatus = setHistoryStatus, button = null) {
   if (!record.pdfUrl) {
-    setHistoryStatus("Esta cotización no tiene PDF para enviar por WhatsApp.", "error");
+    setStatus("Esta cotización no tiene PDF para enviar por WhatsApp.", "error");
     return;
   }
-  window.open(whatsappShareUrl(record), "_blank", "noopener");
+
+  if (!record.id) {
+    setStatus("Primero guarde la cotización para poder enviar el PDF por WhatsApp.", "error");
+    return;
+  }
+
+  let phone = whatsappPhone(record.clientPhone);
+  if (!phone) {
+    const typedPhone = window.prompt("Ingrese el número de WhatsApp del cliente con código de país:");
+    phone = whatsappPhone(typedPhone);
+  }
+
+  if (!phone) {
+    setStatus("Envío cancelado. No se indicó número de WhatsApp.", "error");
+    return;
+  }
+
+  const previousText = button?.textContent || "";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Enviando PDF...";
+  }
+  setStatus("Enviando PDF por WhatsApp...");
+
+  try {
+    const result = await apiRequest(`/api/cotizaciones/${record.id}/whatsapp`, {
+      method: "POST",
+      body: JSON.stringify({ phone })
+    });
+    setStatus(`PDF enviado por WhatsApp a +${result.phone || phone}.`, "success");
+    return true;
+  } catch (error) {
+    setStatus(error.message, "error");
+    return false;
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = previousText || "Enviar PDF";
+    }
+  }
 }
 
 function buttonElement(text, onClick) {
@@ -1228,7 +1253,7 @@ function buttonElement(text, onClick) {
   button.type = "button";
   button.className = "secondary-button";
   button.textContent = text;
-  button.addEventListener("click", onClick);
+  button.addEventListener("click", (event) => onClick(event, button));
   return button;
 }
 
@@ -1241,7 +1266,7 @@ function renderLastSavedActions(record) {
   clearNode(elements.lastSavedActions);
   elements.lastSavedActions.append(
     buttonElement("Abrir PDF", () => openPdf(record)),
-    buttonElement("Enviar por WhatsApp", () => openWhatsapp(record))
+    buttonElement("Enviar PDF por WhatsApp", (event, button) => sendWhatsappPdf(record, setDriveStatus, button))
   );
   elements.lastSavedActions.classList.remove("is-hidden");
 }
@@ -2048,13 +2073,52 @@ function renderBatchSavedResults(results) {
     const actions = document.createElement("div");
     actions.className = "batch-saved-result-actions";
 
-    const whatsappButton = buttonElement("WhatsApp", () => openWhatsapp(result));
+    const whatsappButton = buttonElement("Enviar PDF por WhatsApp", (event, button) =>
+      sendWhatsappPdf(result, setBatchStatus, button)
+    );
 
     actions.append(link, whatsappButton);
     row.append(name, actions);
     elements.batchSavedResults.appendChild(row);
   });
+
+  if (results.length > 1) {
+    const sendAllButton = buttonElement("Enviar todos por WhatsApp", (event, button) =>
+      sendBatchWhatsappPdfs(results, button)
+    );
+    sendAllButton.classList.add("batch-send-all-button");
+    elements.batchSavedResults.appendChild(sendAllButton);
+  }
   elements.batchSavedResults.classList.remove("is-hidden");
+}
+
+async function sendBatchWhatsappPdfs(results, button = null) {
+  const savedResults = Array.isArray(results) ? results.filter((result) => result.id && result.pdfUrl) : [];
+  if (!savedResults.length) {
+    setBatchStatus("No hay PDFs guardados para enviar por WhatsApp.", "error");
+    return;
+  }
+
+  const previousText = button?.textContent || "";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Enviando PDFs...";
+  }
+
+  try {
+    let sentCount = 0;
+    for (let index = 0; index < savedResults.length; index += 1) {
+      setBatchStatus(`Enviando PDF ${index + 1} de ${savedResults.length} por WhatsApp...`);
+      const sent = await sendWhatsappPdf(savedResults[index], setBatchStatus);
+      if (sent) sentCount += 1;
+    }
+    setBatchStatus(`${sentCount} de ${savedResults.length} PDFs enviados por WhatsApp.`, sentCount ? "success" : "error");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = previousText || "Enviar todos por WhatsApp";
+    }
+  }
 }
 
 async function saveBatchQuotes() {
@@ -3528,7 +3592,7 @@ function renderHistoryResults(records) {
 
     const loadButton = buttonElement("Cargar", () => loadQuoteFromHistory(record.id));
     const openButton = buttonElement("Abrir PDF", () => openPdf(record));
-    const whatsappButton = buttonElement("WhatsApp", () => openWhatsapp(record));
+    const whatsappButton = buttonElement("Enviar PDF", (event, button) => sendWhatsappPdf(record, setHistoryStatus, button));
     const deleteButton = buttonElement("X", () => deleteQuoteFromHistory(record));
     deleteButton.classList.add("history-delete-button");
     deleteButton.setAttribute("aria-label", `Eliminar cotización ${record.quoteNumber || ""}`);
