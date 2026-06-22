@@ -6,8 +6,8 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260622-01" />
-    <script src="app.js?v=20260622-01" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260622-02" />
+    <script src="app.js?v=20260622-02" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -100,14 +100,56 @@
       </section>
 
       <section id="requerimientosPage" class="site-page no-print" data-page="requerimientos">
-        <div class="site-page-card">
+        <div class="site-page-card requirements-card">
           <img class="page-logo" src="assets/logo-live-productions.jpeg" alt="Live Productions" />
           <p class="eyebrow">Requerimientos</p>
           <h1>Requerimientos del evento</h1>
           <p>
             El equipo debe quedar siempre bajo techo en un lugar seguro o toldo para la protección del equipo.
           </p>
-          <p>Esta sección queda lista para agregar más requerimientos operativos.</p>
+          <div class="requirements-shell">
+            <section class="requirements-panel" aria-labelledby="requirementsCollaboratorTitle">
+              <div class="section-heading">
+                <span id="requirementsCollaboratorTitle">Colaborador</span>
+                <small>editable</small>
+              </div>
+              <div class="requirements-form-grid">
+                <label>
+                  Nombre del colaborador
+                  <input id="requirementCollaboratorName" type="text" autocomplete="off" />
+                </label>
+                <label>
+                  Número de WhatsApp
+                  <input id="requirementCollaboratorPhone" type="tel" inputmode="tel" autocomplete="off" />
+                </label>
+              </div>
+              <div class="requirements-actions">
+                <button id="saveRequirementCollaboratorButton" class="primary-button" type="button">
+                  Guardar colaborador
+                </button>
+                <button id="newRequirementCollaboratorButton" class="secondary-button" type="button">
+                  Nuevo colaborador
+                </button>
+              </div>
+              <p id="requirementsStatus" class="requirements-status" role="status"></p>
+            </section>
+
+            <section class="requirements-panel requirements-board" aria-labelledby="requirementsBoardTitle">
+              <div class="section-heading">
+                <span id="requirementsBoardTitle">Tareas por colaborador</span>
+                <small>WhatsApp</small>
+              </div>
+              <div id="requirementsPeople" class="requirements-people"></div>
+            </section>
+
+            <section class="requirements-panel requirements-history-panel" aria-labelledby="requirementsHistoryTitle">
+              <div class="section-heading">
+                <span id="requirementsHistoryTitle">Historial</span>
+                <small>hecho / no se hizo</small>
+              </div>
+              <div id="requirementsHistory" class="requirements-history"></div>
+            </section>
+          </div>
         </div>
       </section>
 

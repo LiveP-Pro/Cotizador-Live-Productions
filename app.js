@@ -514,6 +514,13 @@ const elements = {
   siteSideMenu: document.querySelector("#siteSideMenu"),
   siteMenuButtons: [...document.querySelectorAll("[data-page-link]")],
   sitePages: [...document.querySelectorAll("[data-page]")],
+  requirementCollaboratorName: document.querySelector("#requirementCollaboratorName"),
+  requirementCollaboratorPhone: document.querySelector("#requirementCollaboratorPhone"),
+  saveRequirementCollaboratorButton: document.querySelector("#saveRequirementCollaboratorButton"),
+  newRequirementCollaboratorButton: document.querySelector("#newRequirementCollaboratorButton"),
+  requirementsStatus: document.querySelector("#requirementsStatus"),
+  requirementsPeople: document.querySelector("#requirementsPeople"),
+  requirementsHistory: document.querySelector("#requirementsHistory"),
   appShell: document.querySelector("#appShell"),
   packageSelect: document.querySelector("#packageSelect"),
   servicePickerButton: document.querySelector("#servicePickerButton"),
@@ -638,11 +645,14 @@ const quoteStorageKeys = {
   currentNumber: "liveQuoteCurrentNumber",
   currentDate: "liveQuoteCurrentDate"
 };
+const requirementsStorageKey = "liveRequirementsBoard";
 let currentQuoteNumber = quoteSequenceStart;
 let currentQuoteDate = "";
 let requestedQuoteNumber = null;
 let editingQuoteId = null;
 let quoteAppStarted = false;
+let requirementsState = { collaborators: [] };
+let editingRequirementsCollaboratorId = null;
 const appShellHome = {
   parent: elements.appShell.parentNode,
   nextSibling: elements.appShell.nextSibling
@@ -697,6 +707,464 @@ function writeStoredValue(key, value) {
   } catch {
     // Some browsers block localStorage on file:// pages. The quote still works.
   }
+}
+
+function requirementId(prefix) {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeRequirementTask(task) {
+  const status = ["pendiente", "hecho", "no-se-hizo"].includes(task?.status) ? task.status : "pendiente";
+  const createdAt = String(task?.createdAt || new Date().toISOString());
+  return {
+    id: String(task?.id || requirementId("task")),
+    text: String(task?.text || "").trim(),
+    status,
+    createdAt,
+    updatedAt: String(task?.updatedAt || createdAt),
+    sentAt: task?.sentAt ? String(task.sentAt) : ""
+  };
+}
+
+function normalizeRequirementCollaborator(collaborator) {
+  return {
+    id: String(collaborator?.id || requirementId("collaborator")),
+    name: String(collaborator?.name || "").trim(),
+    phone: String(collaborator?.phone || "").trim(),
+    tasks: Array.isArray(collaborator?.tasks)
+      ? collaborator.tasks.map(normalizeRequirementTask).filter((task) => task.text)
+      : []
+  };
+}
+
+function normalizeRequirementsState(data) {
+  return {
+    collaborators: Array.isArray(data?.collaborators)
+      ? data.collaborators.map(normalizeRequirementCollaborator).filter((collaborator) => collaborator.name)
+      : []
+  };
+}
+
+function readRequirementsState() {
+  const stored = readStoredValue(requirementsStorageKey);
+  if (!stored) return { collaborators: [] };
+  try {
+    return normalizeRequirementsState(JSON.parse(stored));
+  } catch {
+    return { collaborators: [] };
+  }
+}
+
+function storeRequirementsState() {
+  writeStoredValue(requirementsStorageKey, JSON.stringify(requirementsState));
+}
+
+function findRequirementCollaborator(collaboratorId) {
+  return requirementsState.collaborators.find((collaborator) => collaborator.id === collaboratorId) || null;
+}
+
+function setRequirementsStatus(message, type = "") {
+  if (!elements.requirementsStatus) return;
+  elements.requirementsStatus.textContent = message;
+  elements.requirementsStatus.classList.toggle("is-error", type === "error");
+  elements.requirementsStatus.classList.toggle("is-success", type === "success");
+}
+
+function clearRequirementCollaboratorForm() {
+  editingRequirementsCollaboratorId = null;
+  if (elements.requirementCollaboratorName) elements.requirementCollaboratorName.value = "";
+  if (elements.requirementCollaboratorPhone) elements.requirementCollaboratorPhone.value = "";
+  if (elements.saveRequirementCollaboratorButton) {
+    elements.saveRequirementCollaboratorButton.textContent = "Guardar colaborador";
+  }
+}
+
+function saveRequirementCollaborator() {
+  const name = elements.requirementCollaboratorName?.value.trim() || "";
+  const phone = elements.requirementCollaboratorPhone?.value.trim() || "";
+  if (!name || !phone) {
+    setRequirementsStatus("Agregue nombre del colaborador y número de WhatsApp.", "error");
+    return;
+  }
+
+  const existing = editingRequirementsCollaboratorId
+    ? findRequirementCollaborator(editingRequirementsCollaboratorId)
+    : null;
+
+  if (existing) {
+    existing.name = name;
+    existing.phone = phone;
+    setRequirementsStatus(`Colaborador actualizado: ${name}.`, "success");
+  } else {
+    requirementsState.collaborators.push({
+      id: requirementId("collaborator"),
+      name,
+      phone,
+      tasks: []
+    });
+    setRequirementsStatus(`Colaborador agregado: ${name}.`, "success");
+  }
+
+  storeRequirementsState();
+  clearRequirementCollaboratorForm();
+  renderRequirementsBoard();
+}
+
+function editRequirementCollaborator(collaboratorId) {
+  const collaborator = findRequirementCollaborator(collaboratorId);
+  if (!collaborator) return;
+  editingRequirementsCollaboratorId = collaborator.id;
+  elements.requirementCollaboratorName.value = collaborator.name;
+  elements.requirementCollaboratorPhone.value = collaborator.phone;
+  elements.saveRequirementCollaboratorButton.textContent = "Actualizar colaborador";
+  elements.requirementCollaboratorName.focus();
+  setRequirementsStatus(`Editando datos de ${collaborator.name}.`, "success");
+}
+
+function removeRequirementCollaborator(collaboratorId) {
+  const collaborator = findRequirementCollaborator(collaboratorId);
+  if (!collaborator) return;
+  const confirmed = window.confirm(
+    `¿Desea eliminar a ${collaborator.name} y todas sus tareas del historial?`
+  );
+  if (!confirmed) return;
+
+  requirementsState.collaborators = requirementsState.collaborators.filter((item) => item.id !== collaboratorId);
+  if (editingRequirementsCollaboratorId === collaboratorId) clearRequirementCollaboratorForm();
+  storeRequirementsState();
+  renderRequirementsBoard();
+  setRequirementsStatus(`Colaborador eliminado: ${collaborator.name}.`, "success");
+}
+
+function requirementDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("es-GT", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function requirementStatusLabel(status) {
+  if (status === "hecho") return "Hecho";
+  if (status === "no-se-hizo") return "No se hizo";
+  return "Pendiente";
+}
+
+function requirementStatusClass(status) {
+  if (status === "hecho") return "is-done";
+  if (status === "no-se-hizo") return "is-missed";
+  return "is-pending";
+}
+
+function buildRequirementWhatsappMessage(collaborator, taskText) {
+  return [
+    `Hola ${collaborator.name}.`,
+    "Te comparto el siguiente requerimiento para el evento:",
+    "",
+    taskText,
+    "",
+    "Por favor confirma recibido.",
+    "Live Productions"
+  ].join("\n");
+}
+
+function openRequirementWhatsapp(collaborator, taskText) {
+  const phone = whatsappPhone(collaborator.phone);
+  if (!phone) {
+    setRequirementsStatus(`Revise el número de WhatsApp de ${collaborator.name}.`, "error");
+    return false;
+  }
+
+  const message = buildRequirementWhatsappMessage(collaborator, taskText);
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+  return true;
+}
+
+function createRequirementTask(collaboratorId, text, shouldSendWhatsapp = false) {
+  const collaborator = findRequirementCollaborator(collaboratorId);
+  const cleanText = String(text || "").trim();
+  if (!collaborator || !cleanText) {
+    setRequirementsStatus("Escriba el requerimiento antes de crear la tarea.", "error");
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const task = {
+    id: requirementId("task"),
+    text: cleanText,
+    status: "pendiente",
+    createdAt: now,
+    updatedAt: now,
+    sentAt: shouldSendWhatsapp ? now : ""
+  };
+  collaborator.tasks.unshift(task);
+
+  let whatsappReady = true;
+  if (shouldSendWhatsapp) {
+    whatsappReady = openRequirementWhatsapp(collaborator, cleanText);
+    if (!whatsappReady) task.sentAt = "";
+  }
+
+  storeRequirementsState();
+  renderRequirementsBoard();
+  if (shouldSendWhatsapp && !whatsappReady) return;
+  setRequirementsStatus(
+    shouldSendWhatsapp
+      ? `Tarea creada y lista para enviar a ${collaborator.name} por WhatsApp.`
+      : `Tarea guardada para ${collaborator.name}.`,
+    "success"
+  );
+}
+
+function updateRequirementTaskStatus(collaboratorId, taskId, status) {
+  const collaborator = findRequirementCollaborator(collaboratorId);
+  const task = collaborator?.tasks.find((item) => item.id === taskId);
+  if (!task) return;
+  task.status = status;
+  task.updatedAt = new Date().toISOString();
+  storeRequirementsState();
+  renderRequirementsBoard();
+  setRequirementsStatus(`${collaborator.name}: tarea marcada como ${requirementStatusLabel(status).toLowerCase()}.`, "success");
+}
+
+function resendRequirementTask(collaboratorId, taskId) {
+  const collaborator = findRequirementCollaborator(collaboratorId);
+  const task = collaborator?.tasks.find((item) => item.id === taskId);
+  if (!task) return;
+
+  if (openRequirementWhatsapp(collaborator, task.text)) {
+    task.sentAt = new Date().toISOString();
+    task.updatedAt = task.sentAt;
+    storeRequirementsState();
+    renderRequirementsBoard();
+    setRequirementsStatus(`WhatsApp listo para reenviar a ${collaborator.name}.`, "success");
+  }
+}
+
+function requirementButton(label, action, extra = {}) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  button.dataset.requirementAction = action;
+  Object.entries(extra).forEach(([key, value]) => {
+    button.dataset[key] = value;
+  });
+  return button;
+}
+
+function appendEmptyRequirementsMessage(parent, text) {
+  const empty = document.createElement("p");
+  empty.className = "requirements-empty";
+  empty.textContent = text;
+  parent.appendChild(empty);
+}
+
+function renderRequirementTask(task, collaborator) {
+  const item = document.createElement("article");
+  item.className = `requirement-task ${requirementStatusClass(task.status)}`;
+
+  const top = document.createElement("div");
+  top.className = "requirement-task-top";
+
+  const status = document.createElement("span");
+  status.className = `requirement-task-status ${requirementStatusClass(task.status)}`;
+  status.textContent = requirementStatusLabel(task.status);
+
+  const dates = document.createElement("small");
+  dates.textContent = `Creado: ${requirementDate(task.createdAt)}${task.sentAt ? ` · WhatsApp: ${requirementDate(task.sentAt)}` : ""}`;
+
+  top.append(status, dates);
+
+  const copy = document.createElement("p");
+  copy.textContent = task.text;
+
+  const actions = document.createElement("div");
+  actions.className = "requirement-task-actions";
+  actions.append(
+    requirementButton("Pendiente", "status-pending", { taskId: task.id }),
+    requirementButton("Hecho", "status-done", { taskId: task.id }),
+    requirementButton("No se hizo", "status-missed", { taskId: task.id }),
+    requirementButton("WhatsApp", "resend-task", { taskId: task.id })
+  );
+
+  [...actions.querySelectorAll("button")].forEach((button) => {
+    const action = button.dataset.requirementAction;
+    button.disabled =
+      (action === "status-pending" && task.status === "pendiente") ||
+      (action === "status-done" && task.status === "hecho") ||
+      (action === "status-missed" && task.status === "no-se-hizo");
+  });
+
+  item.append(top, copy, actions);
+  return item;
+}
+
+function renderRequirementCollaborator(collaborator) {
+  const card = document.createElement("article");
+  card.className = "requirement-person-card";
+  card.dataset.collaboratorId = collaborator.id;
+
+  const header = document.createElement("div");
+  header.className = "requirement-person-header";
+
+  const title = document.createElement("div");
+  const name = document.createElement("h2");
+  name.textContent = collaborator.name;
+  const phone = document.createElement("span");
+  const normalizedPhone = whatsappPhone(collaborator.phone);
+  phone.textContent = normalizedPhone ? `WhatsApp: +${normalizedPhone}` : `WhatsApp: ${collaborator.phone}`;
+  title.append(name, phone);
+
+  const headerActions = document.createElement("div");
+  headerActions.className = "requirement-person-actions";
+  headerActions.append(
+    requirementButton("Editar", "edit-collaborator"),
+    requirementButton("Eliminar", "remove-collaborator")
+  );
+
+  header.append(title, headerActions);
+
+  const composer = document.createElement("div");
+  composer.className = "requirement-composer";
+  const label = document.createElement("label");
+  label.textContent = "Requerimiento";
+  const textarea = document.createElement("textarea");
+  textarea.dataset.requirementText = "true";
+  textarea.placeholder = "Escriba aquí la tarea o requerimiento para este colaborador";
+  label.appendChild(textarea);
+
+  const composerActions = document.createElement("div");
+  composerActions.className = "requirements-actions";
+  composerActions.append(
+    requirementButton("Guardar tarea", "save-task"),
+    requirementButton("Enviar por WhatsApp", "send-task")
+  );
+  composer.append(label, composerActions);
+
+  const taskList = document.createElement("div");
+  taskList.className = "requirement-task-list";
+  if (collaborator.tasks.length) {
+    collaborator.tasks.forEach((task) => taskList.appendChild(renderRequirementTask(task, collaborator)));
+  } else {
+    appendEmptyRequirementsMessage(taskList, "Aún no hay tareas para este colaborador.");
+  }
+
+  card.append(header, composer, taskList);
+  return card;
+}
+
+function renderRequirementsHistory() {
+  if (!elements.requirementsHistory) return;
+  clearNode(elements.requirementsHistory);
+
+  const records = requirementsState.collaborators
+    .flatMap((collaborator) =>
+      collaborator.tasks.map((task) => ({
+        collaborator,
+        task
+      }))
+    )
+    .sort((left, right) => new Date(right.task.updatedAt) - new Date(left.task.updatedAt));
+
+  if (!records.length) {
+    appendEmptyRequirementsMessage(elements.requirementsHistory, "El historial aparecerá cuando cree tareas.");
+    return;
+  }
+
+  records.forEach(({ collaborator, task }) => {
+    const item = document.createElement("article");
+    item.className = `requirements-history-item ${requirementStatusClass(task.status)}`;
+
+    const status = document.createElement("span");
+    status.className = `requirement-task-status ${requirementStatusClass(task.status)}`;
+    status.textContent = requirementStatusLabel(task.status);
+
+    const title = document.createElement("strong");
+    title.textContent = collaborator.name;
+
+    const text = document.createElement("p");
+    text.textContent = task.text;
+
+    const meta = document.createElement("small");
+    meta.textContent = `Actualizado: ${requirementDate(task.updatedAt)}${task.sentAt ? ` · Enviado: ${requirementDate(task.sentAt)}` : ""}`;
+
+    item.append(status, title, text, meta);
+    elements.requirementsHistory.appendChild(item);
+  });
+}
+
+function renderRequirementsBoard() {
+  if (!elements.requirementsPeople) return;
+  clearNode(elements.requirementsPeople);
+
+  if (!requirementsState.collaborators.length) {
+    appendEmptyRequirementsMessage(
+      elements.requirementsPeople,
+      "Agregue un colaborador para crear su cuadro de tareas."
+    );
+    renderRequirementsHistory();
+    return;
+  }
+
+  requirementsState.collaborators.forEach((collaborator) => {
+    elements.requirementsPeople.appendChild(renderRequirementCollaborator(collaborator));
+  });
+  renderRequirementsHistory();
+}
+
+function handleRequirementsBoardClick(event) {
+  const button = event.target.closest("button[data-requirement-action]");
+  if (!button) return;
+
+  const card = button.closest("[data-collaborator-id]");
+  const collaboratorId = card?.dataset.collaboratorId;
+  const action = button.dataset.requirementAction;
+  if (!collaboratorId || !action) return;
+
+  if (action === "edit-collaborator") {
+    editRequirementCollaborator(collaboratorId);
+    return;
+  }
+
+  if (action === "remove-collaborator") {
+    removeRequirementCollaborator(collaboratorId);
+    return;
+  }
+
+  if (action === "save-task" || action === "send-task") {
+    const textarea = card.querySelector("[data-requirement-text]");
+    createRequirementTask(collaboratorId, textarea?.value || "", action === "send-task");
+    return;
+  }
+
+  const taskId = button.dataset.taskId;
+  if (!taskId) return;
+
+  if (action === "status-pending") updateRequirementTaskStatus(collaboratorId, taskId, "pendiente");
+  if (action === "status-done") updateRequirementTaskStatus(collaboratorId, taskId, "hecho");
+  if (action === "status-missed") updateRequirementTaskStatus(collaboratorId, taskId, "no-se-hizo");
+  if (action === "resend-task") resendRequirementTask(collaboratorId, taskId);
+}
+
+function bindRequirementsEvents() {
+  requirementsState = readRequirementsState();
+  elements.saveRequirementCollaboratorButton?.addEventListener("click", saveRequirementCollaborator);
+  elements.newRequirementCollaboratorButton?.addEventListener("click", () => {
+    clearRequirementCollaboratorForm();
+    setRequirementsStatus("Listo para agregar un nuevo colaborador.");
+  });
+  elements.requirementsPeople?.addEventListener("click", handleRequirementsBoardClick);
+  [elements.requirementCollaboratorName, elements.requirementCollaboratorPhone].forEach((input) => {
+    input?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") saveRequirementCollaborator();
+    });
+  });
+  renderRequirementsBoard();
 }
 
 function currencySymbol() {
@@ -3913,6 +4381,7 @@ function bindSiteEvents() {
       setActivePage(window.location.hash.replace("#", "") || "cotizador");
     }
   });
+  bindRequirementsEvents();
 }
 
 function startQuoteApp() {

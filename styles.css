@@ -285,6 +285,226 @@ body {
   font-size: 15px;
 }
 
+.requirements-card {
+  width: min(1280px, calc(100% - 48px));
+}
+
+.requirements-shell {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
+  gap: 18px;
+  margin-top: 26px;
+}
+
+.requirements-panel {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.requirements-board {
+  grid-row: span 2;
+}
+
+.requirements-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.requirements-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.requirements-actions button {
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+.requirements-status {
+  min-height: 18px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.requirements-status.is-error {
+  color: #a32920;
+}
+
+.requirements-status.is-success {
+  color: #17633a;
+}
+
+.requirements-people,
+.requirement-task-list,
+.requirements-history {
+  display: grid;
+  gap: 12px;
+}
+
+.requirement-person-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #cfd4dc;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.requirement-person-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: start;
+}
+
+.requirement-person-header h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.requirement-person-header span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.requirement-person-actions,
+.requirement-task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.requirement-person-actions button,
+.requirement-task-actions button {
+  min-height: 34px;
+  padding: 6px 10px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.requirement-person-actions button:hover,
+.requirement-task-actions button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.requirement-person-actions button:last-child {
+  color: #8f1d1d;
+  border-color: #d8aaa6;
+}
+
+.requirement-composer {
+  display: grid;
+  gap: 10px;
+}
+
+.requirement-composer textarea {
+  min-height: 118px;
+}
+
+.requirement-task,
+.requirements-history-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 5px solid #b4bbc4;
+  border-radius: 7px;
+  background: #fbfcfd;
+}
+
+.requirement-task.is-done,
+.requirements-history-item.is-done {
+  border-left-color: #3f8f62;
+}
+
+.requirement-task.is-missed,
+.requirements-history-item.is-missed {
+  border-left-color: #a32920;
+}
+
+.requirement-task-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.requirement-task p,
+.requirements-history-item p {
+  margin: 0;
+  max-width: none;
+  color: var(--ink);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.requirements-history-item strong {
+  font-size: 14px;
+}
+
+.requirement-task small,
+.requirements-history-item small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.requirement-task-status {
+  width: max-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #34383f;
+  background: #e9edf2;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.requirement-task-status.is-done {
+  color: #17633a;
+  background: #e0f2e7;
+}
+
+.requirement-task-status.is-missed {
+  color: #8f1d1d;
+  background: #f7e3e1;
+}
+
+.requirement-task-actions button:disabled {
+  color: #8a8f97;
+  background: #eef1f5;
+  cursor: not-allowed;
+}
+
+.requirements-empty {
+  max-width: none;
+  margin: 0;
+  padding: 14px;
+  color: var(--muted);
+  background: #ffffff;
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .topbar {
   display: grid;
   grid-template-columns: minmax(180px, auto) minmax(820px, 1fr) minmax(220px, auto);
@@ -2223,6 +2443,14 @@ td.price-column {
     grid-template-columns: 1fr;
   }
 
+  .requirements-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .requirements-board {
+    grid-row: auto;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
   }
@@ -2273,6 +2501,25 @@ td.price-column {
 
   .page-logo {
     width: 150px;
+  }
+
+  .requirements-form-grid,
+  .requirement-person-header {
+    grid-template-columns: 1fr;
+  }
+
+  .requirement-person-header {
+    display: grid;
+  }
+
+  .requirements-actions button,
+  .requirement-person-actions button,
+  .requirement-task-actions button {
+    flex: 1 1 130px;
+  }
+
+  .requirement-task-top {
+    display: grid;
   }
 
   .topbar {
