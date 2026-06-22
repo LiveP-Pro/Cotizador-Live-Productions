@@ -734,6 +734,8 @@ function normalizeRequirementTask(task) {
     status,
     createdAt,
     updatedAt: String(task?.updatedAt || createdAt),
+    completedBy: String(task?.completedBy || "").trim(),
+    completedAt: task?.completedAt ? String(task.completedAt) : "",
     sentAt: task?.sentAt ? String(task.sentAt) : "",
     doneUrl: task?.doneUrl ? String(task.doneUrl) : ""
   };
@@ -994,9 +996,11 @@ function buildRequirementWhatsappMessage(collaborator, task) {
     `Descripción: ${taskText}`,
     "Estado: Pendiente",
     "",
-    doneUrl ? `Realizado: ${doneUrl}` : "Realizado: confirme por este chat.",
+    doneUrl
+      ? `Confirmar realizado: ${doneUrl}`
+      : "Confirmar realizado: responda por este chat.",
     "",
-    "Cuando termines, toca el enlace de Realizado para actualizar el historial.",
+    "Cuando termines, abre el enlace, escribe el responsable y presiona Realizado para actualizar el historial.",
     "Live Productions"
   ].join("\n");
 }
@@ -1147,8 +1151,21 @@ function renderRequirementTask(task, collaborator) {
   status.textContent = requirementStatusLabel(task.status);
   statusLine.append(statusLabel, status);
 
+  const responsibleLine = document.createElement("div");
+  responsibleLine.className = "requirement-task-line";
+  const responsibleLabel = document.createElement("strong");
+  responsibleLabel.textContent = "Responsable";
+  const responsibleCopy = document.createElement("p");
+  responsibleCopy.textContent =
+    task.completedBy || (task.status === "realizado" ? "Sin responsable registrado" : "Pendiente de confirmar");
+  responsibleLine.append(responsibleLabel, responsibleCopy);
+
   const dates = document.createElement("small");
-  dates.textContent = `Creado: ${requirementDate(task.createdAt)}${task.sentAt ? ` · WhatsApp: ${requirementDate(task.sentAt)}` : ""}`;
+  dates.textContent = [
+    `Creado: ${requirementDate(task.createdAt)}`,
+    task.sentAt ? `WhatsApp: ${requirementDate(task.sentAt)}` : "",
+    task.completedAt ? `Realizado: ${requirementDate(task.completedAt)}` : ""
+  ].filter(Boolean).join(" · ");
 
   const actions = document.createElement("div");
   actions.className = "requirement-task-actions";
@@ -1165,7 +1182,7 @@ function renderRequirementTask(task, collaborator) {
       (action === "status-done" && task.status === "realizado");
   });
 
-  item.append(descriptionLine, statusLine, dates, actions);
+  item.append(descriptionLine, statusLine, responsibleLine, dates, actions);
   return item;
 }
 
@@ -1268,7 +1285,7 @@ function renderRequirementsHistory() {
     const meta = document.createElement("small");
     meta.textContent = `Fecha: ${requirementDate(record.createdAt)}${
       record.collaboratorPhone ? ` · WhatsApp: +${whatsappPhone(record.collaboratorPhone)}` : ""
-    }`;
+    }${record.completedBy ? ` · Responsable: ${record.completedBy}` : ""}`;
 
     item.append(status, title, text, meta);
     elements.requirementsHistory.appendChild(item);

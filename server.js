@@ -174,6 +174,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_requirement_history_created ON requirement_history (created_at);
 `);
 
+function addColumnIfMissing(tableName, columnName, columnSql) {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all();
+  if (columns.some((column) => column.name === columnName)) return;
+  db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnSql}`);
+}
+
+addColumnIfMissing("requirement_tasks", "completed_by", "completed_by TEXT");
+addColumnIfMissing("requirement_tasks", "completed_at", "completed_at TEXT");
+addColumnIfMissing("requirement_history", "completed_by", "completed_by TEXT");
+
 function sqlLiteral(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
@@ -933,13 +943,16 @@ function collaboratorRecord(row) {
 }
 
 function taskRecord(row, request) {
+  const status = normalizeRequirementStatus(row.status);
   return {
     id: String(row.id),
     collaboratorId: String(row.collaborator_id),
     description: row.description,
     text: row.description,
-    status: normalizeRequirementStatus(row.status),
+    status,
     doneUrl: requirementDoneUrl(request, row.done_token),
+    completedBy: row.completed_by || "",
+    completedAt: row.completed_at || "",
     sentAt: row.sent_at || "",
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -957,6 +970,7 @@ function historyRecord(row) {
     collaboratorPhone: row.collaborator_phone || "",
     description: row.description || "",
     status: normalizeRequirementStatus(row.status),
+    completedBy: row.completed_by || "",
     createdAt: row.created_at
   };
 }
@@ -969,6 +983,7 @@ function recordRequirementHistory({
   collaboratorPhone = "",
   description = "",
   status = "pendiente",
+  completedBy = "",
   createdAt = nowIso()
 }) {
   db.prepare(`
@@ -980,9 +995,10 @@ function recordRequirementHistory({
       collaborator_phone,
       description,
       status,
+      completed_by,
       created_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     taskId,
     collaboratorId,
@@ -991,6 +1007,7 @@ function recordRequirementHistory({
     collaboratorPhone,
     description,
     normalizeRequirementStatus(status),
+    cleanRequirementText(completedBy),
     createdAt
   );
 }
@@ -1222,7 +1239,16 @@ function updateRequirementTaskStatus(id, payload, request, response) {
 
   const status = normalizeRequirementStatus(payload.status);
   const now = nowIso();
-  db.prepare("UPDATE requirement_tasks SET status = ?, updated_at = ? WHERE id = ?").run(status, now, id);
+  const completedBy =
+    status === "realizado"
+      ? cleanRequirementText(payload.completedBy || task.completed_by || "")
+      : "";
+  const completedAt = status === "realizado" ? task.completed_at || now : "";
+  db.prepare(`
+    UPDATE requirement_tasks
+    SET status = ?, completed_by = ?, completed_at = ?, updated_at = ?
+    WHERE id = ?
+  `).run(status, completedBy, completedAt, now, id);
 
   recordRequirementHistory({
     taskId: id,
@@ -1232,6 +1258,7 @@ function updateRequirementTaskStatus(id, payload, request, response) {
     collaboratorPhone: task.collaborator_phone,
     description: task.description,
     status,
+    completedBy,
     createdAt: now
   });
 
@@ -1361,8 +1388,8 @@ function importRequirementState(payload, request, response) {
   });
 }
 
-function completeRequirementByToken(token, response) {
-  const task = db
+function getRequirementTaskByToken(token) {
+  return db
     .prepare(`
       SELECT t.*, c.name AS collaborator_name, c.phone AS collaborator_phone
       FROM requirement_tasks t
@@ -1370,54 +1397,126 @@ function completeRequirementByToken(token, response) {
       WHERE t.done_token = ?
     `)
     .get(token);
+}
 
+function renderRequirementNotFound(response) {
+  response.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
+  response.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Tarea no encontrada</title></head><body><h1>Tarea no encontrada</h1><p>El enlace de realizado no existe o ya no está disponible.</p></body></html>`);
+}
+
+function renderRequirementDonePage(task, response, { error = "", statusCode = 200 } = {}) {
   if (!task) {
-    response.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
-    response.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Tarea no encontrada</title></head><body><h1>Tarea no encontrada</h1><p>El enlace de realizado no existe o ya no está disponible.</p></body></html>`);
+    renderRequirementNotFound(response);
     return;
   }
 
-  const now = nowIso();
-  if (normalizeRequirementStatus(task.status) !== "realizado") {
-    db.prepare("UPDATE requirement_tasks SET status = 'realizado', updated_at = ? WHERE id = ?").run(now, task.id);
-    recordRequirementHistory({
-      taskId: task.id,
-      collaboratorId: task.collaborator_id,
-      action: "task_done_whatsapp",
-      collaboratorName: task.collaborator_name,
-      collaboratorPhone: task.collaborator_phone,
-      description: task.description,
-      status: "realizado",
-      createdAt: now
-    });
-    createDailyDatabaseBackup();
-  }
+  const isDone = normalizeRequirementStatus(task.status) === "realizado";
+  const completedBy = cleanRequirementText(task.completed_by);
+  const needsResponsible = !isDone || !completedBy;
+  const heading = isDone
+    ? completedBy
+      ? "Tarea marcada como realizada"
+      : "Agregar responsable"
+    : "Confirmar tarea realizada";
+  const lead = isDone
+    ? completedBy
+      ? "la tarea quedó actualizada en el historial compartido."
+      : "la tarea ya está realizada; agregue quién fue el responsable."
+    : "revise la tarea y confirme manualmente cuando ya esté realizada.";
 
-  response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+  response.writeHead(statusCode, { "Content-Type": "text/html; charset=utf-8" });
   response.end(`<!doctype html>
 <html lang="es">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Tarea realizada - Live Productions</title>
+    <title>${isDone ? "Tarea realizada" : "Confirmar tarea"} - Live Productions</title>
     <style>
       body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f2f4f7;color:#171717;font-family:Arial,Helvetica,sans-serif}
       main{width:min(560px,calc(100% - 32px));padding:28px;background:#fff;border:1px solid #d8dce2;border-radius:8px;box-shadow:0 18px 55px rgba(23,23,23,.12)}
       p{line-height:1.45}.eyebrow{margin:0 0 8px;color:#63666d;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
       h1{margin:0 0 14px;font-family:Georgia,'Times New Roman',serif;font-size:34px;line-height:1}
+      label{display:grid;gap:8px;margin-top:18px;color:#34383f;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+      input{width:100%;box-sizing:border-box;min-height:46px;padding:10px 12px;color:#171717;background:#fbfcfd;border:1px solid #cfd4dc;border-radius:7px;font-size:16px}
+      button{width:100%;min-height:48px;margin-top:16px;color:#fff;background:#101112;border:0;border-radius:7px;font-size:14px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+      .task{margin:18px 0 0;padding:14px;background:#fbfcfd;border:1px solid #d8dce2;border-radius:7px}
+      .error{margin-top:14px;color:#a32920;font-weight:800}
+      .responsible{margin-top:14px;font-weight:800}
       .status{display:inline-block;margin-top:12px;padding:8px 11px;color:#17633a;background:#e0f2e7;border-radius:999px;font-size:12px;font-weight:800;text-transform:uppercase}
     </style>
   </head>
   <body>
     <main>
       <p class="eyebrow">Live Productions</p>
-      <h1>Tarea marcada como realizada</h1>
-      <p><strong>${escapeHtml(task.collaborator_name)}</strong>, la tarea quedó actualizada en el historial compartido.</p>
-      <p>${escapeHtml(task.description)}</p>
-      <span class="status">Realizado</span>
+      <h1>${heading}</h1>
+      <p><strong>${escapeHtml(task.collaborator_name)}</strong>, ${lead}</p>
+      <p class="task">${escapeHtml(task.description)}</p>
+      ${
+        !needsResponsible
+          ? `<p class="responsible">Responsable: ${escapeHtml(completedBy || "Sin responsable registrado")}</p><span class="status">Realizado</span>`
+          : `<form method="post">
+              <label>
+                Nombre responsable de la tarea
+                <input name="completedBy" type="text" autocomplete="name" required placeholder="Escriba quién realizó la tarea" value="${escapeHtml(completedBy)}">
+              </label>
+              ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
+              <button type="submit">${isDone ? "Guardar responsable" : "Marcar como realizado"}</button>
+            </form>`
+      }
     </main>
   </body>
 </html>`);
+}
+
+function showRequirementDoneForm(token, response) {
+  renderRequirementDonePage(getRequirementTaskByToken(token), response);
+}
+
+function confirmRequirementByToken(token, payload, response) {
+  const task = getRequirementTaskByToken(token);
+  if (!task) {
+    renderRequirementNotFound(response);
+    return;
+  }
+
+  const completedBy = cleanRequirementText(payload.completedBy);
+  if (!completedBy) {
+    renderRequirementDonePage(task, response, {
+      error: "Escriba el nombre del responsable antes de marcar realizado.",
+      statusCode: 400
+    });
+    return;
+  }
+
+  const now = nowIso();
+  const completedAt = task.completed_at || now;
+  db.prepare(`
+    UPDATE requirement_tasks
+    SET status = 'realizado', completed_by = ?, completed_at = ?, updated_at = ?
+    WHERE id = ?
+  `).run(completedBy, completedAt, now, task.id);
+  recordRequirementHistory({
+    taskId: task.id,
+    collaboratorId: task.collaborator_id,
+    action: "task_done_whatsapp",
+    collaboratorName: task.collaborator_name,
+    collaboratorPhone: task.collaborator_phone,
+    description: task.description,
+    status: "realizado",
+    completedBy,
+    createdAt: now
+  });
+  createDailyDatabaseBackup();
+  renderRequirementDonePage(
+    {
+      ...task,
+      status: "realizado",
+      completed_by: completedBy,
+      completed_at: completedAt,
+      updated_at: now
+    },
+    response
+  );
 }
 
 function whatsappIsConfigured() {
@@ -1542,7 +1641,7 @@ function advanceQuoteSequenceFrom(startNumber, count = 1) {
   return saveNextQuoteNumber(nextNumber);
 }
 
-async function readJsonBody(request) {
+async function readRequestBody(request) {
   const chunks = [];
   let size = 0;
 
@@ -1552,7 +1651,16 @@ async function readJsonBody(request) {
     chunks.push(chunk);
   }
 
-  return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+async function readJsonBody(request) {
+  return JSON.parse((await readRequestBody(request)) || "{}");
+}
+
+async function readFormBody(request) {
+  const body = await readRequestBody(request);
+  return Object.fromEntries(new URLSearchParams(body));
 }
 
 function enqueueSave(task) {
@@ -1947,7 +2055,14 @@ async function handleRequest(request, response) {
 
     const requirementDoneMatch = url.pathname.match(/^\/requerimientos\/realizado\/([^/]+)\/?$/);
     if (request.method === "GET" && requirementDoneMatch) {
-      completeRequirementByToken(decodeURIComponent(requirementDoneMatch[1]), response);
+      showRequirementDoneForm(decodeURIComponent(requirementDoneMatch[1]), response);
+      return;
+    }
+    if (request.method === "POST" && requirementDoneMatch) {
+      const payload = await readFormBody(request);
+      await enqueueSave(() =>
+        confirmRequirementByToken(decodeURIComponent(requirementDoneMatch[1]), payload, response)
+      );
       return;
     }
 
