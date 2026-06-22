@@ -356,6 +356,18 @@ body {
   color: #17633a;
 }
 
+.requirements-lock-note {
+  margin: -4px 0 2px;
+  padding: 10px 12px;
+  color: #263238;
+  background: #eef4f1;
+  border: 1px solid #bdd7c8;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .requirements-people,
 .requirement-task-list,
 .requirements-history {

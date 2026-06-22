@@ -184,6 +184,39 @@ addColumnIfMissing("requirement_tasks", "completed_by", "completed_by TEXT");
 addColumnIfMissing("requirement_tasks", "completed_at", "completed_at TEXT");
 addColumnIfMissing("requirement_history", "completed_by", "completed_by TEXT");
 
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS lock_requirement_collaborators_delete
+  BEFORE DELETE ON requirement_collaborators
+  BEGIN
+    SELECT RAISE(ABORT, 'Historial protegido: no se pueden borrar colaboradores.');
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS lock_requirement_collaborators_archive
+  BEFORE UPDATE OF archived ON requirement_collaborators
+  WHEN NEW.archived != OLD.archived AND NEW.archived != 0
+  BEGIN
+    SELECT RAISE(ABORT, 'Historial protegido: no se pueden ocultar colaboradores.');
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS lock_requirement_tasks_delete
+  BEFORE DELETE ON requirement_tasks
+  BEGIN
+    SELECT RAISE(ABORT, 'Historial protegido: no se pueden borrar tareas.');
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS lock_requirement_history_delete
+  BEFORE DELETE ON requirement_history
+  BEGIN
+    SELECT RAISE(ABORT, 'Historial protegido: no se puede borrar el historial.');
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS lock_requirement_history_update
+  BEFORE UPDATE ON requirement_history
+  BEGIN
+    SELECT RAISE(ABORT, 'Historial protegido: no se puede modificar el historial.');
+  END;
+`);
+
 function sqlLiteral(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }

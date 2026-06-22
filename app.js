@@ -960,7 +960,10 @@ function editRequirementCollaborator(collaboratorId) {
 function removeRequirementCollaborator(collaboratorId) {
   const collaborator = findRequirementCollaborator(collaboratorId);
   if (!collaborator) return;
-  setRequirementsStatus(`El historial de ${collaborator.name} no se borra. Puede editar nombre o teléfono.`, "error");
+  setRequirementsStatus(
+    `Candado activo: el historial de ${collaborator.name} no se puede borrar. Puede editar nombre o teléfono.`,
+    "error"
+  );
 }
 
 function requirementDate(value) {
