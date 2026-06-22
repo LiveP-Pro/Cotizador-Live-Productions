@@ -646,6 +646,7 @@ const quoteStorageKeys = {
   currentDate: "liveQuoteCurrentDate"
 };
 const requirementsStorageKey = "liveRequirementsBoard";
+const requirementsMigrationKey = "liveRequirementsBoardMigratedToServer";
 let currentQuoteNumber = quoteSequenceStart;
 let currentQuoteDate = "";
 let requestedQuoteNumber = null;
@@ -653,6 +654,8 @@ let editingQuoteId = null;
 let quoteAppStarted = false;
 let requirementsState = { collaborators: [] };
 let editingRequirementsCollaboratorId = null;
+let requirementsEventsBound = false;
+let requirementsRefreshTimer = null;
 const appShellHome = {
   parent: elements.appShell.parentNode,
   nextSibling: elements.appShell.nextSibling
@@ -714,15 +717,18 @@ function requirementId(prefix) {
 }
 
 function normalizeRequirementTask(task) {
-  const status = ["pendiente", "hecho", "no-se-hizo"].includes(task?.status) ? task.status : "pendiente";
+  const rawStatus = String(task?.status || "").trim().toLowerCase();
+  const status = rawStatus === "realizado" || rawStatus === "hecho" ? "realizado" : "pendiente";
   const createdAt = String(task?.createdAt || new Date().toISOString());
   return {
     id: String(task?.id || requirementId("task")),
-    text: String(task?.text || "").trim(),
+    text: String(task?.text || task?.description || "").trim(),
+    description: String(task?.description || task?.text || "").trim(),
     status,
     createdAt,
     updatedAt: String(task?.updatedAt || createdAt),
-    sentAt: task?.sentAt ? String(task.sentAt) : ""
+    sentAt: task?.sentAt ? String(task.sentAt) : "",
+    doneUrl: task?.doneUrl ? String(task.doneUrl) : ""
   };
 }
 
@@ -779,7 +785,59 @@ function clearRequirementCollaboratorForm() {
   }
 }
 
-function saveRequirementCollaborator() {
+function applyRequirementsData(data) {
+  requirementsState = normalizeRequirementsState(data || {});
+  if (Array.isArray(data?.history)) requirementsState.history = data.history;
+  renderRequirementsBoard();
+}
+
+async function refreshRequirementsBoard({ quiet = false } = {}) {
+  if (!isLocalServerAvailable()) {
+    if (!quiet) {
+      requirementsState = readRequirementsState();
+      renderRequirementsBoard();
+      setRequirementsStatus("El historial compartido se activa desde la página web.", "error");
+    }
+    return;
+  }
+
+  try {
+    const data = await apiRequest("/api/requerimientos", { method: "GET", headers: {} });
+    applyRequirementsData(data);
+    if (!quiet) setRequirementsStatus("Historial compartido actualizado.", "success");
+  } catch (error) {
+    if (!quiet) setRequirementsStatus(error.message, "error");
+  }
+}
+
+async function migrateStoredRequirementsToServer() {
+  if (!isLocalServerAvailable() || readStoredValue(requirementsMigrationKey)) return;
+
+  const storedState = readRequirementsState();
+  if (!storedState.collaborators.length) {
+    writeStoredValue(requirementsMigrationKey, "empty");
+    return;
+  }
+
+  try {
+    const data = await apiRequest("/api/requerimientos/import", {
+      method: "POST",
+      body: JSON.stringify(storedState)
+    });
+    writeStoredValue(requirementsMigrationKey, new Date().toISOString());
+    applyRequirementsData(data);
+    setRequirementsStatus("Historial local migrado al historial compartido.", "success");
+  } catch (error) {
+    setRequirementsStatus(`No se pudo migrar el historial local: ${error.message}`, "error");
+  }
+}
+
+async function loadSharedRequirementsBoard() {
+  await migrateStoredRequirementsToServer();
+  await refreshRequirementsBoard({ quiet: true });
+}
+
+async function saveRequirementCollaborator() {
   const name = elements.requirementCollaboratorName?.value.trim() || "";
   const phone = elements.requirementCollaboratorPhone?.value.trim() || "";
   if (!name || !phone) {
@@ -791,23 +849,22 @@ function saveRequirementCollaborator() {
     ? findRequirementCollaborator(editingRequirementsCollaboratorId)
     : null;
 
-  if (existing) {
-    existing.name = name;
-    existing.phone = phone;
-    setRequirementsStatus(`Colaborador actualizado: ${name}.`, "success");
-  } else {
-    requirementsState.collaborators.push({
-      id: requirementId("collaborator"),
-      name,
-      phone,
-      tasks: []
-    });
-    setRequirementsStatus(`Colaborador agregado: ${name}.`, "success");
-  }
+  setRequirementsStatus(existing ? "Actualizando colaborador..." : "Guardando colaborador...");
 
-  storeRequirementsState();
-  clearRequirementCollaboratorForm();
-  renderRequirementsBoard();
+  try {
+    const data = await apiRequest(
+      existing ? `/api/requerimientos/colaboradores/${existing.id}` : "/api/requerimientos/colaboradores",
+      {
+        method: existing ? "PUT" : "POST",
+        body: JSON.stringify({ name, phone })
+      }
+    );
+    applyRequirementsData(data);
+    clearRequirementCollaboratorForm();
+    setRequirementsStatus(existing ? `Colaborador actualizado: ${name}.` : `Colaborador agregado: ${name}.`, "success");
+  } catch (error) {
+    setRequirementsStatus(error.message, "error");
+  }
 }
 
 function editRequirementCollaborator(collaboratorId) {
@@ -824,16 +881,7 @@ function editRequirementCollaborator(collaboratorId) {
 function removeRequirementCollaborator(collaboratorId) {
   const collaborator = findRequirementCollaborator(collaboratorId);
   if (!collaborator) return;
-  const confirmed = window.confirm(
-    `¿Desea eliminar a ${collaborator.name} y todas sus tareas del historial?`
-  );
-  if (!confirmed) return;
-
-  requirementsState.collaborators = requirementsState.collaborators.filter((item) => item.id !== collaboratorId);
-  if (editingRequirementsCollaboratorId === collaboratorId) clearRequirementCollaboratorForm();
-  storeRequirementsState();
-  renderRequirementsBoard();
-  setRequirementsStatus(`Colaborador eliminado: ${collaborator.name}.`, "success");
+  setRequirementsStatus(`El historial de ${collaborator.name} no se borra. Puede editar nombre o teléfono.`, "error");
 }
 
 function requirementDate(value) {
@@ -850,99 +898,134 @@ function requirementDate(value) {
 }
 
 function requirementStatusLabel(status) {
-  if (status === "hecho") return "Hecho";
-  if (status === "no-se-hizo") return "No se hizo";
+  if (status === "realizado") return "Realizado";
   return "Pendiente";
 }
 
 function requirementStatusClass(status) {
-  if (status === "hecho") return "is-done";
-  if (status === "no-se-hizo") return "is-missed";
+  if (status === "realizado") return "is-done";
   return "is-pending";
 }
 
-function buildRequirementWhatsappMessage(collaborator, taskText) {
+function buildRequirementWhatsappMessage(collaborator, task) {
+  const taskText = String(task?.description || task?.text || "").trim();
+  const doneUrl = String(task?.doneUrl || "").trim();
   return [
     `Hola ${collaborator.name}.`,
     "Te comparto el siguiente requerimiento para el evento:",
     "",
-    taskText,
+    `Descripción: ${taskText}`,
+    "Estado: Pendiente",
     "",
-    "Por favor confirma recibido.",
+    doneUrl ? `Realizado: ${doneUrl}` : "Realizado: confirme por este chat.",
+    "",
+    "Cuando termines, toca el enlace de Realizado para actualizar el historial.",
     "Live Productions"
   ].join("\n");
 }
 
-function openRequirementWhatsapp(collaborator, taskText) {
+function requirementWhatsappUrl(collaborator, task) {
   const phone = whatsappPhone(collaborator.phone);
   if (!phone) {
     setRequirementsStatus(`Revise el número de WhatsApp de ${collaborator.name}.`, "error");
+    return "";
+  }
+
+  const message = buildRequirementWhatsappMessage(collaborator, task);
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+function openRequirementWhatsapp(collaborator, task, targetWindow = null) {
+  const url = requirementWhatsappUrl(collaborator, task);
+  if (!url) {
+    if (targetWindow && !targetWindow.closed) targetWindow.close();
     return false;
   }
 
-  const message = buildRequirementWhatsappMessage(collaborator, taskText);
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+  if (targetWindow && !targetWindow.closed) {
+    targetWindow.location.href = url;
+  } else {
+    window.open(url, "_blank", "noopener");
+  }
   return true;
 }
 
-function createRequirementTask(collaboratorId, text, shouldSendWhatsapp = false) {
+async function createRequirementTask(collaboratorId, text, shouldSendWhatsapp = false, targetWindow = null) {
   const collaborator = findRequirementCollaborator(collaboratorId);
   const cleanText = String(text || "").trim();
   if (!collaborator || !cleanText) {
     setRequirementsStatus("Escriba el requerimiento antes de crear la tarea.", "error");
+    if (targetWindow && !targetWindow.closed) targetWindow.close();
     return;
   }
 
-  const now = new Date().toISOString();
-  const task = {
-    id: requirementId("task"),
-    text: cleanText,
-    status: "pendiente",
-    createdAt: now,
-    updatedAt: now,
-    sentAt: shouldSendWhatsapp ? now : ""
-  };
-  collaborator.tasks.unshift(task);
+  setRequirementsStatus(shouldSendWhatsapp ? "Creando tarea para WhatsApp..." : "Guardando tarea...");
 
-  let whatsappReady = true;
-  if (shouldSendWhatsapp) {
-    whatsappReady = openRequirementWhatsapp(collaborator, cleanText);
-    if (!whatsappReady) task.sentAt = "";
+  try {
+    const result = await apiRequest("/api/requerimientos/tareas", {
+      method: "POST",
+      body: JSON.stringify({
+        collaboratorId,
+        description: cleanText
+      })
+    });
+    const task = normalizeRequirementTask(result.task);
+    const whatsappReady = shouldSendWhatsapp ? openRequirementWhatsapp(collaborator, task, targetWindow) : true;
+    if (shouldSendWhatsapp && whatsappReady) {
+      const data = await apiRequest(`/api/requerimientos/tareas/${task.id}/enviado`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      applyRequirementsData(data);
+    } else {
+      applyRequirementsData(result.requirements || {});
+    }
+    if (shouldSendWhatsapp && !whatsappReady) return;
+    setRequirementsStatus(
+      shouldSendWhatsapp
+        ? `Tarea creada y WhatsApp listo para ${collaborator.name}.`
+        : `Tarea guardada para ${collaborator.name}.`,
+      "success"
+    );
+  } catch (error) {
+    if (targetWindow && !targetWindow.closed) targetWindow.close();
+    setRequirementsStatus(error.message, "error");
   }
-
-  storeRequirementsState();
-  renderRequirementsBoard();
-  if (shouldSendWhatsapp && !whatsappReady) return;
-  setRequirementsStatus(
-    shouldSendWhatsapp
-      ? `Tarea creada y lista para enviar a ${collaborator.name} por WhatsApp.`
-      : `Tarea guardada para ${collaborator.name}.`,
-    "success"
-  );
 }
 
-function updateRequirementTaskStatus(collaboratorId, taskId, status) {
+async function updateRequirementTaskStatus(collaboratorId, taskId, status) {
   const collaborator = findRequirementCollaborator(collaboratorId);
   const task = collaborator?.tasks.find((item) => item.id === taskId);
   if (!task) return;
-  task.status = status;
-  task.updatedAt = new Date().toISOString();
-  storeRequirementsState();
-  renderRequirementsBoard();
-  setRequirementsStatus(`${collaborator.name}: tarea marcada como ${requirementStatusLabel(status).toLowerCase()}.`, "success");
+  setRequirementsStatus(`Actualizando tarea de ${collaborator.name}...`);
+  try {
+    const data = await apiRequest(`/api/requerimientos/tareas/${taskId}`, {
+      method: "PUT",
+      body: JSON.stringify({ status })
+    });
+    applyRequirementsData(data);
+    setRequirementsStatus(`${collaborator.name}: tarea marcada como ${requirementStatusLabel(status).toLowerCase()}.`, "success");
+  } catch (error) {
+    setRequirementsStatus(error.message, "error");
+  }
 }
 
-function resendRequirementTask(collaboratorId, taskId) {
+async function resendRequirementTask(collaboratorId, taskId, targetWindow = null) {
   const collaborator = findRequirementCollaborator(collaboratorId);
   const task = collaborator?.tasks.find((item) => item.id === taskId);
   if (!task) return;
 
-  if (openRequirementWhatsapp(collaborator, task.text)) {
-    task.sentAt = new Date().toISOString();
-    task.updatedAt = task.sentAt;
-    storeRequirementsState();
-    renderRequirementsBoard();
-    setRequirementsStatus(`WhatsApp listo para reenviar a ${collaborator.name}.`, "success");
+  if (openRequirementWhatsapp(collaborator, task, targetWindow)) {
+    try {
+      const data = await apiRequest(`/api/requerimientos/tareas/${task.id}/enviado`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      applyRequirementsData(data);
+      setRequirementsStatus(`WhatsApp listo para reenviar a ${collaborator.name}.`, "success");
+    } catch (error) {
+      setRequirementsStatus(error.message, "error");
+    }
   }
 }
 
@@ -968,27 +1051,31 @@ function renderRequirementTask(task, collaborator) {
   const item = document.createElement("article");
   item.className = `requirement-task ${requirementStatusClass(task.status)}`;
 
-  const top = document.createElement("div");
-  top.className = "requirement-task-top";
+  const descriptionLine = document.createElement("div");
+  descriptionLine.className = "requirement-task-line";
+  const descriptionLabel = document.createElement("strong");
+  descriptionLabel.textContent = "Descripción";
+  const descriptionCopy = document.createElement("p");
+  descriptionCopy.textContent = task.description || task.text;
+  descriptionLine.append(descriptionLabel, descriptionCopy);
 
+  const statusLine = document.createElement("div");
+  statusLine.className = "requirement-task-line requirement-task-status-line";
+  const statusLabel = document.createElement("strong");
+  statusLabel.textContent = "Estado";
   const status = document.createElement("span");
   status.className = `requirement-task-status ${requirementStatusClass(task.status)}`;
   status.textContent = requirementStatusLabel(task.status);
+  statusLine.append(statusLabel, status);
 
   const dates = document.createElement("small");
   dates.textContent = `Creado: ${requirementDate(task.createdAt)}${task.sentAt ? ` · WhatsApp: ${requirementDate(task.sentAt)}` : ""}`;
-
-  top.append(status, dates);
-
-  const copy = document.createElement("p");
-  copy.textContent = task.text;
 
   const actions = document.createElement("div");
   actions.className = "requirement-task-actions";
   actions.append(
     requirementButton("Pendiente", "status-pending", { taskId: task.id }),
-    requirementButton("Hecho", "status-done", { taskId: task.id }),
-    requirementButton("No se hizo", "status-missed", { taskId: task.id }),
+    requirementButton("Realizado", "status-done", { taskId: task.id }),
     requirementButton("WhatsApp", "resend-task", { taskId: task.id })
   );
 
@@ -996,11 +1083,10 @@ function renderRequirementTask(task, collaborator) {
     const action = button.dataset.requirementAction;
     button.disabled =
       (action === "status-pending" && task.status === "pendiente") ||
-      (action === "status-done" && task.status === "hecho") ||
-      (action === "status-missed" && task.status === "no-se-hizo");
+      (action === "status-done" && task.status === "realizado");
   });
 
-  item.append(top, copy, actions);
+  item.append(descriptionLine, statusLine, dates, actions);
   return item;
 }
 
@@ -1022,10 +1108,7 @@ function renderRequirementCollaborator(collaborator) {
 
   const headerActions = document.createElement("div");
   headerActions.className = "requirement-person-actions";
-  headerActions.append(
-    requirementButton("Editar", "edit-collaborator"),
-    requirementButton("Eliminar", "remove-collaborator")
-  );
+  headerActions.append(requirementButton("Editar", "edit-collaborator"));
 
   header.append(title, headerActions);
 
@@ -1062,36 +1145,31 @@ function renderRequirementsHistory() {
   if (!elements.requirementsHistory) return;
   clearNode(elements.requirementsHistory);
 
-  const records = requirementsState.collaborators
-    .flatMap((collaborator) =>
-      collaborator.tasks.map((task) => ({
-        collaborator,
-        task
-      }))
-    )
-    .sort((left, right) => new Date(right.task.updatedAt) - new Date(left.task.updatedAt));
+  const records = Array.isArray(requirementsState.history) ? requirementsState.history : [];
 
   if (!records.length) {
     appendEmptyRequirementsMessage(elements.requirementsHistory, "El historial aparecerá cuando cree tareas.");
     return;
   }
 
-  records.forEach(({ collaborator, task }) => {
+  records.forEach((record) => {
     const item = document.createElement("article");
-    item.className = `requirements-history-item ${requirementStatusClass(task.status)}`;
+    item.className = `requirements-history-item ${requirementStatusClass(record.status)}`;
 
     const status = document.createElement("span");
-    status.className = `requirement-task-status ${requirementStatusClass(task.status)}`;
-    status.textContent = requirementStatusLabel(task.status);
+    status.className = `requirement-task-status ${requirementStatusClass(record.status)}`;
+    status.textContent = requirementStatusLabel(record.status);
 
     const title = document.createElement("strong");
-    title.textContent = collaborator.name;
+    title.textContent = `${record.actionLabel || "Actualización"} · ${record.collaboratorName || "Sin colaborador"}`;
 
     const text = document.createElement("p");
-    text.textContent = task.text;
+    text.textContent = record.description || "Sin descripción";
 
     const meta = document.createElement("small");
-    meta.textContent = `Actualizado: ${requirementDate(task.updatedAt)}${task.sentAt ? ` · Enviado: ${requirementDate(task.sentAt)}` : ""}`;
+    meta.textContent = `Fecha: ${requirementDate(record.createdAt)}${
+      record.collaboratorPhone ? ` · WhatsApp: +${whatsappPhone(record.collaboratorPhone)}` : ""
+    }`;
 
     item.append(status, title, text, meta);
     elements.requirementsHistory.appendChild(item);
@@ -1138,7 +1216,8 @@ function handleRequirementsBoardClick(event) {
 
   if (action === "save-task" || action === "send-task") {
     const textarea = card.querySelector("[data-requirement-text]");
-    createRequirementTask(collaboratorId, textarea?.value || "", action === "send-task");
+    const whatsappWindow = action === "send-task" ? window.open("about:blank", "_blank") : null;
+    createRequirementTask(collaboratorId, textarea?.value || "", action === "send-task", whatsappWindow);
     return;
   }
 
@@ -1146,13 +1225,16 @@ function handleRequirementsBoardClick(event) {
   if (!taskId) return;
 
   if (action === "status-pending") updateRequirementTaskStatus(collaboratorId, taskId, "pendiente");
-  if (action === "status-done") updateRequirementTaskStatus(collaboratorId, taskId, "hecho");
-  if (action === "status-missed") updateRequirementTaskStatus(collaboratorId, taskId, "no-se-hizo");
-  if (action === "resend-task") resendRequirementTask(collaboratorId, taskId);
+  if (action === "status-done") updateRequirementTaskStatus(collaboratorId, taskId, "realizado");
+  if (action === "resend-task") {
+    const whatsappWindow = window.open("about:blank", "_blank");
+    resendRequirementTask(collaboratorId, taskId, whatsappWindow);
+  }
 }
 
 function bindRequirementsEvents() {
-  requirementsState = readRequirementsState();
+  if (requirementsEventsBound) return;
+  requirementsEventsBound = true;
   elements.saveRequirementCollaboratorButton?.addEventListener("click", saveRequirementCollaborator);
   elements.newRequirementCollaboratorButton?.addEventListener("click", () => {
     clearRequirementCollaboratorForm();
@@ -1165,6 +1247,23 @@ function bindRequirementsEvents() {
     });
   });
   renderRequirementsBoard();
+}
+
+function activeRequirementsPageVisible() {
+  return document.querySelector(".site-page.is-active")?.dataset.page === "requerimientos";
+}
+
+function requirementsInputHasFocus() {
+  return Boolean(document.activeElement?.closest?.("#requerimientosPage input, #requerimientosPage textarea"));
+}
+
+function startRequirementsRefreshTimer() {
+  if (requirementsRefreshTimer) return;
+  requirementsRefreshTimer = window.setInterval(() => {
+    if (activeRequirementsPageVisible() && !requirementsInputHasFocus()) {
+      refreshRequirementsBoard({ quiet: true });
+    }
+  }, 15000);
 }
 
 function currencySymbol() {
@@ -2012,6 +2111,8 @@ function showApp() {
   elements.siteApp.classList.remove("is-hidden");
   const requestedPage = window.location.hash.replace("#", "");
   setActivePage(requestedPage || "cotizador");
+  loadSharedRequirementsBoard();
+  startRequirementsRefreshTimer();
 }
 
 async function submitLogin(event) {

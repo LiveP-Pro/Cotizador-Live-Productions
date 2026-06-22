@@ -432,15 +432,21 @@ body {
   border-left-color: #3f8f62;
 }
 
-.requirement-task.is-missed,
-.requirements-history-item.is-missed {
-  border-left-color: #a32920;
+.requirement-task-line {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
 }
 
-.requirement-task-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+.requirement-task-line > strong {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.requirement-task-status-line {
   align-items: center;
 }
 
@@ -479,11 +485,6 @@ body {
 .requirement-task-status.is-done {
   color: #17633a;
   background: #e0f2e7;
-}
-
-.requirement-task-status.is-missed {
-  color: #8f1d1d;
-  background: #f7e3e1;
 }
 
 .requirement-task-actions button:disabled {
@@ -2518,8 +2519,9 @@ td.price-column {
     flex: 1 1 130px;
   }
 
-  .requirement-task-top {
-    display: grid;
+  .requirement-task-line {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 
   .topbar {

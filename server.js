@@ -130,10 +130,48 @@ db.exec(`
     value TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS requirement_collaborators (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_key TEXT UNIQUE,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    archived INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS requirement_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_key TEXT UNIQUE,
+    collaborator_id INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pendiente',
+    done_token TEXT NOT NULL UNIQUE,
+    sent_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (collaborator_id) REFERENCES requirement_collaborators(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS requirement_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER,
+    collaborator_id INTEGER,
+    action TEXT NOT NULL,
+    collaborator_name TEXT,
+    collaborator_phone TEXT,
+    description TEXT,
+    status TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE INDEX IF NOT EXISTS idx_quotes_quote_number ON quotes (quote_number);
   CREATE INDEX IF NOT EXISTS idx_quotes_client_name ON quotes (client_name);
   CREATE INDEX IF NOT EXISTS idx_quotes_quote_date ON quotes (quote_date);
   CREATE INDEX IF NOT EXISTS idx_quotes_event_date ON quotes (event_date);
+  CREATE INDEX IF NOT EXISTS idx_requirement_tasks_collaborator ON requirement_tasks (collaborator_id);
+  CREATE INDEX IF NOT EXISTS idx_requirement_tasks_status ON requirement_tasks (status);
+  CREATE INDEX IF NOT EXISTS idx_requirement_history_created ON requirement_history (created_at);
 `);
 
 function sqlLiteral(value) {
@@ -158,7 +196,9 @@ function writeDatabaseBackup(backupPath) {
 
 function createDailyDatabaseBackup() {
   try {
-    const total = db.prepare("SELECT COUNT(*) AS total FROM quotes").get().total;
+    const quoteTotal = db.prepare("SELECT COUNT(*) AS total FROM quotes").get().total;
+    const requirementTotal = db.prepare("SELECT COUNT(*) AS total FROM requirement_tasks").get().total;
+    const total = quoteTotal + requirementTotal;
     if (!total) return;
 
     const today = new Date().toISOString().slice(0, 10);
@@ -839,6 +879,514 @@ function normalizeWhatsappPhone(value) {
   return digits;
 }
 
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function cleanRequirementText(value, fallback = "") {
+  return String(value || fallback).replace(/\s+/g, " ").trim();
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function normalizeRequirementStatus(value) {
+  const status = String(value || "").trim().toLowerCase();
+  return status === "realizado" || status === "hecho" || status === "done" ? "realizado" : "pendiente";
+}
+
+function newRequirementToken() {
+  return crypto.randomBytes(18).toString("base64url");
+}
+
+function requirementDoneUrl(request, token) {
+  const origin = publicOrigin(request);
+  const pathName = `/requerimientos/realizado/${encodeURIComponent(token)}`;
+  return origin ? new URL(pathName, origin).href : pathName;
+}
+
+function requirementHistoryLabel(action) {
+  if (action === "task_created") return "Tarea creada";
+  if (action === "task_status") return "Estado actualizado";
+  if (action === "task_sent") return "WhatsApp enviado";
+  if (action === "task_done_whatsapp") return "Realizado desde WhatsApp";
+  if (action === "collaborator_created") return "Colaborador creado";
+  if (action === "collaborator_updated") return "Colaborador actualizado";
+  if (action === "local_import") return "Historial importado";
+  return "Actualización";
+}
+
+function collaboratorRecord(row) {
+  return {
+    id: String(row.id),
+    name: row.name,
+    phone: row.phone,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function taskRecord(row, request) {
+  return {
+    id: String(row.id),
+    collaboratorId: String(row.collaborator_id),
+    description: row.description,
+    text: row.description,
+    status: normalizeRequirementStatus(row.status),
+    doneUrl: requirementDoneUrl(request, row.done_token),
+    sentAt: row.sent_at || "",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function historyRecord(row) {
+  return {
+    id: String(row.id),
+    taskId: row.task_id ? String(row.task_id) : "",
+    collaboratorId: row.collaborator_id ? String(row.collaborator_id) : "",
+    action: row.action,
+    actionLabel: requirementHistoryLabel(row.action),
+    collaboratorName: row.collaborator_name || "",
+    collaboratorPhone: row.collaborator_phone || "",
+    description: row.description || "",
+    status: normalizeRequirementStatus(row.status),
+    createdAt: row.created_at
+  };
+}
+
+function recordRequirementHistory({
+  taskId = null,
+  collaboratorId = null,
+  action,
+  collaboratorName = "",
+  collaboratorPhone = "",
+  description = "",
+  status = "pendiente",
+  createdAt = nowIso()
+}) {
+  db.prepare(`
+    INSERT INTO requirement_history (
+      task_id,
+      collaborator_id,
+      action,
+      collaborator_name,
+      collaborator_phone,
+      description,
+      status,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    taskId,
+    collaboratorId,
+    action,
+    collaboratorName,
+    collaboratorPhone,
+    description,
+    normalizeRequirementStatus(status),
+    createdAt
+  );
+}
+
+function listRequirements(request) {
+  const collaborators = db
+    .prepare(`
+      SELECT *
+      FROM requirement_collaborators
+      WHERE archived = 0
+      ORDER BY lower(name), id
+    `)
+    .all()
+    .map((row) => ({ ...collaboratorRecord(row), tasks: [] }));
+
+  const collaboratorMap = new Map(collaborators.map((collaborator) => [collaborator.id, collaborator]));
+  db.prepare(`
+    SELECT *
+    FROM requirement_tasks
+    ORDER BY updated_at DESC, id DESC
+  `)
+    .all()
+    .forEach((row) => {
+      const collaborator = collaboratorMap.get(String(row.collaborator_id));
+      if (collaborator) collaborator.tasks.push(taskRecord(row, request));
+    });
+
+  const history = db
+    .prepare(`
+      SELECT *
+      FROM requirement_history
+      ORDER BY created_at DESC, id DESC
+      LIMIT 500
+    `)
+    .all()
+    .map(historyRecord);
+
+  return { collaborators, history };
+}
+
+function getRequirementCollaborator(id) {
+  return db
+    .prepare("SELECT * FROM requirement_collaborators WHERE id = ? AND archived = 0")
+    .get(id);
+}
+
+function getRequirementTask(id) {
+  return db
+    .prepare(`
+      SELECT t.*, c.name AS collaborator_name, c.phone AS collaborator_phone
+      FROM requirement_tasks t
+      JOIN requirement_collaborators c ON c.id = t.collaborator_id
+      WHERE t.id = ?
+    `)
+    .get(id);
+}
+
+function createRequirementCollaborator(payload, request, response) {
+  const name = cleanRequirementText(payload.name);
+  const phone = cleanRequirementText(payload.phone);
+  if (!name || !phone) {
+    errorResponse(response, 400, "Agregue nombre del colaborador y número de WhatsApp.");
+    return;
+  }
+
+  const now = nowIso();
+  const result = db
+    .prepare(`
+      INSERT INTO requirement_collaborators (client_key, name, phone, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+    `)
+    .run(payload.clientKey || null, name, phone, now, now);
+
+  recordRequirementHistory({
+    collaboratorId: Number(result.lastInsertRowid),
+    action: "collaborator_created",
+    collaboratorName: name,
+    collaboratorPhone: phone,
+    description: "Colaborador agregado",
+    status: "pendiente",
+    createdAt: now
+  });
+
+  createDailyDatabaseBackup();
+  jsonResponse(response, 201, listRequirements(request));
+}
+
+function updateRequirementCollaborator(id, payload, request, response) {
+  const existing = getRequirementCollaborator(id);
+  if (!existing) {
+    errorResponse(response, 404, "No se encontró el colaborador.");
+    return;
+  }
+
+  const name = cleanRequirementText(payload.name);
+  const phone = cleanRequirementText(payload.phone);
+  if (!name || !phone) {
+    errorResponse(response, 400, "Agregue nombre del colaborador y número de WhatsApp.");
+    return;
+  }
+
+  const now = nowIso();
+  db.prepare(`
+    UPDATE requirement_collaborators
+    SET name = ?, phone = ?, updated_at = ?
+    WHERE id = ?
+  `).run(name, phone, now, id);
+
+  recordRequirementHistory({
+    collaboratorId: id,
+    action: "collaborator_updated",
+    collaboratorName: name,
+    collaboratorPhone: phone,
+    description: `Antes: ${existing.name} / ${existing.phone}`,
+    status: "pendiente",
+    createdAt: now
+  });
+
+  createDailyDatabaseBackup();
+  jsonResponse(response, 200, listRequirements(request));
+}
+
+function createRequirementTask(payload, request, response) {
+  const collaboratorId = Number(payload.collaboratorId);
+  const collaborator = getRequirementCollaborator(collaboratorId);
+  if (!collaborator) {
+    errorResponse(response, 404, "No se encontró el colaborador.");
+    return;
+  }
+
+  const description = String(payload.description || payload.text || "").trim();
+  if (!description) {
+    errorResponse(response, 400, "Escriba el requerimiento antes de crear la tarea.");
+    return;
+  }
+
+  const now = nowIso();
+  const status = normalizeRequirementStatus(payload.status);
+  const doneToken = newRequirementToken();
+  const sentAt = payload.sent ? now : "";
+  const result = db
+    .prepare(`
+      INSERT INTO requirement_tasks (
+        client_key,
+        collaborator_id,
+        description,
+        status,
+        done_token,
+        sent_at,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    .run(payload.clientKey || null, collaboratorId, description, status, doneToken, sentAt, now, now);
+
+  const taskId = Number(result.lastInsertRowid);
+  recordRequirementHistory({
+    taskId,
+    collaboratorId,
+    action: "task_created",
+    collaboratorName: collaborator.name,
+    collaboratorPhone: collaborator.phone,
+    description,
+    status,
+    createdAt: now
+  });
+
+  if (sentAt) {
+    recordRequirementHistory({
+      taskId,
+      collaboratorId,
+      action: "task_sent",
+      collaboratorName: collaborator.name,
+      collaboratorPhone: collaborator.phone,
+      description,
+      status,
+      createdAt: now
+    });
+  }
+
+  createDailyDatabaseBackup();
+  const row = getRequirementTask(taskId);
+  jsonResponse(response, 201, {
+    task: taskRecord(row, request),
+    requirements: listRequirements(request)
+  });
+}
+
+function updateRequirementTaskStatus(id, payload, request, response) {
+  const task = getRequirementTask(id);
+  if (!task) {
+    errorResponse(response, 404, "No se encontró la tarea.");
+    return;
+  }
+
+  const status = normalizeRequirementStatus(payload.status);
+  const now = nowIso();
+  db.prepare("UPDATE requirement_tasks SET status = ?, updated_at = ? WHERE id = ?").run(status, now, id);
+
+  recordRequirementHistory({
+    taskId: id,
+    collaboratorId: task.collaborator_id,
+    action: "task_status",
+    collaboratorName: task.collaborator_name,
+    collaboratorPhone: task.collaborator_phone,
+    description: task.description,
+    status,
+    createdAt: now
+  });
+
+  createDailyDatabaseBackup();
+  jsonResponse(response, 200, listRequirements(request));
+}
+
+function markRequirementTaskSent(id, request, response) {
+  const task = getRequirementTask(id);
+  if (!task) {
+    errorResponse(response, 404, "No se encontró la tarea.");
+    return;
+  }
+
+  const now = nowIso();
+  db.prepare("UPDATE requirement_tasks SET sent_at = ?, updated_at = ? WHERE id = ?").run(now, now, id);
+  recordRequirementHistory({
+    taskId: id,
+    collaboratorId: task.collaborator_id,
+    action: "task_sent",
+    collaboratorName: task.collaborator_name,
+    collaboratorPhone: task.collaborator_phone,
+    description: task.description,
+    status: task.status,
+    createdAt: now
+  });
+
+  createDailyDatabaseBackup();
+  jsonResponse(response, 200, listRequirements(request));
+}
+
+function importRequirementState(payload, request, response) {
+  const collaborators = Array.isArray(payload.collaborators) ? payload.collaborators : [];
+  let importedTasks = 0;
+  const now = nowIso();
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    collaborators.forEach((collaborator) => {
+      const name = cleanRequirementText(collaborator.name);
+      const phone = cleanRequirementText(collaborator.phone);
+      if (!name || !phone) return;
+
+      const clientKey = collaborator.id ? `local-collaborator:${collaborator.id}` : null;
+      let row = clientKey
+        ? db.prepare("SELECT * FROM requirement_collaborators WHERE client_key = ?").get(clientKey)
+        : null;
+
+      if (!row) {
+        const result = db
+          .prepare(`
+            INSERT INTO requirement_collaborators (client_key, name, phone, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+          `)
+          .run(clientKey, name, phone, collaborator.createdAt || now, collaborator.updatedAt || now);
+        row = { id: Number(result.lastInsertRowid), name, phone };
+        recordRequirementHistory({
+          collaboratorId: row.id,
+          action: "local_import",
+          collaboratorName: name,
+          collaboratorPhone: phone,
+          description: "Colaborador importado desde historial local",
+          status: "pendiente",
+          createdAt: now
+        });
+      }
+
+      (Array.isArray(collaborator.tasks) ? collaborator.tasks : []).forEach((task) => {
+        const description = String(task.description || task.text || "").trim();
+        if (!description) return;
+        const taskClientKey = task.id ? `local-task:${task.id}` : null;
+        if (taskClientKey) {
+          const existingTask = db.prepare("SELECT id FROM requirement_tasks WHERE client_key = ?").get(taskClientKey);
+          if (existingTask) return;
+        }
+
+        const taskStatus = normalizeRequirementStatus(task.status);
+        const taskCreatedAt = task.createdAt || now;
+        const taskUpdatedAt = task.updatedAt || taskCreatedAt;
+        const result = db
+          .prepare(`
+            INSERT INTO requirement_tasks (
+              client_key,
+              collaborator_id,
+              description,
+              status,
+              done_token,
+              sent_at,
+              created_at,
+              updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `)
+          .run(
+            taskClientKey,
+            row.id,
+            description,
+            taskStatus,
+            newRequirementToken(),
+            task.sentAt || "",
+            taskCreatedAt,
+            taskUpdatedAt
+          );
+        importedTasks += 1;
+        recordRequirementHistory({
+          taskId: Number(result.lastInsertRowid),
+          collaboratorId: row.id,
+          action: "local_import",
+          collaboratorName: row.name,
+          collaboratorPhone: row.phone,
+          description,
+          status: taskStatus,
+          createdAt: now
+        });
+      });
+    });
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+
+  createDailyDatabaseBackup();
+  jsonResponse(response, 200, {
+    importedTasks,
+    ...listRequirements(request)
+  });
+}
+
+function completeRequirementByToken(token, response) {
+  const task = db
+    .prepare(`
+      SELECT t.*, c.name AS collaborator_name, c.phone AS collaborator_phone
+      FROM requirement_tasks t
+      JOIN requirement_collaborators c ON c.id = t.collaborator_id
+      WHERE t.done_token = ?
+    `)
+    .get(token);
+
+  if (!task) {
+    response.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Tarea no encontrada</title></head><body><h1>Tarea no encontrada</h1><p>El enlace de realizado no existe o ya no está disponible.</p></body></html>`);
+    return;
+  }
+
+  const now = nowIso();
+  if (normalizeRequirementStatus(task.status) !== "realizado") {
+    db.prepare("UPDATE requirement_tasks SET status = 'realizado', updated_at = ? WHERE id = ?").run(now, task.id);
+    recordRequirementHistory({
+      taskId: task.id,
+      collaboratorId: task.collaborator_id,
+      action: "task_done_whatsapp",
+      collaboratorName: task.collaborator_name,
+      collaboratorPhone: task.collaborator_phone,
+      description: task.description,
+      status: "realizado",
+      createdAt: now
+    });
+    createDailyDatabaseBackup();
+  }
+
+  response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+  response.end(`<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tarea realizada - Live Productions</title>
+    <style>
+      body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f2f4f7;color:#171717;font-family:Arial,Helvetica,sans-serif}
+      main{width:min(560px,calc(100% - 32px));padding:28px;background:#fff;border:1px solid #d8dce2;border-radius:8px;box-shadow:0 18px 55px rgba(23,23,23,.12)}
+      p{line-height:1.45}.eyebrow{margin:0 0 8px;color:#63666d;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+      h1{margin:0 0 14px;font-family:Georgia,'Times New Roman',serif;font-size:34px;line-height:1}
+      .status{display:inline-block;margin-top:12px;padding:8px 11px;color:#17633a;background:#e0f2e7;border-radius:999px;font-size:12px;font-weight:800;text-transform:uppercase}
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Live Productions</p>
+      <h1>Tarea marcada como realizada</h1>
+      <p><strong>${escapeHtml(task.collaborator_name)}</strong>, la tarea quedó actualizada en el historial compartido.</p>
+      <p>${escapeHtml(task.description)}</p>
+      <span class="status">Realizado</span>
+    </main>
+  </body>
+</html>`);
+}
+
 function whatsappIsConfigured() {
   return Boolean(whatsappConfig.phoneNumberId && whatsappConfig.accessToken);
 }
@@ -1361,6 +1909,66 @@ async function handleRequest(request, response) {
         "Set-Cookie": expiredSessionCookie()
       });
       response.end(JSON.stringify({ authenticated: false }));
+      return;
+    }
+
+    const requirementDoneMatch = url.pathname.match(/^\/requerimientos\/realizado\/([^/]+)$/);
+    if (request.method === "GET" && requirementDoneMatch) {
+      completeRequirementByToken(decodeURIComponent(requirementDoneMatch[1]), response);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/requerimientos") {
+      if (!requireAuth(request, response)) return;
+      jsonResponse(response, 200, listRequirements(request));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/requerimientos/import") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => importRequirementState(payload, request, response));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/requerimientos/colaboradores") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => createRequirementCollaborator(payload, request, response));
+      return;
+    }
+
+    const requirementCollaboratorMatch = url.pathname.match(/^\/api\/requerimientos\/colaboradores\/(\d+)$/);
+    if (request.method === "PUT" && requirementCollaboratorMatch) {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() =>
+        updateRequirementCollaborator(Number(requirementCollaboratorMatch[1]), payload, request, response)
+      );
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/requerimientos/tareas") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => createRequirementTask(payload, request, response));
+      return;
+    }
+
+    const requirementTaskMatch = url.pathname.match(/^\/api\/requerimientos\/tareas\/(\d+)$/);
+    if (request.method === "PUT" && requirementTaskMatch) {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() =>
+        updateRequirementTaskStatus(Number(requirementTaskMatch[1]), payload, request, response)
+      );
+      return;
+    }
+
+    const requirementSentMatch = url.pathname.match(/^\/api\/requerimientos\/tareas\/(\d+)\/enviado$/);
+    if (request.method === "POST" && requirementSentMatch) {
+      if (!requireAuth(request, response)) return;
+      await enqueueSave(() => markRequirementTaskSent(Number(requirementSentMatch[1]), request, response));
       return;
     }
 
