@@ -6,8 +6,8 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260622-03" />
-    <script src="app.js?v=20260622-03" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260622-04" />
+    <script src="app.js?v=20260622-04" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -138,6 +138,40 @@
               <div class="section-heading">
                 <span id="requirementsBoardTitle">Tareas por colaborador</span>
                 <small>WhatsApp</small>
+              </div>
+              <div class="requirements-filter-grid" aria-label="Filtros de tareas">
+                <label>
+                  Fecha
+                  <input id="requirementDateFilter" type="date" />
+                </label>
+                <label>
+                  Hora
+                  <input id="requirementTimeFilter" type="time" />
+                </label>
+                <label>
+                  Día
+                  <select id="requirementDayFilter">
+                    <option value="">Todos</option>
+                    <option value="1">Lunes</option>
+                    <option value="2">Martes</option>
+                    <option value="3">Miércoles</option>
+                    <option value="4">Jueves</option>
+                    <option value="5">Viernes</option>
+                    <option value="6">Sábado</option>
+                    <option value="0">Domingo</option>
+                  </select>
+                </label>
+                <label>
+                  Estado
+                  <select id="requirementStatusFilter">
+                    <option value="all">Todas las tareas</option>
+                    <option value="pendiente">Pendientes</option>
+                    <option value="realizado">Realizadas</option>
+                  </select>
+                </label>
+                <button id="clearRequirementFiltersButton" class="secondary-button" type="button">
+                  Limpiar filtros
+                </button>
               </div>
               <div id="requirementsPeople" class="requirements-people"></div>
             </section>

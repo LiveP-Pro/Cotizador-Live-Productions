@@ -316,6 +316,19 @@ body {
   gap: 12px;
 }
 
+.requirements-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.requirements-filter-grid button {
+  min-height: 42px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
 .requirements-actions {
   display: flex;
   flex-wrap: wrap;
@@ -350,6 +363,50 @@ body {
   gap: 12px;
 }
 
+.requirements-collaborator-list {
+  display: grid;
+  gap: 8px;
+}
+
+.requirement-collaborator-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  text-align: left;
+}
+
+.requirement-collaborator-button:hover,
+.requirement-collaborator-button.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.requirement-collaborator-button strong {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.requirement-collaborator-button span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.requirement-collaborator-button small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .requirement-person-card {
   display: grid;
   gap: 14px;
@@ -357,6 +414,10 @@ body {
   border: 1px solid #cfd4dc;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.requirement-person-detail {
+  border-color: var(--accent);
 }
 
 .requirement-person-header {
@@ -402,18 +463,25 @@ body {
   background: var(--accent-soft);
 }
 
-.requirement-person-actions button:last-child {
-  color: #8f1d1d;
-  border-color: #d8aaa6;
-}
-
 .requirement-composer {
   display: grid;
   gap: 10px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+  background: #fbfcfd;
 }
 
 .requirement-composer textarea {
-  min-height: 118px;
+  min-height: 82px;
+}
+
+.requirement-autosave-note {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .requirement-task,
@@ -2448,6 +2516,14 @@ td.price-column {
     grid-template-columns: 1fr;
   }
 
+  .requirements-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .requirements-filter-grid button {
+    grid-column: 1 / -1;
+  }
+
   .requirements-board {
     grid-row: auto;
   }
@@ -2505,6 +2581,7 @@ td.price-column {
   }
 
   .requirements-form-grid,
+  .requirements-filter-grid,
   .requirement-person-header {
     grid-template-columns: 1fr;
   }

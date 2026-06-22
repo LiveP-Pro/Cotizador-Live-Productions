@@ -521,6 +521,11 @@ const elements = {
   requirementsStatus: document.querySelector("#requirementsStatus"),
   requirementsPeople: document.querySelector("#requirementsPeople"),
   requirementsHistory: document.querySelector("#requirementsHistory"),
+  requirementDateFilter: document.querySelector("#requirementDateFilter"),
+  requirementTimeFilter: document.querySelector("#requirementTimeFilter"),
+  requirementDayFilter: document.querySelector("#requirementDayFilter"),
+  requirementStatusFilter: document.querySelector("#requirementStatusFilter"),
+  clearRequirementFiltersButton: document.querySelector("#clearRequirementFiltersButton"),
   appShell: document.querySelector("#appShell"),
   packageSelect: document.querySelector("#packageSelect"),
   servicePickerButton: document.querySelector("#servicePickerButton"),
@@ -656,6 +661,8 @@ let requirementsState = { collaborators: [] };
 let editingRequirementsCollaboratorId = null;
 let requirementsEventsBound = false;
 let requirementsRefreshTimer = null;
+let selectedRequirementsCollaboratorId = null;
+let requirementAutoSaveTimer = null;
 const appShellHome = {
   parent: elements.appShell.parentNode,
   nextSibling: elements.appShell.nextSibling
@@ -788,7 +795,70 @@ function clearRequirementCollaboratorForm() {
 function applyRequirementsData(data) {
   requirementsState = normalizeRequirementsState(data || {});
   if (Array.isArray(data?.history)) requirementsState.history = data.history;
+  if (
+    selectedRequirementsCollaboratorId &&
+    !requirementsState.collaborators.some((collaborator) => collaborator.id === selectedRequirementsCollaboratorId)
+  ) {
+    selectedRequirementsCollaboratorId = null;
+  }
   renderRequirementsBoard();
+}
+
+function requirementFilters() {
+  return {
+    date: elements.requirementDateFilter?.value || "",
+    time: elements.requirementTimeFilter?.value || "",
+    day: elements.requirementDayFilter?.value || "",
+    status: elements.requirementStatusFilter?.value || "all"
+  };
+}
+
+function localRequirementParts(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return { date: "", time: "", day: "" };
+  const pad = (number) => String(number).padStart(2, "0");
+  return {
+    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+    day: String(date.getDay())
+  };
+}
+
+function matchesRequirementFilters(item) {
+  const filters = requirementFilters();
+  const itemStatus = item.status === "realizado" ? "realizado" : "pendiente";
+  const itemParts = localRequirementParts(item.createdAt || item.updatedAt);
+
+  if (filters.status !== "all" && itemStatus !== filters.status) return false;
+  if (filters.date && itemParts.date !== filters.date) return false;
+  if (filters.time && itemParts.time !== filters.time) return false;
+  if (filters.day && itemParts.day !== filters.day) return false;
+  return true;
+}
+
+function filteredRequirementTasks(collaborator) {
+  return (collaborator.tasks || []).filter(matchesRequirementFilters);
+}
+
+function requirementTaskCounts(collaborator) {
+  return (collaborator.tasks || []).reduce(
+    (totals, task) => {
+      if (task.status === "realizado") totals.realizado += 1;
+      else totals.pendiente += 1;
+      totals.total += 1;
+      return totals;
+    },
+    { total: 0, pendiente: 0, realizado: 0 }
+  );
+}
+
+function clearRequirementFilters() {
+  if (elements.requirementDateFilter) elements.requirementDateFilter.value = "";
+  if (elements.requirementTimeFilter) elements.requirementTimeFilter.value = "";
+  if (elements.requirementDayFilter) elements.requirementDayFilter.value = "";
+  if (elements.requirementStatusFilter) elements.requirementStatusFilter.value = "all";
+  renderRequirementsBoard();
+  setRequirementsStatus("Filtros limpiados.", "success");
 }
 
 async function refreshRequirementsBoard({ quiet = false } = {}) {
@@ -860,7 +930,14 @@ async function saveRequirementCollaborator() {
       }
     );
     applyRequirementsData(data);
+    const selected = requirementsState.collaborators.find(
+      (collaborator) =>
+        collaborator.name.toLocaleLowerCase("es-GT") === name.toLocaleLowerCase("es-GT") ||
+        whatsappPhone(collaborator.phone) === whatsappPhone(phone)
+    );
+    selectedRequirementsCollaboratorId = selected?.id || existing?.id || selectedRequirementsCollaboratorId;
     clearRequirementCollaboratorForm();
+    renderRequirementsBoard();
     setRequirementsStatus(existing ? `Colaborador actualizado: ${name}.` : `Colaborador agregado: ${name}.`, "success");
   } catch (error) {
     setRequirementsStatus(error.message, "error");
@@ -956,7 +1033,7 @@ async function createRequirementTask(collaboratorId, text, shouldSendWhatsapp = 
   if (!collaborator || !cleanText) {
     setRequirementsStatus("Escriba el requerimiento antes de crear la tarea.", "error");
     if (targetWindow && !targetWindow.closed) targetWindow.close();
-    return;
+    return false;
   }
 
   setRequirementsStatus(shouldSendWhatsapp ? "Creando tarea para WhatsApp..." : "Guardando tarea...");
@@ -980,16 +1057,18 @@ async function createRequirementTask(collaboratorId, text, shouldSendWhatsapp = 
     } else {
       applyRequirementsData(result.requirements || {});
     }
-    if (shouldSendWhatsapp && !whatsappReady) return;
+    if (shouldSendWhatsapp && !whatsappReady) return false;
     setRequirementsStatus(
       shouldSendWhatsapp
         ? `Tarea creada y WhatsApp listo para ${collaborator.name}.`
         : `Tarea guardada para ${collaborator.name}.`,
       "success"
     );
+    return true;
   } catch (error) {
     if (targetWindow && !targetWindow.closed) targetWindow.close();
     setRequirementsStatus(error.message, "error");
+    return false;
   }
 }
 
@@ -1091,8 +1170,28 @@ function renderRequirementTask(task, collaborator) {
 }
 
 function renderRequirementCollaborator(collaborator) {
+  const counts = requirementTaskCounts(collaborator);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "requirement-collaborator-button";
+  button.classList.toggle("is-active", collaborator.id === selectedRequirementsCollaboratorId);
+  button.dataset.requirementAction = "select-collaborator";
+  button.dataset.collaboratorId = collaborator.id;
+
+  const name = document.createElement("strong");
+  name.textContent = collaborator.name;
+  const phone = document.createElement("span");
+  const normalizedPhone = whatsappPhone(collaborator.phone);
+  phone.textContent = normalizedPhone ? `+${normalizedPhone}` : collaborator.phone;
+  const summary = document.createElement("small");
+  summary.textContent = `${counts.total} tareas · ${counts.pendiente} pendientes · ${counts.realizado} realizadas`;
+  button.append(name, phone, summary);
+  return button;
+}
+
+function renderSelectedRequirementCollaborator(collaborator) {
   const card = document.createElement("article");
-  card.className = "requirement-person-card";
+  card.className = "requirement-person-card requirement-person-detail";
   card.dataset.collaboratorId = collaborator.id;
 
   const header = document.createElement("div");
@@ -1115,26 +1214,23 @@ function renderRequirementCollaborator(collaborator) {
   const composer = document.createElement("div");
   composer.className = "requirement-composer";
   const label = document.createElement("label");
-  label.textContent = "Requerimiento";
+  label.textContent = "Nueva tarea";
   const textarea = document.createElement("textarea");
-  textarea.dataset.requirementText = "true";
-  textarea.placeholder = "Escriba aquí la tarea o requerimiento para este colaborador";
+  textarea.dataset.requirementAutosave = "true";
+  textarea.placeholder = "Escriba una tarea nueva";
   label.appendChild(textarea);
-
-  const composerActions = document.createElement("div");
-  composerActions.className = "requirements-actions";
-  composerActions.append(
-    requirementButton("Guardar tarea", "save-task"),
-    requirementButton("Enviar por WhatsApp", "send-task")
-  );
-  composer.append(label, composerActions);
+  const autoSaveNote = document.createElement("small");
+  autoSaveNote.className = "requirement-autosave-note";
+  autoSaveNote.textContent = "Guardado automático";
+  composer.append(label, autoSaveNote);
 
   const taskList = document.createElement("div");
   taskList.className = "requirement-task-list";
-  if (collaborator.tasks.length) {
-    collaborator.tasks.forEach((task) => taskList.appendChild(renderRequirementTask(task, collaborator)));
+  const visibleTasks = filteredRequirementTasks(collaborator);
+  if (visibleTasks.length) {
+    visibleTasks.forEach((task) => taskList.appendChild(renderRequirementTask(task, collaborator)));
   } else {
-    appendEmptyRequirementsMessage(taskList, "Aún no hay tareas para este colaborador.");
+    appendEmptyRequirementsMessage(taskList, "No hay tareas con los filtros seleccionados.");
   }
 
   card.append(header, composer, taskList);
@@ -1145,10 +1241,13 @@ function renderRequirementsHistory() {
   if (!elements.requirementsHistory) return;
   clearNode(elements.requirementsHistory);
 
-  const records = Array.isArray(requirementsState.history) ? requirementsState.history : [];
+  const records = (Array.isArray(requirementsState.history) ? requirementsState.history : [])
+    .filter((record) => record.taskId)
+    .filter((record) => !selectedRequirementsCollaboratorId || record.collaboratorId === selectedRequirementsCollaboratorId)
+    .filter(matchesRequirementFilters);
 
   if (!records.length) {
-    appendEmptyRequirementsMessage(elements.requirementsHistory, "El historial aparecerá cuando cree tareas.");
+    appendEmptyRequirementsMessage(elements.requirementsHistory, "No hay historial de tareas con los filtros seleccionados.");
     return;
   }
 
@@ -1189,9 +1288,29 @@ function renderRequirementsBoard() {
     return;
   }
 
+  if (
+    selectedRequirementsCollaboratorId &&
+    !requirementsState.collaborators.some((collaborator) => collaborator.id === selectedRequirementsCollaboratorId)
+  ) {
+    selectedRequirementsCollaboratorId = null;
+  }
+
+  const list = document.createElement("div");
+  list.className = "requirements-collaborator-list";
   requirementsState.collaborators.forEach((collaborator) => {
-    elements.requirementsPeople.appendChild(renderRequirementCollaborator(collaborator));
+    list.appendChild(renderRequirementCollaborator(collaborator));
   });
+  elements.requirementsPeople.appendChild(list);
+
+  const selectedCollaborator = selectedRequirementsCollaboratorId
+    ? findRequirementCollaborator(selectedRequirementsCollaboratorId)
+    : null;
+  if (selectedCollaborator) {
+    elements.requirementsPeople.appendChild(renderSelectedRequirementCollaborator(selectedCollaborator));
+  } else {
+    appendEmptyRequirementsMessage(elements.requirementsPeople, "Seleccione un colaborador para ver y crear sus tareas.");
+  }
+
   renderRequirementsHistory();
 }
 
@@ -1200,9 +1319,16 @@ function handleRequirementsBoardClick(event) {
   if (!button) return;
 
   const card = button.closest("[data-collaborator-id]");
-  const collaboratorId = card?.dataset.collaboratorId;
+  const collaboratorId = button.dataset.collaboratorId || card?.dataset.collaboratorId;
   const action = button.dataset.requirementAction;
   if (!collaboratorId || !action) return;
+
+  if (action === "select-collaborator") {
+    selectedRequirementsCollaboratorId =
+      selectedRequirementsCollaboratorId === collaboratorId ? null : collaboratorId;
+    renderRequirementsBoard();
+    return;
+  }
 
   if (action === "edit-collaborator") {
     editRequirementCollaborator(collaboratorId);
@@ -1211,13 +1337,6 @@ function handleRequirementsBoardClick(event) {
 
   if (action === "remove-collaborator") {
     removeRequirementCollaborator(collaboratorId);
-    return;
-  }
-
-  if (action === "save-task" || action === "send-task") {
-    const textarea = card.querySelector("[data-requirement-text]");
-    const whatsappWindow = action === "send-task" ? window.open("about:blank", "_blank") : null;
-    createRequirementTask(collaboratorId, textarea?.value || "", action === "send-task", whatsappWindow);
     return;
   }
 
@@ -1232,6 +1351,49 @@ function handleRequirementsBoardClick(event) {
   }
 }
 
+function scheduleRequirementTaskAutoSave(textarea) {
+  const card = textarea.closest("[data-collaborator-id]");
+  const collaboratorId = card?.dataset.collaboratorId;
+  if (!collaboratorId) return;
+
+  window.clearTimeout(requirementAutoSaveTimer);
+  const text = textarea.value.trim();
+  if (!text) return;
+
+  setRequirementsStatus("Guardando tarea automáticamente...");
+  requirementAutoSaveTimer = window.setTimeout(async () => {
+    if (textarea.dataset.autosaving === "true") return;
+    textarea.dataset.autosaving = "true";
+    textarea.disabled = true;
+    const saved = await createRequirementTask(collaboratorId, text, false);
+    if (!saved) {
+      textarea.disabled = false;
+      textarea.dataset.autosaving = "";
+    }
+  }, 1600);
+}
+
+function handleRequirementsBoardInput(event) {
+  const textarea = event.target.closest("[data-requirement-autosave]");
+  if (!textarea) return;
+  scheduleRequirementTaskAutoSave(textarea);
+}
+
+async function handleRequirementsBoardFocusOut(event) {
+  const textarea = event.target.closest("[data-requirement-autosave]");
+  if (!textarea || !textarea.value.trim() || textarea.dataset.autosaving === "true") return;
+
+  window.clearTimeout(requirementAutoSaveTimer);
+  textarea.dataset.autosaving = "true";
+  textarea.disabled = true;
+  const card = textarea.closest("[data-collaborator-id]");
+  const saved = await createRequirementTask(card?.dataset.collaboratorId, textarea.value.trim(), false);
+  if (!saved) {
+    textarea.disabled = false;
+    textarea.dataset.autosaving = "";
+  }
+}
+
 function bindRequirementsEvents() {
   if (requirementsEventsBound) return;
   requirementsEventsBound = true;
@@ -1241,6 +1403,18 @@ function bindRequirementsEvents() {
     setRequirementsStatus("Listo para agregar un nuevo colaborador.");
   });
   elements.requirementsPeople?.addEventListener("click", handleRequirementsBoardClick);
+  elements.requirementsPeople?.addEventListener("input", handleRequirementsBoardInput);
+  elements.requirementsPeople?.addEventListener("focusout", handleRequirementsBoardFocusOut);
+  [
+    elements.requirementDateFilter,
+    elements.requirementTimeFilter,
+    elements.requirementDayFilter,
+    elements.requirementStatusFilter
+  ].forEach((field) => {
+    field?.addEventListener("input", renderRequirementsBoard);
+    field?.addEventListener("change", renderRequirementsBoard);
+  });
+  elements.clearRequirementFiltersButton?.addEventListener("click", clearRequirementFilters);
   [elements.requirementCollaboratorName, elements.requirementCollaboratorPhone].forEach((input) => {
     input?.addEventListener("keydown", (event) => {
       if (event.key === "Enter") saveRequirementCollaborator();

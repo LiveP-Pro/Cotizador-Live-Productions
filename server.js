@@ -1037,6 +1037,18 @@ function getRequirementCollaborator(id) {
     .get(id);
 }
 
+function findExistingRequirementCollaborator(name, phone) {
+  const normalizedPhone = normalizeWhatsappPhone(phone);
+  return db
+    .prepare("SELECT * FROM requirement_collaborators WHERE archived = 0")
+    .all()
+    .find((row) => {
+      const sameName = row.name.toLocaleLowerCase("es-GT") === name.toLocaleLowerCase("es-GT");
+      const samePhone = normalizedPhone && normalizeWhatsappPhone(row.phone) === normalizedPhone;
+      return sameName || samePhone;
+    }) || null;
+}
+
 function getRequirementTask(id) {
   return db
     .prepare(`
@@ -1056,7 +1068,28 @@ function createRequirementCollaborator(payload, request, response) {
     return;
   }
 
+  const existing = findExistingRequirementCollaborator(name, phone);
   const now = nowIso();
+  if (existing) {
+    db.prepare(`
+      UPDATE requirement_collaborators
+      SET name = ?, phone = ?, updated_at = ?
+      WHERE id = ?
+    `).run(name, phone, now, existing.id);
+    recordRequirementHistory({
+      collaboratorId: existing.id,
+      action: "collaborator_updated",
+      collaboratorName: name,
+      collaboratorPhone: phone,
+      description: "Colaborador existente actualizado",
+      status: "pendiente",
+      createdAt: now
+    });
+    createDailyDatabaseBackup();
+    jsonResponse(response, 200, listRequirements(request));
+    return;
+  }
+
   const result = db
     .prepare(`
       INSERT INTO requirement_collaborators (client_key, name, phone, created_at, updated_at)
@@ -1912,7 +1945,7 @@ async function handleRequest(request, response) {
       return;
     }
 
-    const requirementDoneMatch = url.pathname.match(/^\/requerimientos\/realizado\/([^/]+)$/);
+    const requirementDoneMatch = url.pathname.match(/^\/requerimientos\/realizado\/([^/]+)\/?$/);
     if (request.method === "GET" && requirementDoneMatch) {
       completeRequirementByToken(decodeURIComponent(requirementDoneMatch[1]), response);
       return;
