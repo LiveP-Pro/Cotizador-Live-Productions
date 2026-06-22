@@ -146,6 +146,7 @@ db.exec(`
     collaborator_id INTEGER NOT NULL,
     description TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pendiente',
+    assigned_by TEXT,
     done_token TEXT NOT NULL UNIQUE,
     sent_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -162,6 +163,7 @@ db.exec(`
     collaborator_phone TEXT,
     description TEXT,
     status TEXT,
+    assigned_by TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -182,7 +184,9 @@ function addColumnIfMissing(tableName, columnName, columnSql) {
 
 addColumnIfMissing("requirement_tasks", "completed_by", "completed_by TEXT");
 addColumnIfMissing("requirement_tasks", "completed_at", "completed_at TEXT");
+addColumnIfMissing("requirement_tasks", "assigned_by", "assigned_by TEXT");
 addColumnIfMissing("requirement_history", "completed_by", "completed_by TEXT");
+addColumnIfMissing("requirement_history", "assigned_by", "assigned_by TEXT");
 
 db.exec(`
   CREATE TRIGGER IF NOT EXISTS lock_requirement_collaborators_delete
@@ -984,6 +988,7 @@ function taskRecord(row, request) {
     text: row.description,
     status,
     doneUrl: requirementDoneUrl(request, row.done_token),
+    assignedBy: row.assigned_by || "",
     completedBy: row.completed_by || "",
     completedAt: row.completed_at || "",
     sentAt: row.sent_at || "",
@@ -1003,6 +1008,7 @@ function historyRecord(row) {
     collaboratorPhone: row.collaborator_phone || "",
     description: row.description || "",
     status: normalizeRequirementStatus(row.status),
+    assignedBy: row.assigned_by || "",
     completedBy: row.completed_by || "",
     createdAt: row.created_at
   };
@@ -1016,6 +1022,7 @@ function recordRequirementHistory({
   collaboratorPhone = "",
   description = "",
   status = "pendiente",
+  assignedBy = "",
   completedBy = "",
   createdAt = nowIso()
 }) {
@@ -1028,10 +1035,11 @@ function recordRequirementHistory({
       collaborator_phone,
       description,
       status,
+      assigned_by,
       completed_by,
       created_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     taskId,
     collaboratorId,
@@ -1040,6 +1048,7 @@ function recordRequirementHistory({
     collaboratorPhone,
     description,
     normalizeRequirementStatus(status),
+    cleanRequirementText(assignedBy),
     cleanRequirementText(completedBy),
     createdAt
   );
@@ -1212,6 +1221,7 @@ function createRequirementTask(payload, request, response) {
 
   const now = nowIso();
   const status = normalizeRequirementStatus(payload.status);
+  const assignedBy = cleanRequirementText(payload.assignedBy);
   const doneToken = newRequirementToken();
   const sentAt = payload.sent ? now : "";
   const result = db
@@ -1221,14 +1231,15 @@ function createRequirementTask(payload, request, response) {
         collaborator_id,
         description,
         status,
+        assigned_by,
         done_token,
         sent_at,
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
-    .run(payload.clientKey || null, collaboratorId, description, status, doneToken, sentAt, now, now);
+    .run(payload.clientKey || null, collaboratorId, description, status, assignedBy, doneToken, sentAt, now, now);
 
   const taskId = Number(result.lastInsertRowid);
   recordRequirementHistory({
@@ -1239,6 +1250,7 @@ function createRequirementTask(payload, request, response) {
     collaboratorPhone: collaborator.phone,
     description,
     status,
+    assignedBy,
     createdAt: now
   });
 
@@ -1251,6 +1263,7 @@ function createRequirementTask(payload, request, response) {
       collaboratorPhone: collaborator.phone,
       description,
       status,
+      assignedBy,
       createdAt: now
     });
   }
@@ -1291,6 +1304,7 @@ function updateRequirementTaskStatus(id, payload, request, response) {
     collaboratorPhone: task.collaborator_phone,
     description: task.description,
     status,
+    assignedBy: task.assigned_by,
     completedBy,
     createdAt: now
   });
@@ -1316,6 +1330,7 @@ function markRequirementTaskSent(id, request, response) {
     collaboratorPhone: task.collaborator_phone,
     description: task.description,
     status: task.status,
+    assignedBy: task.assigned_by,
     createdAt: now
   });
 
@@ -1369,6 +1384,7 @@ function importRequirementState(payload, request, response) {
         }
 
         const taskStatus = normalizeRequirementStatus(task.status);
+        const assignedBy = cleanRequirementText(task.assignedBy);
         const taskCreatedAt = task.createdAt || now;
         const taskUpdatedAt = task.updatedAt || taskCreatedAt;
         const result = db
@@ -1378,18 +1394,20 @@ function importRequirementState(payload, request, response) {
               collaborator_id,
               description,
               status,
+              assigned_by,
               done_token,
               sent_at,
               created_at,
               updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           `)
           .run(
             taskClientKey,
             row.id,
             description,
             taskStatus,
+            assignedBy,
             newRequirementToken(),
             task.sentAt || "",
             taskCreatedAt,
@@ -1404,6 +1422,7 @@ function importRequirementState(payload, request, response) {
           collaboratorPhone: row.phone,
           description,
           status: taskStatus,
+          assignedBy,
           createdAt: now
         });
       });
@@ -1536,6 +1555,7 @@ function confirmRequirementByToken(token, payload, response) {
     collaboratorPhone: task.collaborator_phone,
     description: task.description,
     status: "realizado",
+    assignedBy: task.assigned_by,
     completedBy,
     createdAt: now
   });

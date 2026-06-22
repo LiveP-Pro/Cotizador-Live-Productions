@@ -652,6 +652,7 @@ const quoteStorageKeys = {
 };
 const requirementsStorageKey = "liveRequirementsBoard";
 const requirementsMigrationKey = "liveRequirementsBoardMigratedToServer";
+const requirementAssignedByStorageKey = "liveRequirementsAssignedByDrafts";
 let currentQuoteNumber = quoteSequenceStart;
 let currentQuoteDate = "";
 let requestedQuoteNumber = null;
@@ -663,6 +664,7 @@ let requirementsEventsBound = false;
 let requirementsRefreshTimer = null;
 let selectedRequirementsCollaboratorId = null;
 let requirementAutoSaveTimer = null;
+const requirementAssignedByDrafts = new Map();
 const appShellHome = {
   parent: elements.appShell.parentNode,
   nextSibling: elements.appShell.nextSibling
@@ -729,11 +731,13 @@ function normalizeRequirementTask(task) {
   const createdAt = String(task?.createdAt || new Date().toISOString());
   return {
     id: String(task?.id || requirementId("task")),
+    collaboratorId: String(task?.collaboratorId || ""),
     text: String(task?.text || task?.description || "").trim(),
     description: String(task?.description || task?.text || "").trim(),
     status,
     createdAt,
     updatedAt: String(task?.updatedAt || createdAt),
+    assignedBy: String(task?.assignedBy || "").trim(),
     completedBy: String(task?.completedBy || "").trim(),
     completedAt: task?.completedAt ? String(task.completedAt) : "",
     sentAt: task?.sentAt ? String(task.sentAt) : "",
@@ -773,6 +777,31 @@ function readRequirementsState() {
 function storeRequirementsState() {
   writeStoredValue(requirementsStorageKey, JSON.stringify(requirementsState));
 }
+
+function loadRequirementAssignedByDrafts() {
+  const stored = readStoredValue(requirementAssignedByStorageKey);
+  if (!stored) return;
+  try {
+    Object.entries(JSON.parse(stored)).forEach(([collaboratorId, assignedBy]) => {
+      if (assignedBy) requirementAssignedByDrafts.set(String(collaboratorId), String(assignedBy));
+    });
+  } catch {
+    // Ignore damaged draft data; server history remains intact.
+  }
+}
+
+function storeRequirementAssignedByDrafts() {
+  writeStoredValue(
+    requirementAssignedByStorageKey,
+    JSON.stringify(Object.fromEntries(requirementAssignedByDrafts))
+  );
+}
+
+function requirementAssignedByValue(collaboratorId) {
+  return requirementAssignedByDrafts.get(String(collaboratorId)) || "";
+}
+
+loadRequirementAssignedByDrafts();
 
 function findRequirementCollaborator(collaboratorId) {
   return requirementsState.collaborators.find((collaborator) => collaborator.id === collaboratorId) || null;
@@ -1034,7 +1063,13 @@ function openRequirementWhatsapp(collaborator, task, targetWindow = null) {
   return true;
 }
 
-async function createRequirementTask(collaboratorId, text, shouldSendWhatsapp = false, targetWindow = null) {
+async function createRequirementTask(
+  collaboratorId,
+  text,
+  shouldSendWhatsapp = false,
+  targetWindow = null,
+  assignedBy = ""
+) {
   const collaborator = findRequirementCollaborator(collaboratorId);
   const cleanText = String(text || "").trim();
   if (!collaborator || !cleanText) {
@@ -1050,7 +1085,8 @@ async function createRequirementTask(collaboratorId, text, shouldSendWhatsapp = 
       method: "POST",
       body: JSON.stringify({
         collaboratorId,
-        description: cleanText
+        description: cleanText,
+        assignedBy
       })
     });
     const task = normalizeRequirementTask(result.task);
@@ -1154,6 +1190,14 @@ function renderRequirementTask(task, collaborator) {
   status.textContent = requirementStatusLabel(task.status);
   statusLine.append(statusLabel, status);
 
+  const assignedLine = document.createElement("div");
+  assignedLine.className = "requirement-task-line";
+  const assignedLabel = document.createElement("strong");
+  assignedLabel.textContent = "Asignada por";
+  const assignedCopy = document.createElement("p");
+  assignedCopy.textContent = task.assignedBy || "Sin asignar";
+  assignedLine.append(assignedLabel, assignedCopy);
+
   const responsibleLine = document.createElement("div");
   responsibleLine.className = "requirement-task-line";
   const responsibleLabel = document.createElement("strong");
@@ -1185,7 +1229,7 @@ function renderRequirementTask(task, collaborator) {
       (action === "status-done" && task.status === "realizado");
   });
 
-  item.append(descriptionLine, statusLine, responsibleLine, dates, actions);
+  item.append(descriptionLine, statusLine, assignedLine, responsibleLine, dates, actions);
   return item;
 }
 
@@ -1225,11 +1269,21 @@ function renderSelectedRequirementCollaborator(collaborator) {
   phone.textContent = normalizedPhone ? `WhatsApp: +${normalizedPhone}` : `WhatsApp: ${collaborator.phone}`;
   title.append(name, phone);
 
+  const assignedField = document.createElement("label");
+  assignedField.className = "requirement-assigned-field";
+  assignedField.textContent = "Nombre de quien asigna la tarea";
+  const assignedInput = document.createElement("input");
+  assignedInput.type = "text";
+  assignedInput.dataset.requirementAssignedBy = "true";
+  assignedInput.placeholder = "Escriba quien asigna";
+  assignedInput.value = requirementAssignedByValue(collaborator.id);
+  assignedField.appendChild(assignedInput);
+
   const headerActions = document.createElement("div");
   headerActions.className = "requirement-person-actions";
   headerActions.append(requirementButton("Editar", "edit-collaborator"));
 
-  header.append(title, headerActions);
+  header.append(title, assignedField, headerActions);
 
   const composer = document.createElement("div");
   composer.className = "requirement-composer";
@@ -1261,34 +1315,50 @@ function renderRequirementsHistory() {
   if (!elements.requirementsHistory) return;
   clearNode(elements.requirementsHistory);
 
-  const records = (Array.isArray(requirementsState.history) ? requirementsState.history : [])
-    .filter((record) => record.taskId)
-    .filter((record) => !selectedRequirementsCollaboratorId || record.collaboratorId === selectedRequirementsCollaboratorId)
-    .filter(matchesRequirementFilters);
+  const records = requirementsState.collaborators
+    .flatMap((collaborator) =>
+      (collaborator.tasks || []).map((task) => ({
+        ...task,
+        collaboratorId: task.collaboratorId || collaborator.id,
+        collaboratorName: collaborator.name,
+        collaboratorPhone: collaborator.phone
+      }))
+    )
+    .filter((task) => !selectedRequirementsCollaboratorId || task.collaboratorId === selectedRequirementsCollaboratorId)
+    .filter(matchesRequirementFilters)
+    .sort((left, right) => {
+      const rightTime = new Date(right.updatedAt || right.createdAt).getTime() || 0;
+      const leftTime = new Date(left.updatedAt || left.createdAt).getTime() || 0;
+      return rightTime - leftTime;
+    });
 
   if (!records.length) {
-    appendEmptyRequirementsMessage(elements.requirementsHistory, "No hay historial de tareas con los filtros seleccionados.");
+    appendEmptyRequirementsMessage(elements.requirementsHistory, "No hay resumen de tareas con los filtros seleccionados.");
     return;
   }
 
-  records.forEach((record) => {
+  records.forEach((task) => {
     const item = document.createElement("article");
-    item.className = `requirements-history-item ${requirementStatusClass(record.status)}`;
+    item.className = `requirements-history-item ${requirementStatusClass(task.status)}`;
 
     const status = document.createElement("span");
-    status.className = `requirement-task-status ${requirementStatusClass(record.status)}`;
-    status.textContent = requirementStatusLabel(record.status);
+    status.className = `requirement-task-status ${requirementStatusClass(task.status)}`;
+    status.textContent = requirementStatusLabel(task.status);
 
     const title = document.createElement("strong");
-    title.textContent = `${record.actionLabel || "Actualización"} · ${record.collaboratorName || "Sin colaborador"}`;
+    title.textContent = `Tarea · ${task.collaboratorName || "Sin colaborador"}`;
 
     const text = document.createElement("p");
-    text.textContent = record.description || "Sin descripción";
+    text.textContent = task.description || "Sin descripción";
 
     const meta = document.createElement("small");
-    meta.textContent = `Fecha: ${requirementDate(record.createdAt)}${
-      record.collaboratorPhone ? ` · WhatsApp: +${whatsappPhone(record.collaboratorPhone)}` : ""
-    }${record.completedBy ? ` · Responsable: ${record.completedBy}` : ""}`;
+    meta.textContent = [
+      `Creado: ${requirementDate(task.createdAt)}`,
+      task.sentAt ? `WhatsApp: ${requirementDate(task.sentAt)}` : "",
+      task.assignedBy ? `Asignada por: ${task.assignedBy}` : "Asignada por: Sin asignar",
+      task.completedBy ? `Responsable: ${task.completedBy}` : "",
+      task.completedAt ? `Realizado: ${requirementDate(task.completedAt)}` : ""
+    ].filter(Boolean).join(" · ");
 
     item.append(status, title, text, meta);
     elements.requirementsHistory.appendChild(item);
@@ -1385,7 +1455,8 @@ function scheduleRequirementTaskAutoSave(textarea) {
     if (textarea.dataset.autosaving === "true") return;
     textarea.dataset.autosaving = "true";
     textarea.disabled = true;
-    const saved = await createRequirementTask(collaboratorId, text, false);
+    const assignedBy = card.querySelector("[data-requirement-assigned-by]")?.value.trim() || "";
+    const saved = await createRequirementTask(collaboratorId, text, false, null, assignedBy);
     if (!saved) {
       textarea.disabled = false;
       textarea.dataset.autosaving = "";
@@ -1394,6 +1465,19 @@ function scheduleRequirementTaskAutoSave(textarea) {
 }
 
 function handleRequirementsBoardInput(event) {
+  const assignedInput = event.target.closest("[data-requirement-assigned-by]");
+  if (assignedInput) {
+    const card = assignedInput.closest("[data-collaborator-id]");
+    const collaboratorId = card?.dataset.collaboratorId;
+    if (collaboratorId) {
+      const value = assignedInput.value.trim();
+      if (value) requirementAssignedByDrafts.set(collaboratorId, value);
+      else requirementAssignedByDrafts.delete(collaboratorId);
+      storeRequirementAssignedByDrafts();
+    }
+    return;
+  }
+
   const textarea = event.target.closest("[data-requirement-autosave]");
   if (!textarea) return;
   scheduleRequirementTaskAutoSave(textarea);
@@ -1407,7 +1491,8 @@ async function handleRequirementsBoardFocusOut(event) {
   textarea.dataset.autosaving = "true";
   textarea.disabled = true;
   const card = textarea.closest("[data-collaborator-id]");
-  const saved = await createRequirementTask(card?.dataset.collaboratorId, textarea.value.trim(), false);
+  const assignedBy = card?.querySelector("[data-requirement-assigned-by]")?.value.trim() || "";
+  const saved = await createRequirementTask(card?.dataset.collaboratorId, textarea.value.trim(), false, null, assignedBy);
   if (!saved) {
     textarea.disabled = false;
     textarea.dataset.autosaving = "";

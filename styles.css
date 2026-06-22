@@ -433,8 +433,8 @@ body {
 }
 
 .requirement-person-header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(240px, 360px) auto;
   gap: 14px;
   align-items: start;
 }
@@ -450,6 +450,29 @@ body {
   font-size: 13px;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+.requirement-assigned-field {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.requirement-assigned-field input {
+  min-height: 38px;
+  padding: 8px 10px;
+  color: var(--ink);
+  background: #fbfcfd;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .requirement-person-actions,
