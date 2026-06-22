@@ -599,12 +599,14 @@ const elements = {
     eventName: document.querySelector("#eventName"),
     quoteDate: document.querySelector("#quoteDate"),
     eventDate: document.querySelector("#eventDate"),
+    groupSchedule: document.querySelector("#groupSchedule"),
     eventPlace: document.querySelector("#eventPlace"),
     guestCount: document.querySelector("#guestCount"),
     notes: document.querySelector("#notes")
   },
   docFields: {
     eventDate: document.querySelector("#docEventDate"),
+    groupSchedule: document.querySelector("#docGroupSchedule"),
     eventPlace: document.querySelector("#docPlace"),
     quoteDate: document.querySelector("#docQuoteDate")
   }
@@ -1613,6 +1615,7 @@ function buildQuoteData() {
     clientPhone: elements.fields.clientPhone.value.trim(),
     eventName: elements.fields.eventName.value.trim(),
     eventDate: elements.fields.eventDate.value,
+    groupSchedule: elements.fields.groupSchedule.value.trim(),
     eventPlace: elements.fields.eventPlace.value.trim(),
     guestCount: elements.fields.guestCount.value,
     packageId: pkg.id,
@@ -1686,6 +1689,7 @@ function emptyQuoteData(number, quoteDate = todayIso()) {
     clientPhone: "",
     eventName: "",
     eventDate: "",
+    groupSchedule: "",
     eventPlace: "",
     guestCount: "",
     packageId: "ninguno",
@@ -1993,6 +1997,7 @@ function copyFirstQuoteClientData() {
     "clientPhone",
     "eventName",
     "eventDate",
+    "groupSchedule",
     "eventPlace",
     "guestCount"
   ];
@@ -3339,6 +3344,7 @@ function renderQuoteLanguage() {
   setDocumentText("quoteNumberLabel", "Número de cotización", "Quotation number");
   setDocumentText("quoteDateLabel", "Fecha de emisión", "Issue date");
   setDocumentText("eventDateLabel", "Fecha del evento", "Event date");
+  setDocumentText("groupScheduleLabel", "Horario de grupo", "Group schedule");
   setDocumentText("eventPlaceLabel", "Lugar del evento", "Event location");
   setDocumentText(
     "introMessage",
@@ -3394,6 +3400,8 @@ function renderCurrencyState() {
 
 function renderDocumentFields() {
   elements.docFields.eventDate.textContent = formatDate(elements.fields.eventDate.value);
+  elements.docFields.groupSchedule.textContent =
+    elements.fields.groupSchedule.value || (quoteLanguage === "en" ? "To be confirmed" : "Por definir");
   elements.docFields.eventPlace.textContent =
     elements.fields.eventPlace.value || (quoteLanguage === "en" ? "To be confirmed" : "Por definir");
   elements.docFields.quoteDate.textContent = formatDate(currentQuoteDate);
@@ -3668,6 +3676,7 @@ function applyQuoteData(data) {
   elements.fields.eventName.value = data.eventName || "";
   elements.fields.quoteDate.value = currentQuoteDate;
   elements.fields.eventDate.value = data.eventDate || "";
+  elements.fields.groupSchedule.value = data.groupSchedule || "";
   elements.fields.eventPlace.value = data.eventPlace || "";
   elements.fields.guestCount.value = data.guestCount || "";
   elements.fields.notes.value = data.notes || "";

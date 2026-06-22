@@ -6,8 +6,8 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260618-01" />
-    <script src="app.js?v=20260620-01" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260622-01" />
+    <script src="app.js?v=20260622-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -211,6 +211,10 @@
             Fecha del evento
             <input id="eventDate" type="date" />
           </label>
+          <label>
+            Horario de grupo
+            <input id="groupSchedule" type="text" autocomplete="off" />
+          </label>
         </div>
 
         <div class="panel-section">
@@ -311,6 +315,13 @@
               <span class="info-copy">
                 <span id="eventPlaceLabel">Lugar del evento</span>
                 <strong id="docPlace"></strong>
+              </span>
+            </div>
+            <div>
+              <span class="info-icon info-icon-clock" aria-hidden="true"></span>
+              <span class="info-copy">
+                <span id="groupScheduleLabel">Horario de grupo</span>
+                <strong id="docGroupSchedule"></strong>
               </span>
             </div>
           </section>
