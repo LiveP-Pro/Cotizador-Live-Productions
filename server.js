@@ -1089,6 +1089,378 @@ function listRequirements(request) {
   return { collaborators, history };
 }
 
+function hasSqliteTable(database, tableName) {
+  return Boolean(
+    database
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+      .get(tableName)
+  );
+}
+
+function countSqliteRows(database, tableName, whereSql = "") {
+  if (!hasSqliteTable(database, tableName)) return 0;
+  return database.prepare(`SELECT COUNT(*) AS total FROM ${tableName} ${whereSql}`).get().total;
+}
+
+function summarizeRequirementsDatabase(database, filePath = "") {
+  const summary = {
+    fileName: filePath ? path.basename(filePath) : "actual",
+    modifiedAt: "",
+    collaboratorsTotal: 0,
+    collaboratorsActive: 0,
+    collaboratorsArchived: 0,
+    tasksTotal: 0,
+    tasksDone: 0,
+    tasksPending: 0,
+    historyTotal: 0,
+    collaborators: []
+  };
+
+  if (filePath) {
+    try {
+      summary.modifiedAt = fs.statSync(filePath).mtime.toISOString();
+    } catch {}
+  }
+
+  if (!hasSqliteTable(database, "requirement_collaborators")) return summary;
+
+  summary.collaboratorsTotal = countSqliteRows(database, "requirement_collaborators");
+  summary.collaboratorsActive = countSqliteRows(database, "requirement_collaborators", "WHERE archived = 0");
+  summary.collaboratorsArchived = countSqliteRows(database, "requirement_collaborators", "WHERE archived = 1");
+  summary.tasksTotal = countSqliteRows(database, "requirement_tasks");
+  summary.tasksDone = countSqliteRows(database, "requirement_tasks", "WHERE status = 'realizado'");
+  summary.tasksPending = countSqliteRows(database, "requirement_tasks", "WHERE status != 'realizado'");
+  summary.historyTotal = countSqliteRows(database, "requirement_history");
+
+  if (hasSqliteTable(database, "requirement_tasks")) {
+    summary.collaborators = database
+      .prepare(`
+        SELECT
+          c.id,
+          c.name,
+          c.phone,
+          c.archived,
+          COUNT(t.id) AS tasks,
+          SUM(CASE WHEN t.status = 'realizado' THEN 1 ELSE 0 END) AS done
+        FROM requirement_collaborators c
+        LEFT JOIN requirement_tasks t ON t.collaborator_id = c.id
+        GROUP BY c.id
+        ORDER BY lower(c.name), c.id
+        LIMIT 50
+      `)
+      .all()
+      .map((row) => ({
+        id: String(row.id),
+        name: row.name || "",
+        phone: row.phone || "",
+        archived: Number(row.archived || 0),
+        tasks: Number(row.tasks || 0),
+        done: Number(row.done || 0)
+      }));
+  } else {
+    summary.collaborators = database
+      .prepare(`
+        SELECT id, name, phone, archived
+        FROM requirement_collaborators
+        ORDER BY lower(name), id
+        LIMIT 50
+      `)
+      .all()
+      .map((row) => ({
+        id: String(row.id),
+        name: row.name || "",
+        phone: row.phone || "",
+        archived: Number(row.archived || 0),
+        tasks: 0,
+        done: 0
+      }));
+  }
+
+  return summary;
+}
+
+function listRequirementRecoveryBackups(response) {
+  const backups = fs
+    .readdirSync(backupDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".sqlite"))
+    .map((entry) => path.join(backupDir, entry.name))
+    .sort((left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs)
+    .map((filePath) => {
+      let backupDb;
+      try {
+        backupDb = new DatabaseSync(filePath, { readOnly: true });
+        return summarizeRequirementsDatabase(backupDb, filePath);
+      } catch (error) {
+        return {
+          fileName: path.basename(filePath),
+          modifiedAt: "",
+          error: error.message,
+          collaboratorsTotal: 0,
+          collaboratorsActive: 0,
+          collaboratorsArchived: 0,
+          tasksTotal: 0,
+          tasksDone: 0,
+          tasksPending: 0,
+          historyTotal: 0,
+          collaborators: []
+        };
+      } finally {
+        try {
+          backupDb?.close();
+        } catch {}
+      }
+    });
+
+  jsonResponse(response, 200, {
+    dataDir,
+    dbPath,
+    backupDir,
+    current: summarizeRequirementsDatabase(db, dbPath),
+    backups
+  });
+}
+
+function uniqueRestoreClientKey(tableName, preferredKey, fallbackKey) {
+  let candidate = preferredKey || fallbackKey;
+  if (!candidate) return null;
+  let suffix = 1;
+  while (db.prepare(`SELECT id FROM ${tableName} WHERE client_key = ?`).get(candidate)) {
+    suffix += 1;
+    candidate = `${fallbackKey || preferredKey}:${suffix}`;
+  }
+  return candidate;
+}
+
+function findRequirementCollaboratorForRestore(row) {
+  if (row.client_key) {
+    const byKey = db.prepare("SELECT * FROM requirement_collaborators WHERE client_key = ?").get(row.client_key);
+    if (byKey) return byKey;
+  }
+
+  const normalizedPhone = normalizeWhatsappPhone(row.phone);
+  return (
+    db
+      .prepare("SELECT * FROM requirement_collaborators")
+      .all()
+      .find((existing) => {
+        const samePhone = normalizedPhone && normalizeWhatsappPhone(existing.phone) === normalizedPhone;
+        const sameName =
+          String(existing.name || "").toLocaleLowerCase("es-GT") ===
+          String(row.name || "").toLocaleLowerCase("es-GT");
+        return samePhone || sameName;
+      }) || null
+  );
+}
+
+function readRequirementBackupRows(sourceDb) {
+  if (!hasSqliteTable(sourceDb, "requirement_collaborators")) {
+    return { collaborators: [], tasks: [], history: [] };
+  }
+
+  return {
+    collaborators: sourceDb.prepare("SELECT * FROM requirement_collaborators ORDER BY id").all(),
+    tasks: hasSqliteTable(sourceDb, "requirement_tasks")
+      ? sourceDb.prepare("SELECT * FROM requirement_tasks ORDER BY id").all()
+      : [],
+    history: hasSqliteTable(sourceDb, "requirement_history")
+      ? sourceDb.prepare("SELECT * FROM requirement_history ORDER BY id").all()
+      : []
+  };
+}
+
+function restoreRequirementBackup(payload, request, response) {
+  const requestedFileName = path.basename(String(payload.fileName || ""));
+  if (!requestedFileName || !requestedFileName.endsWith(".sqlite")) {
+    errorResponse(response, 400, "Indique el archivo de respaldo SQLite a restaurar.");
+    return;
+  }
+
+  const sourcePath = path.join(backupDir, requestedFileName);
+  if (!fs.existsSync(sourcePath)) {
+    errorResponse(response, 404, "No se encontró ese respaldo en el servidor.");
+    return;
+  }
+
+  let sourceDb;
+  try {
+    sourceDb = new DatabaseSync(sourcePath, { readOnly: true });
+    const sourceRows = readRequirementBackupRows(sourceDb);
+    if (!sourceRows.collaborators.length && !sourceRows.tasks.length) {
+      errorResponse(response, 404, "Ese respaldo no contiene colaboradores o tareas de requerimientos.");
+      return;
+    }
+
+    const now = nowIso();
+    const collaboratorMap = new Map();
+    const stats = {
+      source: requestedFileName,
+      collaboratorsRestored: 0,
+      collaboratorsUpdated: 0,
+      tasksRestored: 0,
+      tasksUpdated: 0,
+      historyRestored: 0
+    };
+
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      sourceRows.collaborators.forEach((row) => {
+        const name = cleanRequirementText(row.name);
+        const phone = cleanRequirementText(row.phone);
+        if (!name || !phone) return;
+
+        const existing = findRequirementCollaboratorForRestore(row);
+        if (existing) {
+          db.prepare(`
+            UPDATE requirement_collaborators
+            SET name = ?, phone = ?, archived = 0, updated_at = ?
+            WHERE id = ?
+          `).run(name, phone, now, existing.id);
+          collaboratorMap.set(Number(row.id), Number(existing.id));
+          stats.collaboratorsUpdated += 1;
+          return;
+        }
+
+        const fallbackKey = `restore-collaborator:${requestedFileName}:${row.id}`;
+        const clientKey = uniqueRestoreClientKey("requirement_collaborators", row.client_key, fallbackKey);
+        const result = db.prepare(`
+          INSERT INTO requirement_collaborators (client_key, name, phone, archived, created_at, updated_at)
+          VALUES (?, ?, ?, 0, ?, ?)
+        `).run(clientKey, name, phone, row.created_at || now, now);
+        collaboratorMap.set(Number(row.id), Number(result.lastInsertRowid));
+        stats.collaboratorsRestored += 1;
+      });
+
+      sourceRows.tasks.forEach((row) => {
+        const collaboratorId = collaboratorMap.get(Number(row.collaborator_id));
+        const description = String(row.description || "").trim();
+        if (!collaboratorId || !description) return;
+
+        const taskClientKey = row.client_key || `restore-task:${requestedFileName}:${row.id}`;
+        const existingTask =
+          (row.client_key
+            ? db.prepare("SELECT id FROM requirement_tasks WHERE client_key = ?").get(row.client_key)
+            : null) ||
+          db
+            .prepare(`
+              SELECT id
+              FROM requirement_tasks
+              WHERE collaborator_id = ? AND description = ? AND created_at = ?
+            `)
+            .get(collaboratorId, description, row.created_at || "");
+
+        const status = normalizeRequirementStatus(row.status);
+        const assignedBy = cleanRequirementText(row.assigned_by);
+        const completedBy = cleanRequirementText(row.completed_by);
+        const dueAt = cleanRequirementText(row.due_at);
+        const completedAt = cleanRequirementText(row.completed_at);
+        const sentAt = cleanRequirementText(row.sent_at);
+
+        if (existingTask) {
+          db.prepare(`
+            UPDATE requirement_tasks
+            SET status = ?, assigned_by = ?, due_at = ?, completed_by = ?, completed_at = ?, sent_at = ?, updated_at = ?
+            WHERE id = ?
+          `).run(status, assignedBy, dueAt, completedBy, completedAt, sentAt, now, existingTask.id);
+          stats.tasksUpdated += 1;
+          return;
+        }
+
+        const doneTokenExists =
+          row.done_token && db.prepare("SELECT id FROM requirement_tasks WHERE done_token = ?").get(row.done_token);
+        const doneToken = doneTokenExists ? newRequirementToken() : row.done_token || newRequirementToken();
+        const clientKey = uniqueRestoreClientKey("requirement_tasks", taskClientKey, `restore-task:${requestedFileName}:${row.id}`);
+        db.prepare(`
+          INSERT INTO requirement_tasks (
+            client_key,
+            collaborator_id,
+            description,
+            status,
+            assigned_by,
+            due_at,
+            done_token,
+            sent_at,
+            completed_by,
+            completed_at,
+            created_at,
+            updated_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          clientKey,
+          collaboratorId,
+          description,
+          status,
+          assignedBy,
+          dueAt,
+          doneToken,
+          sentAt,
+          completedBy,
+          completedAt,
+          row.created_at || now,
+          row.updated_at || now
+        );
+        stats.tasksRestored += 1;
+      });
+
+      sourceRows.history.forEach((row) => {
+        const collaboratorId = row.collaborator_id ? collaboratorMap.get(Number(row.collaborator_id)) : null;
+        const exists = db
+          .prepare(`
+            SELECT id
+            FROM requirement_history
+            WHERE action = ? AND collaborator_name = ? AND description = ? AND created_at = ?
+          `)
+          .get(row.action || "", row.collaborator_name || "", row.description || "", row.created_at || "");
+        if (exists) return;
+
+        db.prepare(`
+          INSERT INTO requirement_history (
+            task_id,
+            collaborator_id,
+            action,
+            collaborator_name,
+            collaborator_phone,
+            description,
+            status,
+            assigned_by,
+            completed_by,
+            created_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          null,
+          collaboratorId || null,
+          row.action || "restore",
+          row.collaborator_name || "",
+          row.collaborator_phone || "",
+          row.description || "",
+          normalizeRequirementStatus(row.status),
+          cleanRequirementText(row.assigned_by),
+          cleanRequirementText(row.completed_by),
+          row.created_at || now
+        );
+        stats.historyRestored += 1;
+      });
+
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+
+    createDailyDatabaseBackup();
+    jsonResponse(response, 200, {
+      ...stats,
+      current: summarizeRequirementsDatabase(db, dbPath),
+      requirements: listRequirements(request)
+    });
+  } finally {
+    try {
+      sourceDb?.close();
+    } catch {}
+  }
+}
+
 function getRequirementCollaborator(id) {
   return db
     .prepare("SELECT * FROM requirement_collaborators WHERE id = ? AND archived = 0")
@@ -2129,6 +2501,19 @@ async function handleRequest(request, response) {
     if (request.method === "GET" && url.pathname === "/api/requerimientos") {
       if (!requireAuth(request, response)) return;
       jsonResponse(response, 200, listRequirements(request));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/requerimientos/rescate") {
+      if (!requireAuth(request, response)) return;
+      listRequirementRecoveryBackups(response);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/requerimientos/rescate") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => restoreRequirementBackup(payload, request, response));
       return;
     }
 
