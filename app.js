@@ -1065,7 +1065,7 @@ function buildRequirementWhatsappMessage(collaborator, task) {
       ? `Confirmar realizado: ${doneUrl}`
       : "Confirmar realizado: responda por este chat.",
     "",
-    "Cuando termines, abre el enlace, escribe el responsable y presiona Realizado para actualizar el historial.",
+    "Cuando termines, abre el enlace y presiona Marcar como realizado para actualizar el historial.",
     "Live Productions"
   ].join("\n");
 }
@@ -1255,15 +1255,6 @@ function renderRequirementTask(task, collaborator) {
   dueCopy.textContent = task.dueAt ? requirementDate(task.dueAt) : "Sin fecha";
   dueLine.append(dueLabel, dueCopy);
 
-  const responsibleLine = document.createElement("div");
-  responsibleLine.className = "requirement-task-line";
-  const responsibleLabel = document.createElement("strong");
-  responsibleLabel.textContent = "Responsable";
-  const responsibleCopy = document.createElement("p");
-  responsibleCopy.textContent =
-    task.completedBy || (task.status === "realizado" ? "Sin responsable registrado" : "Pendiente de confirmar");
-  responsibleLine.append(responsibleLabel, responsibleCopy);
-
   const dates = document.createElement("small");
   dates.textContent = [
     `Asignada: ${requirementDate(task.createdAt)}`,
@@ -1286,7 +1277,7 @@ function renderRequirementTask(task, collaborator) {
       (action === "status-done" && task.status === "realizado");
   });
 
-  item.append(descriptionLine, statusLine, assignedLine, dueLine, responsibleLine, dates, actions);
+  item.append(descriptionLine, statusLine, assignedLine, dueLine, dates, actions);
   return item;
 }
 
@@ -1363,7 +1354,6 @@ function buildRequirementReportText(collaborator, type, dateKey) {
       lines.push(`   Estado: ${requirementStatusLabel(task.status)}`);
       if (task.dueAt) lines.push(`   Fecha a realizarse: ${requirementDate(task.dueAt)}`);
       if (task.completedAt) lines.push(`   Realizado: ${requirementDate(task.completedAt)}`);
-      if (task.completedBy) lines.push(`   Responsable: ${task.completedBy}`);
       if (task.assignedBy) lines.push(`   Asignada por: ${task.assignedBy}`);
     });
   }
@@ -1561,7 +1551,6 @@ function renderRequirementsHistory() {
       task.dueAt ? `Fecha a realizarse: ${requirementDate(task.dueAt)}` : "",
       task.sentAt ? `WhatsApp: ${requirementDate(task.sentAt)}` : "",
       task.assignedBy ? `Asignada por: ${task.assignedBy}` : "Asignada por: Sin asignar",
-      task.completedBy ? `Responsable: ${task.completedBy}` : "",
       task.completedAt ? `Realizado: ${requirementDate(task.completedAt)}` : ""
     ].filter(Boolean).join(" · ");
 

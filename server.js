@@ -1495,17 +1495,9 @@ function renderRequirementDonePage(task, response, { error = "", statusCode = 20
   }
 
   const isDone = normalizeRequirementStatus(task.status) === "realizado";
-  const completedBy = cleanRequirementText(task.completed_by);
-  const needsResponsible = !isDone || !completedBy;
-  const heading = isDone
-    ? completedBy
-      ? "Tarea marcada como realizada"
-      : "Agregar responsable"
-    : "Confirmar tarea realizada";
+  const heading = isDone ? "Tarea marcada como realizada" : "Confirmar tarea realizada";
   const lead = isDone
-    ? completedBy
-      ? "la tarea quedó actualizada en el historial compartido."
-      : "la tarea ya está realizada; agregue quién fue el responsable."
+    ? "la tarea quedó actualizada en el historial compartido."
     : "revise la tarea y confirme manualmente cuando ya esté realizada.";
 
   response.writeHead(statusCode, { "Content-Type": "text/html; charset=utf-8" });
@@ -1520,12 +1512,9 @@ function renderRequirementDonePage(task, response, { error = "", statusCode = 20
       main{width:min(560px,calc(100% - 32px));padding:28px;background:#fff;border:1px solid #d8dce2;border-radius:8px;box-shadow:0 18px 55px rgba(23,23,23,.12)}
       p{line-height:1.45}.eyebrow{margin:0 0 8px;color:#63666d;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
       h1{margin:0 0 14px;font-family:Georgia,'Times New Roman',serif;font-size:34px;line-height:1}
-      label{display:grid;gap:8px;margin-top:18px;color:#34383f;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
-      input{width:100%;box-sizing:border-box;min-height:46px;padding:10px 12px;color:#171717;background:#fbfcfd;border:1px solid #cfd4dc;border-radius:7px;font-size:16px}
       button{width:100%;min-height:48px;margin-top:16px;color:#fff;background:#101112;border:0;border-radius:7px;font-size:14px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
       .task{margin:18px 0 0;padding:14px;background:#fbfcfd;border:1px solid #d8dce2;border-radius:7px}
       .error{margin-top:14px;color:#a32920;font-weight:800}
-      .responsible{margin-top:14px;font-weight:800}
       .status{display:inline-block;margin-top:12px;padding:8px 11px;color:#17633a;background:#e0f2e7;border-radius:999px;font-size:12px;font-weight:800;text-transform:uppercase}
     </style>
   </head>
@@ -1536,15 +1525,11 @@ function renderRequirementDonePage(task, response, { error = "", statusCode = 20
       <p><strong>${escapeHtml(task.collaborator_name)}</strong>, ${lead}</p>
       <p class="task">${escapeHtml(task.description)}</p>
       ${
-        !needsResponsible
-          ? `<p class="responsible">Responsable: ${escapeHtml(completedBy || "Sin responsable registrado")}</p><span class="status">Realizado</span>`
+        isDone
+          ? `<span class="status">Realizado</span>`
           : `<form method="post">
-              <label>
-                Nombre responsable de la tarea
-                <input name="completedBy" type="text" autocomplete="name" required placeholder="Escriba quién realizó la tarea" value="${escapeHtml(completedBy)}">
-              </label>
               ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
-              <button type="submit">${isDone ? "Guardar responsable" : "Marcar como realizado"}</button>
+              <button type="submit">Marcar como realizado</button>
             </form>`
       }
     </main>
@@ -1563,22 +1548,13 @@ function confirmRequirementByToken(token, payload, response) {
     return;
   }
 
-  const completedBy = cleanRequirementText(payload.completedBy);
-  if (!completedBy) {
-    renderRequirementDonePage(task, response, {
-      error: "Escriba el nombre del responsable antes de marcar realizado.",
-      statusCode: 400
-    });
-    return;
-  }
-
   const now = nowIso();
   const completedAt = task.completed_at || now;
   db.prepare(`
     UPDATE requirement_tasks
     SET status = 'realizado', completed_by = ?, completed_at = ?, updated_at = ?
     WHERE id = ?
-  `).run(completedBy, completedAt, now, task.id);
+  `).run("", completedAt, now, task.id);
   recordRequirementHistory({
     taskId: task.id,
     collaboratorId: task.collaborator_id,
@@ -1588,7 +1564,6 @@ function confirmRequirementByToken(token, payload, response) {
     description: task.description,
     status: "realizado",
     assignedBy: task.assigned_by,
-    completedBy,
     createdAt: now
   });
   createDailyDatabaseBackup();
@@ -1596,7 +1571,7 @@ function confirmRequirementByToken(token, payload, response) {
     {
       ...task,
       status: "realizado",
-      completed_by: completedBy,
+      completed_by: "",
       completed_at: completedAt,
       updated_at: now
     },
