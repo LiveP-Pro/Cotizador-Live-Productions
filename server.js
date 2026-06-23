@@ -147,6 +147,7 @@ db.exec(`
     description TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pendiente',
     assigned_by TEXT,
+    due_at TEXT,
     done_token TEXT NOT NULL UNIQUE,
     sent_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -185,21 +186,17 @@ function addColumnIfMissing(tableName, columnName, columnSql) {
 addColumnIfMissing("requirement_tasks", "completed_by", "completed_by TEXT");
 addColumnIfMissing("requirement_tasks", "completed_at", "completed_at TEXT");
 addColumnIfMissing("requirement_tasks", "assigned_by", "assigned_by TEXT");
+addColumnIfMissing("requirement_tasks", "due_at", "due_at TEXT");
 addColumnIfMissing("requirement_history", "completed_by", "completed_by TEXT");
 addColumnIfMissing("requirement_history", "assigned_by", "assigned_by TEXT");
 
 db.exec(`
+  DROP TRIGGER IF EXISTS lock_requirement_collaborators_archive;
+
   CREATE TRIGGER IF NOT EXISTS lock_requirement_collaborators_delete
   BEFORE DELETE ON requirement_collaborators
   BEGIN
     SELECT RAISE(ABORT, 'Historial protegido: no se pueden borrar colaboradores.');
-  END;
-
-  CREATE TRIGGER IF NOT EXISTS lock_requirement_collaborators_archive
-  BEFORE UPDATE OF archived ON requirement_collaborators
-  WHEN NEW.archived != OLD.archived AND NEW.archived != 0
-  BEGIN
-    SELECT RAISE(ABORT, 'Historial protegido: no se pueden ocultar colaboradores.');
   END;
 
   CREATE TRIGGER IF NOT EXISTS lock_requirement_tasks_delete
@@ -965,6 +962,7 @@ function requirementHistoryLabel(action) {
   if (action === "task_done_whatsapp") return "Realizado desde WhatsApp";
   if (action === "collaborator_created") return "Colaborador creado";
   if (action === "collaborator_updated") return "Colaborador actualizado";
+  if (action === "collaborator_deleted") return "Colaborador eliminado";
   if (action === "local_import") return "Historial importado";
   return "Actualización";
 }
@@ -989,6 +987,7 @@ function taskRecord(row, request) {
     status,
     doneUrl: requirementDoneUrl(request, row.done_token),
     assignedBy: row.assigned_by || "",
+    dueAt: row.due_at || "",
     completedBy: row.completed_by || "",
     completedAt: row.completed_at || "",
     sentAt: row.sent_at || "",
@@ -1205,6 +1204,34 @@ function updateRequirementCollaborator(id, payload, request, response) {
   jsonResponse(response, 200, listRequirements(request));
 }
 
+function archiveRequirementCollaborator(id, request, response) {
+  const existing = getRequirementCollaborator(id);
+  if (!existing) {
+    errorResponse(response, 404, "No se encontró el colaborador.");
+    return;
+  }
+
+  const now = nowIso();
+  db.prepare(`
+    UPDATE requirement_collaborators
+    SET archived = 1, updated_at = ?
+    WHERE id = ?
+  `).run(now, id);
+
+  recordRequirementHistory({
+    collaboratorId: id,
+    action: "collaborator_deleted",
+    collaboratorName: existing.name,
+    collaboratorPhone: existing.phone,
+    description: "Colaborador eliminado de la vista activa. Sus tareas permanecen en la base de datos.",
+    status: "pendiente",
+    createdAt: now
+  });
+
+  createDailyDatabaseBackup();
+  jsonResponse(response, 200, listRequirements(request));
+}
+
 function createRequirementTask(payload, request, response) {
   const collaboratorId = Number(payload.collaboratorId);
   const collaborator = getRequirementCollaborator(collaboratorId);
@@ -1222,6 +1249,7 @@ function createRequirementTask(payload, request, response) {
   const now = nowIso();
   const status = normalizeRequirementStatus(payload.status);
   const assignedBy = cleanRequirementText(payload.assignedBy);
+  const dueAt = cleanRequirementText(payload.dueAt);
   const doneToken = newRequirementToken();
   const sentAt = payload.sent ? now : "";
   const result = db
@@ -1232,14 +1260,15 @@ function createRequirementTask(payload, request, response) {
         description,
         status,
         assigned_by,
+        due_at,
         done_token,
         sent_at,
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
-    .run(payload.clientKey || null, collaboratorId, description, status, assignedBy, doneToken, sentAt, now, now);
+    .run(payload.clientKey || null, collaboratorId, description, status, assignedBy, dueAt, doneToken, sentAt, now, now);
 
   const taskId = Number(result.lastInsertRowid);
   recordRequirementHistory({
@@ -1385,6 +1414,7 @@ function importRequirementState(payload, request, response) {
 
         const taskStatus = normalizeRequirementStatus(task.status);
         const assignedBy = cleanRequirementText(task.assignedBy);
+        const dueAt = cleanRequirementText(task.dueAt);
         const taskCreatedAt = task.createdAt || now;
         const taskUpdatedAt = task.updatedAt || taskCreatedAt;
         const result = db
@@ -1395,12 +1425,13 @@ function importRequirementState(payload, request, response) {
               description,
               status,
               assigned_by,
+              due_at,
               done_token,
               sent_at,
               created_at,
               updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `)
           .run(
             taskClientKey,
@@ -1408,6 +1439,7 @@ function importRequirementState(payload, request, response) {
             description,
             taskStatus,
             assignedBy,
+            dueAt,
             newRequirementToken(),
             task.sentAt || "",
             taskCreatedAt,
@@ -2145,6 +2177,14 @@ async function handleRequest(request, response) {
       const payload = await readJsonBody(request);
       await enqueueSave(() =>
         updateRequirementCollaborator(Number(requirementCollaboratorMatch[1]), payload, request, response)
+      );
+      return;
+    }
+
+    if (request.method === "DELETE" && requirementCollaboratorMatch) {
+      if (!requireAuth(request, response)) return;
+      await enqueueSave(() =>
+        archiveRequirementCollaborator(Number(requirementCollaboratorMatch[1]), request, response)
       );
       return;
     }

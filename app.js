@@ -663,6 +663,7 @@ let editingRequirementsCollaboratorId = null;
 let requirementsEventsBound = false;
 let requirementsRefreshTimer = null;
 let selectedRequirementsCollaboratorId = null;
+let activeRequirementReport = null;
 let requirementAutoSaveTimer = null;
 const requirementAssignedByDrafts = new Map();
 const appShellHome = {
@@ -738,6 +739,7 @@ function normalizeRequirementTask(task) {
     createdAt,
     updatedAt: String(task?.updatedAt || createdAt),
     assignedBy: String(task?.assignedBy || "").trim(),
+    dueAt: task?.dueAt ? String(task.dueAt) : "",
     completedBy: String(task?.completedBy || "").trim(),
     completedAt: task?.completedAt ? String(task.completedAt) : "",
     sentAt: task?.sentAt ? String(task.sentAt) : "",
@@ -832,6 +834,12 @@ function applyRequirementsData(data) {
   ) {
     selectedRequirementsCollaboratorId = null;
   }
+  if (
+    activeRequirementReport &&
+    !requirementsState.collaborators.some((collaborator) => collaborator.id === activeRequirementReport.collaboratorId)
+  ) {
+    activeRequirementReport = null;
+  }
   renderRequirementsBoard();
 }
 
@@ -855,10 +863,21 @@ function localRequirementParts(value) {
   };
 }
 
+function localDateTimeInputValue(value = new Date()) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (number) => String(number).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function todayRequirementDateKey() {
+  return localRequirementParts(new Date()).date;
+}
+
 function matchesRequirementFilters(item) {
   const filters = requirementFilters();
   const itemStatus = item.status === "realizado" ? "realizado" : "pendiente";
-  const itemParts = localRequirementParts(item.createdAt || item.updatedAt);
+  const itemParts = localRequirementParts(item.dueAt || item.createdAt || item.updatedAt);
 
   if (filters.status !== "all" && itemStatus !== filters.status) return false;
   if (filters.date && itemParts.date !== filters.date) return false;
@@ -986,13 +1005,25 @@ function editRequirementCollaborator(collaboratorId) {
   setRequirementsStatus(`Editando datos de ${collaborator.name}.`, "success");
 }
 
-function removeRequirementCollaborator(collaboratorId) {
+async function removeRequirementCollaborator(collaboratorId) {
   const collaborator = findRequirementCollaborator(collaboratorId);
   if (!collaborator) return;
-  setRequirementsStatus(
-    `Candado activo: el historial de ${collaborator.name} no se puede borrar. Puede editar nombre o teléfono.`,
-    "error"
-  );
+  const confirmed = window.confirm("¿Estás totalmente seguro que deseas eliminar este colaborador?");
+  if (!confirmed) return;
+
+  setRequirementsStatus(`Eliminando colaborador ${collaborator.name}...`);
+  try {
+    const data = await apiRequest(`/api/requerimientos/colaboradores/${collaborator.id}`, {
+      method: "DELETE",
+      headers: {}
+    });
+    if (selectedRequirementsCollaboratorId === collaborator.id) selectedRequirementsCollaboratorId = null;
+    if (activeRequirementReport?.collaboratorId === collaborator.id) activeRequirementReport = null;
+    applyRequirementsData(data);
+    setRequirementsStatus(`Colaborador eliminado: ${collaborator.name}. Sus tareas quedan resguardadas.`, "success");
+  } catch (error) {
+    setRequirementsStatus(error.message, "error");
+  }
 }
 
 function requirementDate(value) {
@@ -1026,6 +1057,8 @@ function buildRequirementWhatsappMessage(collaborator, task) {
     "Te comparto el siguiente requerimiento para el evento:",
     "",
     `Descripción: ${taskText}`,
+    task?.dueAt ? `Fecha a realizarse: ${requirementDate(task.dueAt)}` : "",
+    task?.assignedBy ? `Asignada por: ${task.assignedBy}` : "",
     "Estado: Pendiente",
     "",
     doneUrl
@@ -1048,18 +1081,31 @@ function requirementWhatsappUrl(collaborator, task) {
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
-function openRequirementWhatsapp(collaborator, task, targetWindow = null) {
-  const url = requirementWhatsappUrl(collaborator, task);
-  if (!url) {
-    if (targetWindow && !targetWindow.closed) targetWindow.close();
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "readonly");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  textarea.remove();
+}
+
+async function copyRequirementWhatsappMessage(collaborator, task) {
+  const phone = whatsappPhone(collaborator.phone);
+  if (!phone) {
+    setRequirementsStatus(`Revise el número de WhatsApp de ${collaborator.name}.`, "error");
     return false;
   }
 
-  if (targetWindow && !targetWindow.closed) {
-    targetWindow.location.href = url;
-  } else {
-    window.open(url, "_blank", "noopener");
-  }
+  await copyTextToClipboard(buildRequirementWhatsappMessage(collaborator, task));
   return true;
 }
 
@@ -1068,13 +1114,13 @@ async function createRequirementTask(
   text,
   shouldSendWhatsapp = false,
   targetWindow = null,
-  assignedBy = ""
+  assignedBy = "",
+  dueAt = ""
 ) {
   const collaborator = findRequirementCollaborator(collaboratorId);
   const cleanText = String(text || "").trim();
   if (!collaborator || !cleanText) {
     setRequirementsStatus("Escriba el requerimiento antes de crear la tarea.", "error");
-    if (targetWindow && !targetWindow.closed) targetWindow.close();
     return false;
   }
 
@@ -1086,11 +1132,12 @@ async function createRequirementTask(
       body: JSON.stringify({
         collaboratorId,
         description: cleanText,
-        assignedBy
+        assignedBy,
+        dueAt
       })
     });
     const task = normalizeRequirementTask(result.task);
-    const whatsappReady = shouldSendWhatsapp ? openRequirementWhatsapp(collaborator, task, targetWindow) : true;
+    const whatsappReady = shouldSendWhatsapp ? await copyRequirementWhatsappMessage(collaborator, task) : true;
     if (shouldSendWhatsapp && whatsappReady) {
       const data = await apiRequest(`/api/requerimientos/tareas/${task.id}/enviado`, {
         method: "POST",
@@ -1103,13 +1150,12 @@ async function createRequirementTask(
     if (shouldSendWhatsapp && !whatsappReady) return false;
     setRequirementsStatus(
       shouldSendWhatsapp
-        ? `Tarea creada y WhatsApp listo para ${collaborator.name}.`
+        ? `Tarea creada. Mensaje copiado para pegarlo en WhatsApp de ${collaborator.name}.`
         : `Tarea guardada para ${collaborator.name}.`,
       "success"
     );
     return true;
   } catch (error) {
-    if (targetWindow && !targetWindow.closed) targetWindow.close();
     setRequirementsStatus(error.message, "error");
     return false;
   }
@@ -1132,19 +1178,22 @@ async function updateRequirementTaskStatus(collaboratorId, taskId, status) {
   }
 }
 
-async function resendRequirementTask(collaboratorId, taskId, targetWindow = null) {
+async function resendRequirementTask(collaboratorId, taskId) {
   const collaborator = findRequirementCollaborator(collaboratorId);
   const task = collaborator?.tasks.find((item) => item.id === taskId);
   if (!task) return;
 
-  if (openRequirementWhatsapp(collaborator, task, targetWindow)) {
+  if (await copyRequirementWhatsappMessage(collaborator, task)) {
     try {
       const data = await apiRequest(`/api/requerimientos/tareas/${task.id}/enviado`, {
         method: "POST",
         body: JSON.stringify({})
       });
       applyRequirementsData(data);
-      setRequirementsStatus(`WhatsApp listo para reenviar a ${collaborator.name}.`, "success");
+      setRequirementsStatus(
+        `Mensaje copiado. Pégalo en la conversación de WhatsApp que ya tienes abierta para ${collaborator.name}.`,
+        "success"
+      );
     } catch (error) {
       setRequirementsStatus(error.message, "error");
     }
@@ -1198,6 +1247,14 @@ function renderRequirementTask(task, collaborator) {
   assignedCopy.textContent = task.assignedBy || "Sin asignar";
   assignedLine.append(assignedLabel, assignedCopy);
 
+  const dueLine = document.createElement("div");
+  dueLine.className = "requirement-task-line";
+  const dueLabel = document.createElement("strong");
+  dueLabel.textContent = "Fecha a realizarse";
+  const dueCopy = document.createElement("p");
+  dueCopy.textContent = task.dueAt ? requirementDate(task.dueAt) : "Sin fecha";
+  dueLine.append(dueLabel, dueCopy);
+
   const responsibleLine = document.createElement("div");
   responsibleLine.className = "requirement-task-line";
   const responsibleLabel = document.createElement("strong");
@@ -1209,7 +1266,7 @@ function renderRequirementTask(task, collaborator) {
 
   const dates = document.createElement("small");
   dates.textContent = [
-    `Creado: ${requirementDate(task.createdAt)}`,
+    `Asignada: ${requirementDate(task.createdAt)}`,
     task.sentAt ? `WhatsApp: ${requirementDate(task.sentAt)}` : "",
     task.completedAt ? `Realizado: ${requirementDate(task.completedAt)}` : ""
   ].filter(Boolean).join(" · ");
@@ -1219,7 +1276,7 @@ function renderRequirementTask(task, collaborator) {
   actions.append(
     requirementButton("Pendiente", "status-pending", { taskId: task.id }),
     requirementButton("Realizado", "status-done", { taskId: task.id }),
-    requirementButton("WhatsApp", "resend-task", { taskId: task.id })
+    requirementButton("Copiar WhatsApp", "resend-task", { taskId: task.id })
   );
 
   [...actions.querySelectorAll("button")].forEach((button) => {
@@ -1229,16 +1286,20 @@ function renderRequirementTask(task, collaborator) {
       (action === "status-done" && task.status === "realizado");
   });
 
-  item.append(descriptionLine, statusLine, assignedLine, responsibleLine, dates, actions);
+  item.append(descriptionLine, statusLine, assignedLine, dueLine, responsibleLine, dates, actions);
   return item;
 }
 
 function renderRequirementCollaborator(collaborator) {
   const counts = requirementTaskCounts(collaborator);
+  const card = document.createElement("article");
+  card.className = "requirement-collaborator-card";
+  card.classList.toggle("is-active", collaborator.id === selectedRequirementsCollaboratorId);
+  card.dataset.collaboratorId = collaborator.id;
+
   const button = document.createElement("button");
   button.type = "button";
   button.className = "requirement-collaborator-button";
-  button.classList.toggle("is-active", collaborator.id === selectedRequirementsCollaboratorId);
   button.dataset.requirementAction = "select-collaborator";
   button.dataset.collaboratorId = collaborator.id;
 
@@ -1250,7 +1311,122 @@ function renderRequirementCollaborator(collaborator) {
   const summary = document.createElement("small");
   summary.textContent = `${counts.total} tareas · ${counts.pendiente} pendientes · ${counts.realizado} realizadas`;
   button.append(name, phone, summary);
-  return button;
+
+  const actions = document.createElement("div");
+  actions.className = "requirement-collaborator-actions";
+  actions.append(
+    requirementButton("Reporte diario", "report-daily", { collaboratorId: collaborator.id }),
+    requirementButton("Pendientes", "report-pending", { collaboratorId: collaborator.id }),
+    requirementButton("Eliminar", "remove-collaborator", { collaboratorId: collaborator.id })
+  );
+
+  card.append(button, actions);
+  return card;
+}
+
+function requirementReportDateKey(task, type) {
+  if (type === "daily") {
+    return localRequirementParts(task.completedAt || task.dueAt || task.updatedAt || task.createdAt).date;
+  }
+  return localRequirementParts(task.dueAt || task.createdAt || task.updatedAt).date;
+}
+
+function requirementReportDateLabel(dateKey) {
+  if (!dateKey) return "";
+  const date = new Date(`${dateKey}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateKey;
+  return date.toLocaleDateString("es-GT", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function requirementTasksForReport(collaborator, type, dateKey) {
+  const tasks = Array.isArray(collaborator?.tasks) ? collaborator.tasks : [];
+  if (type === "pending") return tasks.filter((task) => task.status !== "realizado");
+  return tasks.filter((task) => task.status === "realizado" && requirementReportDateKey(task, type) === dateKey);
+}
+
+function buildRequirementReportText(collaborator, type, dateKey) {
+  const title = type === "pending" ? "Reporte de tareas pendientes" : "Reporte diario de tareas realizadas";
+  const tasks = requirementTasksForReport(collaborator, type, dateKey);
+  const lines = [
+    title,
+    `Colaborador: ${collaborator.name}`,
+    `WhatsApp: ${collaborator.phone}`,
+    `Fecha: ${requirementReportDateLabel(dateKey) || "Sin fecha"}`,
+    ""
+  ];
+
+  if (!tasks.length) {
+    lines.push(type === "pending" ? "No tiene tareas pendientes." : "No tiene tareas realizadas para esta fecha.");
+  } else {
+    tasks.forEach((task, index) => {
+      lines.push(`${index + 1}. ${task.description || task.text}`);
+      lines.push(`   Estado: ${requirementStatusLabel(task.status)}`);
+      if (task.dueAt) lines.push(`   Fecha a realizarse: ${requirementDate(task.dueAt)}`);
+      if (task.completedAt) lines.push(`   Realizado: ${requirementDate(task.completedAt)}`);
+      if (task.completedBy) lines.push(`   Responsable: ${task.completedBy}`);
+      if (task.assignedBy) lines.push(`   Asignada por: ${task.assignedBy}`);
+    });
+  }
+
+  lines.push("", "Live Productions");
+  return lines.join("\n");
+}
+
+function showRequirementReport(collaboratorId, type) {
+  const collaborator = findRequirementCollaborator(collaboratorId);
+  if (!collaborator) return;
+  const dateKey = elements.requirementDateFilter?.value || todayRequirementDateKey();
+  activeRequirementReport = {
+    collaboratorId,
+    type,
+    dateKey,
+    text: buildRequirementReportText(collaborator, type, dateKey)
+  };
+  renderRequirementsHistory();
+  setRequirementsStatus(
+    type === "pending"
+      ? `Reporte de pendientes generado para ${collaborator.name}.`
+      : `Reporte diario generado para ${collaborator.name}.`,
+    "success"
+  );
+}
+
+async function copyActiveRequirementReport() {
+  if (!activeRequirementReport?.text) return;
+  try {
+    await copyTextToClipboard(activeRequirementReport.text);
+    setRequirementsStatus("Reporte copiado. Puede pegarlo en WhatsApp o en otro documento.", "success");
+  } catch (error) {
+    setRequirementsStatus(`No se pudo copiar el reporte: ${error.message}`, "error");
+  }
+}
+
+function renderActiveRequirementReport() {
+  if (!activeRequirementReport) return null;
+  const collaborator = findRequirementCollaborator(activeRequirementReport.collaboratorId);
+  if (!collaborator) return null;
+  const card = document.createElement("article");
+  card.className = "requirements-report-card";
+  card.dataset.collaboratorId = collaborator.id;
+
+  const title = document.createElement("strong");
+  title.textContent =
+    activeRequirementReport.type === "pending"
+      ? `Pendientes · ${collaborator.name}`
+      : `Reporte diario · ${collaborator.name}`;
+
+  const text = document.createElement("pre");
+  text.textContent = activeRequirementReport.text;
+
+  const actions = document.createElement("div");
+  actions.className = "requirement-task-actions";
+  actions.append(
+    requirementButton("Copiar reporte", "copy-report", { collaboratorId: collaborator.id }),
+    requirementButton("Cerrar", "close-report", { collaboratorId: collaborator.id })
+  );
+
+  card.append(title, text, actions);
+  return card;
 }
 
 function renderSelectedRequirementCollaborator(collaborator) {
@@ -1281,7 +1457,12 @@ function renderSelectedRequirementCollaborator(collaborator) {
 
   const headerActions = document.createElement("div");
   headerActions.className = "requirement-person-actions";
-  headerActions.append(requirementButton("Editar", "edit-collaborator"));
+  headerActions.append(
+    requirementButton("Editar", "edit-collaborator"),
+    requirementButton("Reporte diario", "report-daily"),
+    requirementButton("Pendientes", "report-pending"),
+    requirementButton("Eliminar", "remove-collaborator")
+  );
 
   header.append(title, assignedField, headerActions);
 
@@ -1290,13 +1471,31 @@ function renderSelectedRequirementCollaborator(collaborator) {
   const label = document.createElement("label");
   label.textContent = "Nueva tarea";
   const textarea = document.createElement("textarea");
-  textarea.dataset.requirementAutosave = "true";
+  textarea.dataset.requirementTaskText = "true";
   textarea.placeholder = "Escriba una tarea nueva";
   label.appendChild(textarea);
+  const metaGrid = document.createElement("div");
+  metaGrid.className = "requirement-composer-grid";
+  const assignedAtLabel = document.createElement("label");
+  assignedAtLabel.textContent = "Fecha y hora asignada";
+  const assignedAtInput = document.createElement("input");
+  assignedAtInput.type = "datetime-local";
+  assignedAtInput.value = localDateTimeInputValue(new Date());
+  assignedAtInput.readOnly = true;
+  assignedAtLabel.appendChild(assignedAtInput);
+  const dueAtLabel = document.createElement("label");
+  dueAtLabel.textContent = "Fecha a realizarse";
+  const dueAtInput = document.createElement("input");
+  dueAtInput.type = "datetime-local";
+  dueAtInput.dataset.requirementDueAt = "true";
+  dueAtLabel.appendChild(dueAtInput);
+  metaGrid.append(assignedAtLabel, dueAtLabel);
+  const createButton = requirementButton("Guardar tarea", "create-task");
+  createButton.classList.add("primary-button");
   const autoSaveNote = document.createElement("small");
   autoSaveNote.className = "requirement-autosave-note";
-  autoSaveNote.textContent = "Guardado automático";
-  composer.append(label, autoSaveNote);
+  autoSaveNote.textContent = "La tarea se guarda únicamente al presionar Guardar tarea.";
+  composer.append(label, metaGrid, createButton, autoSaveNote);
 
   const taskList = document.createElement("div");
   taskList.className = "requirement-task-list";
@@ -1314,6 +1513,9 @@ function renderSelectedRequirementCollaborator(collaborator) {
 function renderRequirementsHistory() {
   if (!elements.requirementsHistory) return;
   clearNode(elements.requirementsHistory);
+
+  const reportCard = renderActiveRequirementReport();
+  if (reportCard) elements.requirementsHistory.appendChild(reportCard);
 
   const records = requirementsState.collaborators
     .flatMap((collaborator) =>
@@ -1333,7 +1535,9 @@ function renderRequirementsHistory() {
     });
 
   if (!records.length) {
-    appendEmptyRequirementsMessage(elements.requirementsHistory, "No hay resumen de tareas con los filtros seleccionados.");
+    if (!reportCard) {
+      appendEmptyRequirementsMessage(elements.requirementsHistory, "No hay resumen de tareas con los filtros seleccionados.");
+    }
     return;
   }
 
@@ -1353,7 +1557,8 @@ function renderRequirementsHistory() {
 
     const meta = document.createElement("small");
     meta.textContent = [
-      `Creado: ${requirementDate(task.createdAt)}`,
+      `Asignada: ${requirementDate(task.createdAt)}`,
+      task.dueAt ? `Fecha a realizarse: ${requirementDate(task.dueAt)}` : "",
       task.sentAt ? `WhatsApp: ${requirementDate(task.sentAt)}` : "",
       task.assignedBy ? `Asignada por: ${task.assignedBy}` : "Asignada por: Sin asignar",
       task.completedBy ? `Responsable: ${task.completedBy}` : "",
@@ -1430,15 +1635,47 @@ function handleRequirementsBoardClick(event) {
     return;
   }
 
+  if (action === "report-daily") {
+    showRequirementReport(collaboratorId, "daily");
+    return;
+  }
+
+  if (action === "report-pending") {
+    showRequirementReport(collaboratorId, "pending");
+    return;
+  }
+
+  if (action === "copy-report") {
+    copyActiveRequirementReport();
+    return;
+  }
+
+  if (action === "close-report") {
+    activeRequirementReport = null;
+    renderRequirementsHistory();
+    return;
+  }
+
+  if (action === "create-task") {
+    const textArea = card.querySelector("[data-requirement-task-text]");
+    const dueAt = card.querySelector("[data-requirement-due-at]")?.value || "";
+    const assignedBy = card.querySelector("[data-requirement-assigned-by]")?.value.trim() || "";
+    createRequirementTask(collaboratorId, textArea?.value || "", false, null, assignedBy, dueAt).then((saved) => {
+      if (saved && textArea) {
+        textArea.value = "";
+        const dueAtInput = card.querySelector("[data-requirement-due-at]");
+        if (dueAtInput) dueAtInput.value = "";
+      }
+    });
+    return;
+  }
+
   const taskId = button.dataset.taskId;
   if (!taskId) return;
 
   if (action === "status-pending") updateRequirementTaskStatus(collaboratorId, taskId, "pendiente");
   if (action === "status-done") updateRequirementTaskStatus(collaboratorId, taskId, "realizado");
-  if (action === "resend-task") {
-    const whatsappWindow = window.open("about:blank", "_blank");
-    resendRequirementTask(collaboratorId, taskId, whatsappWindow);
-  }
+  if (action === "resend-task") resendRequirementTask(collaboratorId, taskId);
 }
 
 function scheduleRequirementTaskAutoSave(textarea) {
@@ -1508,6 +1745,7 @@ function bindRequirementsEvents() {
     setRequirementsStatus("Listo para agregar un nuevo colaborador.");
   });
   elements.requirementsPeople?.addEventListener("click", handleRequirementsBoardClick);
+  elements.requirementsHistory?.addEventListener("click", handleRequirementsBoardClick);
   elements.requirementsPeople?.addEventListener("input", handleRequirementsBoardInput);
   elements.requirementsPeople?.addEventListener("focusout", handleRequirementsBoardFocusOut);
   [

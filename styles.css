@@ -380,6 +380,20 @@ body {
   gap: 8px;
 }
 
+.requirement-collaborator-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.requirement-collaborator-card.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
 .requirement-collaborator-button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -387,18 +401,15 @@ body {
   align-items: center;
   width: 100%;
   min-height: 0;
-  padding: 12px 14px;
+  padding: 2px 4px;
   color: var(--ink);
-  background: #ffffff;
-  border: 1px solid var(--line);
-  border-radius: 7px;
+  background: transparent;
+  border: 0;
   text-align: left;
 }
 
-.requirement-collaborator-button:hover,
-.requirement-collaborator-button.is-active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
+.requirement-collaborator-button:hover {
+  color: #000000;
 }
 
 .requirement-collaborator-button strong {
@@ -417,6 +428,26 @@ body {
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
+}
+
+.requirement-collaborator-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.requirement-collaborator-actions button {
+  min-height: 34px;
+  padding: 6px 8px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.requirement-collaborator-actions button:hover {
+  border-color: var(--accent);
+  background: #fff7e5;
 }
 
 .requirement-person-card {
@@ -511,6 +542,12 @@ body {
   min-height: 82px;
 }
 
+.requirement-composer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .requirement-autosave-note {
   color: var(--muted);
   font-size: 11px;
@@ -528,6 +565,11 @@ body {
   border-left: 5px solid #b4bbc4;
   border-radius: 7px;
   background: #fbfcfd;
+}
+
+.requirement-task.is-pending,
+.requirements-history-item.is-pending {
+  border-left-color: #c89421;
 }
 
 .requirement-task.is-done,
@@ -577,8 +619,8 @@ body {
   width: max-content;
   padding: 5px 8px;
   border-radius: 999px;
-  color: #34383f;
-  background: #e9edf2;
+  color: #7a5200;
+  background: #fff1c2;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -588,6 +630,35 @@ body {
 .requirement-task-status.is-done {
   color: #17633a;
   background: #e0f2e7;
+}
+
+.requirements-report-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: #fff7e5;
+}
+
+.requirements-report-card > strong {
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.requirements-report-card pre {
+  max-height: 260px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
 }
 
 .requirement-task-actions button:disabled {
@@ -2557,6 +2628,11 @@ td.price-column {
 
   .requirements-filter-grid button {
     grid-column: 1 / -1;
+  }
+
+  .requirement-composer-grid,
+  .requirement-collaborator-actions {
+    grid-template-columns: 1fr;
   }
 
   .requirements-board {
