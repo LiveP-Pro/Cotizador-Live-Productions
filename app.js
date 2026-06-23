@@ -2381,6 +2381,47 @@ function downloadPdfFile(record) {
   return true;
 }
 
+async function writePdfRecordToDirectory(record, directoryHandle, setStatus = null) {
+  const fileName = record.fileName || buildPdfFileName();
+  const response = await fetch(absoluteAppUrl(record.pdfUrl), { credentials: "same-origin" });
+  if (!response.ok) throw new Error("No se pudo descargar el PDF guardado.");
+  const pdfBlob = await response.blob();
+  const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(pdfBlob);
+  await writable.close();
+
+  if (setStatus) {
+    const folderName = directoryHandle.name || "carpeta elegida";
+    setStatus(`PDF guardado en ${folderName}: ${fileName}`, "success");
+  }
+  return true;
+}
+
+async function configuredLocalPdfFolderHandle() {
+  if (!window.showDirectoryPicker) return null;
+  let directoryHandle = await readLocalPdfFolderHandle().catch(() => null);
+  directoryHandle = await ensureWritableFolderHandle(directoryHandle);
+  return directoryHandle || null;
+}
+
+async function savePdfOnConfiguredComputer(record, setStatus = null) {
+  if (!record?.pdfUrl) return false;
+  try {
+    const directoryHandle = await configuredLocalPdfFolderHandle();
+    if (!directoryHandle) return false;
+    return await writePdfRecordToDirectory(record, directoryHandle, setStatus);
+  } catch (error) {
+    if (setStatus) {
+      setStatus(
+        `La cotización quedó guardada en la web, pero no se pudo copiar a la carpeta local: ${error.message}`,
+        "error"
+      );
+    }
+    return false;
+  }
+}
+
 async function savePdfOnThisComputer(record, setStatus = setDriveStatus, button = null) {
   if (!record.pdfUrl) {
     setStatus("Esta cotización no tiene PDF para guardar en la computadora.", "error");
@@ -2414,17 +2455,7 @@ async function savePdfOnThisComputer(record, setStatus = setDriveStatus, button 
       if (!directoryHandle) return false;
     }
 
-    const response = await fetch(absoluteAppUrl(record.pdfUrl), { credentials: "same-origin" });
-    if (!response.ok) throw new Error("No se pudo descargar el PDF guardado.");
-    const pdfBlob = await response.blob();
-    const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(pdfBlob);
-    await writable.close();
-
-    const folderName = directoryHandle.name || "carpeta elegida";
-    setStatus(`PDF guardado en ${folderName}: ${fileName}`, "success");
-    return true;
+    return await writePdfRecordToDirectory({ ...record, fileName }, directoryHandle, setStatus);
   } catch (error) {
     if (error?.name === "AbortError") {
       setStatus("Guardado local cancelado. El PDF sigue disponible en el historial.", "error");
@@ -3380,6 +3411,25 @@ async function saveBatchPdfsOnThisComputer(results, button = null) {
   }
 }
 
+async function saveBatchPdfsOnConfiguredComputer(results) {
+  const savedResults = Array.isArray(results) ? results.filter((result) => result.pdfUrl) : [];
+  if (!savedResults.length) return 0;
+
+  const directoryHandle = await configuredLocalPdfFolderHandle();
+  if (!directoryHandle) return 0;
+
+  let completed = 0;
+  for (const record of savedResults) {
+    try {
+      await writePdfRecordToDirectory(record, directoryHandle);
+      completed += 1;
+    } catch {
+      // Si una copia local falla, la cotización principal ya quedó guardada en Render.
+    }
+  }
+  return completed;
+}
+
 async function sendBatchWhatsappPdfs(results, button = null) {
   const savedResults = Array.isArray(results) ? results.filter((result) => result.id && result.pdfUrl) : [];
   if (!savedResults.length) {
@@ -3496,8 +3546,11 @@ async function saveBatchQuotes() {
     renderBatchSavedResults(batchState.results);
     renderBatchDraftList();
     renderBatchHeaderState();
+    const localSavedCount = await saveBatchPdfsOnConfiguredComputer(batchState.results);
     setBatchStatus(
-      `${batchState.results.length} PDFs guardados en ${result.folder || "cotizaciones-generadas"}. Siguiente correlativo: ${result.nextNumber}.`,
+      `${batchState.results.length} PDFs guardados en ${result.folder || "cotizaciones-generadas"}.` +
+        `${localSavedCount ? ` También se copiaron ${localSavedCount} PDF(s) a esta computadora.` : ""}` +
+        ` Siguiente correlativo: ${result.nextNumber}.`,
       "success"
     );
     setDriveStatus(
@@ -3558,12 +3611,14 @@ async function saveQuoteToFolder() {
       `${isEditing ? "Actualizado" : "Guardado"}: ${result.fileName} en ${result.folder || "cotizaciones-generadas"}`,
       "success"
     );
-    renderLastSavedActions({
+    const savedRecord = {
       ...payload.quoteData,
       ...result,
       serviceName: payload.quoteData.packageName,
       total: payload.quoteData.totals?.grandTotal || 0
-    });
+    };
+    renderLastSavedActions(savedRecord);
+    await savePdfOnConfiguredComputer(savedRecord, setDriveStatus);
     if (result.pdfUrl) openPdf(result);
     const nextNumber = parseStoredNumber(result.nextNumber);
     if (nextNumber) {
