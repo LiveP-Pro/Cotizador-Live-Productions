@@ -2279,6 +2279,7 @@ function openPdf(record) {
 const localPdfFolderDbName = "cotizador-live-local-pdf-folder";
 const localPdfFolderStoreName = "handles";
 const localPdfFolderKey = "pdf-folder";
+const preferredLocalPdfFolderName = "Cotizaciones liveproductionsgt";
 
 function openLocalPdfFolderDb() {
   return new Promise((resolve, reject) => {
@@ -2329,6 +2330,46 @@ async function ensureWritableFolderHandle(handle) {
   return null;
 }
 
+async function chooseLocalPdfFolder(setStatus = setDriveStatus, button = null) {
+  if (!window.showDirectoryPicker) {
+    setStatus("Este navegador no permite elegir carpeta. Use Chrome o Edge en computadora.", "error");
+    return null;
+  }
+
+  const previousText = button?.textContent || "";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Eligiendo...";
+  }
+
+  try {
+    setStatus(`Seleccione Documentos > ${preferredLocalPdfFolderName}.`);
+    const directoryHandle = await window.showDirectoryPicker({
+      id: "cotizaciones-liveproductionsgt",
+      mode: "readwrite",
+      startIn: "documents"
+    });
+    const writableHandle = await ensureWritableFolderHandle(directoryHandle);
+    if (!writableHandle) throw new Error("No se otorgó permiso para guardar en esa carpeta.");
+    await writeLocalPdfFolderHandle(writableHandle);
+    const folderName = writableHandle.name || preferredLocalPdfFolderName;
+    setStatus(`Carpeta local configurada: ${folderName}.`, "success");
+    return writableHandle;
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      setStatus("Selección de carpeta cancelada.", "error");
+      return null;
+    }
+    setStatus(error.message || "No se pudo configurar la carpeta local.", "error");
+    return null;
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = previousText || "Elegir carpeta";
+    }
+  }
+}
+
 function downloadPdfFile(record) {
   if (!record.pdfUrl) return false;
   const link = document.createElement("a");
@@ -2358,7 +2399,10 @@ async function savePdfOnThisComputer(record, setStatus = setDriveStatus, button 
 
     if (!window.showDirectoryPicker) {
       downloadPdfFile(record);
-      setStatus("PDF descargado. Si desea elegir carpeta, use Chrome o Edge en computadora.", "success");
+      setStatus(
+        `PDF descargado. Para guardarlo directo en Documentos > ${preferredLocalPdfFolderName}, use Chrome o Edge en computadora.`,
+        "success"
+      );
       return true;
     }
 
@@ -2366,14 +2410,8 @@ async function savePdfOnThisComputer(record, setStatus = setDriveStatus, button 
     directoryHandle = await ensureWritableFolderHandle(directoryHandle);
 
     if (!directoryHandle) {
-      directoryHandle = await window.showDirectoryPicker({
-        id: "cotizaciones-live-productions",
-        mode: "readwrite",
-        startIn: "documents"
-      });
-      directoryHandle = await ensureWritableFolderHandle(directoryHandle);
-      if (!directoryHandle) throw new Error("No se otorgó permiso para guardar en esa carpeta.");
-      await writeLocalPdfFolderHandle(directoryHandle);
+      directoryHandle = await chooseLocalPdfFolder(setStatus);
+      if (!directoryHandle) return false;
     }
 
     const response = await fetch(absoluteAppUrl(record.pdfUrl), { credentials: "same-origin" });
@@ -2384,7 +2422,8 @@ async function savePdfOnThisComputer(record, setStatus = setDriveStatus, button 
     await writable.write(pdfBlob);
     await writable.close();
 
-    setStatus(`PDF guardado en la carpeta elegida de esta computadora: ${fileName}`, "success");
+    const folderName = directoryHandle.name || "carpeta elegida";
+    setStatus(`PDF guardado en ${folderName}: ${fileName}`, "success");
     return true;
   } catch (error) {
     if (error?.name === "AbortError") {
@@ -2466,6 +2505,7 @@ function renderLastSavedActions(record) {
   clearNode(elements.lastSavedActions);
   elements.lastSavedActions.append(
     buttonElement("Abrir PDF", () => openPdf(record)),
+    buttonElement("Elegir carpeta", (event, button) => chooseLocalPdfFolder(setDriveStatus, button)),
     buttonElement("Guardar en computadora", (event, button) => savePdfOnThisComputer(record, setDriveStatus, button)),
     buttonElement("Enviar PDF por WhatsApp", (event, button) => sendWhatsappPdf(record, setDriveStatus, button))
   );
@@ -2684,7 +2724,10 @@ async function readApiJson(response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401) showLogin("Inicie sesión para continuar.");
-    throw new Error(data.error || "No se pudo completar la operación.");
+    const detail = Array.isArray(data.detail)
+      ? data.detail.map((item) => item?.msg || item?.message || String(item)).join(" ")
+      : data.detail;
+    throw new Error(data.error || detail || "No se pudo completar la operación.");
   }
   return data;
 }
@@ -2694,10 +2737,15 @@ async function apiRequest(path, options = {}) {
     throw new Error("Abra el cotizador con la app local o ejecute node server.js para guardar y buscar historial.");
   }
 
-  const response = await fetch(path, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options
-  });
+  const headers = { ...(options.headers || {}) };
+  const hasBody =
+    Object.prototype.hasOwnProperty.call(options, "body") &&
+    options.body !== undefined &&
+    options.body !== null;
+  const hasContentType = Object.keys(headers).some((key) => key.toLowerCase() === "content-type");
+  if (hasBody && !hasContentType) headers["Content-Type"] = "application/json";
+
+  const response = await fetch(path, { ...options, headers });
   return readApiJson(response);
 }
 
@@ -4863,7 +4911,21 @@ async function fetchHistory(query = elements.historySearch.value.trim()) {
       method: "GET",
       headers: {}
     });
-    renderHistoryResults(result.records || []);
+    const records = result.records || [];
+    renderHistoryResults(records);
+
+    const searchedNumber = String(query || "").trim().match(/^\d+/)?.[0] || "";
+    if (searchedNumber) {
+      const exactMatches = records.filter((record) => {
+        const quoteNumber = String(record.quoteNumber || "");
+        const quoteCodeValue = String(record.quoteCode || "");
+        return quoteNumber === searchedNumber || quoteCodeValue.startsWith(`${searchedNumber}-`);
+      });
+      if (exactMatches.length === 1) {
+        await loadQuoteFromHistory(exactMatches[0].id);
+        setHistoryStatus(`Cotización ${searchedNumber} cargada para modificar.`, "success");
+      }
+    }
   } catch (error) {
     setHistoryStatus(error.message, "error");
     clearHistoryResults();
