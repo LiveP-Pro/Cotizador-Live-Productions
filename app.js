@@ -2276,6 +2276,131 @@ function openPdf(record) {
   if (record.pdfUrl) window.open(absoluteAppUrl(record.pdfUrl), "_blank", "noopener");
 }
 
+const localPdfFolderDbName = "cotizador-live-local-pdf-folder";
+const localPdfFolderStoreName = "handles";
+const localPdfFolderKey = "pdf-folder";
+
+function openLocalPdfFolderDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error("Este navegador no permite recordar carpetas locales."));
+      return;
+    }
+
+    const request = window.indexedDB.open(localPdfFolderDbName, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(localPdfFolderStoreName);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("No se pudo abrir el almacenamiento local."));
+  });
+}
+
+async function readLocalPdfFolderHandle() {
+  const db = await openLocalPdfFolderDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(localPdfFolderStoreName, "readonly");
+    const request = transaction.objectStore(localPdfFolderStoreName).get(localPdfFolderKey);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error || new Error("No se pudo leer la carpeta local."));
+  });
+}
+
+async function writeLocalPdfFolderHandle(handle) {
+  const db = await openLocalPdfFolderDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(localPdfFolderStoreName, "readwrite");
+    const request = transaction.objectStore(localPdfFolderStoreName).put(handle, localPdfFolderKey);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error || new Error("No se pudo guardar la carpeta local."));
+  });
+}
+
+async function ensureWritableFolderHandle(handle) {
+  if (!handle) return null;
+  if (typeof handle.queryPermission === "function") {
+    const currentPermission = await handle.queryPermission({ mode: "readwrite" });
+    if (currentPermission === "granted") return handle;
+  }
+  if (typeof handle.requestPermission === "function") {
+    const requestedPermission = await handle.requestPermission({ mode: "readwrite" });
+    if (requestedPermission === "granted") return handle;
+  }
+  return null;
+}
+
+function downloadPdfFile(record) {
+  if (!record.pdfUrl) return false;
+  const link = document.createElement("a");
+  link.href = absoluteAppUrl(record.pdfUrl);
+  link.download = record.fileName || buildPdfFileName();
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  return true;
+}
+
+async function savePdfOnThisComputer(record, setStatus = setDriveStatus, button = null) {
+  if (!record.pdfUrl) {
+    setStatus("Esta cotización no tiene PDF para guardar en la computadora.", "error");
+    return false;
+  }
+
+  const previousText = button?.textContent || "";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Guardando...";
+  }
+  setStatus("Preparando descarga del PDF...");
+
+  try {
+    const fileName = record.fileName || buildPdfFileName();
+
+    if (!window.showDirectoryPicker) {
+      downloadPdfFile(record);
+      setStatus("PDF descargado. Si desea elegir carpeta, use Chrome o Edge en computadora.", "success");
+      return true;
+    }
+
+    let directoryHandle = await readLocalPdfFolderHandle().catch(() => null);
+    directoryHandle = await ensureWritableFolderHandle(directoryHandle);
+
+    if (!directoryHandle) {
+      directoryHandle = await window.showDirectoryPicker({
+        id: "cotizaciones-live-productions",
+        mode: "readwrite",
+        startIn: "documents"
+      });
+      directoryHandle = await ensureWritableFolderHandle(directoryHandle);
+      if (!directoryHandle) throw new Error("No se otorgó permiso para guardar en esa carpeta.");
+      await writeLocalPdfFolderHandle(directoryHandle);
+    }
+
+    const response = await fetch(absoluteAppUrl(record.pdfUrl), { credentials: "same-origin" });
+    if (!response.ok) throw new Error("No se pudo descargar el PDF guardado.");
+    const pdfBlob = await response.blob();
+    const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(pdfBlob);
+    await writable.close();
+
+    setStatus(`PDF guardado en la carpeta elegida de esta computadora: ${fileName}`, "success");
+    return true;
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      setStatus("Guardado local cancelado. El PDF sigue disponible en el historial.", "error");
+      return false;
+    }
+    setStatus(error.message || "No se pudo guardar el PDF en esta computadora.", "error");
+    return false;
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = previousText || "Guardar en computadora";
+    }
+  }
+}
+
 async function sendWhatsappPdf(record, setStatus = setHistoryStatus, button = null) {
   if (!record.pdfUrl) {
     setStatus("Esta cotización no tiene PDF para enviar por WhatsApp.", "error");
@@ -2341,6 +2466,7 @@ function renderLastSavedActions(record) {
   clearNode(elements.lastSavedActions);
   elements.lastSavedActions.append(
     buttonElement("Abrir PDF", () => openPdf(record)),
+    buttonElement("Guardar en computadora", (event, button) => savePdfOnThisComputer(record, setDriveStatus, button)),
     buttonElement("Enviar PDF por WhatsApp", (event, button) => sendWhatsappPdf(record, setDriveStatus, button))
   );
   elements.lastSavedActions.classList.remove("is-hidden");
@@ -3156,20 +3282,54 @@ function renderBatchSavedResults(results) {
     const whatsappButton = buttonElement("Enviar PDF por WhatsApp", (event, button) =>
       sendWhatsappPdf(result, setBatchStatus, button)
     );
+    const localSaveButton = buttonElement("Guardar en computadora", (event, button) =>
+      savePdfOnThisComputer(result, setBatchStatus, button)
+    );
 
-    actions.append(link, whatsappButton);
+    actions.append(link, localSaveButton, whatsappButton);
     row.append(name, actions);
     elements.batchSavedResults.appendChild(row);
   });
 
   if (results.length > 1) {
+    const saveAllLocalButton = buttonElement("Guardar todos en computadora", (event, button) =>
+      saveBatchPdfsOnThisComputer(results, button)
+    );
+    saveAllLocalButton.classList.add("batch-send-all-button");
     const sendAllButton = buttonElement("Enviar todos por WhatsApp", (event, button) =>
       sendBatchWhatsappPdfs(results, button)
     );
     sendAllButton.classList.add("batch-send-all-button");
+    elements.batchSavedResults.appendChild(saveAllLocalButton);
     elements.batchSavedResults.appendChild(sendAllButton);
   }
   elements.batchSavedResults.classList.remove("is-hidden");
+}
+
+async function saveBatchPdfsOnThisComputer(results, button = null) {
+  const savedResults = Array.isArray(results) ? results.filter((result) => result.pdfUrl) : [];
+  if (!savedResults.length) {
+    setBatchStatus("No hay PDFs guardados para guardar en esta computadora.", "error");
+    return;
+  }
+
+  const previousText = button?.textContent || "";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Guardando...";
+  }
+
+  let completed = 0;
+  for (const record of savedResults) {
+    const ok = await savePdfOnThisComputer(record, setBatchStatus);
+    if (ok) completed += 1;
+  }
+
+  setBatchStatus(`${completed} PDF(s) guardado(s) en esta computadora.`, completed ? "success" : "error");
+  if (button) {
+    button.disabled = false;
+    button.textContent = previousText || "Guardar todos en computadora";
+  }
 }
 
 async function sendBatchWhatsappPdfs(results, button = null) {
@@ -4675,12 +4835,15 @@ function renderHistoryResults(records) {
 
     const loadButton = buttonElement("Cargar", () => loadQuoteFromHistory(record.id));
     const openButton = buttonElement("Abrir PDF", () => openPdf(record));
+    const localSaveButton = buttonElement("Guardar en computadora", (event, button) =>
+      savePdfOnThisComputer(record, setHistoryStatus, button)
+    );
     const whatsappButton = buttonElement("Enviar PDF", (event, button) => sendWhatsappPdf(record, setHistoryStatus, button));
     const deleteButton = buttonElement("X", () => deleteQuoteFromHistory(record));
     deleteButton.classList.add("history-delete-button");
     deleteButton.setAttribute("aria-label", `Eliminar cotización ${record.quoteNumber || ""}`);
 
-    actions.append(loadButton, openButton, whatsappButton, deleteButton);
+    actions.append(loadButton, openButton, localSaveButton, whatsappButton, deleteButton);
     item.append(title, details, actions);
     elements.historyResults.appendChild(item);
   });
