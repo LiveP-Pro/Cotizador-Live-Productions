@@ -578,6 +578,8 @@ const elements = {
   topPrintButton: document.querySelector("#topPrintButton"),
   topNewQuoteButton: document.querySelector("#topNewQuoteButton"),
   topLanguageButton: document.querySelector("#topLanguageButton"),
+  localFolderButton: document.querySelector("#localFolderButton"),
+  localFolderStatus: document.querySelector("#localFolderStatus"),
   driveSaveStatus: document.querySelector("#driveSaveStatus"),
   lastSavedActions: document.querySelector("#lastSavedActions"),
   pdfFileName: document.querySelector("#pdfFileName"),
@@ -2255,6 +2257,17 @@ function setDriveStatus(message, type = "") {
   elements.driveSaveStatus.classList.toggle("is-success", type === "success");
 }
 
+function setLocalFolderStatus(message, type = "") {
+  if (!elements.localFolderStatus) return;
+  elements.localFolderStatus.textContent = message;
+  elements.localFolderStatus.classList.toggle("is-error", type === "error");
+  elements.localFolderStatus.classList.toggle("is-success", type === "success");
+}
+
+function isPreferredLocalPdfFolderName(folderName) {
+  return normalizedSearchText(folderName) === normalizedSearchText(preferredLocalPdfFolderName);
+}
+
 function absoluteAppUrl(pathOrUrl) {
   if (!pathOrUrl) return "";
   try {
@@ -2351,8 +2364,12 @@ async function chooseLocalPdfFolder(setStatus = setDriveStatus, button = null) {
     });
     const writableHandle = await ensureWritableFolderHandle(directoryHandle);
     if (!writableHandle) throw new Error("No se otorgó permiso para guardar en esa carpeta.");
+    const folderName = writableHandle.name || "";
+    if (!isPreferredLocalPdfFolderName(folderName)) {
+      throw new Error(`Seleccione la carpeta exacta: ${preferredLocalPdfFolderName}.`);
+    }
     await writeLocalPdfFolderHandle(writableHandle);
-    const folderName = writableHandle.name || preferredLocalPdfFolderName;
+    setLocalFolderStatus(`Carpeta configurada: ${folderName}.`, "success");
     setStatus(`Carpeta local configurada: ${folderName}.`, "success");
     return writableHandle;
   } catch (error) {
@@ -2402,7 +2419,30 @@ async function configuredLocalPdfFolderHandle() {
   if (!window.showDirectoryPicker) return null;
   let directoryHandle = await readLocalPdfFolderHandle().catch(() => null);
   directoryHandle = await ensureWritableFolderHandle(directoryHandle);
-  return directoryHandle || null;
+  if (!directoryHandle) return null;
+  const folderName = directoryHandle.name || "";
+  return isPreferredLocalPdfFolderName(folderName) ? directoryHandle : null;
+}
+
+async function refreshLocalFolderStatus() {
+  if (!window.showDirectoryPicker) {
+    setLocalFolderStatus("Use Chrome o Edge para guardar directo en carpeta.", "error");
+    return;
+  }
+
+  const directoryHandle = await configuredLocalPdfFolderHandle().catch(() => null);
+  if (!directoryHandle) {
+    setLocalFolderStatus(`Carpeta pendiente: ${preferredLocalPdfFolderName}.`);
+    return;
+  }
+
+  const folderName = directoryHandle.name || preferredLocalPdfFolderName;
+  if (!isPreferredLocalPdfFolderName(folderName)) {
+    setLocalFolderStatus(`Vuelva a elegir la carpeta exacta: ${preferredLocalPdfFolderName}.`, "error");
+    return;
+  }
+
+  setLocalFolderStatus(`Carpeta configurada: ${folderName}.`, "success");
 }
 
 async function savePdfOnConfiguredComputer(record, setStatus = null) {
@@ -3547,6 +3587,7 @@ async function saveBatchQuotes() {
     renderBatchDraftList();
     renderBatchHeaderState();
     const localSavedCount = await saveBatchPdfsOnConfiguredComputer(batchState.results);
+    if (!localSavedCount) refreshLocalFolderStatus();
     setBatchStatus(
       `${batchState.results.length} PDFs guardados en ${result.folder || "cotizaciones-generadas"}.` +
         `${localSavedCount ? ` También se copiaron ${localSavedCount} PDF(s) a esta computadora.` : ""}` +
@@ -3618,7 +3659,8 @@ async function saveQuoteToFolder() {
       total: payload.quoteData.totals?.grandTotal || 0
     };
     renderLastSavedActions(savedRecord);
-    await savePdfOnConfiguredComputer(savedRecord, setDriveStatus);
+    const localCopySaved = await savePdfOnConfiguredComputer(savedRecord, setDriveStatus);
+    if (!localCopySaved) refreshLocalFolderStatus();
     if (result.pdfUrl) openPdf(result);
     const nextNumber = parseStoredNumber(result.nextNumber);
     if (nextNumber) {
@@ -5243,6 +5285,9 @@ function bindEvents() {
   elements.historySearch.addEventListener("keydown", (event) => {
     if (event.key === "Enter") fetchHistory();
   });
+  elements.localFolderButton?.addEventListener("click", (event) => {
+    chooseLocalPdfFolder(setLocalFolderStatus, event.currentTarget).then(refreshLocalFolderStatus);
+  });
 
   const preparePdfAssets =
     window.requestIdleCallback || ((callback) => window.setTimeout(callback, 250));
@@ -5293,6 +5338,7 @@ function startQuoteApp() {
   renderExtrasPicker();
   renderQuote();
   syncQuoteSequenceFromServer();
+  refreshLocalFolderStatus();
   requestedQuoteNumber = null;
   fetchHistory("");
 }
