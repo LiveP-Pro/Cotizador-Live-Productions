@@ -653,7 +653,7 @@ let quoteCurrency = "Q";
 let pdfCssTextCache = "";
 const pdfImageDataUriCache = new Map();
 const defaultPackageId = "sunday-funday-completo";
-const quoteSequenceStart = 10757n;
+const quoteSequenceStart = 10760n;
 const quoteStorageKeys = {
   currentNumber: "liveQuoteCurrentNumber",
   currentDate: "liveQuoteCurrentDate"

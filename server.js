@@ -23,7 +23,7 @@ const pdfDir = path.join(dataDir, "cotizaciones-generadas");
 const backupDir = path.join(dataDir, "respaldo-cotizaciones");
 const dbPath = path.join(dataDir, "cotizaciones.sqlite");
 const maxBodyBytes = 100 * 1024 * 1024;
-const quoteSequenceStart = 10757n;
+const quoteSequenceStart = 10760n;
 const whatsappConfig = {
   apiVersion: process.env.WHATSAPP_API_VERSION || "v23.0",
   phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
@@ -2283,6 +2283,7 @@ async function deleteQuote(id, response) {
 
   try {
     db.exec("BEGIN IMMEDIATE");
+    advanceQuoteSequenceFrom(existing.quote_number, 1);
     db.prepare("DELETE FROM quotes WHERE id = ?").run(id);
     db.exec("COMMIT");
   } catch (error) {
