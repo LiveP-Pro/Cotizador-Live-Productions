@@ -579,6 +579,8 @@ const elements = {
   topNewQuoteButton: document.querySelector("#topNewQuoteButton"),
   topLanguageButton: document.querySelector("#topLanguageButton"),
   localFolderButton: document.querySelector("#localFolderButton"),
+  editableQuoteOpenButton: document.querySelector("#editableQuoteOpenButton"),
+  editableQuoteFileInput: document.querySelector("#editableQuoteFileInput"),
   localFolderStatus: document.querySelector("#localFolderStatus"),
   driveSaveStatus: document.querySelector("#driveSaveStatus"),
   lastSavedActions: document.querySelector("#lastSavedActions"),
@@ -2398,6 +2400,70 @@ function downloadPdfFile(record) {
   return true;
 }
 
+function editableQuoteFileName(record) {
+  const pdfName = cleanFilePart(record?.fileName || buildPdfFileName(), "cotizacion.pdf");
+  return pdfName.replace(/\.pdf$/i, "") + ".cotizacion-live.json";
+}
+
+async function editableQuotePayload(record) {
+  let quoteData = record?.quoteData || null;
+  let sourceRecord = record || {};
+
+  if (!quoteData && record?.id) {
+    const result = await apiRequest(`/api/cotizaciones/${record.id}`, {
+      method: "GET",
+      headers: {}
+    });
+    quoteData = result.quoteData || null;
+    sourceRecord = { ...sourceRecord, ...(result.record || {}) };
+  }
+
+  if (!quoteData) {
+    const possibleQuoteNumber = parseStoredNumber(record?.quoteNumber);
+    if (possibleQuoteNumber) quoteData = { ...record, quoteNumber: possibleQuoteNumber.toString() };
+  }
+
+  if (!quoteData?.quoteNumber) {
+    throw new Error("No se encontró la información editable de esta cotización.");
+  }
+
+  return {
+    type: "live-productions-quote",
+    version: 1,
+    savedAt: new Date().toISOString(),
+    quoteId: Number(sourceRecord.id || record?.id) || null,
+    quoteNumber: String(quoteData.quoteNumber || sourceRecord.quoteNumber || ""),
+    fileName: sourceRecord.fileName || record?.fileName || "",
+    pdfUrl: sourceRecord.pdfUrl || record?.pdfUrl || "",
+    quoteData
+  };
+}
+
+async function writeEditableQuoteToDirectory(record, directoryHandle) {
+  const payload = await editableQuotePayload(record);
+  const fileHandle = await directoryHandle.getFileHandle(editableQuoteFileName(record), { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(
+    new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" })
+  );
+  await writable.close();
+  return payload;
+}
+
+async function downloadEditableQuoteFile(record) {
+  const payload = await editableQuotePayload(record);
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(
+    new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" })
+  );
+  link.download = editableQuoteFileName(record);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  return true;
+}
+
 async function writePdfRecordToDirectory(record, directoryHandle, setStatus = null) {
   const fileName = record.fileName || buildPdfFileName();
   const response = await fetch(absoluteAppUrl(record.pdfUrl), { credentials: "same-origin" });
@@ -2407,10 +2473,11 @@ async function writePdfRecordToDirectory(record, directoryHandle, setStatus = nu
   const writable = await fileHandle.createWritable();
   await writable.write(pdfBlob);
   await writable.close();
+  await writeEditableQuoteToDirectory({ ...record, fileName }, directoryHandle);
 
   if (setStatus) {
     const folderName = directoryHandle.name || "carpeta elegida";
-    setStatus(`PDF guardado en ${folderName}: ${fileName}`, "success");
+    setStatus(`PDF y editable guardados en ${folderName}: ${fileName}`, "success");
   }
   return true;
 }
@@ -2448,7 +2515,10 @@ async function refreshLocalFolderStatus() {
 async function savePdfOnConfiguredComputer(record, setStatus = null) {
   if (!record?.pdfUrl) return false;
   try {
-    const directoryHandle = await configuredLocalPdfFolderHandle();
+    let directoryHandle = await configuredLocalPdfFolderHandle();
+    if (!directoryHandle && setStatus) {
+      directoryHandle = await chooseLocalPdfFolder(setStatus);
+    }
     if (!directoryHandle) return false;
     return await writePdfRecordToDirectory(record, directoryHandle, setStatus);
   } catch (error) {
@@ -2480,8 +2550,9 @@ async function savePdfOnThisComputer(record, setStatus = setDriveStatus, button 
 
     if (!window.showDirectoryPicker) {
       downloadPdfFile(record);
+      await downloadEditableQuoteFile(record);
       setStatus(
-        `PDF descargado. Para guardarlo directo en Documentos > ${preferredLocalPdfFolderName}, use Chrome o Edge en computadora.`,
+        `PDF y editable descargados. Para guardarlos directo en Documentos > ${preferredLocalPdfFolderName}, use Chrome o Edge en computadora.`,
         "success"
       );
       return true;
@@ -2508,6 +2579,62 @@ async function savePdfOnThisComputer(record, setStatus = setDriveStatus, button 
       button.disabled = false;
       button.textContent = previousText || "Guardar en computadora";
     }
+  }
+}
+
+async function findQuoteRecordByNumber(quoteNumber) {
+  if (!isLocalServerAvailable() || !quoteNumber) return null;
+  const params = new URLSearchParams({ search: String(quoteNumber) });
+  const result = await apiRequest(`/api/cotizaciones?${params.toString()}`, {
+    method: "GET",
+    headers: {}
+  });
+  return (result.records || []).find((record) => String(record.quoteNumber || "") === String(quoteNumber)) || null;
+}
+
+async function loadEditableQuoteFile(file) {
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new Error(
+        "Ese archivo no es editable. El PDF solo se abre para ver; para modificar use el archivo .cotizacion-live.json guardado junto al PDF."
+      );
+    }
+
+    const quoteData = payload.quoteData || payload;
+    const quoteNumber = String(quoteData.quoteNumber || payload.quoteNumber || "").trim();
+    if (!quoteNumber || !quoteData.packageId) {
+      throw new Error("El archivo no contiene una cotización editable de Live Productions.");
+    }
+
+    let quoteId = Number(payload.quoteId || payload.id) || null;
+    let record = quoteId ? { id: quoteId, quoteNumber } : null;
+    if (!quoteId) {
+      record = await findQuoteRecordByNumber(quoteNumber);
+      quoteId = Number(record?.id) || null;
+    }
+
+    if (quoteId) setEditingQuote({ id: quoteId, quoteNumber });
+    else clearEditingQuote();
+
+    applyQuoteData(quoteData);
+    clearLastSavedActions();
+    const message = quoteId
+      ? `Cotización ${quoteNumber} cargada editable. Al guardar se actualizará el mismo correlativo.`
+      : `Cotización ${quoteNumber} cargada, pero no se encontró en el historial web. Busque ese correlativo en Historial para actualizar el mismo registro.`;
+    setDriveStatus(message, quoteId ? "success" : "error");
+    setHistoryStatus(message, quoteId ? "success" : "error");
+  } catch (error) {
+    const message = error.message || "No se pudo abrir la cotización editable.";
+    setDriveStatus(message, "error");
+    setHistoryStatus(message, "error");
+  } finally {
+    if (elements.editableQuoteFileInput) elements.editableQuoteFileInput.value = "";
   }
 }
 
@@ -3455,7 +3582,8 @@ async function saveBatchPdfsOnConfiguredComputer(results) {
   const savedResults = Array.isArray(results) ? results.filter((result) => result.pdfUrl) : [];
   if (!savedResults.length) return 0;
 
-  const directoryHandle = await configuredLocalPdfFolderHandle();
+  let directoryHandle = await configuredLocalPdfFolderHandle();
+  if (!directoryHandle) directoryHandle = await chooseLocalPdfFolder(setBatchStatus);
   if (!directoryHandle) return 0;
 
   let completed = 0;
@@ -3565,6 +3693,7 @@ async function saveBatchQuotes() {
 
     batchState.results = (result.quotes || []).map((savedResult, index) => ({
       ...savedResult,
+      quoteData: batchState.drafts[index]?.data || null,
       clientName: batchState.drafts[index]?.data.clientName || "",
       clientPhone: batchState.drafts[index]?.data.clientPhone || "",
       packageName: batchState.drafts[index]?.data.packageName || "",
@@ -3655,6 +3784,7 @@ async function saveQuoteToFolder() {
     const savedRecord = {
       ...payload.quoteData,
       ...result,
+      quoteData: payload.quoteData,
       serviceName: payload.quoteData.packageName,
       total: payload.quoteData.totals?.grandTotal || 0
     };
@@ -5287,6 +5417,12 @@ function bindEvents() {
   });
   elements.localFolderButton?.addEventListener("click", (event) => {
     chooseLocalPdfFolder(setLocalFolderStatus, event.currentTarget).then(refreshLocalFolderStatus);
+  });
+  elements.editableQuoteOpenButton?.addEventListener("click", () => {
+    elements.editableQuoteFileInput?.click();
+  });
+  elements.editableQuoteFileInput?.addEventListener("change", (event) => {
+    loadEditableQuoteFile(event.target.files?.[0]);
   });
 
   const preparePdfAssets =
