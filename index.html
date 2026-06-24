@@ -6,8 +6,8 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260624-01" />
-    <script src="app.js?v=20260624-01" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260624-02" />
+    <script src="app.js?v=20260624-02" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -195,6 +195,7 @@
       </div>
       <nav class="topbar-actions" aria-label="Acciones principales">
         <button id="topBatchQuotesButton" type="button">Cotizaciones múltiples</button>
+        <button id="topMountingPageButton" type="button" aria-pressed="false">Incluir tipos de montaje</button>
         <button id="topVatButton" type="button" aria-pressed="false">IVA</button>
         <div class="topbar-discount-action">
           <button id="topDiscountButton" type="button" aria-pressed="false">Descuento</button>
@@ -215,44 +216,6 @@
 
     <main id="appShell" class="app-shell">
       <section class="control-panel no-print" aria-label="Controles de cotización">
-        <div class="panel-section service-picker-section">
-          <span class="field-label">Servicio</span>
-          <label id="servicePickerButton" class="service-picker-button" for="packageSelect">
-            Seleccione el tipo de servicios
-          </label>
-          <p id="selectedServiceSummary" class="selected-service-summary"></p>
-          <select id="packageSelect"></select>
-          <div id="servicePicker" class="service-picker"></div>
-        </div>
-
-        <div id="manualServiceEditor" class="panel-section manual-service-editor is-hidden">
-          <div class="section-heading">
-            <span>Edición manual</span>
-            <small>Servicio, cantidades y montos</small>
-          </div>
-          <label>
-            Nombre del servicio
-            <input id="manualServiceName" type="text" autocomplete="off" />
-          </label>
-          <label id="manualServicePriceField">
-            Monto del servicio
-            <input id="manualServicePrice" type="number" min="0" step="0.01" inputmode="decimal" />
-          </label>
-          <div id="manualServiceItems" class="manual-service-items"></div>
-          <button id="manualServiceAddItem" class="manual-service-add-button" type="button">
-            + Agregar equipo
-          </button>
-          <button id="manualServiceAddSubtitle" class="manual-service-add-button manual-service-subtitle-button" type="button">
-            + Agregar subtítulo
-          </button>
-          <button id="manualServiceAddSubtotal" class="manual-service-add-button manual-service-subtotal-button" type="button">
-            + Agregar sub total
-          </button>
-          <button id="manualServiceAddTotal" class="manual-service-add-button manual-service-total-button" type="button">
-            + Agregar total
-          </button>
-        </div>
-
         <div class="panel-section">
           <label>
             Moneda
@@ -305,6 +268,44 @@
             Cantidad de invitados
             <input id="guestCount" type="number" min="0" inputmode="numeric" />
           </label>
+        </div>
+
+        <div class="panel-section service-picker-section">
+          <span class="field-label">Servicio</span>
+          <label id="servicePickerButton" class="service-picker-button" for="packageSelect">
+            Seleccione el tipo de servicios
+          </label>
+          <p id="selectedServiceSummary" class="selected-service-summary"></p>
+          <select id="packageSelect"></select>
+          <div id="servicePicker" class="service-picker"></div>
+        </div>
+
+        <div id="manualServiceEditor" class="panel-section manual-service-editor is-hidden">
+          <div class="section-heading">
+            <span>Edición manual</span>
+            <small>Servicio, cantidades y montos</small>
+          </div>
+          <label>
+            Nombre del servicio
+            <input id="manualServiceName" type="text" autocomplete="off" />
+          </label>
+          <label id="manualServicePriceField">
+            Monto del servicio
+            <input id="manualServicePrice" type="number" min="0" step="0.01" inputmode="decimal" />
+          </label>
+          <div id="manualServiceItems" class="manual-service-items"></div>
+          <button id="manualServiceAddItem" class="manual-service-add-button" type="button">
+            + Agregar equipo
+          </button>
+          <button id="manualServiceAddSubtitle" class="manual-service-add-button manual-service-subtitle-button" type="button">
+            + Agregar subtítulo
+          </button>
+          <button id="manualServiceAddSubtotal" class="manual-service-add-button manual-service-subtotal-button" type="button">
+            + Agregar sub total
+          </button>
+          <button id="manualServiceAddTotal" class="manual-service-add-button manual-service-total-button" type="button">
+            + Agregar total
+          </button>
         </div>
 
         <div class="panel-section">
@@ -516,7 +517,7 @@
           </div>
           </article>
 
-          <article class="quote-document quote-page mounting-page">
+          <article id="mountingPage" class="quote-document quote-page mounting-page is-hidden">
             <header class="mounting-page-header">
               <div>
                 <p class="quote-label">Live Productions</p>

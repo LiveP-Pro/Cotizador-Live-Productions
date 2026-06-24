@@ -722,7 +722,7 @@ body {
 
 .topbar-actions {
   display: grid;
-  grid-template-columns: repeat(7, minmax(100px, 1fr));
+  grid-template-columns: repeat(8, minmax(94px, 1fr));
   gap: 8px;
   min-width: 0;
 }
@@ -2892,6 +2892,11 @@ td.price-column {
     page-break-after: auto;
   }
 
+  .quote-document-set.without-mounting-page .quote-main-page {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
   .quote-section,
   .quote-info-grid,
   .totals-box,
@@ -3018,6 +3023,11 @@ body.pdf-export .quote-page {
 }
 
 body.pdf-export .quote-page:last-child {
+  break-after: auto;
+  page-break-after: auto;
+}
+
+body.pdf-export .quote-document-set.without-mounting-page .quote-main-page {
   break-after: auto;
   page-break-after: auto;
 }

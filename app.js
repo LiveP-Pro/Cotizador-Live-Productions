@@ -566,11 +566,14 @@ const elements = {
   grandTotal: document.querySelector("#grandTotal"),
   totalsBox: document.querySelector("#totalsBox"),
   quoteBottomGrid: document.querySelector("#quoteBottomGrid"),
+  quoteDocument: document.querySelector("#quoteDocument"),
+  mountingPage: document.querySelector("#mountingPage"),
   paymentConditionsText: document.querySelector("#paymentConditionsText"),
   notesSection: document.querySelector("#notesSection"),
   docNotes: document.querySelector("#docNotes"),
   discountAmount: document.querySelector("#discountAmount"),
   topBatchQuotesButton: document.querySelector("#topBatchQuotesButton"),
+  topMountingPageButton: document.querySelector("#topMountingPageButton"),
   topVatButton: document.querySelector("#topVatButton"),
   topDiscountButton: document.querySelector("#topDiscountButton"),
   topDiscountPanel: document.querySelector("#topDiscountPanel"),
@@ -643,6 +646,7 @@ const packageItemOverrides = new Map();
 const vatRate = 0.12;
 let includeVat = false;
 let includeDiscount = false;
+let includeMountingPage = false;
 let extrasSearchTerm = "";
 let quoteLanguage = "es";
 let quoteCurrency = "Q";
@@ -2806,6 +2810,7 @@ async function buildPdfHtml() {
   clonedImages.forEach((image, index) => {
     if (imageSources[index]) image.src = imageSources[index];
   });
+  quoteClone.querySelectorAll(".quote-page.is-hidden").forEach((page) => page.remove());
 
   return `<!doctype html>
 <html lang="es">
@@ -3094,6 +3099,7 @@ function buildQuoteData() {
     })),
     includeVat,
     includeDiscount,
+    includeMountingPage,
     discountAmount: readMoneyInput(elements.discountAmount),
     language: quoteLanguage,
     currency: quoteCurrency,
@@ -3157,6 +3163,7 @@ function emptyQuoteData(number, quoteDate = todayIso()) {
     selectedExtras: [],
     includeVat: false,
     includeDiscount: false,
+    includeMountingPage: false,
     discountAmount: 0,
     language: "es",
     currency: "Q",
@@ -4984,6 +4991,15 @@ function renderVatState() {
   elements.batchHeaderVatButton.textContent = includeVat ? "IVA 12% agregado" : "IVA";
 }
 
+function renderMountingPageState() {
+  elements.mountingPage.classList.toggle("is-hidden", !includeMountingPage);
+  elements.quoteDocument.classList.toggle("without-mounting-page", !includeMountingPage);
+  elements.topMountingPageButton.classList.toggle("is-active", includeMountingPage);
+  elements.topMountingPageButton.setAttribute("aria-pressed", String(includeMountingPage));
+  elements.topMountingPageButton.textContent =
+    quoteLanguage === "en" ? "Include setup styles" : "Incluir tipos de montaje";
+}
+
 function renderPaymentConditions() {
   if (quoteLanguage === "en") {
     const start = includeVat
@@ -5024,6 +5040,7 @@ function renderQuote() {
   renderTotals(pkg, selected);
   renderDiscountState();
   renderVatState();
+  renderMountingPageState();
   renderPaymentConditions();
   renderCurrencyState();
 
@@ -5060,6 +5077,7 @@ async function resetQuote() {
   includeDiscount = false;
   elements.discountAmount.value = "";
   includeVat = false;
+  includeMountingPage = false;
   quoteLanguage = "es";
   quoteCurrency = "Q";
   extrasSearchTerm = "";
@@ -5226,6 +5244,7 @@ function applyQuoteData(data) {
 
   includeVat = Boolean(data.includeVat);
   includeDiscount = Boolean(data.includeDiscount);
+  includeMountingPage = Boolean(data.includeMountingPage);
   elements.discountAmount.value = data.discountAmount || "";
   quoteLanguage = data.language === "en" ? "en" : "es";
   quoteCurrency = data.currency === "$" ? "$" : "Q";
@@ -5305,6 +5324,10 @@ function bindEvents() {
   elements.topNewQuoteButton.addEventListener("click", resetQuote);
   elements.topVatButton.addEventListener("click", () => {
     includeVat = !includeVat;
+    renderQuote();
+  });
+  elements.topMountingPageButton.addEventListener("click", () => {
+    includeMountingPage = !includeMountingPage;
     renderQuote();
   });
   elements.topDiscountButton.addEventListener("click", () => {
