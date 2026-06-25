@@ -6,8 +6,8 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260624-03" />
-    <script src="app.js?v=20260624-03" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260625-01" />
+    <script src="app.js?v=20260625-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -226,7 +226,11 @@
           </label>
         </div>
 
-        <div class="panel-section two-columns">
+        <div class="panel-section client-info-grid">
+          <label>
+            Número de cotización
+            <input id="quoteNumberInput" type="text" inputmode="numeric" autocomplete="off" />
+          </label>
           <label>
             Cliente
             <input id="clientName" type="text" autocomplete="organization" />

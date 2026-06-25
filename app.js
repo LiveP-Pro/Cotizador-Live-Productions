@@ -613,6 +613,7 @@ const elements = {
   batchEditorHost: document.querySelector("#batchEditorHost"),
   batchSavedResults: document.querySelector("#batchSavedResults"),
   fields: {
+    quoteNumber: document.querySelector("#quoteNumberInput"),
     clientName: document.querySelector("#clientName"),
     clientPhone: document.querySelector("#clientPhone"),
     eventName: document.querySelector("#eventName"),
@@ -2154,13 +2155,25 @@ function parseStoredNumber(value) {
   }
 }
 
+function cleanManualQuoteNumber(value) {
+  return String(value || "").replace(/\D/g, "").trim();
+}
+
+function quoteNumberValue() {
+  return cleanManualQuoteNumber(elements.fields.quoteNumber.value) || currentQuoteNumber.toString();
+}
+
+function setQuoteNumberInput(value) {
+  elements.fields.quoteNumber.value = cleanManualQuoteNumber(value) || currentQuoteNumber.toString();
+}
+
 function formatCodeDate(dateValue) {
   const [year, month, day] = (dateValue || todayIso()).split("-");
   return `${day}-${month}-${year}`;
 }
 
 function quoteCode() {
-  return `${currentQuoteNumber}-${formatCodeDate(currentQuoteDate)}`;
+  return `${quoteNumberValue()}-${formatCodeDate(currentQuoteDate)}`;
 }
 
 function storeQuoteSequence() {
@@ -2172,11 +2185,13 @@ function initializeQuoteSequence() {
   currentQuoteNumber =
     parseStoredNumber(readStoredValue(quoteStorageKeys.currentNumber)) || quoteSequenceStart;
   currentQuoteDate = readStoredValue(quoteStorageKeys.currentDate) || todayIso();
+  setQuoteNumberInput(currentQuoteNumber.toString());
   storeQuoteSequence();
 }
 
 function startNewQuoteSequence() {
   currentQuoteDate = todayIso();
+  setQuoteNumberInput(currentQuoteNumber.toString());
   storeQuoteSequence();
 }
 
@@ -2196,6 +2211,7 @@ function cleanNewQuoteUrl() {
 function setQuoteSequence(number) {
   currentQuoteNumber = number;
   currentQuoteDate = todayIso();
+  setQuoteNumberInput(currentQuoteNumber.toString());
   storeQuoteSequence();
 }
 
@@ -2254,7 +2270,7 @@ function buildPdfFileName() {
   const client = cleanFilePart(elements.fields.clientName.value, "nombre del cliente");
   const phone = cleanFilePart(elements.fields.clientPhone.value, "numero telefonico");
   const service = cleanFilePart(fileServiceName(), "servicio");
-  return `Coti-${currentQuoteNumber}-${service}-${client}-${phone}.pdf`;
+  return `Coti-${quoteNumberValue()}-${service}-${client}-${phone}.pdf`;
 }
 
 function setDriveStatus(message, type = "") {
@@ -3059,7 +3075,7 @@ function buildQuoteData() {
   const selected = selectedExtrasForQuote();
   const totals = calculateTotals(pkg, selected);
   return {
-    quoteNumber: currentQuoteNumber.toString(),
+    quoteNumber: quoteNumberValue(),
     quoteDate: currentQuoteDate,
     quoteCode: quoteCode(),
     fileName: buildPdfFileName(),
@@ -3638,29 +3654,20 @@ async function saveBatchQuotes() {
   if (!batchState.started || !batchState.drafts.length || batchState.saving) return;
   captureActiveBatchDraft();
 
-  let serverStart;
-  try {
-    serverStart = await fetchNextQuoteNumber();
-  } catch (error) {
-    setBatchStatus(error.message, "error");
+  const quoteNumbers = batchState.drafts.map((draft) => cleanManualQuoteNumber(draft.data.quoteNumber));
+  if (quoteNumbers.some((number) => !number)) {
+    setBatchStatus("Cada cotización debe tener un número escrito manualmente.", "error");
+    return;
+  }
+  const repeatedNumber = quoteNumbers.find((number, index) => quoteNumbers.indexOf(number) !== index);
+  if (repeatedNumber) {
+    setBatchStatus(`El número ${repeatedNumber} está repetido en el lote. Corrija los números antes de guardar.`, "error");
     return;
   }
 
-  const quoteDate = todayIso();
-  batchState.drafts = batchState.drafts.map((draft, index) => ({
-    data: assignQuoteNumber(draft.data, batchQuoteNumber(serverStart, index), quoteDate),
-    savedResult: null
-  }));
-  batchState.baseNumber = serverStart;
-  const lastNumber = batchQuoteNumber(serverStart, batchState.drafts.length - 1);
-  batchState.suppressCapture = true;
-  applyQuoteData(batchState.drafts[batchState.activeIndex].data);
-  batchState.suppressCapture = false;
-  renderBatchDraftList();
-
   const confirmed = window.confirm(
     `¿Está seguro que desea guardar ${batchState.drafts.length} cotizaciones?\n\n` +
-      `Se crearán PDFs individuales con correlativos del ${serverStart} al ${lastNumber}.`
+      `Se crearán PDFs individuales con los números escritos: ${quoteNumbers.join(", ")}.`
   );
   if (!confirmed) {
     setBatchStatus("Guardado cancelado. Ningún correlativo fue utilizado.");
@@ -3756,16 +3763,14 @@ async function saveBatchQuotes() {
 }
 
 async function saveQuoteToFolder() {
-  if (!editingQuoteId) await syncQuoteSequenceFromServer();
-
   const isEditing = Boolean(editingQuoteId);
   const confirmed = window.confirm(
     isEditing
       ? `¿Está seguro que desea actualizar la cotización ${quoteCode()}?\n\nAceptar reemplazará el PDF de esta cotización sin cambiar el correlativo.`
-      : `¿Está seguro que desea guardar la cotización ${quoteCode()}?\n\nAceptar guardará el PDF y avanzará el correlativo. Cancelar conservará el mismo número.`
+      : `¿Está seguro que desea guardar la cotización ${quoteCode()}?\n\nAceptar guardará el PDF con el número escrito manualmente. Cancelar conservará la cotización abierta.`
   );
   if (!confirmed) {
-    setDriveStatus(`Guardado cancelado. El correlativo ${currentQuoteNumber} no cambió.`);
+    setDriveStatus(`Guardado cancelado. El número ${quoteNumberValue()} no cambió.`);
     return;
   }
 
@@ -5072,6 +5077,7 @@ async function resetQuote() {
   Object.values(elements.fields).forEach((field) => {
     field.value = "";
   });
+  setQuoteNumberInput(currentQuoteNumber.toString());
   elements.fields.quoteDate.value = currentQuoteDate;
   elements.packageSelect.value = defaultPackageId;
   includeDiscount = false;
@@ -5216,6 +5222,7 @@ function applyQuoteData(data) {
   if (savedNumber) currentQuoteNumber = savedNumber;
   currentQuoteDate = data.quoteDate || todayIso();
 
+  setQuoteNumberInput(data.quoteNumber || currentQuoteNumber.toString());
   elements.fields.clientName.value = data.clientName || "";
   elements.fields.clientPhone.value = data.clientPhone || "";
   elements.fields.eventName.value = data.eventName || "";
@@ -5293,6 +5300,7 @@ async function syncQuoteSequenceFromServer() {
     if (serverNextNumber && serverNextNumber !== currentQuoteNumber) {
       currentQuoteNumber = serverNextNumber;
       currentQuoteDate = todayIso();
+      setQuoteNumberInput(currentQuoteNumber.toString());
       elements.fields.quoteDate.value = currentQuoteDate;
       storeQuoteSequence();
       renderQuote();
@@ -5315,7 +5323,13 @@ function bindEvents() {
   });
 
   Object.values(elements.fields).forEach((field) => {
-    field.addEventListener("input", renderQuote);
+    field.addEventListener("input", () => {
+      if (field === elements.fields.quoteNumber) {
+        const cleanValue = cleanManualQuoteNumber(field.value);
+        if (field.value !== cleanValue) field.value = cleanValue;
+      }
+      renderQuote();
+    });
   });
 
   elements.topPrintButton.addEventListener("click", printQuote);

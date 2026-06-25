@@ -2107,6 +2107,16 @@ function selectedServiceName(quoteData) {
     : (quoteData.selectedExtras || []).map((extra) => extra.description).join(", ");
 }
 
+function cleanManualQuoteNumber(value) {
+  return String(value || "").replace(/\D/g, "").trim();
+}
+
+function findQuoteNumberConflict(quoteNumber, excludeId = 0) {
+  return db
+    .prepare("SELECT id FROM quotes WHERE quote_number = ? AND id <> ? LIMIT 1")
+    .get(String(quoteNumber || ""), Number(excludeId) || 0);
+}
+
 function insertQuoteRecord(quoteData, fileName, target) {
   return db
     .prepare(`
@@ -2148,7 +2158,8 @@ function updateQuoteRecord(id, quoteData, fileName, target) {
   return db
     .prepare(`
       UPDATE quotes
-      SET quote_code = ?,
+      SET quote_number = ?,
+          quote_code = ?,
           quote_date = ?,
           event_date = ?,
           client_name = ?,
@@ -2163,6 +2174,7 @@ function updateQuoteRecord(id, quoteData, fileName, target) {
       WHERE id = ?
     `)
     .run(
+      String(quoteData.quoteNumber || ""),
       quoteData.quoteCode || "",
       quoteData.quoteDate || "",
       quoteData.eventDate || "",
@@ -2188,16 +2200,16 @@ async function saveQuote(payload, response) {
     return;
   }
 
-  const expectedNumber = nextQuoteNumber();
-  const quoteNumber = String(quoteData.quoteNumber || "");
-  if (quoteNumber !== expectedNumber) {
-    errorResponse(
-      response,
-      409,
-      `El correlativo cambió. El siguiente número disponible es ${expectedNumber}. Revise la cotización y vuelva a guardar.`
-    );
+  const quoteNumber = cleanManualQuoteNumber(quoteData.quoteNumber);
+  if (!quoteNumber) {
+    errorResponse(response, 400, "Ingrese manualmente el número de cotización antes de guardar.");
     return;
   }
+  if (findQuoteNumberConflict(quoteNumber)) {
+    errorResponse(response, 409, `Ya existe una cotización con el número ${quoteNumber}. Cárguela desde Historial para editarla.`);
+    return;
+  }
+  quoteData.quoteNumber = quoteNumber;
 
   const { fileName, target } = uniquePdfTarget(payload.fileName || quoteData.fileName);
   quoteData.fileName = fileName;
@@ -2239,18 +2251,22 @@ async function updateQuote(id, payload, response) {
     return;
   }
 
-  const quoteNumber = String(quoteData.quoteNumber || "");
-  if (quoteNumber !== String(existing.quote_number || "")) {
-    errorResponse(
-      response,
-      409,
-      `Esta cotización cargada conserva el correlativo ${existing.quote_number}. Use Nueva cotización para crear otro correlativo.`
-    );
+  const quoteNumber = cleanManualQuoteNumber(quoteData.quoteNumber);
+  if (!quoteNumber) {
+    errorResponse(response, 400, "Ingrese manualmente el número de cotización antes de guardar.");
     return;
   }
+  if (findQuoteNumberConflict(quoteNumber, id)) {
+    errorResponse(response, 409, `Ya existe otra cotización con el número ${quoteNumber}. Use un número diferente.`);
+    return;
+  }
+  quoteData.quoteNumber = quoteNumber;
 
   const oldTarget = existingPdfPath(existing);
-  const { fileName, target } = updatePdfTarget(existing);
+  const { fileName, target } =
+    quoteNumber === String(existing.quote_number || "")
+      ? updatePdfTarget(existing)
+      : uniquePdfTarget(payload.fileName || quoteData.fileName);
   const tempTarget = path.join(pdfDir, `.tmp-${Date.now()}-${Math.random().toString(16).slice(2)}.pdf`);
 
   try {
@@ -2359,25 +2375,30 @@ async function saveQuoteBatch(payload, response) {
     return;
   }
 
-  const expectedStart = nextQuoteNumber();
-  let expectedNumber = BigInt(expectedStart);
+  const seenQuoteNumbers = new Set();
 
   for (const quote of quotes) {
+    quote.quoteData = quote.quoteData || {};
     const html = String(quote.html || "");
-    const quoteNumber = String(quote.quoteData?.quoteNumber || "");
+    const quoteNumber = cleanManualQuoteNumber(quote.quoteData.quoteNumber);
     if (!html.includes("quote-document")) {
       errorResponse(response, 400, "Una de las cotizaciones no contiene HTML válido.");
       return;
     }
-    if (quoteNumber !== expectedNumber.toString()) {
-      errorResponse(
-        response,
-        409,
-        `El correlativo cambió. El siguiente número disponible es ${expectedStart}. Revise el lote y vuelva a guardar.`
-      );
+    if (!quoteNumber) {
+      errorResponse(response, 400, "Cada cotización del lote debe tener un número escrito manualmente.");
       return;
     }
-    expectedNumber += 1n;
+    if (seenQuoteNumbers.has(quoteNumber)) {
+      errorResponse(response, 409, `El número ${quoteNumber} está repetido en el lote.`);
+      return;
+    }
+    if (findQuoteNumberConflict(quoteNumber)) {
+      errorResponse(response, 409, `Ya existe una cotización con el número ${quoteNumber}. Revise el lote antes de guardar.`);
+      return;
+    }
+    seenQuoteNumbers.add(quoteNumber);
+    quote.quoteData.quoteNumber = quoteNumber;
   }
 
   const generated = [];
@@ -2402,7 +2423,9 @@ async function saveQuoteBatch(payload, response) {
           pdfUrl: pdfUrl(fileName)
         });
       });
-      advanceQuoteSequenceFrom(expectedStart, generated.length);
+      generated.forEach(({ quoteData }) => {
+        advanceQuoteSequenceFrom(quoteData.quoteNumber, 1);
+      });
       db.exec("COMMIT");
       createDailyDatabaseBackup();
     } catch (error) {
