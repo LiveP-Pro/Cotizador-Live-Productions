@@ -871,6 +871,22 @@ button:focus-visible {
   border-color: var(--focus);
 }
 
+.toggle-panel-button {
+  min-height: 40px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.toggle-panel-button:hover,
+.toggle-panel-button.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
 .hidden-select {
   position: absolute;
   width: 1px;
@@ -2488,6 +2504,43 @@ td.price-column {
   background: #fbfcfd;
 }
 
+.additional-services-section {
+  width: min(640px, 100%);
+  margin: 16px auto 0;
+  padding: 10px 16px 12px;
+  color: #111111;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #d8dce2;
+  border-radius: 7px;
+}
+
+.additional-services-section h3 {
+  margin: 0 0 7px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.additional-services-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.additional-services-grid ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.additional-services-grid li {
+  margin: 0 0 2px;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.18;
+}
+
 .quote-footer {
   margin-top: 26px;
   padding-top: 0;
@@ -2817,6 +2870,11 @@ td.price-column {
     padding: 24px;
   }
 
+  .additional-services-grid {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
   .quote-header {
     grid-template-columns: 1fr;
   }
@@ -2915,6 +2973,19 @@ td.price-column {
 
   .quote-logo {
     width: 154px;
+  }
+
+  .additional-services-section {
+    margin-top: 12px;
+    padding: 8px 14px 10px;
+  }
+
+  .additional-services-section h3 {
+    font-size: 9px;
+  }
+
+  .additional-services-grid li {
+    font-size: 8.2px;
   }
 
   .quote-info-grid {
@@ -3062,6 +3133,19 @@ body.pdf-export .quote-logo {
   width: 154px;
 }
 
+body.pdf-export .additional-services-section {
+  margin-top: 12px;
+  padding: 8px 14px 10px;
+}
+
+body.pdf-export .additional-services-section h3 {
+  font-size: 9px;
+}
+
+body.pdf-export .additional-services-grid li {
+  font-size: 8.2px;
+}
+
 body.pdf-export .quote-info-grid {
   gap: 16px;
   margin-bottom: 16px;
@@ -3145,6 +3229,7 @@ body.pdf-export .quote-footer {
 body.pdf-export .quote-section,
 body.pdf-export .quote-info-grid,
 body.pdf-export .totals-box,
-body.pdf-export .payment-conditions {
+body.pdf-export .payment-conditions,
+body.pdf-export .additional-services-section {
   break-inside: avoid;
 }

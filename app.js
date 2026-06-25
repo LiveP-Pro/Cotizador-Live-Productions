@@ -546,6 +546,8 @@ const elements = {
   manualExtrasCount: document.querySelector("#manualExtrasCount"),
   manualExtrasAddButton: document.querySelector("#manualExtrasAddButton"),
   extrasList: document.querySelector("#extrasList"),
+  additionalServicesButton: document.querySelector("#additionalServicesButton"),
+  additionalServicesSection: document.querySelector("#additionalServicesSection"),
   quotePackageTitle: document.querySelector("#quotePackageTitle"),
   quoteCode: document.querySelector("#quoteCode"),
   serviceDetailCard: document.querySelector(".service-detail-card"),
@@ -648,6 +650,7 @@ const vatRate = 0.12;
 let includeVat = false;
 let includeDiscount = false;
 let includeMountingPage = false;
+let includeAdditionalServices = false;
 let extrasSearchTerm = "";
 let quoteLanguage = "es";
 let quoteCurrency = "Q";
@@ -3116,6 +3119,7 @@ function buildQuoteData() {
     includeVat,
     includeDiscount,
     includeMountingPage,
+    includeAdditionalServices,
     discountAmount: readMoneyInput(elements.discountAmount),
     language: quoteLanguage,
     currency: quoteCurrency,
@@ -3180,6 +3184,7 @@ function emptyQuoteData(number, quoteDate = todayIso()) {
     includeVat: false,
     includeDiscount: false,
     includeMountingPage: false,
+    includeAdditionalServices: false,
     discountAmount: 0,
     language: "es",
     currency: "Q",
@@ -4891,6 +4896,11 @@ function renderQuoteLanguage() {
   setDocumentText("vatTotalLabel", "IVA 12%", "VAT 12%");
   setDocumentText("grandTotalLabel", "Total", "Total");
   setDocumentText("notesTitle", "Notas", "Notes");
+  setDocumentText(
+    "additionalServicesTitle",
+    "Servicios Adicionales (no incluidos en la cotización):",
+    "Additional Services (not included in this quote):"
+  );
   setDocumentText("signatureLabel", "Firma:", "Signature:");
   setDocumentText("addressLabel", "Direccion:", "Address:");
   setDocumentText("phoneLabel", "Telefono:", "Phone:");
@@ -5005,6 +5015,14 @@ function renderMountingPageState() {
     quoteLanguage === "en" ? "Include setup styles" : "Incluir tipos de montaje";
 }
 
+function renderAdditionalServicesState() {
+  elements.additionalServicesSection.classList.toggle("is-hidden", !includeAdditionalServices);
+  elements.additionalServicesButton.classList.toggle("is-active", includeAdditionalServices);
+  elements.additionalServicesButton.setAttribute("aria-pressed", String(includeAdditionalServices));
+  elements.additionalServicesButton.textContent =
+    quoteLanguage === "en" ? "Additional services" : "Servicios adicionales";
+}
+
 function renderPaymentConditions() {
   if (quoteLanguage === "en") {
     const start = includeVat
@@ -5046,6 +5064,7 @@ function renderQuote() {
   renderDiscountState();
   renderVatState();
   renderMountingPageState();
+  renderAdditionalServicesState();
   renderPaymentConditions();
   renderCurrencyState();
 
@@ -5084,6 +5103,7 @@ async function resetQuote() {
   elements.discountAmount.value = "";
   includeVat = false;
   includeMountingPage = false;
+  includeAdditionalServices = false;
   quoteLanguage = "es";
   quoteCurrency = "Q";
   extrasSearchTerm = "";
@@ -5252,6 +5272,7 @@ function applyQuoteData(data) {
   includeVat = Boolean(data.includeVat);
   includeDiscount = Boolean(data.includeDiscount);
   includeMountingPage = Boolean(data.includeMountingPage);
+  includeAdditionalServices = Boolean(data.includeAdditionalServices);
   elements.discountAmount.value = data.discountAmount || "";
   quoteLanguage = data.language === "en" ? "en" : "es";
   quoteCurrency = data.currency === "$" ? "$" : "Q";
@@ -5342,6 +5363,10 @@ function bindEvents() {
   });
   elements.topMountingPageButton.addEventListener("click", () => {
     includeMountingPage = !includeMountingPage;
+    renderQuote();
+  });
+  elements.additionalServicesButton.addEventListener("click", () => {
+    includeAdditionalServices = !includeAdditionalServices;
     renderQuote();
   });
   elements.topDiscountButton.addEventListener("click", () => {

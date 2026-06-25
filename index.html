@@ -6,8 +6,8 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260625-01" />
-    <script src="app.js?v=20260625-01" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260625-02" />
+    <script src="app.js?v=20260625-02" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -272,6 +272,9 @@
             Cantidad de invitados
             <input id="guestCount" type="number" min="0" inputmode="numeric" />
           </label>
+          <button id="additionalServicesButton" class="secondary-button toggle-panel-button" type="button" aria-pressed="false">
+            Servicios adicionales
+          </button>
         </div>
 
         <div class="panel-section service-picker-section">
@@ -508,6 +511,30 @@
           <section id="notesSection" class="quote-section notes-section is-hidden">
             <h3 id="notesTitle">Notas</h3>
             <p id="docNotes"></p>
+          </section>
+
+          <section id="additionalServicesSection" class="additional-services-section is-hidden">
+            <h3 id="additionalServicesTitle">Servicios Adicionales (no incluidos en la cotización):</h3>
+            <div class="additional-services-grid">
+              <ul>
+                <li>Presentación de Grupos musicales</li>
+                <li>2 personajes cabezones animadores</li>
+                <li>Batucada</li>
+                <li>Servicio de grabación de Video</li>
+                <li>Presentación de Saxofonic</li>
+                <li>Presentación de Violín eléctrico</li>
+                <li>Pirotecnia fría</li>
+              </ul>
+              <ul>
+                <li>Pistola LED CO2</li>
+                <li>Cañón de Confeti</li>
+                <li>Pantalla LED</li>
+                <li>Tarima</li>
+                <li>Bus de Shots</li>
+                <li>Carrito de Shots</li>
+                <li>Pianista con Piano de Cola</li>
+              </ul>
+            </div>
           </section>
 
           <footer class="quote-footer">
