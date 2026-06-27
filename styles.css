@@ -285,6 +285,80 @@ body {
   font-size: 15px;
 }
 
+.module-intro {
+  margin-bottom: 24px;
+}
+
+.equipment-module-card label {
+  display: grid;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.equipment-module-card input,
+.equipment-module-card textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.equipment-module-card textarea {
+  resize: vertical;
+}
+
+.equipment-base-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.equipment-field-wide {
+  grid-column: 1 / -1;
+}
+
+.equipment-table-wrap {
+  margin-top: 24px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.equipment-base-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.equipment-base-table th,
+.equipment-base-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.equipment-base-table th {
+  color: #ffffff;
+  background: #111111;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.equipment-base-table td {
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .requirements-card {
   width: min(1280px, calc(100% - 48px));
 }
@@ -2672,6 +2746,10 @@ td.price-column {
   }
 
   .about-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-base-grid {
     grid-template-columns: 1fr;
   }
 

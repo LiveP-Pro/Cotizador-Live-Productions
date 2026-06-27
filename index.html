@@ -6,8 +6,8 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260625-02" />
-    <script src="app.js?v=20260625-02" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260627-01" />
+    <script src="app.js?v=20260627-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -62,6 +62,8 @@
           <button type="button" data-page-link="quienes">Quiénes somos</button>
           <button type="button" data-page-link="cotizador">Cotizador Live Productions</button>
           <button type="button" data-page-link="requerimientos">Requerimientos</button>
+          <button type="button" data-page-link="requerimiento-equipo">Requerimiento de equipo</button>
+          <button type="button" data-page-link="contabilidad-equipo">Contabilidad de equipo</button>
         </nav>
       </aside>
 
@@ -183,6 +185,72 @@
               </p>
               <div id="requirementsHistory" class="requirements-history"></div>
             </section>
+          </div>
+        </div>
+      </section>
+
+      <section id="requerimientoEquipoPage" class="site-page no-print" data-page="requerimiento-equipo">
+        <div class="site-page-card equipment-module-card">
+          <img class="page-logo" src="assets/logo-live-productions.jpeg" alt="Live Productions" />
+          <p class="eyebrow">Requerimiento de equipo</p>
+          <h1>Requerimiento de equipo</h1>
+          <p class="module-intro">
+            Base inicial para registrar solicitudes de equipo, responsables, fechas y observaciones del evento.
+          </p>
+          <div class="equipment-base-grid">
+            <label>
+              Evento
+              <input type="text" autocomplete="off" placeholder="Nombre del evento" />
+            </label>
+            <label>
+              Responsable
+              <input type="text" autocomplete="off" placeholder="Nombre del responsable" />
+            </label>
+            <label>
+              Fecha requerida
+              <input type="date" />
+            </label>
+            <label>
+              Hora requerida
+              <input type="time" />
+            </label>
+            <label class="equipment-field-wide">
+              Equipo solicitado
+              <textarea rows="5" placeholder="Detalle del equipo requerido"></textarea>
+            </label>
+            <label class="equipment-field-wide">
+              Observaciones
+              <textarea rows="4" placeholder="Notas importantes para montaje, transporte o cuidado del equipo"></textarea>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section id="contabilidadEquipoPage" class="site-page no-print" data-page="contabilidad-equipo">
+        <div class="site-page-card equipment-module-card">
+          <img class="page-logo" src="assets/logo-live-productions.jpeg" alt="Live Productions" />
+          <p class="eyebrow">Contabilidad de equipo</p>
+          <h1>Contabilidad de equipo</h1>
+          <p class="module-intro">
+            Base inicial para controlar inventario, salidas, retornos y disponibilidad del equipo.
+          </p>
+          <div class="equipment-table-wrap">
+            <table class="equipment-base-table">
+              <thead>
+                <tr>
+                  <th>Equipo</th>
+                  <th>Cantidad</th>
+                  <th>Asignado a</th>
+                  <th>Estado</th>
+                  <th>Observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="5">Agregue el detalle del equipo para iniciar el control.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
