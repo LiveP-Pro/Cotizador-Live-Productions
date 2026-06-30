@@ -1,4 +1,281 @@
 const equipmentServices = {
+  "sunday-funday-a": {
+    name: "SUNDAY FUNDAY A",
+    source: "SUNDAY A.pdf",
+    mainSections: [
+      {
+        title: "CONSOLA",
+        items: [
+          [1, "consola de mesa X32 beringer con su AC y case"],
+          [1, "router con su funda (cable de RED y cargador)"],
+          [2, "ipad nuevo con su protector y cargador de ipad con su cable"]
+        ]
+      },
+      {
+        title: "TELEFONO (MOCHILA)",
+        items: [
+          [1, "celular, cargador para telefono con su cable, cable de celular para audio"],
+          [1, "cable lighthing y cable tipo C"]
+        ]
+      },
+      {
+        title: "AUDIO",
+        items: [
+          [4, "bocinas QSC con su power spicon"],
+          [2, "pedestales de bocina hercules con su case"],
+          [1, "amplificador TP18000 con sus 2 cables spicon en case (1 DBX y 1 AC)"],
+          [2, "sub QSC con su case"],
+          [1, "snake de audio 18 entradas"],
+          [1, "grabadora de audio"]
+        ]
+      },
+      {
+        title: "MICROFONIA PARA BATERIA",
+        items: [
+          [4, "mic. SM57"],
+          [1, "mic. Beta 52"],
+          [2, "mic. Pg81 con su case"],
+          [4, "clamps para microfonos con su case"]
+        ]
+      },
+      {
+        title: "MICROFONIA PARA VOCES",
+        items: [
+          [2, "mic. Sm58 alambrico con su case (Diego y Backup de toolback)"],
+          [2, "mic. Sm 58 inalambrico con su funda (1 receptor y 1 cargador)"],
+          [1, "mic. Saxo con su funda (1 receptor y 1 cargador)"],
+          [1, "mic. Violin con su funda (1 receptor y 1 cargador)"],
+          [2, "mic. Blx4 Shure cantantes con su funda"],
+          [1, "funda para microfono Paola (rosado)"],
+          [1, "pedal para microfono tolback"],
+          [2, "cajas directas Whirlwhind"]
+        ]
+      },
+      {
+        title: "PEDESTALES",
+        items: [
+          [1, "case de teclado"],
+          [3, "pedestales para antena HD con su case"],
+          [1, "pedestal recto Paola HD con su case"],
+          [1, "pedestal de Jorge para Ipad con su case"],
+          [1, "pedestal de brazo Diego HD con su case"],
+          [1, "pedestal de hit hat Dw con su case"],
+          [1, "pedestal para teclado"],
+          [2, "pedestales OH de brazo para platos con su case"]
+        ]
+      },
+      {
+        title: "MONITOREO INTERNO",
+        items: [
+          [2, "monitores turbosound con su power spicon en su case"],
+          [1, "bajo turbosound con su power spicon en su case"],
+          [2, "pedestales para monitores con su case"]
+        ]
+      },
+      {
+        title: "COMPUTADORA",
+        items: [
+          [1, "computadora de prueba con su mochila (1 cargador con su cable, 1 cable de RED, 1 trapo)"],
+          [1, "Mochila Jorge Merida complemento de computadora de prueba (2 cargadores de IPAD, 2 IPAD, 2 in ears extras)"]
+        ]
+      },
+      {
+        title: "IN EARS",
+        items: [
+          [2, "sistemas completos in ears Acemic (8 in ears) con su cargador y case"],
+          [1, "sistema completo in ears grupo shure (6 in ears) con su cargador y case"],
+          [2, "antenas para mic. Shure cantantes con su case"],
+          [1, "antena In ears grupo con su case"]
+        ]
+      },
+      {
+        title: "BACKLINE INSTRUMENTOS - BATERIA",
+        items: [
+          [1, "bombo (pedal) DW con su funda"],
+          [1, "alfombra"],
+          [1, "banquito Diego Dw"],
+          [2, "pares de baquetas con su estuche"],
+          [1, "caja DW con su funda"],
+          [1, "tom no.1 DW con su funda"],
+          [1, "tom no.2 con su funda"],
+          [1, "pedal de bombo con su case"],
+          [1, "floortom DW con su funda"]
+        ]
+      },
+      {
+        title: "PLATOS",
+        items: [
+          [1, "hit hat zildjan con su funda"],
+          [1, "china zildjan con su funda"],
+          [1, "ride zildjan con su funda"]
+        ]
+      },
+      {
+        title: "ILUMINACION",
+        items: [
+          [6, "beam 260 con su power spicon y case"],
+          [6, "pares LED con su AC y case"],
+          [2, "luces circulares con su power spicon"],
+          [2, "lasers grandes con sus power spicon y case"],
+          [2, "luces Wash con su spicon y case"],
+          [24, "clamps"],
+          [24, "bases de clamps"],
+          [4, "tuvos galvanizados con sus hamburguesas dobles"],
+          [2, "spliter de luces 6 canales american dj con su AC"],
+          [2, "blinders multicolor con sus power spicon y case"],
+          [2, "maquinas de humo con su AC, su control y 1 caja plastica"],
+          [1, "galon de liquido de humo"],
+          [2, "ventilador con su cable de corriente y su funda"]
+        ]
+      },
+      {
+        title: "ESTRUCTURAS",
+        items: [
+          [2, "cajones de madera negro para músicos"],
+          [2, "marcos de dj both con su tela (grande) controles"],
+          [1, "marco de dj both con su tela (pequeño) DJ"],
+          [1, "dj booth case"]
+        ]
+      },
+      {
+        title: "ESTRUCTURAS DE 2 A 3.50 METROS FORRADAS",
+        items: [
+          [6, "estructuras de 2 metros"],
+          [8, "estructuras de 0.50 centimetros"],
+          [6, "platinas pequeñas"],
+          [6, "platinas grandes"],
+          [100, "pines"],
+          [40, "chiches"],
+          [1, "interfaz con su cable de RED y su cargador (compu mouse, cargador, adaptador) (monitor, HDMI, cable de corriente) con su case"]
+        ]
+      },
+      {
+        title: "TELAS PARA FORRAR",
+        items: [
+          [6, "telas de 3mts para forrar truss en color a definir"],
+          [1, "tela pequeña para forrar dj booth color a definir (DJ)"],
+          [2, "tela grande para forrar dj booth color negro (controles)"]
+        ]
+      },
+      {
+        title: "CABLEADO",
+        items: [
+          [1, "distro de corriente"],
+          [5, "cables AC"],
+          [5, "cables spicon power"],
+          [2, "cables de 1/4 a 1/4"],
+          [1, "case de pulpos (6 grandes y 6 pequeños)"],
+          [1, "tcj calibre No. 4 (30 metros)"],
+          [10, "cuadritos de corriente"],
+          [10, "regletas en case"],
+          [60, "cables XLR en case"],
+          [40, "extensiones"]
+        ]
+      },
+      {
+        title: "BATERIAS",
+        items: [
+          [7, "baterias cuadradas shure recargables con su case"],
+          [3, "cargadores dobles para baterias shure con su case"],
+          [24, "baterias recargables bonai"],
+          [1, "cargador para bateria bonai"]
+        ]
+      }
+    ],
+    extras: [
+      {
+        id: "pistola-led-co2",
+        title: "Pistola LED CO2",
+        items: [
+          [1, "pistola de co2"],
+          [1, "manguera de 10mts. Para pistola co2"],
+          [1, "cilindro de CO2 lleno con tapadera"],
+          [4, "1 cangrejo para co2, 1 funda de co2, 1 troquet y 1 strap pequeño"]
+        ]
+      },
+      {
+        id: "pirotecnia-fria",
+        title: "Pirotecnia Fria",
+        items: [
+          [2, "maquinas de pirotecnia fria"],
+          [2, "sobre de polvo para pirotecnia"],
+          [1, "DMX para pirotecnia (cases de Jorge)"]
+        ]
+      },
+      {
+        id: "toldos",
+        title: "Toldos",
+        items: [
+          [1, "toldito blanco de 3 x 3 con tubos galvanizados con paredes"],
+          [1, "toldito blanco de 2 x 2 con tubos galvanizados con paredes"],
+          [2, "mesas plegables grandes"],
+          [2, "luces par LED con su AC para toldo"]
+        ]
+      },
+      {
+        id: "extras-operativos",
+        title: "Extras operativos",
+        items: [
+          [1, "extintor"],
+          [1, "bolsa de agua pura"],
+          [5, "dop teip (caja de herramienta)"],
+          [3, "paquetes de cinchos (caja de herramienta)"],
+          [7, "cinta de aislar (caja de herramienta)"],
+          [4, "intercomunicadores hollyland con su cargadores y estuche"]
+        ]
+      },
+      {
+        id: "caja-herramientas",
+        title: "Caja de Herramientas",
+        items: [
+          [1, "macho"],
+          [2, "tomas patas de gallo"],
+          [1, "flipon doble de 50 amp"],
+          [1, "desarmador de estrella"],
+          [1, "desarmador de castigaderas"],
+          [1, "cuchilla o cutter"],
+          [1, "estuche de llaves Allen"],
+          [1, "alicate"],
+          [1, "tenaza"],
+          [1, "pinza"],
+          [1, "espiga tipo tester"],
+          [1, "multímetro o tester marca fluke (estuche)"]
+        ]
+      },
+      {
+        id: "equipo-limpieza",
+        title: "Equipo de Limpieza",
+        items: [
+          [5, "trapos"],
+          [1, "escoba"],
+          [1, "pala"],
+          [5, "trapiadores"],
+          [1, "atomizador de azistin"],
+          [1, "atomizador de cera"],
+          [2, "espumas limpiadoras"]
+        ]
+      },
+      {
+        id: "equipo-proteccion",
+        title: "Equipo de proteccion",
+        items: [
+          [10, "bolsas jardineras de tonel"],
+          [3, "retazos de nylon para tapar equipo"]
+        ]
+      },
+      {
+        id: "seguridad-industrial",
+        title: "Equipo de Seguridad Industrial",
+        items: [
+          [6, "casco"],
+          [6, "chalecos"],
+          [0, "botas"],
+          [6, "pares de guantes"],
+          [1, "arnes completo para subir"]
+        ]
+      }
+    ]
+  },
   "sunday-funday-b": {
     name: "SUNDAY FUNDAY B",
     source: "SUNDAY B.pdf",
@@ -307,6 +584,9 @@ function normalizeEquipmentKey(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    .replace(/[“”"']/g, "")
+    .replace(/\bno\.\s*/g, "no ")
+    .replace(/[.,;:]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -411,7 +691,7 @@ function equipmentRowsSummary() {
 
 function tableForEquipmentSections(sections, compact = false) {
   if (!sections.length) {
-    return `<p class="equipment-empty">Seleccione SUNDAY FUNDAY B para cargar el equipo.</p>`;
+    return `<p class="equipment-empty">Seleccione un servicio para cargar el equipo.</p>`;
   }
   const rows = sections
     .map((section) => {
@@ -826,7 +1106,7 @@ function equipmentPdfFileName(mode = "full") {
 async function saveEquipmentPdf(mode = "full") {
   const status = equipmentQuery("#equipmentSaveStatus");
   if (!currentEquipmentService()) {
-    if (status) status.textContent = "Seleccione SUNDAY FUNDAY B antes de guardar.";
+    if (status) status.textContent = "Seleccione un servicio antes de guardar.";
     return;
   }
   if (mode === "rent" && !equipmentRentalRows().length) {
