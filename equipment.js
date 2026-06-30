@@ -280,6 +280,7 @@ const equipmentServices = {
 const equipmentState = {
   selectedServiceId: "",
   events: [],
+  selectedExtraIds: new Set(),
   manualExtras: [],
   inventory: new Map(),
   observations: new Map()
@@ -332,6 +333,7 @@ function currentEquipmentService() {
 function selectedEquipmentSections() {
   const service = currentEquipmentService();
   if (!service) return [];
+  const selectedExtrasSections = (service.extras || []).filter((extra) => equipmentState.selectedExtraIds.has(extra.id));
   const manualExtrasSection = equipmentState.manualExtras.length
     ? [
         {
@@ -341,7 +343,7 @@ function selectedEquipmentSections() {
         }
       ]
     : [];
-  return [...service.mainSections, ...manualExtrasSection];
+  return [...service.mainSections, ...selectedExtrasSections, ...manualExtrasSection];
 }
 
 function currentEquipmentEventDraft() {
@@ -473,8 +475,42 @@ function addEquipmentEvent() {
   renderEquipmentModule();
 }
 
-function renderEquipmentExtras() {
-  const host = equipmentQuery("#equipmentExtrasList");
+function renderEquipmentPredefinedExtras() {
+  const host = equipmentQuery("#equipmentPredefinedExtras");
+  if (!host) return;
+  const service = currentEquipmentService();
+  if (!service?.extras?.length) {
+    host.innerHTML = `<p class="equipment-empty">Este servicio no tiene extras cargados.</p>`;
+    return;
+  }
+  host.innerHTML = service.extras
+    .map((extra) => {
+      const checked = equipmentState.selectedExtraIds.has(extra.id) ? "checked" : "";
+      const itemCount = extra.items?.length || 0;
+      return `
+        <label class="equipment-extra-card">
+          <input type="checkbox" data-extra-id="${escapeEquipmentHtml(extra.id)}" ${checked} />
+          <span>
+            <strong>${escapeEquipmentHtml(extra.title)}</strong>
+            <span>${escapeEquipmentHtml(itemCount)} línea(s) de equipo</span>
+          </span>
+        </label>`;
+    })
+    .join("");
+  host.querySelectorAll("[data-extra-id]").forEach((input) => {
+    input.addEventListener("change", () => {
+      if (input.checked) {
+        equipmentState.selectedExtraIds.add(input.dataset.extraId);
+      } else {
+        equipmentState.selectedExtraIds.delete(input.dataset.extraId);
+      }
+      renderEquipmentModule();
+    });
+  });
+}
+
+function renderManualEquipmentExtras() {
+  const host = equipmentQuery("#equipmentManualExtrasList");
   if (!host) return;
   if (!equipmentState.manualExtras.length) {
     host.innerHTML = `<p class="equipment-empty">Aún no hay extras manuales agregados.</p>`;
@@ -711,12 +747,10 @@ function renderEquipmentModule() {
   if (equipmentQuery("#equipmentMainTable")) {
     equipmentQuery("#equipmentMainTable").innerHTML = tableForEquipmentSections(selectedEquipmentSections());
   }
-  renderEquipmentExtras();
+  renderEquipmentPredefinedExtras();
+  renderManualEquipmentExtras();
   if (equipmentQuery("#equipmentInventoryTable")) {
     equipmentQuery("#equipmentInventoryTable").innerHTML = tableForEquipmentInventory(equipmentRowsSummary(), true);
-  }
-  if (equipmentQuery("#equipmentRentReportTable")) {
-    equipmentQuery("#equipmentRentReportTable").innerHTML = tableForEquipmentRentalReport(equipmentRentalRows());
   }
   bindEquipmentInventoryInputs();
   renderEquipmentPdfPreview();
@@ -790,6 +824,7 @@ function initEquipmentModule() {
   if (!serviceSelect) return;
   serviceSelect.addEventListener("change", () => {
     equipmentState.selectedServiceId = serviceSelect.value;
+    equipmentState.selectedExtraIds.clear();
     renderEquipmentModule();
   });
   [

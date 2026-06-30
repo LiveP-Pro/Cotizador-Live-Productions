@@ -6,9 +6,9 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260629-01" />
+    <link rel="stylesheet" href="styles.css?v=20260629-02" />
     <script src="app.js?v=20260628-01" defer></script>
-    <script src="equipment.js?v=20260629-01" defer></script>
+    <script src="equipment.js?v=20260629-02" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -252,8 +252,13 @@
 
             <section class="equipment-panel">
               <div class="equipment-section-title">
+                <span>Extras del servicio</span>
+                <small>seleccione los extras del PDF o agregue extras manuales</small>
+              </div>
+              <div id="equipmentPredefinedExtras" class="equipment-extra-grid"></div>
+              <div class="equipment-section-title equipment-subsection-title">
                 <span>Extras manuales</span>
-                <small>agregue solo lo que enviará a bodega</small>
+                <small>sin límite de extras agregados</small>
               </div>
               <div class="equipment-manual-extra-form">
                 <label>
@@ -266,7 +271,7 @@
                 </label>
                 <button id="equipmentAddExtraButton" type="button">Agregar extra</button>
               </div>
-              <div id="equipmentExtrasList" class="equipment-extra-list"></div>
+              <div id="equipmentManualExtrasList" class="equipment-extra-list"></div>
             </section>
 
             <section class="equipment-panel">
@@ -275,14 +280,6 @@
                 <small>si falta equipo, se marca renta en rojo</small>
               </div>
               <div id="equipmentInventoryTable" class="equipment-table-wrap"></div>
-            </section>
-
-            <section class="equipment-panel">
-              <div class="equipment-section-title">
-                <span>Reporte solo equipo para renta</span>
-                <small>incluye únicamente faltantes marcados en rojo</small>
-              </div>
-              <div id="equipmentRentReportTable" class="equipment-table-wrap"></div>
             </section>
 
             <section id="equipmentPdfDocument" class="equipment-pdf-document">

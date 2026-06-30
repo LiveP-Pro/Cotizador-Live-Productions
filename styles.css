@@ -606,6 +606,16 @@ body {
   font-weight: 800;
 }
 
+.equipment-extra-card input:checked + span strong {
+  color: #111111;
+}
+
+.equipment-subsection-title {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
 .equipment-manual-extra-form {
   display: grid;
   grid-template-columns: 140px minmax(0, 1fr) auto;
