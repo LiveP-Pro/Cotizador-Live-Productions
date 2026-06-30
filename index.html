@@ -226,10 +226,16 @@
               Tipo de Servicio
               <select id="equipmentServiceSelect">
                 <option value="">Seleccione el tipo de servicio</option>
+                <option value="dj-completo">DJ COMPLETO</option>
                 <option value="sunday-funday-a">SUNDAY FUNDAY A</option>
                 <option value="sunday-funday-b">SUNDAY FUNDAY B</option>
               </select>
             </label>
+            <div id="equipmentDjAudioOptions" class="equipment-field-wide equipment-audio-options is-hidden">
+              <span>Tipo de audio para DJ COMPLETO</span>
+              <button type="button" data-dj-audio-type="qsc">Audio QSC</button>
+              <button type="button" data-dj-audio-type="t4">Audio T4 / JBL</button>
+            </div>
             <label class="equipment-field-wide">
               Observaciones para bodega
               <textarea id="equipmentNotes" rows="3" placeholder="Notas importantes para montaje, transporte o cuidado del equipo"></textarea>

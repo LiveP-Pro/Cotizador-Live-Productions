@@ -1,4 +1,202 @@
+const djCompletoAudioOptions = {
+  qsc: {
+    label: "Audio QSC",
+    items: [
+      [4, "bocinas QSC con su power spicon"],
+      [2, "sub QSC con su case"],
+      [1, "amplificador TP18000 con sus 2 cables spicon en case (1 DBX y 1 AC)"],
+      [2, "pedestales de bocina hercules con su case"],
+      [1, "grabadora de audio"]
+    ]
+  },
+  t4: {
+    label: "Audio T4 / JBL",
+    items: [
+      [2, "bajos dobles JBL con su power spicon"],
+      [4, "bocinas T4 con su power spicon"],
+      [2, "bompers de T4"],
+      [2, "pedestales de bocina hercules con su case"],
+      [1, "amplificador TP18000 con sus 2 cables spicon en case (1 DBX y 1 AC)"]
+    ]
+  }
+};
+
+const djCompletoMainSections = [
+  {
+    title: "CONSOLA",
+    items: [
+      [1, "consola X18 Rack con su AC y case"],
+      [1, "router con su funda (cable de RED y cargador)"],
+      [1, "ipad viejo con su protector y cargador de ipad con su cable"]
+    ]
+  },
+  {
+    title: "TELEFONO (MOCHILA)",
+    items: [
+      [1, "celular, cargador para telefono con su cable, cable de celular para audio"],
+      [1, "cable lightning y cable tipo C"]
+    ]
+  },
+  {
+    id: "audio-dinamico",
+    title: "AUDIO",
+    audioVariant: true,
+    items: djCompletoAudioOptions.qsc.items
+  },
+  {
+    title: "MICROFONIA",
+    items: [
+      [1, "mic. Sm 58 inalambrico con su funda (1 receptor y 1 cargador)"],
+      [2, "cajas directas Whirlwhind"]
+    ]
+  },
+  {
+    title: "MONITOREO INTERNO",
+    items: [
+      [1, "monitores turbosound con su power spicon en su case"]
+    ]
+  },
+  {
+    title: "ILUMINACION",
+    items: [
+      [6, "beam 260 con su power spicon y case"],
+      [6, "pares LED con su AC y case"],
+      [2, "lasers pequenos con sus power spicon y case"],
+      [24, "clamps"],
+      [24, "bases de clamps"],
+      [4, "tubos galvanizados con sus hamburguesas dobles"],
+      [2, "spliter de luces 6 canales american dj con su AC"],
+      [2, "blinders con sus power spicon y case"],
+      [1, "interfaz con su cable de RED y su cargador (compu mouse, cargador, adaptador) (monitor, HDMI, cable de corriente) con su case"],
+      [2, "maquinas de humo con su AC, su control y 1 caja plastica"],
+      [1, "galon de liquido de humo"],
+      [2, "ventilador con su cable de corriente y su funda"]
+    ]
+  },
+  {
+    title: "ESTRUCTURAS",
+    items: [
+      [2, "marcos de dj booth con su tela (grande) controles"],
+      [1, "marco de dj booth con su tela (pequeno) DJ"],
+      [1, "dj booth case"]
+    ]
+  },
+  {
+    title: "ESTRUCTURAS DE 2 A 3.50 METROS FORRADAS",
+    items: [
+      [6, "estructuras de 2 metros"],
+      [8, "estructuras de 0.50 centimetros"],
+      [6, "platinas pequenas"],
+      [6, "platinas grandes"],
+      [100, "pines"],
+      [40, "chiches"]
+    ]
+  },
+  {
+    title: "TELAS PARA FORRAR",
+    items: [
+      [6, "telas de 3mts para forrar truss en color a definir"],
+      [1, "tela pequena para forrar dj booth color a definir (DJ)"],
+      [2, "tela grande para forrar dj booth color negro (controles)"]
+    ]
+  },
+  {
+    title: "CABLEADO",
+    items: [
+      [1, "distro de corriente"],
+      [5, "cables AC"],
+      [5, "cables spicon power"],
+      [2, "cables de 1/4 a 1/4"],
+      [1, "case de pulpos (6 grandes y 6 pequenos)"],
+      [1, "tcj calibre No. 4 (30 metros)"],
+      [6, "cuadritos de corriente"],
+      [6, "regletas en case"],
+      [40, "cables XLR en case"],
+      [30, "extensiones"]
+    ]
+  },
+  {
+    title: "BATERIAS",
+    items: [
+      [16, "baterias recargables bonai"],
+      [1, "cargador para bateria bonai"]
+    ]
+  }
+];
+
+const djCompletoExtras = [
+  {
+    id: "dj-extras-operativos",
+    title: "Extras",
+    items: [
+      [1, "extintor"],
+      [1, "bolsa de agua pura"],
+      [5, "dop teip (caja de herramienta)"],
+      [3, "paquetes de cinchos (caja de herramienta)"],
+      [7, "cinta de aislar (caja de herramienta)"],
+      [2, "intercomunicadores hollyland con sus cargadores y estuche"]
+    ]
+  },
+  {
+    id: "dj-caja-herramientas",
+    title: "Caja de Herramientas",
+    items: [
+      [1, "macho"],
+      [2, "tomas patas de gallo"],
+      [1, "flipon doble de 50 amp"],
+      [1, "desarmador de estrella"],
+      [1, "desarmador de castigaderas"],
+      [1, "cuchilla o cutter"],
+      [1, "estuche de llaves Allen"],
+      [1, "alicate"],
+      [1, "tenaza"],
+      [1, "pinza"],
+      [1, "espiga tipo tester"],
+      [1, "multimetro o tester marca fluke (estuche)"]
+    ]
+  },
+  {
+    id: "dj-equipo-limpieza",
+    title: "Equipo de Limpieza",
+    items: [
+      [5, "trapos"],
+      [1, "escoba"],
+      [1, "pala"],
+      [5, "trapiadores"],
+      [1, "atomizador de azistin"],
+      [1, "atomizador de cera"],
+      [2, "espumas limpiadoras"]
+    ]
+  },
+  {
+    id: "dj-equipo-proteccion",
+    title: "Equipo de proteccion",
+    items: [
+      [10, "bolsas jardineras de tonel"],
+      [3, "retazos de nylon para tapar equipo"]
+    ]
+  },
+  {
+    id: "dj-seguridad-industrial",
+    title: "Equipo de Seguridad Industrial",
+    items: [
+      [6, "casco"],
+      [6, "chalecos"],
+      [0, "botas"],
+      [6, "pares de guantes"],
+      [1, "arnes completo para subir"]
+    ]
+  }
+];
+
 const equipmentServices = {
+  "dj-completo": {
+    name: "DJ COMPLETO",
+    source: "DJ COMPLETO",
+    audioOptions: djCompletoAudioOptions,
+    mainSections: djCompletoMainSections,
+    extras: djCompletoExtras
+  },
   "sunday-funday-a": {
     name: "SUNDAY FUNDAY A",
     source: "SUNDAY A.pdf",
@@ -556,6 +754,7 @@ const equipmentServices = {
 
 const equipmentState = {
   selectedServiceId: "",
+  djAudioType: "qsc",
   events: [],
   selectedExtraIds: new Set(),
   manualMainItems: [],
@@ -620,7 +819,23 @@ function formatEquipmentDateForFile(value) {
 }
 
 function currentEquipmentService() {
-  return equipmentServices[equipmentState.selectedServiceId] || null;
+  const service = equipmentServices[equipmentState.selectedServiceId] || null;
+  if (!service) return null;
+  if (equipmentState.selectedServiceId !== "dj-completo") return service;
+  const audioType = equipmentState.djAudioType || "qsc";
+  const audioOption = service.audioOptions?.[audioType] || service.audioOptions?.qsc;
+  return {
+    ...service,
+    mainSections: (service.mainSections || []).map((section) => {
+      if (!section.audioVariant || !audioOption) return section;
+      return {
+        ...section,
+        id: `audio-${audioType}`,
+        title: `AUDIO - ${audioOption.label}`,
+        items: audioOption.items
+      };
+    })
+  };
 }
 
 function equipmentSectionKey(section, index, scope, serviceId = "") {
@@ -1292,6 +1507,7 @@ function renderEquipmentModule() {
   const workspace = equipmentQuery("#equipmentWorkspace");
   if (workspace) workspace.classList.toggle("is-hidden", !service);
   if (equipmentQuery("#equipmentServiceName")) equipmentQuery("#equipmentServiceName").textContent = service?.name || "";
+  renderDjAudioOptions();
   renderEquipmentEvents();
   if (equipmentQuery("#equipmentMainTable")) {
     equipmentQuery("#equipmentMainTable").innerHTML = tableForEquipmentSections(selectedEquipmentSections());
@@ -1304,6 +1520,16 @@ function renderEquipmentModule() {
   }
   bindEquipmentInventoryInputs();
   renderEquipmentPdfPreview();
+}
+
+function renderDjAudioOptions() {
+  const audioOptions = equipmentQuery("#equipmentDjAudioOptions");
+  if (!audioOptions) return;
+  const isDjCompleto = equipmentState.selectedServiceId === "dj-completo";
+  audioOptions.classList.toggle("is-hidden", !isDjCompleto);
+  audioOptions.querySelectorAll("[data-dj-audio-type]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.djAudioType === equipmentState.djAudioType);
+  });
 }
 
 async function equipmentPdfHtml(documentSelector = "#equipmentPdfDocument", title = "Cuadro de equipo") {
@@ -1407,7 +1633,16 @@ function initEquipmentModule() {
   serviceSelect.addEventListener("change", () => {
     equipmentState.selectedServiceId = serviceSelect.value;
     equipmentState.selectedExtraIds.clear();
+    if (equipmentState.selectedServiceId === "dj-completo" && !equipmentState.djAudioType) {
+      equipmentState.djAudioType = "qsc";
+    }
     renderEquipmentModule();
+  });
+  document.querySelectorAll("[data-dj-audio-type]").forEach((button) => {
+    button.addEventListener("click", () => {
+      equipmentState.djAudioType = button.dataset.djAudioType || "qsc";
+      renderEquipmentModule();
+    });
   });
   [
     "#equipmentEventName",
