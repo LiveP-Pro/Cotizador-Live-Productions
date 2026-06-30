@@ -359,6 +359,341 @@ body {
   font-weight: 700;
 }
 
+.equipment-event-grid select {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.equipment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.equipment-actions button {
+  min-height: 46px;
+  padding: 0 18px;
+  color: #ffffff;
+  background: #111111;
+  border: 1px solid #111111;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.equipment-actions span {
+  color: #17633a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.equipment-actions span.is-error {
+  color: #a32920;
+}
+
+.equipment-workspace {
+  display: grid;
+  gap: 22px;
+  margin-top: 24px;
+}
+
+.equipment-panel {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.equipment-section-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.equipment-section-title span {
+  font-size: 20px;
+}
+
+.equipment-section-title small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.equipment-table-wrap table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.equipment-table-wrap th,
+.equipment-table-wrap td {
+  padding: 8px 10px;
+  border: 1px solid #cfd5dd;
+  color: var(--ink);
+  vertical-align: middle;
+}
+
+.equipment-table-wrap th {
+  color: #ffffff;
+  background: #111111;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.equipment-table-wrap td:first-child {
+  width: 110px;
+  text-align: center;
+  font-weight: 900;
+}
+
+.equipment-category-row td {
+  color: #ffffff;
+  background: #111111;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.equipment-category-row td:first-child {
+  text-align: left;
+}
+
+.equipment-empty-cell {
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
+}
+
+.equipment-extra-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.equipment-extra-card {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.equipment-extra-card input {
+  width: 20px;
+  min-height: 20px;
+  margin-top: 2px;
+  padding: 0;
+}
+
+.equipment-extra-card strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.equipment-extra-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.equipment-inventory-input,
+.equipment-observation-input {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font: inherit;
+}
+
+.equipment-rent-needed {
+  color: #ffffff !important;
+  background: #df1717 !important;
+  font-weight: 900;
+  text-align: center;
+}
+
+.equipment-rest-ok {
+  color: #17633a;
+  font-weight: 900;
+}
+
+.equipment-rest-missing {
+  color: #b00020;
+  font-weight: 900;
+}
+
+.equipment-pdf-document {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 18px;
+  background: #ffffff;
+  border: 2px solid #111111;
+}
+
+.equipment-pdf-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+  padding: 20px 24px;
+  color: #ffffff;
+  background: #111111;
+}
+
+.equipment-pdf-header p,
+.equipment-pdf-header h2,
+.equipment-pdf-header span {
+  margin: 0;
+}
+
+.equipment-pdf-header p {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.equipment-pdf-header h2 {
+  margin-top: 6px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 38px;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.equipment-pdf-header span {
+  display: block;
+  margin-top: 6px;
+  color: #e8e8e8;
+  font-weight: 700;
+}
+
+.equipment-pdf-header img {
+  width: 170px;
+  max-height: 92px;
+  object-fit: contain;
+  background: #ffffff;
+}
+
+.equipment-pdf-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.equipment-pdf-meta div {
+  min-height: 64px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.equipment-pdf-meta span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.equipment-pdf-meta strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.equipment-pdf-notes {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 5px solid var(--accent);
+  background: var(--accent-soft);
+  font-weight: 800;
+}
+
+#equipmentPdfMainTable,
+#equipmentPdfInventoryTable {
+  overflow-x: auto;
+}
+
+#equipmentPdfDocument table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#equipmentPdfDocument th,
+#equipmentPdfDocument td {
+  padding: 6px 8px;
+  border: 1px solid #cfd5dd;
+  color: #111111;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+#equipmentPdfDocument th {
+  color: #ffffff;
+  background: #111111;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#equipmentPdfDocument .equipment-category-row td {
+  color: #ffffff;
+  background: #111111;
+  font-size: 13px;
+}
+
+#equipmentPdfDocument .equipment-rent-needed {
+  color: #ffffff !important;
+  background: #df1717 !important;
+}
+
+@media (max-width: 900px) {
+  .equipment-base-grid,
+  .equipment-pdf-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-pdf-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 .requirements-card {
   width: min(1280px, calc(100% - 48px));
 }

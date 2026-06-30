@@ -6,8 +6,9 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260627-01" />
-    <script src="app.js?v=20260627-01" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260628-01" />
+    <script src="app.js?v=20260628-01" defer></script>
+    <script src="equipment.js?v=20260628-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -193,35 +194,101 @@
         <div class="site-page-card equipment-module-card">
           <img class="page-logo" src="assets/logo-live-productions.jpeg" alt="Live Productions" />
           <p class="eyebrow">Requerimiento de equipo</p>
-          <h1>Requerimiento de equipo</h1>
+          <h1>Cuadros de equipo</h1>
           <p class="module-intro">
-            Base inicial para registrar solicitudes de equipo, responsables, fechas y observaciones del evento.
+            Arme el equipo que bodega debe preparar para cada servicio y guarde el cuadro en PDF.
           </p>
-          <div class="equipment-base-grid">
+          <div class="equipment-base-grid equipment-event-grid">
             <label>
-              Evento
-              <input type="text" autocomplete="off" placeholder="Nombre del evento" />
+              Nombre del evento
+              <input id="equipmentEventName" type="text" autocomplete="off" placeholder="Ej. Boda, cumpleaños, evento corporativo" />
+            </label>
+            <label>
+              Número de teléfono
+              <input id="equipmentEventPhone" type="tel" autocomplete="off" placeholder="Ej. +502 37941298" />
+            </label>
+            <label>
+              Fecha del evento
+              <input id="equipmentEventDate" type="date" />
             </label>
             <label>
               Responsable
-              <input type="text" autocomplete="off" placeholder="Nombre del responsable" />
+              <input id="equipmentEventResponsible" type="text" autocomplete="off" placeholder="Persona que solicita o revisa" />
             </label>
-            <label>
-              Fecha requerida
-              <input type="date" />
-            </label>
-            <label>
-              Hora requerida
-              <input type="time" />
-            </label>
-            <label class="equipment-field-wide">
-              Equipo solicitado
-              <textarea rows="5" placeholder="Detalle del equipo requerido"></textarea>
+            <label class="equipment-field-wide equipment-service-label">
+              Tipo de Servicio
+              <select id="equipmentServiceSelect">
+                <option value="">Seleccione el tipo de servicio</option>
+                <option value="sunday-funday-b">SUNDAY FUNDAY B</option>
+              </select>
             </label>
             <label class="equipment-field-wide">
-              Observaciones
-              <textarea rows="4" placeholder="Notas importantes para montaje, transporte o cuidado del equipo"></textarea>
+              Observaciones para bodega
+              <textarea id="equipmentNotes" rows="3" placeholder="Notas importantes para montaje, transporte o cuidado del equipo"></textarea>
             </label>
+          </div>
+
+          <div class="equipment-actions">
+            <button id="equipmentSavePdfButton" type="button">Guardar cuadro PDF en computadora</button>
+            <span id="equipmentSaveStatus" role="status"></span>
+          </div>
+
+          <div id="equipmentWorkspace" class="equipment-workspace is-hidden">
+            <section class="equipment-panel">
+              <div class="equipment-section-title">
+                <span>Equipo principal</span>
+                <small id="equipmentServiceName">SUNDAY FUNDAY B</small>
+              </div>
+              <div id="equipmentMainTable" class="equipment-table-wrap"></div>
+            </section>
+
+            <section class="equipment-panel">
+              <div class="equipment-section-title">
+                <span>Extras Sunday Funday</span>
+                <small>seleccione solo lo que enviará a bodega</small>
+              </div>
+              <div id="equipmentExtrasList" class="equipment-extra-grid"></div>
+            </section>
+
+            <section class="equipment-panel">
+              <div class="equipment-section-title">
+                <span>Resumen para bodega e inventario</span>
+                <small>si falta equipo, se marca renta en rojo</small>
+              </div>
+              <div id="equipmentInventoryTable" class="equipment-table-wrap"></div>
+            </section>
+
+            <section id="equipmentPdfDocument" class="equipment-pdf-document">
+              <header class="equipment-pdf-header">
+                <div>
+                  <p>Live Productions</p>
+                  <h2 id="equipmentPdfTitle">SUNDAY FUNDAY B</h2>
+                  <span id="equipmentPdfSubtitle">Cuadro de equipo para bodega</span>
+                </div>
+                <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
+              </header>
+              <div class="equipment-pdf-meta">
+                <div>
+                  <span>Evento</span>
+                  <strong id="equipmentPdfEvent">Por definir</strong>
+                </div>
+                <div>
+                  <span>Teléfono</span>
+                  <strong id="equipmentPdfPhone">Por definir</strong>
+                </div>
+                <div>
+                  <span>Fecha</span>
+                  <strong id="equipmentPdfDate">Por definir</strong>
+                </div>
+                <div>
+                  <span>Responsable</span>
+                  <strong id="equipmentPdfResponsible">Por definir</strong>
+                </div>
+              </div>
+              <p id="equipmentPdfNotes" class="equipment-pdf-notes is-hidden"></p>
+              <div id="equipmentPdfMainTable"></div>
+              <div id="equipmentPdfInventoryTable"></div>
+            </section>
           </div>
         </div>
       </section>

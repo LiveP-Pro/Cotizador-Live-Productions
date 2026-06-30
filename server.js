@@ -20,6 +20,13 @@ const dataDir = process.env.COTIZADOR_DATA_DIR
   ? path.resolve(process.env.COTIZADOR_DATA_DIR)
   : defaultDataDir;
 const pdfDir = path.join(dataDir, "cotizaciones-generadas");
+const defaultEquipmentPdfDir =
+  process.env.NODE_ENV === "production"
+    ? path.join(dataDir, "Cuadros de Equipo")
+    : path.join(os.homedir(), "Documents", "Cuadros de Equipo");
+const equipmentPdfDir = process.env.EQUIPMENT_PDF_DIR
+  ? path.resolve(process.env.EQUIPMENT_PDF_DIR)
+  : defaultEquipmentPdfDir;
 const backupDir = path.join(dataDir, "respaldo-cotizaciones");
 const dbPath = path.join(dataDir, "cotizaciones.sqlite");
 const maxBodyBytes = 100 * 1024 * 1024;
@@ -46,6 +53,7 @@ const mimeTypes = {
 };
 
 fs.mkdirSync(pdfDir, { recursive: true });
+fs.mkdirSync(equipmentPdfDir, { recursive: true });
 fs.mkdirSync(backupDir, { recursive: true });
 
 const authConfigPath = path.join(dataDir, "cotizador-auth.json");
@@ -376,6 +384,10 @@ function cleanFileName(value) {
   return withName.toLocaleLowerCase("es-GT").endsWith(".pdf") ? withName : `${withName}.pdf`;
 }
 
+function publicEquipmentPdfPath(fileName) {
+  return `/cuadros-equipo/${encodeURIComponent(fileName)}`;
+}
+
 function uniquePdfTarget(fileName) {
   const parsed = path.parse(cleanFileName(fileName));
   let candidate = `${parsed.name}${parsed.ext}`;
@@ -385,6 +397,21 @@ function uniquePdfTarget(fileName) {
   while (fs.existsSync(target)) {
     candidate = `${parsed.name}-${counter}${parsed.ext}`;
     target = path.join(pdfDir, candidate);
+    counter += 1;
+  }
+
+  return { fileName: candidate, target };
+}
+
+function uniqueEquipmentPdfTarget(fileName) {
+  const parsed = path.parse(cleanFileName(fileName || "cuadro-equipo.pdf"));
+  let candidate = `${parsed.name}${parsed.ext}`;
+  let target = path.join(equipmentPdfDir, candidate);
+  let counter = 2;
+
+  while (fs.existsSync(target)) {
+    candidate = `${parsed.name}-${counter}${parsed.ext}`;
+    target = path.join(equipmentPdfDir, candidate);
     counter += 1;
   }
 
@@ -648,8 +675,16 @@ class ReusablePdfEngine {
     }
   }
 
-  async print(html, pdfPath) {
+  async print(html, pdfPath, options = {}) {
     if (this.closed) throw new Error("El motor de PDF ya no está disponible.");
+    const documentSelector = options.documentSelector || "#quoteDocument";
+    const pageSelector = options.pageSelector || ".quote-document";
+    const missingMessage =
+      options.missingMessage || "No se encontró la cotización dentro del HTML enviado al PDF.";
+    const sizeMessage =
+      options.sizeMessage || "La cotización no tiene tamaño visible para imprimir.";
+    const emptyMessage =
+      options.emptyMessage || "La cotización no tiene contenido visible para guardar.";
 
     await this.connection.send(
       "Page.setDocumentContent",
@@ -679,19 +714,19 @@ class ReusablePdfEngine {
       "Runtime.evaluate",
       {
         expression: `(() => {
-          const documentNode = document.querySelector("#quoteDocument");
-          const quotePage = document.querySelector(".quote-document");
+          const documentNode = document.querySelector(${JSON.stringify(documentSelector)});
+          const quotePage = document.querySelector(${JSON.stringify(pageSelector)});
           const rect = quotePage ? quotePage.getBoundingClientRect() : null;
           const text = (document.body?.innerText || "").replace(/\\s+/g, " ").trim();
           const images = [...document.images].length;
           if (!documentNode || !quotePage) {
-            return { ok: false, message: "No se encontró la cotización dentro del HTML enviado al PDF." };
+            return { ok: false, message: ${JSON.stringify(missingMessage)} };
           }
           if (!rect || rect.width < 100 || rect.height < 100) {
-            return { ok: false, message: "La cotización no tiene tamaño visible para imprimir." };
+            return { ok: false, message: ${JSON.stringify(sizeMessage)} };
           }
           if (text.length < 20 && images === 0) {
-            return { ok: false, message: "La cotización no tiene contenido visible para guardar." };
+            return { ok: false, message: ${JSON.stringify(emptyMessage)} };
           }
           return { ok: true, textLength: text.length, width: rect.width, height: rect.height, images };
         })()`,
@@ -809,7 +844,7 @@ function runBrowserPrint(browserPath, htmlPath, pdfPath, profileDir) {
   });
 }
 
-async function generatePdf(html, pdfPath) {
+async function generatePdf(html, pdfPath, options = {}) {
   const browserPath = findBrowserExecutable();
   if (!browserPath) {
     throw new Error("No se encontró Google Chrome, Microsoft Edge o Chromium para generar el PDF.");
@@ -817,21 +852,21 @@ async function generatePdf(html, pdfPath) {
 
   try {
     const engine = await getPdfEngine(browserPath);
-    await engine.print(html, pdfPath);
+    await engine.print(html, pdfPath, options);
     const stat = await fsp.stat(pdfPath);
     if (!stat.size) throw new Error("El PDF se generó vacío.");
     return;
   } catch (error) {
     await resetPdfEngine();
     if (
-      /cotizaci[oó]n|contenido|visible|imprimir/i.test(error.message || "")
+      /cotizaci[oó]n|cuadro de equipo|contenido|visible|imprimir/i.test(error.message || "")
     ) {
       throw error;
     }
   }
 
   const tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), "cotizador-live-"));
-  const htmlPath = path.join(tempDir, "cotizacion.html");
+  const htmlPath = path.join(tempDir, options.htmlFileName || "cotizacion.html");
   const profileDir = path.join(tempDir, "chrome-profile");
 
   try {
@@ -2446,13 +2481,44 @@ async function saveQuoteBatch(payload, response) {
   }
 }
 
+async function saveEquipmentBoard(payload, request, response) {
+  const html = String(payload?.html || "");
+  if (!html.includes("equipment-pdf-document")) {
+    errorResponse(response, 400, "No se recibió el cuadro de equipo para guardar.");
+    return;
+  }
+
+  const requestedName = cleanFileName(payload?.fileName || "Cuadro-Equipo-Live-Productions.pdf");
+  const { fileName, target } = uniqueEquipmentPdfTarget(requestedName);
+  await generatePdf(html, target, {
+    documentSelector: ".equipment-pdf-document",
+    pageSelector: ".equipment-pdf-document",
+    missingMessage: "No se encontró el cuadro de equipo dentro del HTML enviado al PDF.",
+    sizeMessage: "El cuadro de equipo no tiene tamaño visible para imprimir.",
+    emptyMessage: "El cuadro de equipo no tiene contenido visible para guardar.",
+    htmlFileName: "cuadro-equipo.html"
+  });
+
+  const publicPath = publicEquipmentPdfPath(fileName);
+  const origin = publicOrigin(request);
+  jsonResponse(response, 200, {
+    fileName,
+    folder: equipmentPdfDir,
+    pdfUrl: publicPath,
+    absolutePdfUrl: origin ? new URL(publicPath, origin).href : publicPath
+  });
+}
+
 function serveStatic(request, response, pathname) {
   const requestedPath = pathname === "/" ? "/index.html" : decodeURIComponent(pathname);
   const isPdfRequest = requestedPath.startsWith("/cotizaciones-generadas/");
-  const baseDir = isPdfRequest ? pdfDir : rootDir;
+  const isEquipmentPdfRequest = requestedPath.startsWith("/cuadros-equipo/");
+  const baseDir = isPdfRequest ? pdfDir : isEquipmentPdfRequest ? equipmentPdfDir : rootDir;
   const relativePath = isPdfRequest
     ? requestedPath.replace(/^\/cotizaciones-generadas\//, "")
-    : `.${requestedPath}`;
+    : isEquipmentPdfRequest
+      ? requestedPath.replace(/^\/cuadros-equipo\//, "")
+      : `.${requestedPath}`;
   const filePath = path.resolve(baseDir, relativePath);
 
   if (!filePath.startsWith(baseDir)) {
@@ -2611,6 +2677,13 @@ async function handleRequest(request, response) {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/cuadros-equipo") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => saveEquipmentBoard(payload, request, response));
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/api/cotizaciones") {
       if (!requireAuth(request, response)) return;
       jsonResponse(response, 200, { records: listQuotes(url.searchParams.get("search")) });
@@ -2683,6 +2756,7 @@ server.listen(port, host, () => {
   const visibleHost = host === "0.0.0.0" ? "localhost" : host;
   console.log(`Cotizador Live Productions listo en http://${visibleHost}:${port}/index.html`);
   console.log(`PDFs: ${pdfDir}`);
+  console.log(`Cuadros de equipo: ${equipmentPdfDir}`);
   console.log(`SQLite: ${dbPath}`);
   console.log(`Respaldos SQLite: ${backupDir}`);
 
