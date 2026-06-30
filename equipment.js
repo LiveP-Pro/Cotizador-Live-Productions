@@ -559,14 +559,17 @@ const equipmentState = {
   events: [],
   selectedExtraIds: new Set(),
   manualMainItems: [],
+  manualMainSections: [],
   manualExtras: [],
   itemOverrides: new Map(),
+  removedItemIds: new Set(),
   inventory: new Map(),
   observations: new Map()
 };
 
 let equipmentEventCounter = 1;
 let equipmentManualMainCounter = 1;
+let equipmentManualSectionCounter = 1;
 let equipmentExtraCounter = 1;
 
 function equipmentQuery(selector) {
@@ -649,17 +652,60 @@ function normalizeEquipmentItem(item) {
 }
 
 function editableEquipmentItems(section, sectionKey) {
-  return (section.items || []).map(([quantity, description], itemIndex) => {
-    const id = equipmentItemKey(sectionKey, itemIndex);
-    const override = equipmentState.itemOverrides.get(id) || {};
-    return {
-      id,
-      quantity: override.quantity ?? quantity,
-      description: override.description ?? description,
-      editable: true,
-      manual: false
-    };
-  });
+  return (section.items || [])
+    .map(([quantity, description], itemIndex) => {
+      const id = equipmentItemKey(sectionKey, itemIndex);
+      const override = equipmentState.itemOverrides.get(id) || {};
+      return {
+        id,
+        quantity: override.quantity ?? quantity,
+        description: override.description ?? description,
+        editable: true,
+        manual: false
+      };
+    })
+    .filter((item) => !equipmentState.removedItemIds.has(item.id));
+}
+
+function manualMainSectionsForTable() {
+  const legacySection = equipmentState.manualMainItems.length
+    ? [
+        {
+          id: "equipo-manual",
+          title: "Equipo agregado manualmente",
+          manualSection: true,
+          items: equipmentState.manualMainItems.map((item) => ({
+            ...item,
+            editable: true,
+            manual: true
+          }))
+        }
+      ]
+    : [];
+  const manualSections = equipmentState.manualMainSections
+    .filter((section) => section.title || section.items.length)
+    .map((section) => ({
+      id: section.id,
+      title: section.title || "Equipo agregado manualmente",
+      manualSection: true,
+      items: section.items.map((item) => ({
+        ...item,
+        editable: true,
+        manual: true
+      }))
+    }));
+  return [...legacySection, ...manualSections];
+}
+
+function ensureManualMainSection() {
+  if (!equipmentState.manualMainSections.length) {
+    equipmentState.manualMainSections.push({
+      id: `manual-section-${Date.now()}-${equipmentManualSectionCounter++}`,
+      title: "Equipo agregado manualmente",
+      items: []
+    });
+  }
+  return equipmentState.manualMainSections[equipmentState.manualMainSections.length - 1];
 }
 
 function selectedEquipmentSections() {
@@ -672,30 +718,18 @@ function selectedEquipmentSections() {
       id: sectionKey,
       items: editableEquipmentItems(section, sectionKey)
     };
-  });
-  const manualMainSection = equipmentState.manualMainItems.length
-    ? [
-        {
-          id: "equipo-manual",
-          title: "Equipo agregado manualmente",
-          items: equipmentState.manualMainItems.map((item) => ({
-            ...item,
-            editable: true,
-            manual: true
-          }))
-        }
-      ]
-    : [];
+  }).filter((section) => section.items.length);
+  const manualMainSection = manualMainSectionsForTable();
   const selectedExtrasSections = (service.extras || [])
     .filter((extra) => equipmentState.selectedExtraIds.has(extra.id))
     .map((extra, index) => {
       const sectionKey = equipmentSectionKey(extra, index, "extra", equipmentState.selectedServiceId);
       return {
-        ...extra,
-        id: sectionKey,
-        items: editableEquipmentItems(extra, sectionKey)
-      };
-    });
+      ...extra,
+      id: sectionKey,
+      items: editableEquipmentItems(extra, sectionKey)
+    };
+  }).filter((section) => section.items.length);
   const manualExtrasSection = equipmentState.manualExtras.length
     ? [
         {
@@ -788,11 +822,7 @@ function tableForEquipmentSections(sections, compact = false) {
                   <input class="equipment-line-description" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="description" type="text" value="${escapeEquipmentHtml(item.description)}" />
                 </td>
                 <td class="equipment-row-action">
-                  ${
-                    item.manual
-                      ? `<button class="equipment-row-remove" type="button" data-remove-equipment-item="${escapeEquipmentHtml(item.id)}" aria-label="Eliminar equipo">X</button>`
-                      : ""
-                  }
+                  <button class="equipment-row-remove" type="button" data-remove-equipment-item="${escapeEquipmentHtml(item.id)}" aria-label="Eliminar línea">X</button>
                 </td>
               </tr>`;
           }
@@ -804,9 +834,13 @@ function tableForEquipmentSections(sections, compact = false) {
             </tr>`;
         })
         .join("");
+      const categoryAction = !compact && section.manualSection
+        ? `<td class="equipment-row-action"><button class="equipment-row-remove" type="button" data-remove-equipment-section="${escapeEquipmentHtml(section.id)}" aria-label="Eliminar subtítulo">X</button></td>`
+        : "";
       return `
         <tr class="equipment-category-row">
-          <td colspan="${compact ? "2" : "3"}">${escapeEquipmentHtml(section.title)}</td>
+          <td colspan="${compact || section.manualSection ? "2" : "3"}">${escapeEquipmentHtml(section.title)}</td>
+          ${categoryAction}
         </tr>
         ${items}`;
     })
@@ -876,7 +910,13 @@ function refreshEquipmentSummaryAndPreview() {
 }
 
 function updateEquipmentItem(itemId, field, value) {
-  const manualMain = equipmentState.manualMainItems.find((item) => item.id === itemId);
+  let manualMain = equipmentState.manualMainItems.find((item) => item.id === itemId);
+  if (!manualMain) {
+    for (const section of equipmentState.manualMainSections) {
+      manualMain = section.items.find((item) => item.id === itemId);
+      if (manualMain) break;
+    }
+  }
   const manualExtra = equipmentState.manualExtras.find((item) => item.id === itemId);
   const target = manualMain || manualExtra;
   const nextValue = field === "quantity" ? Number(value || 0) || 0 : String(value || "");
@@ -890,8 +930,31 @@ function updateEquipmentItem(itemId, field, value) {
 }
 
 function removeManualEquipmentItem(itemId) {
+  let removedManual = false;
+  const originalLegacyLength = equipmentState.manualMainItems.length;
   equipmentState.manualMainItems = equipmentState.manualMainItems.filter((item) => item.id !== itemId);
+  removedManual = removedManual || originalLegacyLength !== equipmentState.manualMainItems.length;
+  equipmentState.manualMainSections.forEach((section) => {
+    const originalLength = section.items.length;
+    section.items = section.items.filter((item) => item.id !== itemId);
+    removedManual = removedManual || originalLength !== section.items.length;
+  });
+  const originalExtrasLength = equipmentState.manualExtras.length;
   equipmentState.manualExtras = equipmentState.manualExtras.filter((item) => item.id !== itemId);
+  removedManual = removedManual || originalExtrasLength !== equipmentState.manualExtras.length;
+  if (!removedManual) {
+    equipmentState.removedItemIds.add(itemId);
+    equipmentState.itemOverrides.delete(itemId);
+  }
+  renderEquipmentModule();
+}
+
+function removeManualEquipmentSection(sectionId) {
+  if (sectionId === "equipo-manual") {
+    equipmentState.manualMainItems = [];
+  } else {
+    equipmentState.manualMainSections = equipmentState.manualMainSections.filter((section) => section.id !== sectionId);
+  }
   renderEquipmentModule();
 }
 
@@ -908,6 +971,9 @@ function bindEquipmentSectionInputs() {
   host.querySelectorAll("[data-remove-equipment-item]").forEach((button) => {
     button.addEventListener("click", () => removeManualEquipmentItem(button.dataset.removeEquipmentItem));
   });
+  host.querySelectorAll("[data-remove-equipment-section]").forEach((button) => {
+    button.addEventListener("click", () => removeManualEquipmentSection(button.dataset.removeEquipmentSection));
+  });
 }
 
 function addManualMainEquipmentItem() {
@@ -920,7 +986,8 @@ function addManualMainEquipmentItem() {
     if (status) status.textContent = "Escriba el nombre del equipo antes de agregarlo.";
     return;
   }
-  equipmentState.manualMainItems.push({
+  const manualSection = ensureManualMainSection();
+  manualSection.items.push({
     id: `manual-main-${Date.now()}-${equipmentManualMainCounter++}`,
     quantity,
     description
@@ -928,6 +995,24 @@ function addManualMainEquipmentItem() {
   if (descriptionInput) descriptionInput.value = "";
   if (quantityInput) quantityInput.value = "1";
   if (status) status.textContent = `Equipo agregado: ${description}`;
+  renderEquipmentModule();
+}
+
+function addManualEquipmentSubtitle() {
+  const subtitleInput = equipmentQuery("#equipmentManualSubtitle");
+  const status = equipmentQuery("#equipmentSaveStatus");
+  const title = subtitleInput?.value.trim() || "";
+  if (!title) {
+    if (status) status.textContent = "Escriba el subtítulo antes de agregarlo.";
+    return;
+  }
+  equipmentState.manualMainSections.push({
+    id: `manual-section-${Date.now()}-${equipmentManualSectionCounter++}`,
+    title,
+    items: []
+  });
+  if (subtitleInput) subtitleInput.value = "";
+  if (status) status.textContent = `Subtítulo agregado: ${title}`;
   renderEquipmentModule();
 }
 
@@ -1339,6 +1424,13 @@ function initEquipmentModule() {
     if (event.key === "Enter") {
       event.preventDefault();
       addManualMainEquipmentItem();
+    }
+  });
+  equipmentQuery("#equipmentAddSubtitleButton")?.addEventListener("click", addManualEquipmentSubtitle);
+  equipmentQuery("#equipmentManualSubtitle")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addManualEquipmentSubtitle();
     }
   });
   equipmentQuery("#equipmentAddExtraButton")?.addEventListener("click", addManualEquipmentExtra);

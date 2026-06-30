@@ -6,9 +6,9 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260629-02" />
+    <link rel="stylesheet" href="styles.css?v=20260630-01" />
     <script src="app.js?v=20260628-01" defer></script>
-    <script src="equipment.js?v=20260629-03" defer></script>
+    <script src="equipment.js?v=20260630-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -243,23 +243,32 @@
           </div>
 
           <div id="equipmentWorkspace" class="equipment-workspace is-hidden">
+            <div class="equipment-manual-controls">
+              <div class="equipment-manual-extra-form equipment-manual-item-form">
+                <label>
+                  Cantidad
+                  <input id="equipmentManualMainQuantity" type="number" min="0" step="1" value="1" />
+                </label>
+                <label>
+                  Equipo
+                  <input id="equipmentManualMainDescription" type="text" autocomplete="off" placeholder="Ej. Consola, luces, cableado, estructura" />
+                </label>
+                <button id="equipmentAddMainItemButton" type="button">Agregar equipo</button>
+              </div>
+              <div class="equipment-manual-extra-form equipment-manual-subtitle-form">
+                <label>
+                  Subtítulo
+                  <input id="equipmentManualSubtitle" type="text" autocomplete="off" placeholder="Ej. VIDEO, AUDIO, ILUMINACIÓN" />
+                </label>
+                <button id="equipmentAddSubtitleButton" type="button">Agregar subtítulo</button>
+              </div>
+            </div>
             <section class="equipment-panel">
               <div class="equipment-section-title">
                 <span>Equipo principal</span>
                 <small id="equipmentServiceName">SUNDAY FUNDAY B</small>
               </div>
             <div id="equipmentMainTable" class="equipment-table-wrap"></div>
-            <div class="equipment-manual-extra-form equipment-manual-item-form">
-              <label>
-                Cantidad
-                <input id="equipmentManualMainQuantity" type="number" min="0" step="1" value="1" />
-              </label>
-              <label>
-                Equipo
-                <input id="equipmentManualMainDescription" type="text" autocomplete="off" placeholder="Ej. Consola, luces, cableado, estructura" />
-              </label>
-              <button id="equipmentAddMainItemButton" type="button">Agregar equipo</button>
-            </div>
           </section>
 
             <section class="equipment-panel">

@@ -486,6 +486,15 @@ body {
   margin-top: 24px;
 }
 
+.equipment-manual-controls {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
 .equipment-panel {
   padding: 18px;
   border: 1px solid var(--line);
@@ -659,6 +668,10 @@ body {
   grid-template-columns: 140px minmax(0, 1fr) auto;
   gap: 12px;
   align-items: end;
+}
+
+.equipment-manual-subtitle-form {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .equipment-extra-line {
