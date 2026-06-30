@@ -324,6 +324,81 @@ body {
   grid-column: 1 / -1;
 }
 
+.equipment-event-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.equipment-event-actions button,
+.equipment-manual-extra-form button {
+  min-height: 46px;
+  padding: 0 18px;
+  color: #ffffff;
+  background: #111111;
+  border: 1px solid #111111;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.equipment-event-actions small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.equipment-event-list,
+.equipment-extra-list {
+  display: grid;
+  gap: 10px;
+}
+
+.equipment-event-card,
+.equipment-extra-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.equipment-event-card div {
+  display: grid;
+  gap: 4px;
+}
+
+.equipment-event-card strong,
+.equipment-extra-line strong {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.equipment-event-card span,
+.equipment-extra-line span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.equipment-event-card button,
+.equipment-extra-line button {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .equipment-table-wrap {
   margin-top: 24px;
   overflow-x: auto;
@@ -466,6 +541,13 @@ body {
   font-weight: 900;
 }
 
+.equipment-inventory-table td:first-child,
+.equipment-rental-table td:first-child {
+  width: auto;
+  min-width: 240px;
+  text-align: left;
+}
+
 .equipment-category-row td {
   color: #ffffff;
   background: #111111;
@@ -524,6 +606,22 @@ body {
   font-weight: 800;
 }
 
+.equipment-manual-extra-form {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.equipment-extra-line {
+  justify-content: flex-start;
+}
+
+.equipment-extra-line span {
+  flex: 1;
+  font-size: 15px;
+}
+
 .equipment-inventory-input,
 .equipment-observation-input {
   width: 100%;
@@ -559,6 +657,10 @@ body {
   padding: 18px;
   background: #ffffff;
   border: 2px solid #111111;
+}
+
+.equipment-rent-pdf-document {
+  display: none;
 }
 
 .equipment-pdf-header {
@@ -644,17 +746,18 @@ body {
 }
 
 #equipmentPdfMainTable,
-#equipmentPdfInventoryTable {
+#equipmentPdfInventoryTable,
+#equipmentRentPdfTable {
   overflow-x: auto;
 }
 
-#equipmentPdfDocument table {
+.equipment-pdf-document table {
   width: 100%;
   border-collapse: collapse;
 }
 
-#equipmentPdfDocument th,
-#equipmentPdfDocument td {
+.equipment-pdf-document th,
+.equipment-pdf-document td {
   padding: 6px 8px;
   border: 1px solid #cfd5dd;
   color: #111111;
@@ -662,7 +765,7 @@ body {
   line-height: 1.2;
 }
 
-#equipmentPdfDocument th {
+.equipment-pdf-document th {
   color: #ffffff;
   background: #111111;
   font-size: 10px;
@@ -671,13 +774,13 @@ body {
   text-transform: uppercase;
 }
 
-#equipmentPdfDocument .equipment-category-row td {
+.equipment-pdf-document .equipment-category-row td {
   color: #ffffff;
   background: #111111;
   font-size: 13px;
 }
 
-#equipmentPdfDocument .equipment-rent-needed {
+.equipment-pdf-document .equipment-rent-needed {
   color: #ffffff !important;
   background: #df1717 !important;
 }

@@ -279,10 +279,14 @@ const equipmentServices = {
 
 const equipmentState = {
   selectedServiceId: "",
-  selectedExtras: new Set(),
+  events: [],
+  manualExtras: [],
   inventory: new Map(),
   observations: new Map()
 };
+
+let equipmentEventCounter = 1;
+let equipmentExtraCounter = 1;
 
 function equipmentQuery(selector) {
   return document.querySelector(selector);
@@ -328,20 +332,64 @@ function currentEquipmentService() {
 function selectedEquipmentSections() {
   const service = currentEquipmentService();
   if (!service) return [];
-  const selectedExtras = service.extras
-    .filter((extra) => equipmentState.selectedExtras.has(extra.id))
-    .map((extra) => ({ title: extra.title, items: extra.items }));
-  return [...service.mainSections, ...selectedExtras];
+  const manualExtrasSection = equipmentState.manualExtras.length
+    ? [
+        {
+          id: "extras-manuales",
+          title: "Extras manuales",
+          items: equipmentState.manualExtras.map((extra) => [extra.quantity, extra.description])
+        }
+      ]
+    : [];
+  return [...service.mainSections, ...manualExtrasSection];
+}
+
+function currentEquipmentEventDraft() {
+  return {
+    id: "event-draft",
+    name: equipmentQuery("#equipmentEventName")?.value.trim() || "Evento por definir",
+    phone: equipmentQuery("#equipmentEventPhone")?.value.trim() || "Por definir",
+    date: equipmentQuery("#equipmentEventDate")?.value || "",
+    responsible: equipmentQuery("#equipmentEventResponsible")?.value.trim() || "Por definir"
+  };
+}
+
+function activeEquipmentEvents() {
+  return equipmentState.events.length ? equipmentState.events : [currentEquipmentEventDraft()];
+}
+
+function eventColumnName(event) {
+  return event?.name?.trim() || "Evento por definir";
+}
+
+function eventSummaryText(events, field, fallback = "Por definir") {
+  const values = events
+    .map((event) => (field === "date" ? formatEquipmentDate(event[field]) : event[field]))
+    .filter((value) => value && value !== "Por definir");
+  return values.length ? values.join(" / ") : fallback;
 }
 
 function equipmentRowsSummary() {
   const rows = new Map();
+  const events = activeEquipmentEvents();
   selectedEquipmentSections().forEach((section) => {
     section.items.forEach(([quantity, description]) => {
       const key = normalizeEquipmentKey(description);
       if (!key) return;
-      const existing = rows.get(key) || { key, quantity: 0, description };
-      existing.quantity += Number(quantity) || 0;
+      const existing = rows.get(key) || {
+        key,
+        quantity: 0,
+        description,
+        eventQuantities: new Map()
+      };
+      const perEventQuantity = Number(quantity) || 0;
+      events.forEach((event) => {
+        existing.eventQuantities.set(
+          event.id,
+          (Number(existing.eventQuantities.get(event.id)) || 0) + perEventQuantity
+        );
+      });
+      existing.quantity += perEventQuantity * events.length;
       rows.set(key, existing);
     });
   });
@@ -383,32 +431,92 @@ function tableForEquipmentSections(sections, compact = false) {
     </table>`;
 }
 
-function renderEquipmentExtras(service) {
-  const host = equipmentQuery("#equipmentExtrasList");
+function renderEquipmentEvents() {
+  const host = equipmentQuery("#equipmentEventsList");
   if (!host) return;
-  if (!service) {
-    host.innerHTML = `<p class="equipment-empty">Seleccione el tipo de servicio para ver extras.</p>`;
+  if (!equipmentState.events.length) {
+    host.innerHTML = `<p class="equipment-empty">Agregue eventos para verlos como columnas en el resumen.</p>`;
     return;
   }
-  host.innerHTML = service.extras
-    .map((extra) => {
-      const selected = equipmentState.selectedExtras.has(extra.id);
-      return `
-        <label class="equipment-extra-card${selected ? " is-selected" : ""}">
-          <input type="checkbox" value="${escapeEquipmentHtml(extra.id)}" ${selected ? "checked" : ""} />
-          <strong>${escapeEquipmentHtml(extra.title)}</strong>
-          <span>${extra.items.length} línea(s) de equipo</span>
-        </label>`;
-    })
+  host.innerHTML = equipmentState.events
+    .map(
+      (event) => `
+        <article class="equipment-event-card">
+          <div>
+            <strong>${escapeEquipmentHtml(event.name)}</strong>
+            <span>${escapeEquipmentHtml(formatEquipmentDate(event.date))} · ${escapeEquipmentHtml(event.phone)}</span>
+          </div>
+          <button type="button" data-remove-event="${escapeEquipmentHtml(event.id)}" aria-label="Eliminar evento">X</button>
+        </article>`
+    )
     .join("");
-
-  host.querySelectorAll("input[type='checkbox']").forEach((input) => {
-    input.addEventListener("change", () => {
-      if (input.checked) equipmentState.selectedExtras.add(input.value);
-      else equipmentState.selectedExtras.delete(input.value);
+  host.querySelectorAll("[data-remove-event]").forEach((button) => {
+    button.addEventListener("click", () => {
+      equipmentState.events = equipmentState.events.filter((event) => event.id !== button.dataset.removeEvent);
       renderEquipmentModule();
     });
   });
+}
+
+function addEquipmentEvent() {
+  const draft = currentEquipmentEventDraft();
+  const status = equipmentQuery("#equipmentSaveStatus");
+  if (!draft.name || draft.name === "Evento por definir") {
+    if (status) status.textContent = "Escriba el nombre del evento antes de agregarlo al resumen.";
+    return;
+  }
+  equipmentState.events.push({
+    ...draft,
+    id: `event-${Date.now()}-${equipmentEventCounter++}`
+  });
+  if (status) status.textContent = `Evento agregado: ${draft.name}`;
+  renderEquipmentModule();
+}
+
+function renderEquipmentExtras() {
+  const host = equipmentQuery("#equipmentExtrasList");
+  if (!host) return;
+  if (!equipmentState.manualExtras.length) {
+    host.innerHTML = `<p class="equipment-empty">Aún no hay extras manuales agregados.</p>`;
+    return;
+  }
+  host.innerHTML = equipmentState.manualExtras
+    .map(
+      (extra) => `
+        <article class="equipment-extra-line">
+          <strong>${escapeEquipmentHtml(extra.quantity)}</strong>
+          <span>${escapeEquipmentHtml(extra.description)}</span>
+          <button type="button" data-remove-extra="${escapeEquipmentHtml(extra.id)}" aria-label="Eliminar extra">X</button>
+        </article>`
+    )
+    .join("");
+  host.querySelectorAll("[data-remove-extra]").forEach((button) => {
+    button.addEventListener("click", () => {
+      equipmentState.manualExtras = equipmentState.manualExtras.filter((extra) => extra.id !== button.dataset.removeExtra);
+      renderEquipmentModule();
+    });
+  });
+}
+
+function addManualEquipmentExtra() {
+  const quantityInput = equipmentQuery("#equipmentExtraQuantity");
+  const descriptionInput = equipmentQuery("#equipmentExtraDescription");
+  const status = equipmentQuery("#equipmentSaveStatus");
+  const description = descriptionInput?.value.trim() || "";
+  const quantity = Number(quantityInput?.value || 0) || 0;
+  if (!description) {
+    if (status) status.textContent = "Escriba el nombre del extra antes de agregarlo.";
+    return;
+  }
+  equipmentState.manualExtras.push({
+    id: `manual-extra-${Date.now()}-${equipmentExtraCounter++}`,
+    quantity,
+    description
+  });
+  if (descriptionInput) descriptionInput.value = "";
+  if (quantityInput) quantityInput.value = "1";
+  if (status) status.textContent = `Extra agregado: ${description}`;
+  renderEquipmentModule();
 }
 
 function inventoryValueFor(row) {
@@ -420,6 +528,10 @@ function tableForEquipmentInventory(rows, editable = true) {
   if (!rows.length) {
     return `<p class="equipment-empty">El resumen aparecerá al seleccionar un servicio.</p>`;
   }
+  const events = activeEquipmentEvents();
+  const eventHeaders = events
+    .map((event) => `<th>${escapeEquipmentHtml(eventColumnName(event))}</th>`)
+    .join("");
   const body = rows
     .map((row) => {
       const inventory = inventoryValueFor(row);
@@ -427,10 +539,13 @@ function tableForEquipmentInventory(rows, editable = true) {
       const missing = Math.max(0, row.quantity - inventory);
       const rentClass = missing > 0 ? " equipment-rent-needed" : "";
       const observation = equipmentState.observations.get(row.key) || "";
+      const eventCells = events
+        .map((event) => `<td class="equipment-qty">${escapeEquipmentHtml(row.eventQuantities.get(event.id) || 0)}</td>`)
+        .join("");
       return `
         <tr data-equipment-key="${escapeEquipmentHtml(row.key)}">
           <td>${escapeEquipmentHtml(row.description)}</td>
-          <td class="equipment-qty">${escapeEquipmentHtml(row.quantity)}</td>
+          ${eventCells}
           <td>
             ${
               editable
@@ -456,9 +571,66 @@ function tableForEquipmentInventory(rows, editable = true) {
       <thead>
         <tr>
           <th>Equipo</th>
-          <th>Equipo requerido</th>
+          ${eventHeaders}
           <th>Inventario físico bodega PP</th>
           <th>Faltante o restante de equipo</th>
+          <th>Equipo para renta</th>
+          <th>Observaciones</th>
+        </tr>
+      </thead>
+      <tbody>${body}</tbody>
+    </table>`;
+}
+
+function equipmentRentalRows() {
+  const events = activeEquipmentEvents();
+  return equipmentRowsSummary()
+    .map((row) => {
+      const inventory = inventoryValueFor(row);
+      const missing = Math.max(0, row.quantity - inventory);
+      const eventDetails = events
+        .map((event) => {
+          const quantity = Number(row.eventQuantities.get(event.id)) || 0;
+          return quantity > 0 ? `${eventColumnName(event)}: ${quantity}` : "";
+        })
+        .filter(Boolean)
+        .join(" / ");
+      return {
+        ...row,
+        inventory,
+        missing,
+        eventDetails,
+        observation: equipmentState.observations.get(row.key) || ""
+      };
+    })
+    .filter((row) => row.missing > 0);
+}
+
+function tableForEquipmentRentalReport(rows) {
+  if (!rows.length) {
+    return `<p class="equipment-empty">No hay equipo para renta con el inventario actual.</p>`;
+  }
+  const body = rows
+    .map(
+      (row) => `
+        <tr>
+          <td>${escapeEquipmentHtml(row.description)}</td>
+          <td>${escapeEquipmentHtml(row.eventDetails)}</td>
+          <td class="equipment-qty">${escapeEquipmentHtml(row.quantity)}</td>
+          <td class="equipment-qty">${escapeEquipmentHtml(row.inventory)}</td>
+          <td class="equipment-rent-needed">${escapeEquipmentHtml(row.missing)}</td>
+          <td>${escapeEquipmentHtml(row.observation)}</td>
+        </tr>`
+    )
+    .join("");
+  return `
+    <table class="equipment-base-table equipment-rental-table equipment-table-compact">
+      <thead>
+        <tr>
+          <th>Equipo</th>
+          <th>Eventos</th>
+          <th>Total requerido</th>
+          <th>Inventario</th>
           <th>Equipo para renta</th>
           <th>Observaciones</th>
         </tr>
@@ -487,11 +659,13 @@ function renderEquipmentPdfPreview() {
   const service = currentEquipmentService();
   const sections = selectedEquipmentSections();
   const rows = equipmentRowsSummary();
-  const eventName = equipmentQuery("#equipmentEventName")?.value.trim() || "Por definir";
-  const phone = equipmentQuery("#equipmentEventPhone")?.value.trim() || "Por definir";
-  const responsible = equipmentQuery("#equipmentEventResponsible")?.value.trim() || "Por definir";
-  const date = formatEquipmentDate(equipmentQuery("#equipmentEventDate")?.value || "");
+  const events = activeEquipmentEvents();
+  const eventName = eventSummaryText(events, "name");
+  const phone = eventSummaryText(events, "phone");
+  const responsible = eventSummaryText(events, "responsible");
+  const date = eventSummaryText(events, "date");
   const notes = equipmentQuery("#equipmentNotes")?.value.trim() || "";
+  const rentalRows = equipmentRentalRows();
 
   const title = service?.name || "Cuadro de equipo";
   if (equipmentQuery("#equipmentPdfTitle")) equipmentQuery("#equipmentPdfTitle").textContent = title;
@@ -512,6 +686,20 @@ function renderEquipmentPdfPreview() {
   if (equipmentQuery("#equipmentPdfInventoryTable")) {
     equipmentQuery("#equipmentPdfInventoryTable").innerHTML = tableForEquipmentInventory(rows, false);
   }
+
+  if (equipmentQuery("#equipmentRentPdfTitle")) equipmentQuery("#equipmentRentPdfTitle").textContent = `Renta - ${title}`;
+  if (equipmentQuery("#equipmentRentPdfEvents")) equipmentQuery("#equipmentRentPdfEvents").textContent = eventName;
+  if (equipmentQuery("#equipmentRentPdfPhone")) equipmentQuery("#equipmentRentPdfPhone").textContent = phone;
+  if (equipmentQuery("#equipmentRentPdfDate")) equipmentQuery("#equipmentRentPdfDate").textContent = date;
+  if (equipmentQuery("#equipmentRentPdfResponsible")) equipmentQuery("#equipmentRentPdfResponsible").textContent = responsible;
+  const rentNotesEl = equipmentQuery("#equipmentRentPdfNotes");
+  if (rentNotesEl) {
+    rentNotesEl.textContent = notes;
+    rentNotesEl.classList.toggle("is-hidden", !notes);
+  }
+  if (equipmentQuery("#equipmentRentPdfTable")) {
+    equipmentQuery("#equipmentRentPdfTable").innerHTML = tableForEquipmentRentalReport(rentalRows);
+  }
 }
 
 function renderEquipmentModule() {
@@ -519,25 +707,29 @@ function renderEquipmentModule() {
   const workspace = equipmentQuery("#equipmentWorkspace");
   if (workspace) workspace.classList.toggle("is-hidden", !service);
   if (equipmentQuery("#equipmentServiceName")) equipmentQuery("#equipmentServiceName").textContent = service?.name || "";
+  renderEquipmentEvents();
   if (equipmentQuery("#equipmentMainTable")) {
     equipmentQuery("#equipmentMainTable").innerHTML = tableForEquipmentSections(selectedEquipmentSections());
   }
-  renderEquipmentExtras(service);
+  renderEquipmentExtras();
   if (equipmentQuery("#equipmentInventoryTable")) {
     equipmentQuery("#equipmentInventoryTable").innerHTML = tableForEquipmentInventory(equipmentRowsSummary(), true);
+  }
+  if (equipmentQuery("#equipmentRentReportTable")) {
+    equipmentQuery("#equipmentRentReportTable").innerHTML = tableForEquipmentRentalReport(equipmentRentalRows());
   }
   bindEquipmentInventoryInputs();
   renderEquipmentPdfPreview();
 }
 
-async function equipmentPdfHtml() {
+async function equipmentPdfHtml(documentSelector = "#equipmentPdfDocument", title = "Cuadro de equipo") {
   const stylesheet = await fetch("styles.css", { credentials: "same-origin" }).then((response) => response.text());
-  const documentHtml = equipmentQuery("#equipmentPdfDocument")?.outerHTML || "";
+  const documentHtml = equipmentQuery(documentSelector)?.outerHTML || "";
   return `<!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <title>Cuadro de equipo</title>
+    <title>${escapeEquipmentHtml(title)}</title>
     <style>
       ${stylesheet}
       body { margin: 0; background: #ffffff; }
@@ -551,29 +743,37 @@ async function equipmentPdfHtml() {
 </html>`;
 }
 
-function equipmentPdfFileName() {
+function equipmentPdfFileName(mode = "full") {
   const service = currentEquipmentService();
   const serviceName = cleanEquipmentFilePart(service?.name || "Cuadro de Equipo", "Cuadro de Equipo");
-  const eventName = cleanEquipmentFilePart(equipmentQuery("#equipmentEventName")?.value || "Evento", "Evento");
-  const phone = cleanEquipmentFilePart(equipmentQuery("#equipmentEventPhone")?.value || "Telefono", "Telefono");
-  return `Cuadro-Equipo-${serviceName}-${eventName}-${phone}.pdf`;
+  const events = activeEquipmentEvents();
+  const eventName = cleanEquipmentFilePart(events.map((event) => event.name).join("-") || "Eventos", "Eventos");
+  const phone = cleanEquipmentFilePart(events.find((event) => event.phone && event.phone !== "Por definir")?.phone || "Telefono", "Telefono");
+  const prefix = mode === "rent" ? "Reporte-Renta" : "Cuadro-Equipo";
+  return `${prefix}-${serviceName}-${eventName}-${phone}.pdf`;
 }
 
-async function saveEquipmentPdf() {
+async function saveEquipmentPdf(mode = "full") {
   const status = equipmentQuery("#equipmentSaveStatus");
   if (!currentEquipmentService()) {
     if (status) status.textContent = "Seleccione SUNDAY FUNDAY B antes de guardar.";
     return;
   }
+  if (mode === "rent" && !equipmentRentalRows().length) {
+    if (status) status.textContent = "No hay equipo marcado para renta con el inventario actual.";
+    return;
+  }
   if (status) status.textContent = "Generando PDF...";
   try {
+    const documentSelector = mode === "rent" ? "#equipmentRentPdfDocument" : "#equipmentPdfDocument";
+    const title = mode === "rent" ? "Reporte de renta" : "Cuadro de equipo";
     const response = await fetch("/api/cuadros-equipo", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        fileName: equipmentPdfFileName(),
-        html: await equipmentPdfHtml()
+        fileName: equipmentPdfFileName(mode),
+        html: await equipmentPdfHtml(documentSelector, title)
       })
     });
     const data = await response.json();
@@ -590,7 +790,6 @@ function initEquipmentModule() {
   if (!serviceSelect) return;
   serviceSelect.addEventListener("change", () => {
     equipmentState.selectedServiceId = serviceSelect.value;
-    equipmentState.selectedExtras.clear();
     renderEquipmentModule();
   });
   [
@@ -600,9 +799,18 @@ function initEquipmentModule() {
     "#equipmentEventResponsible",
     "#equipmentNotes"
   ].forEach((selector) => {
-    equipmentQuery(selector)?.addEventListener("input", renderEquipmentPdfPreview);
+    equipmentQuery(selector)?.addEventListener("input", renderEquipmentModule);
   });
-  equipmentQuery("#equipmentSavePdfButton")?.addEventListener("click", saveEquipmentPdf);
+  equipmentQuery("#equipmentAddEventButton")?.addEventListener("click", addEquipmentEvent);
+  equipmentQuery("#equipmentAddExtraButton")?.addEventListener("click", addManualEquipmentExtra);
+  equipmentQuery("#equipmentExtraDescription")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addManualEquipmentExtra();
+    }
+  });
+  equipmentQuery("#equipmentSavePdfButton")?.addEventListener("click", () => saveEquipmentPdf("full"));
+  equipmentQuery("#equipmentSaveRentPdfButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
   renderEquipmentModule();
 }
 

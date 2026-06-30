@@ -6,9 +6,9 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260628-01" />
+    <link rel="stylesheet" href="styles.css?v=20260629-01" />
     <script src="app.js?v=20260628-01" defer></script>
-    <script src="equipment.js?v=20260628-01" defer></script>
+    <script src="equipment.js?v=20260629-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -201,7 +201,7 @@
           <div class="equipment-base-grid equipment-event-grid">
             <label>
               Nombre del evento
-              <input id="equipmentEventName" type="text" autocomplete="off" placeholder="Ej. Boda, cumpleaños, evento corporativo" />
+              <input id="equipmentEventName" type="text" autocomplete="off" placeholder="Ej. Hotel Intercontinental" />
             </label>
             <label>
               Número de teléfono
@@ -215,6 +215,13 @@
               Responsable
               <input id="equipmentEventResponsible" type="text" autocomplete="off" placeholder="Persona que solicita o revisa" />
             </label>
+            <div class="equipment-field-wide equipment-event-actions">
+              <button id="equipmentAddEventButton" type="button">Agregar evento al resumen</button>
+              <small>Puede agregar todos los eventos que necesite; cada nombre aparece como columna en el resumen.</small>
+            </div>
+            <div class="equipment-field-wide">
+              <div id="equipmentEventsList" class="equipment-event-list"></div>
+            </div>
             <label class="equipment-field-wide equipment-service-label">
               Tipo de Servicio
               <select id="equipmentServiceSelect">
@@ -230,6 +237,7 @@
 
           <div class="equipment-actions">
             <button id="equipmentSavePdfButton" type="button">Guardar cuadro PDF en computadora</button>
+            <button id="equipmentSaveRentPdfButton" type="button">Guardar reporte de renta PDF</button>
             <span id="equipmentSaveStatus" role="status"></span>
           </div>
 
@@ -244,10 +252,21 @@
 
             <section class="equipment-panel">
               <div class="equipment-section-title">
-                <span>Extras Sunday Funday</span>
-                <small>seleccione solo lo que enviará a bodega</small>
+                <span>Extras manuales</span>
+                <small>agregue solo lo que enviará a bodega</small>
               </div>
-              <div id="equipmentExtrasList" class="equipment-extra-grid"></div>
+              <div class="equipment-manual-extra-form">
+                <label>
+                  Cantidad
+                  <input id="equipmentExtraQuantity" type="number" min="0" step="1" value="1" />
+                </label>
+                <label>
+                  Equipo extra
+                  <input id="equipmentExtraDescription" type="text" autocomplete="off" placeholder="Ej. Pistola LED CO2, toldo, cableado extra" />
+                </label>
+                <button id="equipmentAddExtraButton" type="button">Agregar extra</button>
+              </div>
+              <div id="equipmentExtrasList" class="equipment-extra-list"></div>
             </section>
 
             <section class="equipment-panel">
@@ -256,6 +275,14 @@
                 <small>si falta equipo, se marca renta en rojo</small>
               </div>
               <div id="equipmentInventoryTable" class="equipment-table-wrap"></div>
+            </section>
+
+            <section class="equipment-panel">
+              <div class="equipment-section-title">
+                <span>Reporte solo equipo para renta</span>
+                <small>incluye únicamente faltantes marcados en rojo</small>
+              </div>
+              <div id="equipmentRentReportTable" class="equipment-table-wrap"></div>
             </section>
 
             <section id="equipmentPdfDocument" class="equipment-pdf-document">
@@ -288,6 +315,37 @@
               <p id="equipmentPdfNotes" class="equipment-pdf-notes is-hidden"></p>
               <div id="equipmentPdfMainTable"></div>
               <div id="equipmentPdfInventoryTable"></div>
+            </section>
+
+            <section id="equipmentRentPdfDocument" class="equipment-pdf-document equipment-rent-pdf-document">
+              <header class="equipment-pdf-header">
+                <div>
+                  <p>Live Productions</p>
+                  <h2 id="equipmentRentPdfTitle">Reporte de renta</h2>
+                  <span>Equipo faltante para renta</span>
+                </div>
+                <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
+              </header>
+              <div class="equipment-pdf-meta">
+                <div>
+                  <span>Eventos</span>
+                  <strong id="equipmentRentPdfEvents">Por definir</strong>
+                </div>
+                <div>
+                  <span>Teléfono</span>
+                  <strong id="equipmentRentPdfPhone">Por definir</strong>
+                </div>
+                <div>
+                  <span>Fecha</span>
+                  <strong id="equipmentRentPdfDate">Por definir</strong>
+                </div>
+                <div>
+                  <span>Responsable</span>
+                  <strong id="equipmentRentPdfResponsible">Por definir</strong>
+                </div>
+              </div>
+              <p id="equipmentRentPdfNotes" class="equipment-pdf-notes is-hidden"></p>
+              <div id="equipmentRentPdfTable"></div>
             </section>
           </div>
         </div>

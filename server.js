@@ -60,9 +60,18 @@ const authConfigPath = path.join(dataDir, "cotizador-auth.json");
 const defaultPasswordHash = {
   algorithm: "pbkdf2-sha256",
   iterations: 210000,
-  salt: "4735e732b458c196f2d378103a6102da",
-  hash: "982f65163a62c92be2eeada89a8a42284a594e7e5391bc11fb13c0d32581fe10"
+  salt: "b7d889cfb3151c2a2df99b950a95fb6d",
+  hash: "52ac54adf50bc2e80b8d0df3faeb688d2e3301f86cd7dae6f2035dbf221a8d22"
 };
+
+const previousDefaultPasswordHashes = [
+  {
+    algorithm: "pbkdf2-sha256",
+    iterations: 210000,
+    salt: "4735e732b458c196f2d378103a6102da",
+    hash: "982f65163a62c92be2eeada89a8a42284a594e7e5391bc11fb13c0d32581fe10"
+  }
+];
 
 function hashPassword(password, salt, iterations = defaultPasswordHash.iterations) {
   return crypto.pbkdf2Sync(String(password || ""), salt, iterations, 32, "sha256").toString("hex");
@@ -76,6 +85,23 @@ function newPasswordHash(password) {
     salt,
     hash: hashPassword(password, salt)
   };
+}
+
+function samePasswordConfig(first, second) {
+  return (
+    String(first?.algorithm || "") === String(second?.algorithm || "") &&
+    Number(first?.iterations || 0) === Number(second?.iterations || 0) &&
+    String(first?.salt || "") === String(second?.salt || "") &&
+    String(first?.hash || "") === String(second?.hash || "")
+  );
+}
+
+function isPreviousDefaultPasswordHash(passwordConfig) {
+  return previousDefaultPasswordHashes.some((previous) => samePasswordConfig(passwordConfig, previous));
+}
+
+function writeAuthConfig(config) {
+  fs.writeFileSync(authConfigPath, JSON.stringify(config, null, 2), { mode: 0o600 });
 }
 
 function loadAuthConfig() {
@@ -100,13 +126,18 @@ function loadAuthConfig() {
 
   try {
     const stored = JSON.parse(fs.readFileSync(authConfigPath, "utf8"));
-    return {
+    const resolved = {
       username: String(stored.username || envConfig.username),
       password: stored.password?.hash ? stored.password : envConfig.password,
       sessionSecret: String(stored.sessionSecret || envConfig.sessionSecret)
     };
+    if (isPreviousDefaultPasswordHash(resolved.password)) {
+      resolved.password = envConfig.password;
+      writeAuthConfig(resolved);
+    }
+    return resolved;
   } catch {
-    fs.writeFileSync(authConfigPath, JSON.stringify(envConfig, null, 2), { mode: 0o600 });
+    writeAuthConfig(envConfig);
     return envConfig;
   }
 }
