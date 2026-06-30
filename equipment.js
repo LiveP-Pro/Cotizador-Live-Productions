@@ -558,12 +558,15 @@ const equipmentState = {
   selectedServiceId: "",
   events: [],
   selectedExtraIds: new Set(),
+  manualMainItems: [],
   manualExtras: [],
+  itemOverrides: new Map(),
   inventory: new Map(),
   observations: new Map()
 };
 
 let equipmentEventCounter = 1;
+let equipmentManualMainCounter = 1;
 let equipmentExtraCounter = 1;
 
 function equipmentQuery(selector) {
@@ -617,20 +620,96 @@ function currentEquipmentService() {
   return equipmentServices[equipmentState.selectedServiceId] || null;
 }
 
+function equipmentSectionKey(section, index, scope, serviceId = "") {
+  const servicePrefix = serviceId ? `${serviceId}-` : "";
+  return `${servicePrefix}${scope}-${section.id || normalizeEquipmentKey(section.title) || index}`;
+}
+
+function equipmentItemKey(sectionKey, itemIndex) {
+  return `${sectionKey}-item-${itemIndex}`;
+}
+
+function normalizeEquipmentItem(item) {
+  if (Array.isArray(item)) {
+    return {
+      id: "",
+      quantity: item[0],
+      description: item[1],
+      editable: false,
+      manual: false
+    };
+  }
+  return {
+    id: item.id || "",
+    quantity: item.quantity,
+    description: item.description,
+    editable: item.editable !== false,
+    manual: Boolean(item.manual)
+  };
+}
+
+function editableEquipmentItems(section, sectionKey) {
+  return (section.items || []).map(([quantity, description], itemIndex) => {
+    const id = equipmentItemKey(sectionKey, itemIndex);
+    const override = equipmentState.itemOverrides.get(id) || {};
+    return {
+      id,
+      quantity: override.quantity ?? quantity,
+      description: override.description ?? description,
+      editable: true,
+      manual: false
+    };
+  });
+}
+
 function selectedEquipmentSections() {
   const service = currentEquipmentService();
   if (!service) return [];
-  const selectedExtrasSections = (service.extras || []).filter((extra) => equipmentState.selectedExtraIds.has(extra.id));
+  const mainSections = (service.mainSections || []).map((section, index) => {
+    const sectionKey = equipmentSectionKey(section, index, "main", equipmentState.selectedServiceId);
+    return {
+      ...section,
+      id: sectionKey,
+      items: editableEquipmentItems(section, sectionKey)
+    };
+  });
+  const manualMainSection = equipmentState.manualMainItems.length
+    ? [
+        {
+          id: "equipo-manual",
+          title: "Equipo agregado manualmente",
+          items: equipmentState.manualMainItems.map((item) => ({
+            ...item,
+            editable: true,
+            manual: true
+          }))
+        }
+      ]
+    : [];
+  const selectedExtrasSections = (service.extras || [])
+    .filter((extra) => equipmentState.selectedExtraIds.has(extra.id))
+    .map((extra, index) => {
+      const sectionKey = equipmentSectionKey(extra, index, "extra", equipmentState.selectedServiceId);
+      return {
+        ...extra,
+        id: sectionKey,
+        items: editableEquipmentItems(extra, sectionKey)
+      };
+    });
   const manualExtrasSection = equipmentState.manualExtras.length
     ? [
         {
           id: "extras-manuales",
           title: "Extras manuales",
-          items: equipmentState.manualExtras.map((extra) => [extra.quantity, extra.description])
+          items: equipmentState.manualExtras.map((extra) => ({
+            ...extra,
+            editable: true,
+            manual: true
+          }))
         }
       ]
     : [];
-  return [...service.mainSections, ...selectedExtrasSections, ...manualExtrasSection];
+  return [...mainSections, ...manualMainSection, ...selectedExtrasSections, ...manualExtrasSection];
 }
 
 function warehousePdfSections() {
@@ -666,7 +745,8 @@ function equipmentRowsSummary() {
   const rows = new Map();
   const events = activeEquipmentEvents();
   selectedEquipmentSections().forEach((section) => {
-    section.items.forEach(([quantity, description]) => {
+    section.items.forEach((rawItem) => {
+      const { quantity, description } = normalizeEquipmentItem(rawItem);
       const key = normalizeEquipmentKey(description);
       if (!key) return;
       const existing = rows.get(key) || {
@@ -696,17 +776,37 @@ function tableForEquipmentSections(sections, compact = false) {
   const rows = sections
     .map((section) => {
       const items = section.items
-        .map(
-          ([quantity, description]) => `
+        .map((rawItem) => {
+          const item = normalizeEquipmentItem(rawItem);
+          if (!compact && item.editable && item.id) {
+            return `
+              <tr>
+                <td class="equipment-qty">
+                  <input class="equipment-line-quantity" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="quantity" type="number" min="0" step="1" value="${escapeEquipmentHtml(item.quantity)}" />
+                </td>
+                <td>
+                  <input class="equipment-line-description" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="description" type="text" value="${escapeEquipmentHtml(item.description)}" />
+                </td>
+                <td class="equipment-row-action">
+                  ${
+                    item.manual
+                      ? `<button class="equipment-row-remove" type="button" data-remove-equipment-item="${escapeEquipmentHtml(item.id)}" aria-label="Eliminar equipo">X</button>`
+                      : ""
+                  }
+                </td>
+              </tr>`;
+          }
+          return `
             <tr>
-              <td class="equipment-qty">${escapeEquipmentHtml(quantity)}</td>
-              <td>${escapeEquipmentHtml(description)}</td>
-            </tr>`
-        )
+              <td class="equipment-qty">${escapeEquipmentHtml(item.quantity)}</td>
+              <td>${escapeEquipmentHtml(item.description)}</td>
+              ${compact ? "" : `<td class="equipment-row-action"></td>`}
+            </tr>`;
+        })
         .join("");
       return `
         <tr class="equipment-category-row">
-          <td colspan="2">${escapeEquipmentHtml(section.title)}</td>
+          <td colspan="${compact ? "2" : "3"}">${escapeEquipmentHtml(section.title)}</td>
         </tr>
         ${items}`;
     })
@@ -718,6 +818,7 @@ function tableForEquipmentSections(sections, compact = false) {
         <tr>
           <th>Cantidad</th>
           <th>Equipo</th>
+          ${compact ? "" : "<th>Acción</th>"}
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -766,6 +867,70 @@ function addEquipmentEvent() {
   renderEquipmentModule();
 }
 
+function refreshEquipmentSummaryAndPreview() {
+  if (equipmentQuery("#equipmentInventoryTable")) {
+    equipmentQuery("#equipmentInventoryTable").innerHTML = tableForEquipmentInventory(equipmentRowsSummary(), true);
+  }
+  bindEquipmentInventoryInputs();
+  renderEquipmentPdfPreview();
+}
+
+function updateEquipmentItem(itemId, field, value) {
+  const manualMain = equipmentState.manualMainItems.find((item) => item.id === itemId);
+  const manualExtra = equipmentState.manualExtras.find((item) => item.id === itemId);
+  const target = manualMain || manualExtra;
+  const nextValue = field === "quantity" ? Number(value || 0) || 0 : String(value || "");
+  if (target) {
+    target[field] = nextValue;
+    return;
+  }
+  const override = equipmentState.itemOverrides.get(itemId) || {};
+  override[field] = nextValue;
+  equipmentState.itemOverrides.set(itemId, override);
+}
+
+function removeManualEquipmentItem(itemId) {
+  equipmentState.manualMainItems = equipmentState.manualMainItems.filter((item) => item.id !== itemId);
+  equipmentState.manualExtras = equipmentState.manualExtras.filter((item) => item.id !== itemId);
+  renderEquipmentModule();
+}
+
+function bindEquipmentSectionInputs() {
+  const host = equipmentQuery("#equipmentMainTable");
+  if (!host) return;
+  host.querySelectorAll("[data-equipment-item-id]").forEach((input) => {
+    input.addEventListener("input", (event) => {
+      updateEquipmentItem(input.dataset.equipmentItemId, input.dataset.equipmentField, event.target.value);
+      refreshEquipmentSummaryAndPreview();
+    });
+    input.addEventListener("change", renderEquipmentModule);
+  });
+  host.querySelectorAll("[data-remove-equipment-item]").forEach((button) => {
+    button.addEventListener("click", () => removeManualEquipmentItem(button.dataset.removeEquipmentItem));
+  });
+}
+
+function addManualMainEquipmentItem() {
+  const quantityInput = equipmentQuery("#equipmentManualMainQuantity");
+  const descriptionInput = equipmentQuery("#equipmentManualMainDescription");
+  const status = equipmentQuery("#equipmentSaveStatus");
+  const description = descriptionInput?.value.trim() || "";
+  const quantity = Number(quantityInput?.value || 0) || 0;
+  if (!description) {
+    if (status) status.textContent = "Escriba el nombre del equipo antes de agregarlo.";
+    return;
+  }
+  equipmentState.manualMainItems.push({
+    id: `manual-main-${Date.now()}-${equipmentManualMainCounter++}`,
+    quantity,
+    description
+  });
+  if (descriptionInput) descriptionInput.value = "";
+  if (quantityInput) quantityInput.value = "1";
+  if (status) status.textContent = `Equipo agregado: ${description}`;
+  renderEquipmentModule();
+}
+
 function renderEquipmentPredefinedExtras() {
   const host = equipmentQuery("#equipmentPredefinedExtras");
   if (!host) return;
@@ -810,13 +975,26 @@ function renderManualEquipmentExtras() {
   host.innerHTML = equipmentState.manualExtras
     .map(
       (extra) => `
-        <article class="equipment-extra-line">
-          <strong>${escapeEquipmentHtml(extra.quantity)}</strong>
-          <span>${escapeEquipmentHtml(extra.description)}</span>
+        <article class="equipment-extra-line equipment-extra-line-editable">
+          <label>
+            Cantidad
+            <input data-manual-extra-id="${escapeEquipmentHtml(extra.id)}" data-equipment-field="quantity" type="number" min="0" step="1" value="${escapeEquipmentHtml(extra.quantity)}" />
+          </label>
+          <label>
+            Equipo extra
+            <input data-manual-extra-id="${escapeEquipmentHtml(extra.id)}" data-equipment-field="description" type="text" value="${escapeEquipmentHtml(extra.description)}" />
+          </label>
           <button type="button" data-remove-extra="${escapeEquipmentHtml(extra.id)}" aria-label="Eliminar extra">X</button>
         </article>`
     )
     .join("");
+  host.querySelectorAll("[data-manual-extra-id]").forEach((input) => {
+    input.addEventListener("input", (event) => {
+      updateEquipmentItem(input.dataset.manualExtraId, input.dataset.equipmentField, event.target.value);
+      refreshEquipmentSummaryAndPreview();
+    });
+    input.addEventListener("change", renderEquipmentModule);
+  });
   host.querySelectorAll("[data-remove-extra]").forEach((button) => {
     button.addEventListener("click", () => {
       equipmentState.manualExtras = equipmentState.manualExtras.filter((extra) => extra.id !== button.dataset.removeExtra);
@@ -1033,6 +1211,7 @@ function renderEquipmentModule() {
   if (equipmentQuery("#equipmentMainTable")) {
     equipmentQuery("#equipmentMainTable").innerHTML = tableForEquipmentSections(selectedEquipmentSections());
   }
+  bindEquipmentSectionInputs();
   renderEquipmentPredefinedExtras();
   renderManualEquipmentExtras();
   if (equipmentQuery("#equipmentInventoryTable")) {
@@ -1155,6 +1334,13 @@ function initEquipmentModule() {
     equipmentQuery(selector)?.addEventListener("input", renderEquipmentModule);
   });
   equipmentQuery("#equipmentAddEventButton")?.addEventListener("click", addEquipmentEvent);
+  equipmentQuery("#equipmentAddMainItemButton")?.addEventListener("click", addManualMainEquipmentItem);
+  equipmentQuery("#equipmentManualMainDescription")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addManualMainEquipmentItem();
+    }
+  });
   equipmentQuery("#equipmentAddExtraButton")?.addEventListener("click", addManualEquipmentExtra);
   equipmentQuery("#equipmentExtraDescription")?.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {

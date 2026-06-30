@@ -248,8 +248,19 @@
                 <span>Equipo principal</span>
                 <small id="equipmentServiceName">SUNDAY FUNDAY B</small>
               </div>
-              <div id="equipmentMainTable" class="equipment-table-wrap"></div>
-            </section>
+            <div id="equipmentMainTable" class="equipment-table-wrap"></div>
+            <div class="equipment-manual-extra-form equipment-manual-item-form">
+              <label>
+                Cantidad
+                <input id="equipmentManualMainQuantity" type="number" min="0" step="1" value="1" />
+              </label>
+              <label>
+                Equipo
+                <input id="equipmentManualMainDescription" type="text" autocomplete="off" placeholder="Ej. Consola, luces, cableado, estructura" />
+              </label>
+              <button id="equipmentAddMainItemButton" type="button">Agregar equipo</button>
+            </div>
+          </section>
 
             <section class="equipment-panel">
               <div class="equipment-section-title">

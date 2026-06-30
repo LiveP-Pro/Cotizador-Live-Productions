@@ -344,6 +344,10 @@ body {
   cursor: pointer;
 }
 
+.equipment-manual-item-form {
+  margin-top: 14px;
+}
+
 .equipment-event-actions small {
   color: var(--muted);
   font-weight: 800;
@@ -541,6 +545,40 @@ body {
   font-weight: 900;
 }
 
+.equipment-service-table input {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 9px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.equipment-service-table .equipment-line-quantity {
+  text-align: center;
+}
+
+.equipment-service-table .equipment-row-action {
+  width: 76px;
+  text-align: center;
+}
+
+.equipment-row-remove {
+  width: 38px;
+  min-width: 38px;
+  height: 34px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .equipment-inventory-table td:first-child,
 .equipment-rental-table td:first-child {
   width: auto;
@@ -630,6 +668,34 @@ body {
 .equipment-extra-line span {
   flex: 1;
   font-size: 15px;
+}
+
+.equipment-extra-line-editable {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 42px;
+  align-items: end;
+}
+
+.equipment-extra-line-editable label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.equipment-extra-line-editable input {
+  min-height: 36px;
+  padding: 7px 9px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .equipment-inventory-input,
