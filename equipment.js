@@ -353,6 +353,10 @@ function selectedEquipmentSections() {
   return [...service.mainSections, ...selectedExtrasSections, ...manualExtrasSection];
 }
 
+function warehousePdfSections() {
+  return selectedEquipmentSections();
+}
+
 function currentEquipmentEventDraft() {
   return {
     id: "event-draft",
@@ -701,7 +705,6 @@ function bindEquipmentInventoryInputs() {
 function renderEquipmentPdfPreview() {
   const service = currentEquipmentService();
   const sections = selectedEquipmentSections();
-  const rows = equipmentRowsSummary();
   const events = activeEquipmentEvents();
   const eventName = eventSummaryText(events, "name");
   const phone = eventSummaryText(events, "phone");
@@ -726,10 +729,6 @@ function renderEquipmentPdfPreview() {
   if (equipmentQuery("#equipmentPdfMainTable")) {
     equipmentQuery("#equipmentPdfMainTable").innerHTML = tableForEquipmentSections(sections, true);
   }
-  if (equipmentQuery("#equipmentPdfInventoryTable")) {
-    equipmentQuery("#equipmentPdfInventoryTable").innerHTML = tableForEquipmentInventory(rows, false);
-  }
-
   if (equipmentQuery("#equipmentRentPdfTitle")) equipmentQuery("#equipmentRentPdfTitle").textContent = `Renta - ${title}`;
   if (equipmentQuery("#equipmentRentPdfEvents")) equipmentQuery("#equipmentRentPdfEvents").textContent = eventName;
   if (equipmentQuery("#equipmentRentPdfPhone")) equipmentQuery("#equipmentRentPdfPhone").textContent = phone;
@@ -787,8 +786,8 @@ async function equipmentPdfHtml(documentSelector = "#equipmentPdfDocument", titl
 async function equipmentUsagePdfHtml() {
   const stylesheet = await fetch("styles.css", { credentials: "same-origin" }).then((response) => response.text());
   const service = currentEquipmentService();
-  const title = service?.name || "Equipo a utilizar";
-  const tableHtml = tableForEquipmentSections(selectedEquipmentSections(), true);
+  const title = service?.name ? `Equipo y extras - ${service.name}` : "Equipo y extras";
+  const tableHtml = tableForEquipmentSections(warehousePdfSections(), true);
   return `<!doctype html>
 <html lang="es">
   <head>
@@ -831,13 +830,13 @@ async function saveEquipmentPdf(mode = "full") {
     return;
   }
   if (mode === "rent" && !equipmentRentalRows().length) {
-    if (status) status.textContent = "No hay equipo marcado para renta con el inventario actual.";
+    if (status) status.textContent = "No hay equipo para rentar con el inventario actual.";
     return;
   }
-  if (status) status.textContent = "Generando PDF...";
+  if (status) status.textContent = mode === "rent" ? "Generando PDF de renta..." : "Generando PDF para bodega...";
   try {
     const documentSelector = mode === "rent" ? "#equipmentRentPdfDocument" : "#equipmentPdfDocument";
-    const title = mode === "rent" ? "Reporte de renta" : "Cuadro de equipo";
+    const title = mode === "rent" ? "Resumen de equipo para renta" : "Equipo y extras para bodega";
     const html = mode === "rent" ? await equipmentPdfHtml(documentSelector, title) : await equipmentUsagePdfHtml();
     const response = await fetch("/api/cuadros-equipo", {
       method: "POST",
@@ -850,7 +849,8 @@ async function saveEquipmentPdf(mode = "full") {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "No se pudo guardar el cuadro de equipo.");
-    if (status) status.textContent = `Guardado: ${data.fileName} en ${data.folder}`;
+    const savedLabel = mode === "rent" ? "PDF de renta guardado" : "PDF de bodega guardado";
+    if (status) status.textContent = `${savedLabel}: ${data.fileName} en ${data.folder}`;
     window.open(data.pdfUrl, "_blank", "noopener");
   } catch (error) {
     if (status) status.textContent = error.message || "No se pudo guardar el PDF.";
