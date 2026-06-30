@@ -22,8 +22,8 @@ const dataDir = process.env.COTIZADOR_DATA_DIR
 const pdfDir = path.join(dataDir, "cotizaciones-generadas");
 const defaultEquipmentPdfDir =
   process.env.NODE_ENV === "production"
-    ? path.join(dataDir, "Cuadros de Equipo")
-    : path.join(os.homedir(), "Documents", "Cuadros de Equipo");
+    ? path.join(dataDir, "Cuadros de equipo")
+    : path.join(os.homedir(), "Documents", "Cuadros de equipo");
 const equipmentPdfDir = process.env.EQUIPMENT_PDF_DIR
   ? path.resolve(process.env.EQUIPMENT_PDF_DIR)
   : defaultEquipmentPdfDir;
@@ -773,8 +773,8 @@ class ReusablePdfEngine {
         displayHeaderFooter: false,
         printBackground: true,
         preferCSSPageSize: true,
-        paperWidth: 8.5,
-        paperHeight: 13,
+        paperWidth: options.paperWidth || 8.5,
+        paperHeight: options.paperHeight || 13,
         marginTop: 0.18,
         marginBottom: 0.18,
         marginLeft: 0.18,
@@ -2527,7 +2527,9 @@ async function saveEquipmentBoard(payload, request, response) {
     missingMessage: "No se encontró el cuadro de equipo dentro del HTML enviado al PDF.",
     sizeMessage: "El cuadro de equipo no tiene tamaño visible para imprimir.",
     emptyMessage: "El cuadro de equipo no tiene contenido visible para guardar.",
-    htmlFileName: "cuadro-equipo.html"
+    htmlFileName: "cuadro-equipo.html",
+    paperWidth: 8.5,
+    paperHeight: 11
   });
 
   const publicPath = publicEquipmentPdfPath(fileName);

@@ -326,6 +326,13 @@ function formatEquipmentDate(value) {
   return `${day}/${month}/${year}`;
 }
 
+function formatEquipmentDateForFile(value) {
+  if (!value) return "Fecha por definir";
+  const [year, month, day] = String(value).split("-");
+  if (!year || !month || !day) return value;
+  return `${day}-${month}-${year}`;
+}
+
 function currentEquipmentService() {
   return equipmentServices[equipmentState.selectedServiceId] || null;
 }
@@ -770,10 +777,38 @@ async function equipmentPdfHtml(documentSelector = "#equipmentPdfDocument", titl
       .equipment-pdf-document { display: block; max-width: none; margin: 0; box-shadow: none; border: 0; }
       .equipment-pdf-document .equipment-base-table { min-width: 0; }
       .equipment-pdf-document input { border: 0; padding: 0; }
-      @page { size: legal landscape; margin: 8mm; }
+      @page { size: letter; margin: 8mm; }
     </style>
   </head>
   <body>${documentHtml}</body>
+</html>`;
+}
+
+async function equipmentUsagePdfHtml() {
+  const stylesheet = await fetch("styles.css", { credentials: "same-origin" }).then((response) => response.text());
+  const service = currentEquipmentService();
+  const title = service?.name || "Equipo a utilizar";
+  const tableHtml = tableForEquipmentSections(selectedEquipmentSections(), true);
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>${escapeEquipmentHtml(title)}</title>
+    <style>
+      ${stylesheet}
+      body { margin: 0; background: #ffffff; }
+      .equipment-pdf-document { display: block; max-width: none; margin: 0; padding: 0; box-shadow: none; border: 0; }
+      .equipment-pdf-document .equipment-base-table { min-width: 0; width: 100%; }
+      .equipment-pdf-document .equipment-base-table th,
+      .equipment-pdf-document .equipment-base-table td { break-inside: avoid; }
+      @page { size: letter; margin: 8mm; }
+    </style>
+  </head>
+  <body>
+    <section class="equipment-pdf-document equipment-usage-pdf-document">
+      ${tableHtml}
+    </section>
+  </body>
 </html>`;
 }
 
@@ -781,10 +816,12 @@ function equipmentPdfFileName(mode = "full") {
   const service = currentEquipmentService();
   const serviceName = cleanEquipmentFilePart(service?.name || "Cuadro de Equipo", "Cuadro de Equipo");
   const events = activeEquipmentEvents();
-  const eventName = cleanEquipmentFilePart(events.map((event) => event.name).join("-") || "Eventos", "Eventos");
-  const phone = cleanEquipmentFilePart(events.find((event) => event.phone && event.phone !== "Por definir")?.phone || "Telefono", "Telefono");
-  const prefix = mode === "rent" ? "Reporte-Renta" : "Cuadro-Equipo";
-  return `${prefix}-${serviceName}-${eventName}-${phone}.pdf`;
+  const eventName = cleanEquipmentFilePart(events.map((event) => event.name).join(" - ") || "Lugar por definir", "Lugar por definir");
+  const eventDates = cleanEquipmentFilePart(events.map((event) => formatEquipmentDateForFile(event.date)).join(" - "), "Fecha por definir");
+  if (mode === "rent") {
+    return `Reporte de renta - ${eventName} - ${serviceName} - ${eventDates}.pdf`;
+  }
+  return `${eventName} - Equipo a utilizar - ${serviceName} - ${eventDates}.pdf`;
 }
 
 async function saveEquipmentPdf(mode = "full") {
@@ -801,13 +838,14 @@ async function saveEquipmentPdf(mode = "full") {
   try {
     const documentSelector = mode === "rent" ? "#equipmentRentPdfDocument" : "#equipmentPdfDocument";
     const title = mode === "rent" ? "Reporte de renta" : "Cuadro de equipo";
+    const html = mode === "rent" ? await equipmentPdfHtml(documentSelector, title) : await equipmentUsagePdfHtml();
     const response = await fetch("/api/cuadros-equipo", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         fileName: equipmentPdfFileName(mode),
-        html: await equipmentPdfHtml(documentSelector, title)
+        html
       })
     });
     const data = await response.json();
