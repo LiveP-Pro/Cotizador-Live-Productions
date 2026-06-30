@@ -18,6 +18,15 @@ const djCompletoAudioOptions = {
       [2, "pedestales de bocina hercules con su case"],
       [1, "amplificador TP18000 con sus 2 cables spicon en case (1 DBX y 1 AC)"]
     ]
+  },
+  turbosound: {
+    label: "Audio Turbosound",
+    items: [
+      [2, "monitores turbosound con su power spicon en su case"],
+      [2, "bajos turbosound con su power spicon en su case"],
+      [2, "pedestales de bocina hercules con su case"],
+      [1, "grabadora de audio"]
+    ]
   }
 };
 
@@ -189,6 +198,196 @@ const djCompletoExtras = [
   }
 ];
 
+const saxofonicCompletoMainSections = [
+  {
+    title: "CONSOLA",
+    items: [
+      [1, "consola analoga con su AC y case"]
+    ]
+  },
+  {
+    title: "TELEFONO (MOCHILA)",
+    items: [
+      [1, "celular, cargador para telefono con su cable, cable de celular para audio"],
+      [1, "cable lightning y cable tipo C"]
+    ]
+  },
+  {
+    id: "audio-dinamico",
+    title: "AUDIO",
+    audioVariant: true,
+    items: djCompletoAudioOptions.qsc.items
+  },
+  {
+    title: "MICROFONIA",
+    items: [
+      [1, "mic. Saxo con su funda (1 receptor y 1 cargador)"]
+    ]
+  },
+  {
+    title: "CABLEADO",
+    items: [
+      [5, "regletas en case"],
+      [10, "cables XLR en Case"],
+      [10, "extensiones"]
+    ]
+  },
+  {
+    title: "BATERIAS",
+    items: [
+      [16, "baterias recargables bonai"],
+      [1, "cargador para bateria bonai"]
+    ]
+  }
+];
+
+const sharedEquipmentExtras = [
+  {
+    id: "tarima-610-366",
+    title: "TARIMA DE 6.10 X 3.66 MTS",
+    items: [
+      [15, "planchas de 1.22 x 1.22 (con velcro)"],
+      [1, "gradas de 0.50 cm."],
+      [6, "andamios de 60cm."],
+      [20, "coronas normales (cubeta plastica)"],
+      [6, "coronas de travesaño (cubeta plastica)"],
+      [4, "esquineras (cubeta plastica)"],
+      [1, "caja de calsa (caja plastica)"],
+      [1, "rollo de vinil color negro"],
+      [1, "rollos de mounting tape"],
+      [1, "faldon de 24mts color negro / blanco"]
+    ]
+  },
+  {
+    id: "pista-baile-610-366-blanca",
+    title: "PISTA DE BAILE 6.10 X 3.66 MTS BLANCA",
+    items: [
+      [15, "planchas de 1.22 x 1.22"],
+      [20, "coronas para pista (cubeta plastica)"],
+      [15, "pedazos de alfombra (en pedacitos)"],
+      [2, "rollos de mounting tape"],
+      [2, "caja de calsa (caja plastica)"],
+      [1, "rollo de vinil blanco"]
+    ]
+  },
+  {
+    id: "pista-baile-610-366-diseno",
+    title: "PISTA DE BAILE 6.10 X 3.66 MTS CON DISEÑO",
+    items: [
+      [15, "planchas de 1.22 x 1.22"],
+      [20, "coronas para pista (cubeta plastica)"],
+      [15, "pedazos de alfombra (en pedacitos)"],
+      [2, "caja de calsa (caja plastica)"]
+    ]
+  },
+  {
+    id: "pantalla-6x4",
+    title: "PANTALLA DE 6 X 4 MTS",
+    items: [
+      [50, "modulos de pantalla en case"],
+      [1, "computadora de pantalla con su cargador, mouse y case"],
+      [1, "procesador de pantalla con su AC y su case"],
+      [1, "clickers completo"],
+      [1, "interfaz de audio volth 2"],
+      [1, "atem mini con su cargador y funda"],
+      [1, "interfaz akain con su cargador y funda"],
+      [50, "cables de corriente con su case"],
+      [50, "cables de señal con su case"],
+      [10, "cables spicon power"],
+      [2, "cables de DVI A DVI con su case"],
+      [2, "cables de HDMI A DVI con su case"],
+      [2, "cables de HDMI A HDMI con su case"],
+      [2, "cables de USB a datos con su case"],
+      [4, "cat 5 de 50mts. con su case"],
+      [2, "HDMI de 5mts con su case"],
+      [6, "estructuras de 2 metros"],
+      [6, "estructuras de 1 metro"],
+      [12, "estructuras de 0.50 centimetros"],
+      [6, "platinas grandes"],
+      [100, "pines"],
+      [72, "chiches"],
+      [2, "straps"],
+      [2, "retazos de tela de 8 metros color negro"]
+    ]
+  },
+  {
+    id: "pantalla-3x2",
+    title: "PANTALLA DE 3 X 2 MTS",
+    items: [
+      [14, "modulos de pantalla en case"],
+      [1, "computadora de pantalla con su cargador, mouse y case"],
+      [1, "procesador de pantalla con su AC y su case"],
+      [1, "clickers completo"],
+      [1, "interfaz de audio volth 2"],
+      [1, "atem mini con su cargador y funda"],
+      [1, "interfaz akain con su cargador y funda"],
+      [14, "cables de corriente con su case"],
+      [14, "cables de señal con su case"],
+      [4, "cables spicon power"],
+      [1, "cables de DVI A DVI con su case"],
+      [1, "cables de HDMI A DVI con su case"],
+      [1, "cables de HDMI A HDMI con su case"],
+      [1, "cables de USB a datos con su case"],
+      [2, "cat 5 de 10mts. con su case"],
+      [1, "HDMI de 5mts con su case"],
+      [2, "estructuras de 2 metros"],
+      [2, "estructuras de 0.50 centimetros"],
+      [2, "platinas grandes"],
+      [24, "pines"],
+      [8, "chiches"],
+      [2, "straps"],
+      [2, "retazos de tela de 8 metros color negro"]
+    ]
+  },
+  {
+    id: "tarima-dj-488-366",
+    title: "TARIMA DJ DE 4.88 X 3.66 MTS",
+    items: [
+      [12, "planchas de 1.22 x 1.22 (con velcro)"],
+      [1, "gradas de 0.50 cm."],
+      [6, "andamios de 0.60cm."],
+      [18, "coronas normales (cubeta plastica)"],
+      [6, "coronas de travesaño (cubeta plastica)"],
+      [4, "esquineras (cubeta plastica)"],
+      [1, "caja de calsa (caja plastica)"],
+      [1, "rollo de vinil color negro"],
+      [1, "rollos de mounting tape"],
+      [1, "faldon de 24mts color negro y blanco"]
+    ]
+  },
+  {
+    id: "ceremonia",
+    title: "CEREMONIA",
+    items: [
+      [1, "consola analoga con su AC y case"],
+      [1, "celular, cargador para telefono con su cable, cable de celular para audio"],
+      [1, "cable lightning y cable tipo C"],
+      [2, "IP 2000 con fundas"],
+      [1, "mic. Sm 58 inalambrico con su funda (1 receptor y 1 cargador)"],
+      [1, "Pedestales de brazo con su Case"],
+      [1, "Microfono de Diadema color piel"],
+      [16, "baterias recargables bonai"],
+      [1, "cargador para bateria bonai"]
+    ]
+  },
+  {
+    id: "saxofonic-con-audio",
+    title: "SAXOFONIC CON AUDIO",
+    items: [
+      [1, "consola analoga con su AC y case"],
+      [1, "celular, cargador para telefono con su cable, cable de celular para audio"],
+      [1, "cable lightning y cable tipo C"],
+      [2, "IP 2000 con fundas"],
+      [1, "mic. Saxo con su funda (1 receptor y 1 cargador)"],
+      [5, "regletas en case"],
+      [10, "cables XLR en Case"],
+      [10, "extensiones"],
+      [16, "baterias recargables bonai"],
+      [1, "cargador para bateria bonai"]
+    ]
+  }
+];
+
 const equipmentServices = {
   "dj-completo": {
     name: "DJ COMPLETO",
@@ -196,6 +395,13 @@ const equipmentServices = {
     audioOptions: djCompletoAudioOptions,
     mainSections: djCompletoMainSections,
     extras: djCompletoExtras
+  },
+  "saxofonic-completo": {
+    name: "SAXOFONIC COMPLETO",
+    source: "SAXOFONIC.pdf",
+    audioOptions: djCompletoAudioOptions,
+    mainSections: saxofonicCompletoMainSections,
+    extras: []
   },
   "sunday-funday-a": {
     name: "SUNDAY FUNDAY A",
@@ -752,6 +958,18 @@ const equipmentServices = {
   }
 };
 
+Object.values(equipmentServices).forEach((service) => {
+  const existingIds = new Set((service.extras || []).map((extra) => extra.id));
+  const extrasToAdd = sharedEquipmentExtras
+    .filter((extra) => !existingIds.has(extra.id))
+    .map((extra) => ({
+      ...extra,
+      items: extra.items.map((item) => [...item])
+    }));
+
+  service.extras = [...(service.extras || []), ...extrasToAdd];
+});
+
 const equipmentState = {
   selectedServiceId: "",
   djAudioType: "qsc",
@@ -821,8 +1039,8 @@ function formatEquipmentDateForFile(value) {
 function currentEquipmentService() {
   const service = equipmentServices[equipmentState.selectedServiceId] || null;
   if (!service) return null;
-  if (equipmentState.selectedServiceId !== "dj-completo") return service;
-  const audioType = equipmentState.djAudioType || "qsc";
+  if (!service.audioOptions) return service;
+  const audioType = service.audioOptions[equipmentState.djAudioType] ? equipmentState.djAudioType : "qsc";
   const audioOption = service.audioOptions?.[audioType] || service.audioOptions?.qsc;
   return {
     ...service,
@@ -830,7 +1048,7 @@ function currentEquipmentService() {
       if (!section.audioVariant || !audioOption) return section;
       return {
         ...section,
-        id: `audio-${audioType}`,
+        id: `${section.id || "audio"}-${audioType}`,
         title: `AUDIO - ${audioOption.label}`,
         items: audioOption.items
       };
@@ -1525,9 +1743,17 @@ function renderEquipmentModule() {
 function renderDjAudioOptions() {
   const audioOptions = equipmentQuery("#equipmentDjAudioOptions");
   if (!audioOptions) return;
-  const isDjCompleto = equipmentState.selectedServiceId === "dj-completo";
-  audioOptions.classList.toggle("is-hidden", !isDjCompleto);
+  const service = equipmentServices[equipmentState.selectedServiceId] || null;
+  const hasAudioOptions = Boolean(service?.audioOptions);
+  audioOptions.classList.toggle("is-hidden", !hasAudioOptions);
+  const label = audioOptions.querySelector("[data-audio-options-label]");
+  if (label) {
+    label.textContent = hasAudioOptions ? `Tipo de audio para ${service.name}` : "Tipo de audio";
+  }
   audioOptions.querySelectorAll("[data-dj-audio-type]").forEach((button) => {
+    const audioType = button.dataset.djAudioType;
+    const isAvailable = hasAudioOptions && Boolean(service.audioOptions?.[audioType]);
+    button.hidden = hasAudioOptions && !isAvailable;
     button.classList.toggle("is-active", button.dataset.djAudioType === equipmentState.djAudioType);
   });
 }
@@ -1633,7 +1859,8 @@ function initEquipmentModule() {
   serviceSelect.addEventListener("change", () => {
     equipmentState.selectedServiceId = serviceSelect.value;
     equipmentState.selectedExtraIds.clear();
-    if (equipmentState.selectedServiceId === "dj-completo" && !equipmentState.djAudioType) {
+    const selectedService = equipmentServices[equipmentState.selectedServiceId] || null;
+    if (!selectedService?.audioOptions || !selectedService.audioOptions[equipmentState.djAudioType]) {
       equipmentState.djAudioType = "qsc";
     }
     renderEquipmentModule();
