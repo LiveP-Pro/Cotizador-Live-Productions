@@ -958,14 +958,36 @@ const equipmentServices = {
   }
 };
 
+const universalSundayExtraIds = new Set([
+  "pistola-led-co2",
+  "pirotecnia-fria",
+  "toldos",
+  "extras-operativos",
+  "caja-herramientas",
+  "equipo-limpieza",
+  "equipo-proteccion",
+  "seguridad-industrial"
+]);
+
+function cloneEquipmentExtra(extra) {
+  return {
+    ...extra,
+    items: extra.items.map((item) => [...item])
+  };
+}
+
+const universalEquipmentExtras = [
+  ...((equipmentServices["sunday-funday-a"]?.extras || []).filter((extra) =>
+    universalSundayExtraIds.has(extra.id)
+  )),
+  ...sharedEquipmentExtras
+];
+
 Object.values(equipmentServices).forEach((service) => {
   const existingIds = new Set((service.extras || []).map((extra) => extra.id));
-  const extrasToAdd = sharedEquipmentExtras
+  const extrasToAdd = universalEquipmentExtras
     .filter((extra) => !existingIds.has(extra.id))
-    .map((extra) => ({
-      ...extra,
-      items: extra.items.map((item) => [...item])
-    }));
+    .map(cloneEquipmentExtra);
 
   service.extras = [...(service.extras || []), ...extrasToAdd];
 });
