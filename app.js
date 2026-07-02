@@ -5010,15 +5010,24 @@ function renderVatState() {
 
 function applyMountingPageButtonState(button) {
   if (!button) return;
+  const isBatchButton = button === elements.batchMountingPageButton;
   button.classList.toggle("is-active", includeMountingPage);
   button.setAttribute("aria-pressed", String(includeMountingPage));
   button.textContent = includeMountingPage
     ? quoteLanguage === "en"
-      ? "Setup styles included"
-      : "Tipos de montaje incluidos"
+      ? isBatchButton
+        ? "Setup sheets included"
+        : "Setup styles included"
+      : isBatchButton
+        ? "Cuadros de Montaje incluidos"
+        : "Tipos de montaje incluidos"
     : quoteLanguage === "en"
-      ? "Include setup styles"
-      : "Incluir tipos de Montaje";
+      ? isBatchButton
+        ? "Include setup sheets"
+        : "Include setup styles"
+      : isBatchButton
+        ? "Incluir Cuadros de Montaje"
+        : "Incluir tipos de Montaje";
 }
 
 function renderMountingPageState() {
