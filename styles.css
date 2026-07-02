@@ -3876,3 +3876,31 @@ body.pdf-export .payment-conditions,
 body.pdf-export .additional-services-section {
   break-inside: avoid;
 }
+
+.equipment-window-toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.equipment-window-toolbar button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font-weight: 800;
+  min-height: 44px;
+  padding: 10px 14px;
+}
+
+.equipment-window-toolbar button.is-active {
+  background: #101010;
+  border-color: #101010;
+  color: #fff;
+}
+
+.equipment-window-toolbar button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}

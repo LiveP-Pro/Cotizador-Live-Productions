@@ -604,6 +604,7 @@ const elements = {
   batchSequenceSummary: document.querySelector("#batchSequenceSummary"),
   batchModeButton: document.querySelector("#batchModeButton"),
   batchHeaderVatButton: document.querySelector("#batchHeaderVatButton"),
+  batchMountingPageButton: document.querySelector("#batchMountingPageButton"),
   batchHeaderPrintButton: document.querySelector("#batchHeaderPrintButton"),
   batchHeaderNewQuoteButton: document.querySelector("#batchHeaderNewQuoteButton"),
   batchDraftList: document.querySelector("#batchDraftList"),
@@ -3204,6 +3205,7 @@ function emptyQuoteData(number, quoteDate = todayIso()) {
 function renderBatchHeaderState() {
   const active = batchState.started && batchState.drafts.length > 0;
   elements.batchHeaderVatButton.disabled = !active || batchState.saving;
+  if (elements.batchMountingPageButton) elements.batchMountingPageButton.disabled = !active || batchState.saving;
   elements.batchSaveButton.disabled = !active || batchState.saving || batchState.saved;
   elements.batchHeaderPrintButton.disabled = !active || batchState.saving;
   elements.batchHeaderNewQuoteButton.disabled = !active || batchState.saving || batchState.saved;
@@ -5006,13 +5008,24 @@ function renderVatState() {
   elements.batchHeaderVatButton.textContent = includeVat ? "IVA 12% agregado" : "IVA";
 }
 
+function applyMountingPageButtonState(button) {
+  if (!button) return;
+  button.classList.toggle("is-active", includeMountingPage);
+  button.setAttribute("aria-pressed", String(includeMountingPage));
+  button.textContent = includeMountingPage
+    ? quoteLanguage === "en"
+      ? "Setup styles included"
+      : "Tipos de montaje incluidos"
+    : quoteLanguage === "en"
+      ? "Include setup styles"
+      : "Incluir tipos de Montaje";
+}
+
 function renderMountingPageState() {
   elements.mountingPage.classList.toggle("is-hidden", !includeMountingPage);
   elements.quoteDocument.classList.toggle("without-mounting-page", !includeMountingPage);
-  elements.topMountingPageButton.classList.toggle("is-active", includeMountingPage);
-  elements.topMountingPageButton.setAttribute("aria-pressed", String(includeMountingPage));
-  elements.topMountingPageButton.textContent =
-    quoteLanguage === "en" ? "Include setup styles" : "Incluir tipos de montaje";
+  applyMountingPageButtonState(elements.topMountingPageButton);
+  applyMountingPageButtonState(elements.batchMountingPageButton);
 }
 
 function renderAdditionalServicesState() {
@@ -5364,6 +5377,11 @@ function bindEvents() {
   elements.topMountingPageButton.addEventListener("click", () => {
     includeMountingPage = !includeMountingPage;
     renderQuote();
+  });
+  elements.batchMountingPageButton?.addEventListener("click", () => {
+    includeMountingPage = !includeMountingPage;
+    renderQuote();
+    renderBatchHeaderState();
   });
   elements.additionalServicesButton.addEventListener("click", () => {
     includeAdditionalServices = !includeAdditionalServices;

@@ -204,8 +204,8 @@
               <input id="equipmentEventName" type="text" autocomplete="off" placeholder="Ej. Hotel Intercontinental" />
             </label>
             <label>
-              Número de teléfono
-              <input id="equipmentEventPhone" type="tel" autocomplete="off" placeholder="Ej. +502 37941298" />
+              Nombre del planner
+              <input id="equipmentEventPhone" type="text" autocomplete="off" placeholder="Ej. Nombre del planner" />
             </label>
             <label>
               Fecha del evento
@@ -228,8 +228,9 @@
                 <option value="">Seleccione el tipo de servicio</option>
                 <option value="dj-completo">DJ COMPLETO</option>
                 <option value="saxofonic-completo">SAXOFONIC COMPLETO</option>
-                <option value="sunday-funday-a">SUNDAY FUNDAY A</option>
-                <option value="sunday-funday-b">SUNDAY FUNDAY B</option>
+                <option value="saxofonic-con-audio">SAXOFONIC CON AUDIO</option>
+                <option value="sunday-funday-a">SUNDAY FUNDAY COMPLETO A</option>
+                <option value="sunday-funday-b">SUNDAY FUNDAY COMPLETO B</option>
               </select>
             </label>
             <div id="equipmentDjAudioOptions" class="equipment-field-wide equipment-audio-options is-hidden">
@@ -248,6 +249,15 @@
             <button id="equipmentSavePdfButton" type="button">Guardar PDF bodega (equipo + extras)</button>
             <button id="equipmentSaveRentPdfButton" type="button">Guardar PDF resumen de renta</button>
             <span id="equipmentSaveStatus" role="status"></span>
+          </div>
+
+          <div class="equipment-window-toolbar" aria-label="Ventanas de requerimiento de equipo">
+            <button id="equipmentReviewWindowButton" type="button" class="is-active">Revisión de equipo</button>
+            <button id="equipmentSummaryWindowButton" type="button">Resumen para bodega</button>
+            <button id="equipmentAddWindowButton" type="button">Agregar ventana</button>
+            <button id="equipmentRemoveWindowButton" type="button">Eliminar</button>
+            <button id="equipmentClearAllButton" type="button">Limpiar todo 0</button>
+            <button id="equipmentUndoDeleteButton" type="button" disabled>Regresar</button>
           </div>
 
           <div id="equipmentWorkspace" class="equipment-workspace is-hidden">
@@ -271,15 +281,15 @@
                 <button id="equipmentAddSubtitleButton" type="button">Agregar subtítulo</button>
               </div>
             </div>
-            <section class="equipment-panel">
+            <section id="equipmentMainPanel" class="equipment-panel">
               <div class="equipment-section-title">
                 <span>Equipo principal</span>
-                <small id="equipmentServiceName">SUNDAY FUNDAY B</small>
+                <small id="equipmentServiceName">SUNDAY FUNDAY COMPLETO B</small>
               </div>
             <div id="equipmentMainTable" class="equipment-table-wrap"></div>
           </section>
 
-            <section class="equipment-panel">
+            <section id="equipmentExtrasPanel" class="equipment-panel">
               <div class="equipment-section-title">
                 <span>Extras del servicio</span>
                 <small>seleccione los extras del PDF o agregue extras manuales</small>
@@ -303,7 +313,7 @@
               <div id="equipmentManualExtrasList" class="equipment-extra-list"></div>
             </section>
 
-            <section class="equipment-panel">
+            <section id="equipmentInventoryPanel" class="equipment-panel">
               <div class="equipment-section-title">
                 <span>Resumen para bodega e inventario</span>
                 <small>si falta equipo, se marca renta en rojo</small>
@@ -315,7 +325,7 @@
               <header class="equipment-pdf-header">
                 <div>
                   <p>Live Productions</p>
-                  <h2 id="equipmentPdfTitle">SUNDAY FUNDAY B</h2>
+                  <h2 id="equipmentPdfTitle">SUNDAY FUNDAY COMPLETO B</h2>
                   <span id="equipmentPdfSubtitle">Equipo y extras para bodega</span>
                 </div>
                 <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
@@ -326,7 +336,7 @@
                   <strong id="equipmentPdfEvent">Por definir</strong>
                 </div>
                 <div>
-                  <span>Teléfono</span>
+                  <span>Planner</span>
                   <strong id="equipmentPdfPhone">Por definir</strong>
                 </div>
                 <div>
@@ -357,7 +367,7 @@
                   <strong id="equipmentRentPdfEvents">Por definir</strong>
                 </div>
                 <div>
-                  <span>Teléfono</span>
+                  <span>Planner</span>
                   <strong id="equipmentRentPdfPhone">Por definir</strong>
                 </div>
                 <div>

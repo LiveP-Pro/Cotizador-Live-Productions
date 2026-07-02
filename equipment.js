@@ -30,6 +30,11 @@ const djCompletoAudioOptions = {
   }
 };
 
+const saxofonicConAudioExtra = sharedEquipmentExtras.find((extra) => extra.id === "saxofonic-con-audio");
+const saxofonicConAudioMainSections = saxofonicConAudioExtra
+  ? [{ title: saxofonicConAudioExtra.title, items: saxofonicConAudioExtra.items.map((item) => [...item]) }]
+  : [];
+
 const djCompletoMainSections = [
   {
     title: "CONSOLA",
@@ -148,7 +153,7 @@ const djCompletoExtras = [
   },
   {
     id: "dj-caja-herramientas",
-    title: "Caja de Herramientas",
+    title: "Caja de Herramienta",
     items: [
       [1, "macho"],
       [2, "tomas patas de gallo"],
@@ -166,7 +171,7 @@ const djCompletoExtras = [
   },
   {
     id: "dj-equipo-limpieza",
-    title: "Equipo de Limpieza",
+    title: "Equipo de limpieza",
     items: [
       [5, "trapos"],
       [1, "escoba"],
@@ -179,7 +184,7 @@ const djCompletoExtras = [
   },
   {
     id: "dj-equipo-proteccion",
-    title: "Equipo de proteccion",
+    title: "Equipo de Proteccion",
     items: [
       [10, "bolsas jardineras de tonel"],
       [3, "retazos de nylon para tapar equipo"]
@@ -403,8 +408,14 @@ const equipmentServices = {
     mainSections: saxofonicCompletoMainSections,
     extras: []
   },
+  "saxofonic-con-audio": {
+    name: "SAXOFONIC CON AUDIO",
+    source: "SAXOFONIC CON AUDIO",
+    mainSections: saxofonicConAudioMainSections,
+    extras: []
+  },
   "sunday-funday-a": {
-    name: "SUNDAY FUNDAY A",
+    name: "SUNDAY FUNDAY COMPLETO A",
     source: "SUNDAY A.pdf",
     mainSections: [
       {
@@ -630,7 +641,7 @@ const equipmentServices = {
       },
       {
         id: "caja-herramientas",
-        title: "Caja de Herramientas",
+        title: "Caja de Herramienta",
         items: [
           [1, "macho"],
           [2, "tomas patas de gallo"],
@@ -648,7 +659,7 @@ const equipmentServices = {
       },
       {
         id: "equipo-limpieza",
-        title: "Equipo de Limpieza",
+        title: "Equipo de limpieza",
         items: [
           [5, "trapos"],
           [1, "escoba"],
@@ -661,7 +672,7 @@ const equipmentServices = {
       },
       {
         id: "equipo-proteccion",
-        title: "Equipo de proteccion",
+        title: "Equipo de Proteccion",
         items: [
           [10, "bolsas jardineras de tonel"],
           [3, "retazos de nylon para tapar equipo"]
@@ -681,7 +692,7 @@ const equipmentServices = {
     ]
   },
   "sunday-funday-b": {
-    name: "SUNDAY FUNDAY B",
+    name: "SUNDAY FUNDAY COMPLETO B",
     source: "SUNDAY B.pdf",
     mainSections: [
       {
@@ -906,7 +917,7 @@ const equipmentServices = {
       },
       {
         id: "caja-herramientas",
-        title: "Caja de Herramientas",
+        title: "Caja de Herramienta",
         items: [
           [1, "macho"],
           [2, "tomas patas de gallo"],
@@ -924,7 +935,7 @@ const equipmentServices = {
       },
       {
         id: "equipo-limpieza",
-        title: "Equipo de Limpieza",
+        title: "Equipo de limpieza",
         items: [
           [5, "trapos"],
           [1, "escoba"],
@@ -937,7 +948,7 @@ const equipmentServices = {
       },
       {
         id: "equipo-proteccion",
-        title: "Equipo de proteccion",
+        title: "Equipo de Proteccion",
         items: [
           [10, "bolsas jardineras de tonel"],
           [3, "retazos de nylon para tapar equipo"]
@@ -958,10 +969,18 @@ const equipmentServices = {
   }
 };
 
-const universalSundayExtraIds = new Set([
+const sundayFixedExtraIds = new Set([
   "pistola-led-co2",
   "pirotecnia-fria",
   "toldos",
+  "extras-operativos",
+  "caja-herramientas",
+  "equipo-limpieza",
+  "equipo-proteccion",
+  "seguridad-industrial"
+]);
+
+const operationalFixedExtraIds = new Set([
   "extras-operativos",
   "caja-herramientas",
   "equipo-limpieza",
@@ -976,20 +995,27 @@ function cloneEquipmentExtra(extra) {
   };
 }
 
-const universalEquipmentExtras = [
-  ...((equipmentServices["sunday-funday-a"]?.extras || []).filter((extra) =>
-    universalSundayExtraIds.has(extra.id)
-  )),
-  ...sharedEquipmentExtras
-];
-
-Object.values(equipmentServices).forEach((service) => {
-  const existingIds = new Set((service.extras || []).map((extra) => extra.id));
-  const extrasToAdd = universalEquipmentExtras
-    .filter((extra) => !existingIds.has(extra.id))
+function equipmentExtrasByIds(ids) {
+  const catalog = [...(equipmentServices["sunday-funday-a"]?.extras || []), ...sharedEquipmentExtras];
+  const used = new Set();
+  return [...ids]
+    .map((id) => catalog.find((extra) => extra.id === id))
+    .filter((extra) => {
+      if (!extra || used.has(extra.id)) return false;
+      used.add(extra.id);
+      return true;
+    })
     .map(cloneEquipmentExtra);
+}
 
-  service.extras = [...(service.extras || []), ...extrasToAdd];
+["sunday-funday-a", "sunday-funday-b"].forEach((serviceId) => {
+  const service = equipmentServices[serviceId];
+  if (service) service.extras = equipmentExtrasByIds(sundayFixedExtraIds);
+});
+
+["dj-completo", "saxofonic-completo", "saxofonic-con-audio"].forEach((serviceId) => {
+  const service = equipmentServices[serviceId];
+  if (service) service.extras = equipmentExtrasByIds(operationalFixedExtraIds);
 });
 
 const equipmentState = {
@@ -1003,7 +1029,9 @@ const equipmentState = {
   itemOverrides: new Map(),
   removedItemIds: new Set(),
   inventory: new Map(),
-  observations: new Map()
+  observations: new Map(),
+  deletedStack: [],
+  activeWindow: "review"
 };
 
 let equipmentEventCounter = 1;
@@ -1362,6 +1390,7 @@ function refreshEquipmentSummaryAndPreview() {
   }
   bindEquipmentInventoryInputs();
   renderEquipmentPdfPreview();
+  renderEquipmentWindowState();
 }
 
 function updateEquipmentItem(itemId, field, value) {
@@ -1384,31 +1413,76 @@ function updateEquipmentItem(itemId, field, value) {
   equipmentState.itemOverrides.set(itemId, override);
 }
 
+function pushDeletedEquipment(entry) {
+  equipmentState.deletedStack.push(entry);
+}
+
 function removeManualEquipmentItem(itemId) {
-  let removedManual = false;
-  const originalLegacyLength = equipmentState.manualMainItems.length;
-  equipmentState.manualMainItems = equipmentState.manualMainItems.filter((item) => item.id !== itemId);
-  removedManual = removedManual || originalLegacyLength !== equipmentState.manualMainItems.length;
-  equipmentState.manualMainSections.forEach((section) => {
-    const originalLength = section.items.length;
-    section.items = section.items.filter((item) => item.id !== itemId);
-    removedManual = removedManual || originalLength !== section.items.length;
-  });
-  const originalExtrasLength = equipmentState.manualExtras.length;
-  equipmentState.manualExtras = equipmentState.manualExtras.filter((item) => item.id !== itemId);
-  removedManual = removedManual || originalExtrasLength !== equipmentState.manualExtras.length;
-  if (!removedManual) {
-    equipmentState.removedItemIds.add(itemId);
-    equipmentState.itemOverrides.delete(itemId);
+  const legacyIndex = equipmentState.manualMainItems.findIndex((item) => item.id === itemId);
+  if (legacyIndex >= 0) {
+    const [item] = equipmentState.manualMainItems.splice(legacyIndex, 1);
+    pushDeletedEquipment({ type: "manual-main", item, index: legacyIndex });
+    renderEquipmentModule();
+    return;
   }
+
+  for (const section of equipmentState.manualMainSections) {
+    const itemIndex = section.items.findIndex((item) => item.id === itemId);
+    if (itemIndex >= 0) {
+      const [item] = section.items.splice(itemIndex, 1);
+      pushDeletedEquipment({ type: "manual-section-item", sectionId: section.id, item, index: itemIndex });
+      renderEquipmentModule();
+      return;
+    }
+  }
+
+  const extraIndex = equipmentState.manualExtras.findIndex((item) => item.id === itemId);
+  if (extraIndex >= 0) {
+    const [item] = equipmentState.manualExtras.splice(extraIndex, 1);
+    pushDeletedEquipment({ type: "manual-extra", item, index: extraIndex });
+    renderEquipmentModule();
+    return;
+  }
+
+  const override = equipmentState.itemOverrides.get(itemId);
+  equipmentState.removedItemIds.add(itemId);
+  equipmentState.itemOverrides.delete(itemId);
+  pushDeletedEquipment({ type: "service-item", itemId, override });
   renderEquipmentModule();
 }
 
 function removeManualEquipmentSection(sectionId) {
   if (sectionId === "equipo-manual") {
+    const items = [...equipmentState.manualMainItems];
+    if (!items.length) return;
     equipmentState.manualMainItems = [];
+    pushDeletedEquipment({ type: "manual-main-items", items });
   } else {
-    equipmentState.manualMainSections = equipmentState.manualMainSections.filter((section) => section.id !== sectionId);
+    const sectionIndex = equipmentState.manualMainSections.findIndex((section) => section.id === sectionId);
+    if (sectionIndex < 0) return;
+    const [section] = equipmentState.manualMainSections.splice(sectionIndex, 1);
+    pushDeletedEquipment({ type: "manual-section", section, index: sectionIndex });
+  }
+  renderEquipmentModule();
+}
+
+function restoreLastDeletedEquipment() {
+  const entry = equipmentState.deletedStack.pop();
+  if (!entry) return;
+  if (entry.type === "manual-main") {
+    equipmentState.manualMainItems.splice(entry.index, 0, entry.item);
+  } else if (entry.type === "manual-section-item") {
+    const section = equipmentState.manualMainSections.find((item) => item.id === entry.sectionId);
+    if (section) section.items.splice(entry.index, 0, entry.item);
+  } else if (entry.type === "manual-extra") {
+    equipmentState.manualExtras.splice(entry.index, 0, entry.item);
+  } else if (entry.type === "service-item") {
+    equipmentState.removedItemIds.delete(entry.itemId);
+    if (entry.override) equipmentState.itemOverrides.set(entry.itemId, entry.override);
+  } else if (entry.type === "manual-main-items") {
+    equipmentState.manualMainItems = [...entry.items, ...equipmentState.manualMainItems];
+  } else if (entry.type === "manual-section") {
+    equipmentState.manualMainSections.splice(entry.index, 0, entry.section);
   }
   renderEquipmentModule();
 }
@@ -1700,6 +1774,52 @@ function bindEquipmentInventoryInputs() {
     });
 }
 
+function renderEquipmentWindowState() {
+  const activeWindow = equipmentState.activeWindow === "summary" ? "summary" : "review";
+  const mainPanel = equipmentQuery("#equipmentMainPanel");
+  const extrasPanel = equipmentQuery("#equipmentExtrasPanel");
+  const inventoryPanel = equipmentQuery("#equipmentInventoryPanel");
+  const reviewButton = equipmentQuery("#equipmentReviewWindowButton");
+  const summaryButton = equipmentQuery("#equipmentSummaryWindowButton");
+  const undoButton = equipmentQuery("#equipmentUndoDeleteButton");
+  if (mainPanel) mainPanel.classList.toggle("is-hidden", activeWindow !== "review");
+  if (extrasPanel) extrasPanel.classList.toggle("is-hidden", activeWindow !== "review");
+  if (inventoryPanel) inventoryPanel.classList.toggle("is-hidden", activeWindow !== "summary");
+  if (reviewButton) reviewButton.classList.toggle("is-active", activeWindow === "review");
+  if (summaryButton) summaryButton.classList.toggle("is-active", activeWindow === "summary");
+  if (undoButton) undoButton.disabled = !equipmentState.deletedStack.length;
+}
+
+function switchEquipmentWindow(windowName) {
+  equipmentState.activeWindow = windowName === "summary" ? "summary" : "review";
+  renderEquipmentModule();
+}
+
+function removeEquipmentActiveWindow() {
+  equipmentState.activeWindow = equipmentState.activeWindow === "summary" ? "review" : "summary";
+  renderEquipmentModule();
+}
+
+function clearEquipmentWorkingArea() {
+  if (!window.confirm("¿Está seguro que desea limpiar todo a 0?")) return;
+  equipmentState.events = [];
+  equipmentState.selectedExtraIds.clear();
+  equipmentState.manualMainItems = [];
+  equipmentState.manualMainSections = [];
+  equipmentState.manualExtras = [];
+  equipmentState.itemOverrides.clear();
+  equipmentState.removedItemIds.clear();
+  equipmentState.inventory.clear();
+  equipmentState.observations.clear();
+  equipmentState.deletedStack = [];
+  equipmentState.activeWindow = "review";
+  ["#equipmentEventName", "#equipmentEventPhone", "#equipmentEventDate", "#equipmentEventResponsible", "#equipmentNotes"].forEach((selector) => {
+    const input = equipmentQuery(selector);
+    if (input) input.value = "";
+  });
+  renderEquipmentModule();
+}
+
 function renderEquipmentPdfPreview() {
   const service = currentEquipmentService();
   const sections = selectedEquipmentSections();
@@ -1881,6 +2001,8 @@ function initEquipmentModule() {
   serviceSelect.addEventListener("change", () => {
     equipmentState.selectedServiceId = serviceSelect.value;
     equipmentState.selectedExtraIds.clear();
+    equipmentState.deletedStack = [];
+    equipmentState.activeWindow = "review";
     const selectedService = equipmentServices[equipmentState.selectedServiceId] || null;
     if (!selectedService?.audioOptions || !selectedService.audioOptions[equipmentState.djAudioType]) {
       equipmentState.djAudioType = "qsc";
@@ -1926,6 +2048,12 @@ function initEquipmentModule() {
   });
   equipmentQuery("#equipmentSavePdfButton")?.addEventListener("click", () => saveEquipmentPdf("full"));
   equipmentQuery("#equipmentSaveRentPdfButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
+  equipmentQuery("#equipmentReviewWindowButton")?.addEventListener("click", () => switchEquipmentWindow("review"));
+  equipmentQuery("#equipmentSummaryWindowButton")?.addEventListener("click", () => switchEquipmentWindow("summary"));
+  equipmentQuery("#equipmentAddWindowButton")?.addEventListener("click", () => switchEquipmentWindow("summary"));
+  equipmentQuery("#equipmentRemoveWindowButton")?.addEventListener("click", removeEquipmentActiveWindow);
+  equipmentQuery("#equipmentClearAllButton")?.addEventListener("click", clearEquipmentWorkingArea);
+  equipmentQuery("#equipmentUndoDeleteButton")?.addEventListener("click", restoreLastDeletedEquipment);
   renderEquipmentModule();
 }
 
