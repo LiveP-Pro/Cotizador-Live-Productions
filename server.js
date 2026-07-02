@@ -22,8 +22,8 @@ const dataDir = process.env.COTIZADOR_DATA_DIR
 const pdfDir = path.join(dataDir, "cotizaciones-generadas");
 const defaultEquipmentPdfDir =
   process.env.NODE_ENV === "production"
-    ? path.join(dataDir, "Cuadros de equipo")
-    : path.join(os.homedir(), "Documents", "Cuadros de equipo");
+    ? path.join(dataDir, "Cuadros de Equipo")
+    : path.join(os.homedir(), "Documents", "Cuadros de Equipo");
 const equipmentPdfDir = process.env.EQUIPMENT_PDF_DIR
   ? path.resolve(process.env.EQUIPMENT_PDF_DIR)
   : defaultEquipmentPdfDir;

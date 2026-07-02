@@ -371,6 +371,35 @@ body {
   background: #ffffff;
 }
 
+.equipment-event-card.is-active {
+  border-color: #bd9347;
+  background: #fbf4e6;
+}
+
+.equipment-event-open {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.equipment-event-open small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .equipment-event-card div {
   display: grid;
   gap: 4px;

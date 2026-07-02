@@ -1031,6 +1031,7 @@ const equipmentState = {
   inventory: new Map(),
   observations: new Map(),
   deletedStack: [],
+  selectedEventId: "",
   activeWindow: "review"
 };
 
@@ -1242,6 +1243,7 @@ function selectedEquipmentSections() {
 }
 
 function warehousePdfSections() {
+  syncActiveEquipmentEvent();
   return selectedEquipmentSections();
 }
 
@@ -1259,6 +1261,117 @@ function activeEquipmentEvents() {
   return equipmentState.events.length ? equipmentState.events : [currentEquipmentEventDraft()];
 }
 
+function cloneEquipmentSnapshotItem(item, index = 0) {
+  const normalized = normalizeEquipmentItem(item || {});
+  return {
+    id: normalized.id || `snapshot-item-${index}`,
+    quantity: Number(normalized.quantity) || 0,
+    description: normalized.description || "",
+    editable: normalized.editable !== false,
+    manual: Boolean(normalized.manual)
+  };
+}
+
+function cloneEquipmentSnapshotItems(items = []) {
+  return items.map((item, index) => cloneEquipmentSnapshotItem(item, index));
+}
+
+function cloneEquipmentSnapshotSections(sections = []) {
+  return sections.map((section, index) => ({
+    id: section.id || `snapshot-section-${index}`,
+    title: section.title || "",
+    items: cloneEquipmentSnapshotItems(section.items || [])
+  }));
+}
+
+function equipmentMapToEntries(map) {
+  return [...map.entries()].map(([key, value]) => [key, { ...(value || {}) }]);
+}
+
+function equipmentEntriesToMap(entries = []) {
+  return new Map(entries.map(([key, value]) => [key, { ...(value || {}) }]));
+}
+
+function captureEquipmentEventSnapshot() {
+  const service = currentEquipmentService();
+  return {
+    serviceId: equipmentState.selectedServiceId,
+    serviceName: service?.name || "",
+    djAudioType: equipmentState.djAudioType,
+    selectedExtraIds: [...equipmentState.selectedExtraIds],
+    manualMainItems: cloneEquipmentSnapshotItems(equipmentState.manualMainItems),
+    manualMainSections: equipmentState.manualMainSections.map((section, index) => ({
+      id: section.id || `manual-section-${index}`,
+      title: section.title || "",
+      items: cloneEquipmentSnapshotItems(section.items || [])
+    })),
+    manualExtras: cloneEquipmentSnapshotItems(equipmentState.manualExtras),
+    itemOverrides: equipmentMapToEntries(equipmentState.itemOverrides),
+    removedItemIds: [...equipmentState.removedItemIds],
+    sections: cloneEquipmentSnapshotSections(selectedEquipmentSections())
+  };
+}
+
+function restoreEquipmentEventSnapshot(event) {
+  if (!event) return;
+  equipmentState.selectedServiceId = event.serviceId || equipmentState.selectedServiceId;
+  equipmentState.djAudioType = event.djAudioType || "qsc";
+  equipmentState.selectedExtraIds = new Set(event.selectedExtraIds || []);
+  equipmentState.manualMainItems = cloneEquipmentSnapshotItems(event.manualMainItems || []);
+  equipmentState.manualMainSections = (event.manualMainSections || []).map((section, index) => ({
+    id: section.id || `manual-section-${Date.now()}-${index}`,
+    title: section.title || "",
+    items: cloneEquipmentSnapshotItems(section.items || [])
+  }));
+  equipmentState.manualExtras = cloneEquipmentSnapshotItems(event.manualExtras || []);
+  equipmentState.itemOverrides = equipmentEntriesToMap(event.itemOverrides || []);
+  equipmentState.removedItemIds = new Set(event.removedItemIds || []);
+
+  const serviceSelect = equipmentQuery("#equipmentServiceSelect");
+  if (serviceSelect) serviceSelect.value = equipmentState.selectedServiceId;
+}
+
+function populateEquipmentEventFields(event) {
+  const nameInput = equipmentQuery("#equipmentEventName");
+  const plannerInput = equipmentQuery("#equipmentEventPhone");
+  const dateInput = equipmentQuery("#equipmentEventDate");
+  const responsibleInput = equipmentQuery("#equipmentEventResponsible");
+  if (nameInput) nameInput.value = event?.name || "";
+  if (plannerInput) plannerInput.value = event?.phone || "";
+  if (dateInput) dateInput.value = event?.date || "";
+  if (responsibleInput) responsibleInput.value = event?.responsible || "";
+}
+
+function updateEquipmentEventFromCurrent(event) {
+  if (!event) return;
+  const draft = currentEquipmentEventDraft();
+  const snapshot = captureEquipmentEventSnapshot();
+  Object.assign(event, draft, snapshot, { id: event.id });
+}
+
+function syncActiveEquipmentEvent() {
+  const event = equipmentState.events.find((item) => item.id === equipmentState.selectedEventId);
+  if (event) updateEquipmentEventFromCurrent(event);
+}
+
+function sectionsForEquipmentEvent(event) {
+  if (event?.sections?.length) return cloneEquipmentSnapshotSections(event.sections);
+  return selectedEquipmentSections();
+}
+
+function loadEquipmentEvent(eventId) {
+  if (equipmentState.selectedEventId && equipmentState.selectedEventId !== eventId) {
+    syncActiveEquipmentEvent();
+  }
+  const event = equipmentState.events.find((item) => item.id === eventId);
+  if (!event) return;
+  equipmentState.selectedEventId = event.id;
+  restoreEquipmentEventSnapshot(event);
+  populateEquipmentEventFields(event);
+  equipmentState.activeWindow = "review";
+  renderEquipmentModule();
+}
+
 function eventColumnName(event) {
   return event?.name?.trim() || "Evento por definir";
 }
@@ -1271,28 +1384,30 @@ function eventSummaryText(events, field, fallback = "Por definir") {
 }
 
 function equipmentRowsSummary() {
+  syncActiveEquipmentEvent();
   const rows = new Map();
   const events = activeEquipmentEvents();
-  selectedEquipmentSections().forEach((section) => {
-    section.items.forEach((rawItem) => {
-      const { quantity, description } = normalizeEquipmentItem(rawItem);
-      const key = normalizeEquipmentKey(description);
-      if (!key) return;
-      const existing = rows.get(key) || {
-        key,
-        quantity: 0,
-        description,
-        eventQuantities: new Map()
-      };
-      const perEventQuantity = Number(quantity) || 0;
-      events.forEach((event) => {
+  events.forEach((event) => {
+    const sections = equipmentState.events.length ? sectionsForEquipmentEvent(event) : selectedEquipmentSections();
+    sections.forEach((section) => {
+      section.items.forEach((rawItem) => {
+        const { quantity, description } = normalizeEquipmentItem(rawItem);
+        const key = normalizeEquipmentKey(description);
+        if (!key) return;
+        const existing = rows.get(key) || {
+          key,
+          quantity: 0,
+          description,
+          eventQuantities: new Map()
+        };
+        const perEventQuantity = Number(quantity) || 0;
         existing.eventQuantities.set(
           event.id,
           (Number(existing.eventQuantities.get(event.id)) || 0) + perEventQuantity
         );
+        existing.quantity += perEventQuantity;
+        rows.set(key, existing);
       });
-      existing.quantity += perEventQuantity * events.length;
-      rows.set(key, existing);
     });
   });
   return [...rows.values()];
