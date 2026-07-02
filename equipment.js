@@ -30,11 +30,6 @@ const djCompletoAudioOptions = {
   }
 };
 
-const saxofonicConAudioExtra = sharedEquipmentExtras.find((extra) => extra.id === "saxofonic-con-audio");
-const saxofonicConAudioMainSections = saxofonicConAudioExtra
-  ? [{ title: saxofonicConAudioExtra.title, items: saxofonicConAudioExtra.items.map((item) => [...item]) }]
-  : [];
-
 const djCompletoMainSections = [
   {
     title: "CONSOLA",
@@ -392,6 +387,11 @@ const sharedEquipmentExtras = [
     ]
   }
 ];
+
+const saxofonicConAudioExtra = sharedEquipmentExtras.find((extra) => extra.id === "saxofonic-con-audio");
+const saxofonicConAudioMainSections = saxofonicConAudioExtra
+  ? [{ title: saxofonicConAudioExtra.title, items: saxofonicConAudioExtra.items.map((item) => [...item]) }]
+  : [];
 
 const equipmentServices = {
   "dj-completo": {
