@@ -1106,6 +1106,18 @@ function currentEquipmentService() {
   };
 }
 
+function syncSelectedEquipmentService() {
+  const serviceSelect = equipmentQuery("#equipmentServiceSelect");
+  if (!serviceSelect) return;
+  const selectedId = serviceSelect.value;
+  if (!selectedId || !equipmentServices[selectedId] || selectedId === equipmentState.selectedServiceId) return;
+  equipmentState.selectedServiceId = selectedId;
+  const selectedService = equipmentServices[selectedId] || null;
+  if (!selectedService?.audioOptions || !selectedService.audioOptions[equipmentState.djAudioType]) {
+    equipmentState.djAudioType = "qsc";
+  }
+}
+
 function equipmentSectionKey(section, index, scope, serviceId = "") {
   const servicePrefix = serviceId ? `${serviceId}-` : "";
   return `${servicePrefix}${scope}-${section.id || normalizeEquipmentKey(section.title) || index}`;
@@ -1863,6 +1875,7 @@ function renderEquipmentPdfPreview() {
 }
 
 function renderEquipmentModule() {
+  syncSelectedEquipmentService();
   const service = currentEquipmentService();
   const workspace = equipmentQuery("#equipmentWorkspace");
   if (workspace) workspace.classList.toggle("is-hidden", !service);
@@ -1880,6 +1893,7 @@ function renderEquipmentModule() {
   }
   bindEquipmentInventoryInputs();
   renderEquipmentPdfPreview();
+  renderEquipmentWindowState();
 }
 
 function renderDjAudioOptions() {
@@ -2055,6 +2069,11 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentClearAllButton")?.addEventListener("click", clearEquipmentWorkingArea);
   equipmentQuery("#equipmentUndoDeleteButton")?.addEventListener("click", restoreLastDeletedEquipment);
   renderEquipmentModule();
+  if (typeof window.requestAnimationFrame === "function") {
+    window.requestAnimationFrame(renderEquipmentModule);
+  } else {
+    window.setTimeout(renderEquipmentModule, 0);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", initEquipmentModule);
