@@ -2080,14 +2080,13 @@ async function equipmentUsagePdfHtml() {
 
 function equipmentPdfFileName(mode = "full") {
   const service = currentEquipmentService();
-  const serviceName = cleanEquipmentFilePart(service?.name || "Cuadro de Equipo", "Cuadro de Equipo");
   const events = activeEquipmentEvents();
-  const eventName = cleanEquipmentFilePart(events.map((event) => event.name).join(" - ") || "Lugar por definir", "Lugar por definir");
+  const eventName = cleanEquipmentFilePart(events.map((event) => event.name).join(" - ") || "Evento por definir", "Evento por definir");
+  const plannerName = cleanEquipmentFilePart(events.map((event) => event.phone).join(" - ") || "Planner por definir", "Planner por definir");
+  const serviceName = cleanEquipmentFilePart(service?.name || "Extras", "Extras");
+  const documentType = mode === "rent" ? `Renta ${serviceName}` : serviceName;
   const eventDates = cleanEquipmentFilePart(events.map((event) => formatEquipmentDateForFile(event.date)).join(" - "), "Fecha por definir");
-  if (mode === "rent") {
-    return `Reporte de renta - ${eventName} - ${serviceName} - ${eventDates}.pdf`;
-  }
-  return `${eventName} - Equipo a utilizar - ${serviceName} - ${eventDates}.pdf`;
+  return `${eventName} - ${plannerName} - ${documentType} - ${eventDates}.pdf`;
 }
 
 async function saveEquipmentPdf(mode = "full") {
