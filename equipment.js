@@ -1257,8 +1257,18 @@ function currentEquipmentEventDraft() {
   };
 }
 
+function selectedEquipmentEvent() {
+  return equipmentState.events.find((item) => item.id === equipmentState.selectedEventId) || null;
+}
+
 function activeEquipmentEvents() {
   return equipmentState.events.length ? equipmentState.events : [currentEquipmentEventDraft()];
+}
+
+function equipmentPdfEvents() {
+  syncActiveEquipmentEvent();
+  const event = selectedEquipmentEvent();
+  return event ? [event] : [currentEquipmentEventDraft()];
 }
 
 function cloneEquipmentSnapshotItem(item, index = 0) {
@@ -1469,45 +1479,73 @@ function tableForEquipmentSections(sections, compact = false) {
     </table>`;
 }
 
+function equipmentEventLineCount(event) {
+  return sectionsForEquipmentEvent(event).reduce((total, section) => total + (section.items?.length || 0), 0);
+}
+
 function renderEquipmentEvents() {
   const host = equipmentQuery("#equipmentEventsList");
   if (!host) return;
   if (!equipmentState.events.length) {
-    host.innerHTML = `<p class="equipment-empty">Agregue eventos para verlos como columnas en el resumen.</p>`;
+    host.innerHTML = `<p class="equipment-empty equipment-window-empty">Cree una ventana para que aparezca en este panel.</p>`;
     return;
   }
   host.innerHTML = equipmentState.events
-    .map(
-      (event) => `
-        <article class="equipment-event-card">
-          <div>
-            <strong>${escapeEquipmentHtml(event.name)}</strong>
-            <span>${escapeEquipmentHtml(formatEquipmentDate(event.date))} · ${escapeEquipmentHtml(event.phone)}</span>
+    .map((event, index) => {
+      const activeClass = event.id === equipmentState.selectedEventId ? " is-active" : "";
+      const lineCount = equipmentEventLineCount(event);
+      const serviceName = event.serviceName || "Sin servicio";
+      const planner = event.phone || "Planner por definir";
+      const date = formatEquipmentDate(event.date);
+      const name = event.name || `Ventana ${index + 1}`;
+      return `
+        <article class="equipment-event-card${activeClass}">
+          <button class="equipment-event-open" type="button" data-open-event="${escapeEquipmentHtml(event.id)}">
+            <strong>${escapeEquipmentHtml(`${index + 1}. ${name}`)}</strong>
+            <small>${escapeEquipmentHtml(serviceName)}</small>
+            <span>${escapeEquipmentHtml(date)} · ${escapeEquipmentHtml(planner)}</span>
+            <span>${escapeEquipmentHtml(lineCount)} líneas de equipo</span>
+          </button>
+          <div class="equipment-event-card-actions">
+            <button class="equipment-event-pdf-button" type="button" data-save-event="${escapeEquipmentHtml(event.id)}" aria-label="Guardar PDF de ${escapeEquipmentHtml(name)}">PDF</button>
+            <button class="equipment-event-remove-button" type="button" data-remove-event="${escapeEquipmentHtml(event.id)}" aria-label="Eliminar ventana">X</button>
           </div>
-          <button type="button" data-remove-event="${escapeEquipmentHtml(event.id)}" aria-label="Eliminar evento">X</button>
-        </article>`
-    )
+        </article>`;
+    })
     .join("");
-  host.querySelectorAll("[data-remove-event]").forEach((button) => {
+  host.querySelectorAll("[data-open-event]").forEach((button) => {
+    button.addEventListener("click", () => loadEquipmentEvent(button.dataset.openEvent));
+  });
+  host.querySelectorAll("[data-save-event]").forEach((button) => {
     button.addEventListener("click", () => {
-      equipmentState.events = equipmentState.events.filter((event) => event.id !== button.dataset.removeEvent);
-      renderEquipmentModule();
+      loadEquipmentEvent(button.dataset.saveEvent);
+      saveEquipmentPdf("full");
     });
+  });
+  host.querySelectorAll("[data-remove-event]").forEach((button) => {
+    button.addEventListener("click", () => removeEquipmentEventById(button.dataset.removeEvent));
   });
 }
 
 function addEquipmentEvent() {
   const draft = currentEquipmentEventDraft();
   const status = equipmentQuery("#equipmentSaveStatus");
-  if (!draft.name || draft.name === "Evento por definir") {
-    if (status) status.textContent = "Escriba el nombre del evento antes de agregarlo al resumen.";
+  if (!currentEquipmentService()) {
+    if (status) status.textContent = "Seleccione el tipo de servicio antes de crear una ventana.";
     return;
   }
-  equipmentState.events.push({
+  if (!draft.name || draft.name === "Evento por definir") {
+    if (status) status.textContent = "Escriba el nombre del evento antes de crear la ventana.";
+    return;
+  }
+  const event = {
     ...draft,
+    ...captureEquipmentEventSnapshot(),
     id: `event-${Date.now()}-${equipmentEventCounter++}`
-  });
-  if (status) status.textContent = `Evento agregado: ${draft.name}`;
+  };
+  equipmentState.events.push(event);
+  equipmentState.selectedEventId = event.id;
+  if (status) status.textContent = `Ventana creada: ${draft.name}`;
   renderEquipmentModule();
 }
 
@@ -1909,12 +1947,14 @@ function renderEquipmentWindowState() {
   const reviewButton = equipmentQuery("#equipmentReviewWindowButton");
   const summaryButton = equipmentQuery("#equipmentSummaryWindowButton");
   const undoButton = equipmentQuery("#equipmentUndoDeleteButton");
+  const removeButton = equipmentQuery("#equipmentRemoveWindowButton");
   if (mainPanel) mainPanel.classList.toggle("is-hidden", activeWindow !== "review");
   if (extrasPanel) extrasPanel.classList.toggle("is-hidden", activeWindow !== "review");
   if (inventoryPanel) inventoryPanel.classList.toggle("is-hidden", activeWindow !== "summary");
   if (reviewButton) reviewButton.classList.toggle("is-active", activeWindow === "review");
   if (summaryButton) summaryButton.classList.toggle("is-active", activeWindow === "summary");
   if (undoButton) undoButton.disabled = !equipmentState.deletedStack.length;
+  if (removeButton) removeButton.disabled = !equipmentState.selectedEventId;
 }
 
 function switchEquipmentWindow(windowName) {
@@ -1922,39 +1962,102 @@ function switchEquipmentWindow(windowName) {
   renderEquipmentModule();
 }
 
-function removeEquipmentActiveWindow() {
-  equipmentState.activeWindow = equipmentState.activeWindow === "summary" ? "review" : "summary";
-  renderEquipmentModule();
-}
-
-function clearEquipmentWorkingArea() {
-  if (!window.confirm("¿Está seguro que desea limpiar todo a 0?")) return;
-  equipmentState.events = [];
+function resetEquipmentWindowDraft() {
+  equipmentState.selectedEventId = "";
+  equipmentState.selectedServiceId = "";
+  equipmentState.djAudioType = "qsc";
   equipmentState.selectedExtraIds.clear();
   equipmentState.manualMainItems = [];
   equipmentState.manualMainSections = [];
   equipmentState.manualExtras = [];
   equipmentState.itemOverrides.clear();
   equipmentState.removedItemIds.clear();
-  equipmentState.inventory.clear();
-  equipmentState.observations.clear();
   equipmentState.deletedStack = [];
   equipmentState.activeWindow = "review";
-  ["#equipmentEventName", "#equipmentEventPhone", "#equipmentEventDate", "#equipmentEventResponsible", "#equipmentNotes"].forEach((selector) => {
-    const input = equipmentQuery(selector);
-    if (input) input.value = "";
-  });
+  const serviceSelect = equipmentQuery("#equipmentServiceSelect");
+  if (serviceSelect) serviceSelect.value = "";
+  populateEquipmentEventFields(null);
+  const notesInput = equipmentQuery("#equipmentNotes");
+  if (notesInput) notesInput.value = "";
+}
+
+function saveCurrentEquipmentWindow() {
+  const status = equipmentQuery("#equipmentSaveStatus");
+  const draft = currentEquipmentEventDraft();
+  if (!currentEquipmentService()) {
+    if (status) status.textContent = "Seleccione el tipo de servicio antes de guardar la ventana.";
+    return;
+  }
+  if (!draft.name || draft.name === "Evento por definir") {
+    if (status) status.textContent = "Escriba el nombre del evento antes de guardar la ventana.";
+    return;
+  }
+  const event = selectedEquipmentEvent();
+  if (!event) {
+    addEquipmentEvent();
+    return;
+  }
+  updateEquipmentEventFromCurrent(event);
+  if (status) status.textContent = `Ventana actualizada: ${event.name}`;
+  renderEquipmentModule();
+}
+
+function removeEquipmentEventById(eventId) {
+  if (!eventId) return;
+  const status = equipmentQuery("#equipmentSaveStatus");
+  if (equipmentState.selectedEventId && equipmentState.selectedEventId !== eventId) {
+    syncActiveEquipmentEvent();
+  }
+  const index = equipmentState.events.findIndex((event) => event.id === eventId);
+  if (index < 0) return;
+  const removed = equipmentState.events[index];
+  const wasSelected = equipmentState.selectedEventId === eventId;
+  equipmentState.events.splice(index, 1);
+  if (wasSelected) {
+    const nextEvent = equipmentState.events[index] || equipmentState.events[index - 1] || null;
+    equipmentState.selectedEventId = "";
+    if (nextEvent) {
+      loadEquipmentEvent(nextEvent.id);
+      if (status) status.textContent = `Ventana eliminada: ${removed.name || "sin nombre"}`;
+      return;
+    }
+    resetEquipmentWindowDraft();
+  }
+  if (status) status.textContent = `Ventana eliminada: ${removed.name || "sin nombre"}`;
+  renderEquipmentModule();
+}
+
+function removeEquipmentActiveWindow() {
+  const status = equipmentQuery("#equipmentSaveStatus");
+  if (!equipmentState.selectedEventId) {
+    if (status) status.textContent = "Seleccione una ventana para eliminarla.";
+    return;
+  }
+  removeEquipmentEventById(equipmentState.selectedEventId);
+}
+
+function clearEquipmentWorkingArea() {
+  if (!window.confirm("¿Está seguro que desea limpiar todo a 0?")) return;
+  equipmentState.events = [];
+  resetEquipmentWindowDraft();
+  equipmentState.inventory.clear();
+  equipmentState.observations.clear();
   renderEquipmentModule();
 }
 
 function renderEquipmentPdfPreview() {
   const service = currentEquipmentService();
   const sections = selectedEquipmentSections();
-  const events = activeEquipmentEvents();
+  const events = equipmentPdfEvents();
+  const summaryEvents = activeEquipmentEvents();
   const eventName = eventSummaryText(events, "name");
   const phone = eventSummaryText(events, "phone");
   const responsible = eventSummaryText(events, "responsible");
   const date = eventSummaryText(events, "date");
+  const rentEventName = eventSummaryText(summaryEvents, "name");
+  const rentPhone = eventSummaryText(summaryEvents, "phone");
+  const rentResponsible = eventSummaryText(summaryEvents, "responsible");
+  const rentDate = eventSummaryText(summaryEvents, "date");
   const notes = equipmentQuery("#equipmentNotes")?.value.trim() || "";
   const rentalRows = equipmentRentalRows();
 
@@ -1975,10 +2078,10 @@ function renderEquipmentPdfPreview() {
     equipmentQuery("#equipmentPdfMainTable").innerHTML = tableForEquipmentSections(sections, true);
   }
   if (equipmentQuery("#equipmentRentPdfTitle")) equipmentQuery("#equipmentRentPdfTitle").textContent = `Renta - ${title}`;
-  if (equipmentQuery("#equipmentRentPdfEvents")) equipmentQuery("#equipmentRentPdfEvents").textContent = eventName;
-  if (equipmentQuery("#equipmentRentPdfPhone")) equipmentQuery("#equipmentRentPdfPhone").textContent = phone;
-  if (equipmentQuery("#equipmentRentPdfDate")) equipmentQuery("#equipmentRentPdfDate").textContent = date;
-  if (equipmentQuery("#equipmentRentPdfResponsible")) equipmentQuery("#equipmentRentPdfResponsible").textContent = responsible;
+  if (equipmentQuery("#equipmentRentPdfEvents")) equipmentQuery("#equipmentRentPdfEvents").textContent = rentEventName;
+  if (equipmentQuery("#equipmentRentPdfPhone")) equipmentQuery("#equipmentRentPdfPhone").textContent = rentPhone;
+  if (equipmentQuery("#equipmentRentPdfDate")) equipmentQuery("#equipmentRentPdfDate").textContent = rentDate;
+  if (equipmentQuery("#equipmentRentPdfResponsible")) equipmentQuery("#equipmentRentPdfResponsible").textContent = rentResponsible;
   const rentNotesEl = equipmentQuery("#equipmentRentPdfNotes");
   if (rentNotesEl) {
     rentNotesEl.textContent = notes;
@@ -1991,6 +2094,7 @@ function renderEquipmentPdfPreview() {
 
 function renderEquipmentModule() {
   syncSelectedEquipmentService();
+  if (equipmentState.selectedEventId) syncActiveEquipmentEvent();
   const service = currentEquipmentService();
   const workspace = equipmentQuery("#equipmentWorkspace");
   if (workspace) workspace.classList.toggle("is-hidden", !service);
@@ -2082,7 +2186,8 @@ const equipmentPreferredPdfFolderName = "Cuadros de Equipo";
 
 function equipmentPdfFileName(mode = "full") {
   const service = currentEquipmentService();
-  const events = activeEquipmentEvents();
+  if (mode === "rent") syncActiveEquipmentEvent();
+  const events = mode === "rent" ? activeEquipmentEvents() : equipmentPdfEvents();
   const eventName = cleanEquipmentFilePart(events.map((event) => event.name).join(" - ") || "Evento por definir", "Evento por definir");
   const plannerName = cleanEquipmentFilePart(events.map((event) => event.phone).join(" - ") || "Planner por definir", "Planner por definir");
   const serviceName = cleanEquipmentFilePart(service?.name || "Extras", "Extras");
@@ -2257,7 +2362,7 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentSaveRentPdfButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
   equipmentQuery("#equipmentReviewWindowButton")?.addEventListener("click", () => switchEquipmentWindow("review"));
   equipmentQuery("#equipmentSummaryWindowButton")?.addEventListener("click", () => switchEquipmentWindow("summary"));
-  equipmentQuery("#equipmentAddWindowButton")?.addEventListener("click", () => switchEquipmentWindow("summary"));
+  equipmentQuery("#equipmentAddWindowButton")?.addEventListener("click", saveCurrentEquipmentWindow);
   equipmentQuery("#equipmentRemoveWindowButton")?.addEventListener("click", removeEquipmentActiveWindow);
   equipmentQuery("#equipmentClearAllButton")?.addEventListener("click", clearEquipmentWorkingArea);
   equipmentQuery("#equipmentUndoDeleteButton")?.addEventListener("click", restoreLastDeletedEquipment);

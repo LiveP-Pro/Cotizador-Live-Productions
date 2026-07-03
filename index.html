@@ -6,9 +6,9 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260630-01" />
+    <link rel="stylesheet" href="styles.css?v=20260703-01" />
     <script src="app.js?v=20260628-01" defer></script>
-    <script src="equipment.js?v=20260703-02" defer></script>
+    <script src="equipment.js?v=20260703-03" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -216,11 +216,8 @@
               <input id="equipmentEventResponsible" type="text" autocomplete="off" placeholder="Persona que solicita o revisa" />
             </label>
             <div class="equipment-field-wide equipment-event-actions">
-              <button id="equipmentAddEventButton" type="button">Agregar evento al resumen</button>
-              <small>Puede agregar todos los eventos que necesite; cada nombre aparece como columna en el resumen.</small>
-            </div>
-            <div class="equipment-field-wide">
-              <div id="equipmentEventsList" class="equipment-event-list"></div>
+              <button id="equipmentAddEventButton" type="button">Crear ventana</button>
+              <small>Cree una ventana por cuadro de equipo; cada una se puede editar y guardar en PDF.</small>
             </div>
             <label class="equipment-field-wide equipment-service-label">
               Tipo de Servicio
@@ -254,13 +251,22 @@
           <div class="equipment-window-toolbar" aria-label="Ventanas de requerimiento de equipo">
             <button id="equipmentReviewWindowButton" type="button" class="is-active">Revisión de equipo</button>
             <button id="equipmentSummaryWindowButton" type="button">Resumen para bodega</button>
-            <button id="equipmentAddWindowButton" type="button">Agregar ventana</button>
+            <button id="equipmentAddWindowButton" type="button">Guardar ventana</button>
             <button id="equipmentRemoveWindowButton" type="button">Eliminar</button>
             <button id="equipmentClearAllButton" type="button">Limpiar todo 0</button>
             <button id="equipmentUndoDeleteButton" type="button" disabled>Regresar</button>
           </div>
 
-          <div id="equipmentWorkspace" class="equipment-workspace is-hidden">
+          <div class="equipment-window-shell">
+            <aside class="equipment-window-sidebar" aria-label="Ventanas de cuadros de equipo">
+              <div class="equipment-window-sidebar-heading">
+                <span>Ventanas</span>
+                <small>cuadros independientes</small>
+              </div>
+              <div id="equipmentEventsList" class="equipment-event-list"></div>
+            </aside>
+
+            <div id="equipmentWorkspace" class="equipment-workspace is-hidden">
             <div class="equipment-manual-controls">
               <div class="equipment-manual-extra-form equipment-manual-item-form">
                 <label>
@@ -382,6 +388,7 @@
               <p id="equipmentRentPdfNotes" class="equipment-pdf-notes is-hidden"></p>
               <div id="equipmentRentPdfTable"></div>
             </section>
+            </div>
           </div>
         </div>
       </section>
