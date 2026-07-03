@@ -2078,6 +2078,8 @@ async function equipmentUsagePdfHtml() {
 </html>`;
 }
 
+const equipmentPreferredPdfFolderName = "Cuadros de Equipo";
+
 function equipmentPdfFileName(mode = "full") {
   const service = currentEquipmentService();
   const events = activeEquipmentEvents();
@@ -2087,6 +2089,75 @@ function equipmentPdfFileName(mode = "full") {
   const documentType = mode === "rent" ? `Renta ${serviceName}` : serviceName;
   const eventDates = cleanEquipmentFilePart(events.map((event) => formatEquipmentDateForFile(event.date)).join(" - "), "Fecha por definir");
   return `${eventName} - ${plannerName} - ${documentType} - ${eventDates}.pdf`;
+}
+
+function equipmentPdfDownloadUrl(pdfUrl) {
+  try {
+    return new URL(pdfUrl, window.location.origin).href;
+  } catch {
+    return pdfUrl;
+  }
+}
+
+function downloadEquipmentPdfFallback(fileName, pdfBlob) {
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(pdfBlob);
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+async function writableEquipmentFolderHandle(directoryHandle) {
+  if (!directoryHandle) return null;
+  if (typeof directoryHandle.queryPermission === "function") {
+    const currentPermission = await directoryHandle.queryPermission({ mode: "readwrite" });
+    if (currentPermission === "granted") return directoryHandle;
+  }
+  if (typeof directoryHandle.requestPermission === "function") {
+    const requestedPermission = await directoryHandle.requestPermission({ mode: "readwrite" });
+    if (requestedPermission === "granted") return directoryHandle;
+  }
+  return null;
+}
+
+async function saveEquipmentPdfCopyToComputer(data, savedLabel) {
+  const fileName = cleanEquipmentFilePart(data?.fileName || "Cuadro de Equipo.pdf", "Cuadro de Equipo.pdf");
+  const isLocalApp = ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname);
+  if (isLocalApp && data?.folder && !String(data.folder).startsWith("/data/")) {
+    return `${savedLabel}: ${data.fileName} en ${data.folder}`;
+  }
+
+  const pdfUrl = data?.pdfUrl || data?.absolutePdfUrl;
+  if (!pdfUrl) return `${savedLabel}: ${fileName}`;
+
+  const pdfResponse = await fetch(equipmentPdfDownloadUrl(pdfUrl), { credentials: "same-origin" });
+  if (!pdfResponse.ok) throw new Error("No se pudo descargar el PDF generado para guardarlo en esta Mac.");
+  const pdfBlob = await pdfResponse.blob();
+
+  if (!window.showDirectoryPicker) {
+    downloadEquipmentPdfFallback(fileName, pdfBlob);
+    return `${savedLabel}: ${fileName}. Se descargó el PDF; este navegador no permite guardar directo en ${equipmentPreferredPdfFolderName}.`;
+  }
+
+  const directoryHandle = await window.showDirectoryPicker({
+    id: "requerimiento-equipo-cuadros",
+    mode: "readwrite",
+    startIn: "documents"
+  });
+  if ((directoryHandle.name || "") !== equipmentPreferredPdfFolderName) {
+    throw new Error(`Seleccione la carpeta exacta: ${equipmentPreferredPdfFolderName}.`);
+  }
+
+  const writableHandle = await writableEquipmentFolderHandle(directoryHandle);
+  if (!writableHandle) throw new Error(`No se otorgó permiso para escribir en ${equipmentPreferredPdfFolderName}.`);
+
+  const fileHandle = await writableHandle.getFileHandle(fileName, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(pdfBlob);
+  await writable.close();
+  return `${savedLabel}: ${fileName} en ${equipmentPreferredPdfFolderName}`;
 }
 
 async function saveEquipmentPdf(mode = "full") {
@@ -2116,7 +2187,15 @@ async function saveEquipmentPdf(mode = "full") {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "No se pudo guardar el cuadro de equipo.");
     const savedLabel = mode === "rent" ? "PDF de renta guardado" : "PDF de bodega guardado";
-    if (status) status.textContent = `${savedLabel}: ${data.fileName} en ${data.folder}`;
+    let statusMessage = `${savedLabel}: ${data.fileName} en ${data.folder}`;
+    try {
+      statusMessage = await saveEquipmentPdfCopyToComputer(data, savedLabel);
+    } catch (saveError) {
+      statusMessage = saveError?.name === "AbortError"
+        ? `${savedLabel}: ${data.fileName}. Selección de carpeta cancelada.`
+        : `${savedLabel}: ${data.fileName}. No se copió a ${equipmentPreferredPdfFolderName}: ${saveError.message}`;
+    }
+    if (status) status.textContent = statusMessage;
     window.open(data.pdfUrl, "_blank", "noopener");
   } catch (error) {
     if (status) status.textContent = error.message || "No se pudo guardar el PDF.";
