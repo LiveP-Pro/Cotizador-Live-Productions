@@ -2831,6 +2831,112 @@ button,
   line-height: 1.35;
 }
 
+.editable-intro {
+  min-height: 1.35em;
+  border-radius: 4px;
+  outline: 1px dashed transparent;
+  outline-offset: 5px;
+  white-space: pre-wrap;
+  cursor: text;
+  transition: background-color 160ms ease, outline-color 160ms ease;
+}
+
+.editable-intro:hover {
+  background: rgba(255, 255, 255, 0.58);
+  outline-color: #b8b8b8;
+}
+
+.editable-intro:focus {
+  background: #ffffff;
+  outline: 2px solid #c9a227;
+}
+
+@media print {
+  .editable-intro,
+  .editable-intro:hover,
+  .editable-intro:focus {
+    background: transparent;
+    outline: 0;
+  }
+}
+
+body.pdf-export .editable-intro {
+  background: transparent;
+  outline: 0;
+}
+
+.extras-folder {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7f8fa;
+  overflow: hidden;
+}
+
+.extras-folder summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 800;
+  list-style-position: inside;
+}
+
+.extras-folder summary small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.extras-folder[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.extras-folder .extras-list {
+  padding: 10px;
+}
+
+.manual-extras-list:empty {
+  display: none;
+}
+
+.editable-payment {
+  min-height: 1.5em;
+  border-radius: 4px;
+  outline: 1px dashed transparent;
+  outline-offset: 4px;
+  white-space: pre-wrap;
+  cursor: text;
+  transition: background-color 160ms ease, outline-color 160ms ease;
+}
+
+.editable-payment:hover {
+  background: rgba(255, 255, 255, 0.1);
+  outline-color: rgba(255, 255, 255, 0.55);
+}
+
+.editable-payment:focus {
+  background: rgba(255, 255, 255, 0.13);
+  outline: 2px solid #d9ba4a;
+}
+
+@media print {
+  .editable-payment,
+  .editable-payment:hover,
+  .editable-payment:focus {
+    background: transparent;
+    outline: 0;
+  }
+}
+
+body.pdf-export .editable-payment {
+  background: transparent;
+  outline: 0;
+}
+
 .service-detail-card {
   padding: 8px 12px;
   border: 1px solid var(--line);

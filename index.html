@@ -6,8 +6,8 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260703-01" />
-    <script src="app.js?v=20260628-01" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260731-01" />
+    <script src="app.js?v=20260731-01" defer></script>
     <script src="equipment.js?v=20260703-03" defer></script>
   </head>
   <body>
@@ -566,7 +566,14 @@
             </label>
             <button id="manualExtrasAddButton" type="button">Preparar extras manuales</button>
           </div>
-          <div id="extrasList" class="extras-list"></div>
+          <div id="manualExtrasList" class="extras-list manual-extras-list"></div>
+          <details id="standardExtrasFolder" class="extras-folder">
+            <summary>
+              <span>Extras disponibles</span>
+              <small>Haga clic para mostrar u ocultar</small>
+            </summary>
+            <div id="extrasList" class="extras-list"></div>
+          </details>
         </div>
 
         <div class="panel-section">
@@ -666,7 +673,7 @@
           </section>
 
           <section class="intro-message">
-            <p id="introMessage">
+            <p id="introMessage" class="editable-intro" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Mensaje introductorio editable" spellcheck="true" title="Haga clic para editar este texto">
               Reciba un cordial saludo de parte de Live Productions, deseándole éxitos en sus labores.
               A continuación, se desglosa la cotización por la presentación de servicios solicitada.
             </p>
@@ -712,7 +719,7 @@
               <span class="payment-icon" aria-hidden="true"></span>
               <div>
                 <h3 id="paymentTitle">Condiciones de Pago:</h3>
-                <p id="paymentConditionsText"></p>
+                <p id="paymentConditionsText" class="editable-payment" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Condiciones de pago editables" spellcheck="true" title="Haga clic para editar este texto"></p>
                 <p id="requirementText" class="requirement-text">
                   <strong>Requerimiento:</strong> El equipo debe quedar siempre bajo techo en un lugar seguro o toldo para la protección del equipo.
                 </p>

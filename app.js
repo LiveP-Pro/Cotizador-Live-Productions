@@ -445,8 +445,8 @@ const extras = {
       }
     ],
     ["pantalla-led", "1", "Pantalla LED", 0, { dimensions: "2 X 3 metros" }],
-    ["pista-baile", "1", "Pista de Baile", 0, { dimensions: "6 X 6 metros" }],
-    ["decoracion-pista-baile", "1", "Decoración para Pista de Baile", 0],
+    ["pista-baile", "1", "Pista de Baile Blanca", 0, { dimensions: "6 X 6 metros" }],
+    ["pista-baile-diseno", "1", "Pista de Baile con Diseño", 0, { dimensions: "6 X 6 metros" }],
     ["tarima", "1", "Tarima", 0, { dimensions: "6 X 6 metros" }]
   ],
   interior: [
@@ -495,8 +495,8 @@ const extras = {
       }
     ],
     ["pantalla-led-interior", "1", "Pantalla LED", 0, { dimensions: "2 X 3 metros" }],
-    ["pista-baile-interior", "1", "Pista de Baile", 0, { dimensions: "6 X 6 metros" }],
-    ["decoracion-pista-baile-interior", "1", "Decoración para Pista de Baile", 0],
+    ["pista-baile-interior", "1", "Pista de Baile Blanca", 0, { dimensions: "6 X 6 metros" }],
+    ["pista-baile-diseno-interior", "1", "Pista de Baile con Diseño", 0, { dimensions: "6 X 6 metros" }],
     ["tarima-interior", "1", "Tarima", 0, { dimensions: "6 X 6 metros" }]
   ]
 };
@@ -545,11 +545,14 @@ const elements = {
   extrasSearch: document.querySelector("#extrasSearch"),
   manualExtrasCount: document.querySelector("#manualExtrasCount"),
   manualExtrasAddButton: document.querySelector("#manualExtrasAddButton"),
+  manualExtrasList: document.querySelector("#manualExtrasList"),
+  standardExtrasFolder: document.querySelector("#standardExtrasFolder"),
   extrasList: document.querySelector("#extrasList"),
   additionalServicesButton: document.querySelector("#additionalServicesButton"),
   additionalServicesSection: document.querySelector("#additionalServicesSection"),
   quotePackageTitle: document.querySelector("#quotePackageTitle"),
   quoteCode: document.querySelector("#quoteCode"),
+  introMessage: document.querySelector("#introMessage"),
   serviceDetailCard: document.querySelector(".service-detail-card"),
   packageItems: document.querySelector("#packageItems"),
   packagePriceHeader: document.querySelector("#packagePriceHeader"),
@@ -654,6 +657,24 @@ let includeMountingPage = false;
 let includeAdditionalServices = false;
 let extrasSearchTerm = "";
 let quoteLanguage = "es";
+const defaultIntroMessages = {
+  es: "Reciba un cordial saludo de parte de Live Productions, deseándole éxitos en sus labores. A continuación, se desglosa la cotización por la presentación de servicios solicitada.",
+  en: "Warm greetings from Live Productions. We wish you continued success. Below is the quotation for the requested services."
+};
+let introMessage = defaultIntroMessages.es;
+const defaultPaymentConditions = (language = quoteLanguage, withVat = includeVat) => {
+  if (language === "en") {
+    const start = withVat
+      ? "This quotation is valid for 30 days after its issue date."
+      : "This quote does not include TAXES. It is valid for 30 days after its issue date.";
+    return `${start} Payment terms: 50% reservation and deposit, and the remaining 50% before the event.`;
+  }
+  const start = withVat
+    ? "Esta cotización es válida por un periodo de 30 días después de emitida."
+    : "Esta cotización No INCLUYE IVA, válida por un periodo de 30 días después de emitida.";
+  return `${start} Forma de pago: 50% reserva y anticipo y 50% restante fechas previas al evento.`;
+};
+let paymentConditions = defaultPaymentConditions("es", false);
 let quoteCurrency = "Q";
 let pdfCssTextCache = "";
 const pdfImageDataUriCache = new Map();
@@ -1897,8 +1918,8 @@ const englishPhraseReplacements = [
   ["Color de confeti sujeto a disponibilidad de color.", "Confetti color subject to color availability."],
   ["Celular con Playlist", "Phone with playlist"],
   ["Pantalla LED", "LED screen"],
-  ["Pista de Baile", "Dance floor"],
-  ["Decoración para Pista de Baile", "Dance floor decoration"],
+  ["Pista de Baile Blanca", "White dance floor"],
+  ["Pista de Baile con Diseño", "Custom-design dance floor"],
   ["Tarima", "Stage"],
   ["Toldo", "Canopy"],
   ["hora", "hour"],
@@ -3123,6 +3144,8 @@ function buildQuoteData() {
     includeAdditionalServices,
     discountAmount: readMoneyInput(elements.discountAmount),
     language: quoteLanguage,
+    introMessage,
+    paymentConditions,
     currency: quoteCurrency,
     notes: elements.fields.notes.value.trim(),
     totals
@@ -4223,7 +4246,19 @@ function makeExtraField(labelText, input) {
   return field;
 }
 
+function syncExtrasPickerSelection() {
+  [elements.manualExtrasList, elements.extrasList].forEach((list) => {
+    list.querySelectorAll(".extra-option > input[type='checkbox']").forEach((checkbox) => {
+      checkbox.checked = checkbox.value === "none"
+        ? selectedExtras.size === 0
+        : selectedExtras.has(checkbox.value);
+    });
+  });
+}
+
 function renderExtrasPicker() {
+  const previousWindowScrollY = window.scrollY;
+  const previousFolderScrollTop = elements.extrasList.scrollTop;
   const customExtras = manualExtras();
   const allExtras = [...customExtras, ...currentExtrasList().map(normalizeExtra)];
   const availableIds = new Set(allExtras.map((item) => item.id));
@@ -4252,6 +4287,7 @@ function renderExtrasPicker() {
     }
   });
 
+  clearNode(elements.manualExtrasList);
   clearNode(elements.extrasList);
   const pkg = currentPackage();
   elements.extrasScope.textContent =
@@ -4334,13 +4370,13 @@ function renderExtrasPicker() {
       } else {
         selectedExtras.delete(extra.id);
       }
-      renderExtrasPicker();
+      syncExtrasPickerSelection();
       renderQuote();
     };
     checkbox.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      setExtraSelection(!isSelected);
+      setExtraSelection(!selectedExtras.has(extra.id));
     });
     checkbox.addEventListener("change", () => setExtraSelection(checkbox.checked));
     label.addEventListener("click", (event) => {
@@ -4516,8 +4552,12 @@ function renderExtrasPicker() {
     updatePriceSummary();
 
     label.append(checkbox, copy, price);
-    elements.extrasList.appendChild(label);
+    (extra.manual ? elements.manualExtrasList : elements.extrasList).appendChild(label);
   });
+
+  if (search) elements.standardExtrasFolder.open = true;
+  elements.extrasList.scrollTop = previousFolderScrollTop;
+  requestAnimationFrame(() => window.scrollTo({ top: previousWindowScrollY, behavior: "auto" }));
 }
 
 function renderPackageTable(pkg) {
@@ -4875,11 +4915,9 @@ function renderQuoteLanguage() {
   setDocumentText("eventDateLabel", "Fecha del evento", "Event date");
   setDocumentText("groupScheduleLabel", "Horario de grupo", "Group schedule");
   setDocumentText("eventPlaceLabel", "Lugar del evento", "Event location");
-  setDocumentText(
-    "introMessage",
-    "Reciba un cordial saludo de parte de Live Productions, deseándole éxitos en sus labores. A continuación, se desglosa la cotización por la presentación de servicios solicitada.",
-    "Warm greetings from Live Productions. We wish you continued success. Below is the quotation for the requested services."
-  );
+  if (elements.introMessage.textContent !== introMessage) {
+    elements.introMessage.textContent = introMessage;
+  }
   setDocumentText("packageQuantityHeader", "Cantidad", "Quantity");
   setDocumentText("packageDescriptionHeader", "Detalle de equipo y servicios", "Equipment and service details");
   setDocumentText("packagePriceHeader", "Precio", "Price");
@@ -5046,20 +5084,9 @@ function renderAdditionalServicesState() {
 }
 
 function renderPaymentConditions() {
-  if (quoteLanguage === "en") {
-    const start = includeVat
-      ? "This quotation is valid for 30 days after its issue date."
-      : "This quote does not include TAXES. It is valid for 30 days after its issue date.";
-    elements.paymentConditionsText.textContent =
-      `${start} Payment terms: 50% reservation and deposit, and the remaining 50% before the event.`;
-    return;
+  if (elements.paymentConditionsText.textContent !== paymentConditions) {
+    elements.paymentConditionsText.textContent = paymentConditions;
   }
-
-  const start = includeVat
-    ? "Esta cotización es válida por un periodo de 30 días después de emitida."
-    : "Esta cotización No INCLUYE IVA, válida por un periodo de 30 días después de emitida.";
-  elements.paymentConditionsText.textContent =
-    `${start} Forma de pago: 50% reserva y anticipo y 50% restante fechas previas al evento.`;
 }
 
 function renderQuote() {
@@ -5127,6 +5154,8 @@ async function resetQuote() {
   includeMountingPage = false;
   includeAdditionalServices = false;
   quoteLanguage = "es";
+  introMessage = defaultIntroMessages.es;
+  paymentConditions = defaultPaymentConditions("es", false);
   quoteCurrency = "Q";
   extrasSearchTerm = "";
   elements.extrasSearch.value = "";
@@ -5297,6 +5326,12 @@ function applyQuoteData(data) {
   includeAdditionalServices = Boolean(data.includeAdditionalServices);
   elements.discountAmount.value = data.discountAmount || "";
   quoteLanguage = data.language === "en" ? "en" : "es";
+  introMessage = typeof data.introMessage === "string" && data.introMessage.trim()
+    ? data.introMessage.trim()
+    : defaultIntroMessages[quoteLanguage];
+  paymentConditions = typeof data.paymentConditions === "string" && data.paymentConditions.trim()
+    ? data.paymentConditions.trim()
+    : defaultPaymentConditions(quoteLanguage, includeVat);
   quoteCurrency = data.currency === "$" ? "$" : "Q";
   const legacyTravelAmount = Number(data.entertainmentTravelAmount || 0);
   if (data.includeEntertainmentTravel && legacyTravelAmount > 0) {
@@ -5375,12 +5410,41 @@ function bindEvents() {
     });
   });
 
+  elements.introMessage.addEventListener("input", () => {
+    introMessage = elements.introMessage.textContent.replace(/\u00a0/g, " ").trim();
+    if (batchState.started) captureActiveBatchDraft();
+  });
+  elements.introMessage.addEventListener("paste", (event) => {
+    event.preventDefault();
+    document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
+  });
+  elements.introMessage.addEventListener("blur", () => {
+    introMessage = elements.introMessage.textContent.replace(/\u00a0/g, " ").trim() || defaultIntroMessages[quoteLanguage];
+    elements.introMessage.textContent = introMessage;
+  });
+
+  elements.paymentConditionsText.addEventListener("input", () => {
+    paymentConditions = elements.paymentConditionsText.textContent.replace(/\u00a0/g, " ").trim();
+    if (batchState.started) captureActiveBatchDraft();
+  });
+  elements.paymentConditionsText.addEventListener("paste", (event) => {
+    event.preventDefault();
+    document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
+  });
+  elements.paymentConditionsText.addEventListener("blur", () => {
+    paymentConditions = elements.paymentConditionsText.textContent.replace(/\u00a0/g, " ").trim()
+      || defaultPaymentConditions();
+    elements.paymentConditionsText.textContent = paymentConditions;
+  });
+
   elements.topPrintButton.addEventListener("click", printQuote);
   elements.topSaveButton.addEventListener("click", saveQuoteToFolder);
   elements.topBatchQuotesButton.addEventListener("click", openBatchDialog);
   elements.topNewQuoteButton.addEventListener("click", resetQuote);
   elements.topVatButton.addEventListener("click", () => {
+    const previousDefault = defaultPaymentConditions(quoteLanguage, includeVat);
     includeVat = !includeVat;
+    if (paymentConditions === previousDefault) paymentConditions = defaultPaymentConditions();
     renderQuote();
   });
   elements.topMountingPageButton.addEventListener("click", () => {
@@ -5402,7 +5466,15 @@ function bindEvents() {
     if (includeDiscount) elements.discountAmount.focus();
   });
   elements.topLanguageButton.addEventListener("click", () => {
+    const previousLanguage = quoteLanguage;
+    const previousPaymentDefault = defaultPaymentConditions(previousLanguage, includeVat);
     quoteLanguage = quoteLanguage === "es" ? "en" : "es";
+    if (introMessage === defaultIntroMessages[previousLanguage]) {
+      introMessage = defaultIntroMessages[quoteLanguage];
+    }
+    if (paymentConditions === previousPaymentDefault) {
+      paymentConditions = defaultPaymentConditions();
+    }
     renderQuote();
   });
   elements.currencySelect.addEventListener("change", () => {
@@ -5464,7 +5536,9 @@ function bindEvents() {
   });
   elements.batchHeaderVatButton.addEventListener("click", () => {
     if (!batchState.started) return;
+    const previousDefault = defaultPaymentConditions(quoteLanguage, includeVat);
     includeVat = !includeVat;
+    if (paymentConditions === previousDefault) paymentConditions = defaultPaymentConditions();
     renderQuote();
   });
   elements.batchHeaderPrintButton.addEventListener("click", () => {
