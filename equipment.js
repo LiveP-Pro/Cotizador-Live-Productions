@@ -12459,7 +12459,8 @@ const equipmentState = {
   observations: new Map(),
   deletedStack: [],
   selectedEventId: "",
-  activeWindow: "review"
+  activeWindow: "review",
+  servicePickerOpen: false
 };
 
 let equipmentEventCounter = 1;
@@ -12624,7 +12625,13 @@ function renderEquipmentServicePicker() {
   const host = equipmentQuery("#equipmentServicePicker");
   if (!host) return;
   const selectedIds = new Set(selectedEquipmentServiceIds());
-  host.innerHTML = equipmentServiceGroups
+  const selectedServices = currentEquipmentServices();
+  const selectedLabel = selectedIds.size
+    ? selectedIds.size === 1
+      ? equipmentServicesLabel(selectedServices, "1 servicio seleccionado")
+      : `${selectedIds.size} servicios seleccionados`
+    : "Seleccione servicios";
+  const groupsHtml = equipmentServiceGroups
     .map((group) => {
       const services = group.serviceIds
         .map((serviceId) => ({ serviceId, service: equipmentServices[serviceId] }))
@@ -12649,6 +12656,18 @@ function renderEquipmentServicePicker() {
         </details>`;
     })
     .join("");
+  const menuOpenAttribute = equipmentState.servicePickerOpen ? " open" : "";
+  host.innerHTML = `
+    <details class="equipment-service-menu" data-equipment-service-menu${menuOpenAttribute}>
+      <summary class="equipment-service-menu-summary">
+        <span>Tipo de Servicio</span>
+        <small>${escapeEquipmentHtml(selectedLabel)}</small>
+      </summary>
+      <div class="equipment-service-menu-content">${groupsHtml}</div>
+    </details>`;
+  host.querySelector("[data-equipment-service-menu]")?.addEventListener("toggle", (event) => {
+    equipmentState.servicePickerOpen = event.currentTarget.open;
+  });
   host.querySelectorAll("[data-equipment-service-option]").forEach((button) => {
     button.addEventListener("click", () => toggleEquipmentService(button.dataset.equipmentServiceOption || ""));
   });
@@ -13607,6 +13626,7 @@ function resetEquipmentWindowDraft() {
   equipmentState.removedItemIds.clear();
   equipmentState.deletedStack = [];
   equipmentState.activeWindow = "review";
+  equipmentState.servicePickerOpen = false;
   updateNativeEquipmentServiceSelect();
   populateEquipmentEventFields(null);
   const notesInput = equipmentQuery("#equipmentNotes");
