@@ -5818,6 +5818,7 @@ const equipmentServiceGroups = [
 
 const equipmentState = {
   selectedServiceId: "",
+  selectedServiceIds: new Set(),
   djAudioType: "qsc",
   events: [],
   selectedExtraIds: new Set(),
@@ -5885,14 +5886,52 @@ function formatEquipmentDateForFile(value) {
   return `${day}-${month}-${year}`;
 }
 
-function currentEquipmentService() {
-  const service = equipmentServices[equipmentState.selectedServiceId] || null;
+function equipmentNormalizeServiceIds(value) {
+  const values = value instanceof Set ? [...value] : Array.isArray(value) ? value : [value];
+  const seen = new Set();
+  return values
+    .map((serviceId) => String(serviceId || "").trim())
+    .filter((serviceId) => {
+      if (!serviceId || !equipmentServices[serviceId] || seen.has(serviceId)) return false;
+      seen.add(serviceId);
+      return true;
+    });
+}
+
+function selectedEquipmentServiceIds() {
+  const selectedIds = equipmentNormalizeServiceIds(equipmentState.selectedServiceIds);
+  if (selectedIds.length) return selectedIds;
+  return equipmentNormalizeServiceIds(equipmentState.selectedServiceId);
+}
+
+function sameEquipmentServiceIds(firstIds, secondIds) {
+  const first = equipmentNormalizeServiceIds(firstIds);
+  const second = equipmentNormalizeServiceIds(secondIds);
+  return first.length === second.length && first.every((serviceId, index) => serviceId === second[index]);
+}
+
+function updateNativeEquipmentServiceSelect() {
+  const serviceSelect = equipmentQuery("#equipmentServiceSelect");
+  if (!serviceSelect) return;
+  const selectedIds = new Set(selectedEquipmentServiceIds());
+  [...serviceSelect.options].forEach((option) => {
+    option.selected = selectedIds.has(option.value);
+  });
+}
+
+function serviceWithEquipmentAudioOption(serviceId) {
+  const service = equipmentServices[serviceId] || null;
   if (!service) return null;
-  if (!service.audioOptions) return service;
+  const baseService = {
+    ...service,
+    id: serviceId,
+    serviceId
+  };
+  if (!service.audioOptions) return baseService;
   const audioType = service.audioOptions[equipmentState.djAudioType] ? equipmentState.djAudioType : "qsc";
   const audioOption = service.audioOptions?.[audioType] || service.audioOptions?.qsc;
   return {
-    ...service,
+    ...baseService,
     mainSections: (service.mainSections || []).map((section) => {
       if (!section.audioVariant || !audioOption) return section;
       return {
@@ -5905,23 +5944,72 @@ function currentEquipmentService() {
   };
 }
 
+function currentEquipmentServices() {
+  return selectedEquipmentServiceIds()
+    .map(serviceWithEquipmentAudioOption)
+    .filter(Boolean);
+}
+
+function equipmentServicesLabel(services = currentEquipmentServices(), fallback = "Seleccione un servicio") {
+  if (!services.length) return fallback;
+  if (services.length === 1) return services[0].name;
+  const allSundayFunday = services.every((service) => String(service.name || "").startsWith("SUNDAY FUNDAY"));
+  if (allSundayFunday) return `SUNDAY FUNDAY - ${services.length} servicios seleccionados`;
+  return services.map((service) => service.name).join(" + ");
+}
+
+function currentEquipmentService() {
+  const services = currentEquipmentServices();
+  if (!services.length) return null;
+  if (services.length === 1) return services[0];
+  return {
+    id: "multiple-services",
+    serviceId: "multiple-services",
+    name: equipmentServicesLabel(services, "Cuadro de equipo"),
+    source: services.map((service) => service.source || service.name).join(" / "),
+    mainSections: [],
+    extras: []
+  };
+}
+
+function equipmentExtraSelectionKey(serviceId, extraId) {
+  return `${serviceId || "servicio"}::${extraId || "extra"}`;
+}
+
+function isEquipmentExtraSelected(serviceId, extraId, allowLegacyId = false) {
+  const key = equipmentExtraSelectionKey(serviceId, extraId);
+  return equipmentState.selectedExtraIds.has(key) || (allowLegacyId && equipmentState.selectedExtraIds.has(extraId));
+}
+
+function setEquipmentServiceSelection(serviceIds, options = {}) {
+  const normalizedIds = equipmentNormalizeServiceIds(serviceIds);
+  equipmentState.selectedServiceIds = new Set(normalizedIds);
+  equipmentState.selectedServiceId = normalizedIds[0] || "";
+  if (options.clearExtras) equipmentState.selectedExtraIds.clear();
+  updateNativeEquipmentServiceSelect();
+  const selectedServices = currentEquipmentServices();
+  const hasCurrentAudioType = selectedServices.some((service) => service.audioOptions?.[equipmentState.djAudioType]);
+  if (!hasCurrentAudioType) equipmentState.djAudioType = "qsc";
+}
+
 function renderEquipmentServicePicker() {
   const host = equipmentQuery("#equipmentServicePicker");
   if (!host) return;
-  const selectedId = equipmentState.selectedServiceId;
+  const selectedIds = new Set(selectedEquipmentServiceIds());
   host.innerHTML = equipmentServiceGroups
-    .map((group, index) => {
+    .map((group) => {
       const services = group.serviceIds
         .map((serviceId) => ({ serviceId, service: equipmentServices[serviceId] }))
         .filter((entry) => entry.service);
       if (!services.length) return "";
-      const groupHasSelectedService = services.some((entry) => entry.serviceId === selectedId);
+      const groupHasSelectedService = services.some((entry) => selectedIds.has(entry.serviceId));
       const openAttribute = groupHasSelectedService ? " open" : "";
       const options = services
         .map(({ serviceId, service }) => {
-          const activeClass = serviceId === selectedId ? " is-active" : "";
+          const isActive = selectedIds.has(serviceId);
+          const activeClass = isActive ? " is-active" : "";
           return `
-            <button class="equipment-service-option${activeClass}" type="button" data-equipment-service-option="${escapeEquipmentHtml(serviceId)}">
+            <button class="equipment-service-option${activeClass}" type="button" aria-pressed="${isActive ? "true" : "false"}" data-equipment-service-option="${escapeEquipmentHtml(serviceId)}">
               <span>${escapeEquipmentHtml(service.name)}</span>
             </button>`;
         })
@@ -5934,34 +6022,43 @@ function renderEquipmentServicePicker() {
     })
     .join("");
   host.querySelectorAll("[data-equipment-service-option]").forEach((button) => {
-    button.addEventListener("click", () => selectEquipmentService(button.dataset.equipmentServiceOption || ""));
+    button.addEventListener("click", () => toggleEquipmentService(button.dataset.equipmentServiceOption || ""));
   });
 }
 
-function selectEquipmentService(serviceId) {
-  const serviceSelect = equipmentQuery("#equipmentServiceSelect");
-  if (serviceSelect) serviceSelect.value = serviceId;
-  equipmentState.selectedServiceId = serviceId;
-  equipmentState.selectedExtraIds.clear();
+function toggleEquipmentService(serviceId) {
+  if (!equipmentServices[serviceId]) return;
+  const selectedIds = new Set(selectedEquipmentServiceIds());
+  if (selectedIds.has(serviceId)) {
+    selectedIds.delete(serviceId);
+  } else {
+    selectedIds.add(serviceId);
+  }
+  setEquipmentServiceSelection([...selectedIds], { clearExtras: true });
   equipmentState.deletedStack = [];
   equipmentState.activeWindow = "review";
-  const selectedService = equipmentServices[equipmentState.selectedServiceId] || null;
-  if (!selectedService?.audioOptions || !selectedService.audioOptions[equipmentState.djAudioType]) {
-    equipmentState.djAudioType = "qsc";
-  }
+  renderEquipmentModule();
+}
+
+function selectEquipmentService(serviceId = "") {
+  const serviceSelect = equipmentQuery("#equipmentServiceSelect");
+  const selectedIds = serviceSelect?.multiple
+    ? [...serviceSelect.selectedOptions].map((option) => option.value)
+    : [serviceId || serviceSelect?.value || ""];
+  setEquipmentServiceSelection(selectedIds, { clearExtras: true });
+  equipmentState.deletedStack = [];
+  equipmentState.activeWindow = "review";
   renderEquipmentModule();
 }
 
 function syncSelectedEquipmentService() {
   const serviceSelect = equipmentQuery("#equipmentServiceSelect");
   if (!serviceSelect) return;
-  const selectedId = serviceSelect.value;
-  if (!selectedId || !equipmentServices[selectedId] || selectedId === equipmentState.selectedServiceId) return;
-  equipmentState.selectedServiceId = selectedId;
-  const selectedService = equipmentServices[selectedId] || null;
-  if (!selectedService?.audioOptions || !selectedService.audioOptions[equipmentState.djAudioType]) {
-    equipmentState.djAudioType = "qsc";
-  }
+  const selectedIds = serviceSelect.multiple
+    ? [...serviceSelect.selectedOptions].map((option) => option.value)
+    : [serviceSelect.value];
+  if (sameEquipmentServiceIds(selectedIds, selectedEquipmentServiceIds())) return;
+  setEquipmentServiceSelection(selectedIds);
 }
 
 function equipmentSectionKey(section, index, scope, serviceId = "") {
@@ -6050,27 +6147,35 @@ function ensureManualMainSection() {
 }
 
 function selectedEquipmentSections() {
-  const service = currentEquipmentService();
-  if (!service) return [];
-  const mainSections = (service.mainSections || []).map((section, index) => {
-    const sectionKey = equipmentSectionKey(section, index, "main", equipmentState.selectedServiceId);
-    return {
-      ...section,
-      id: sectionKey,
-      items: editableEquipmentItems(section, sectionKey)
-    };
-  }).filter((section) => section.items.length);
-  const manualMainSection = manualMainSectionsForTable();
-  const selectedExtrasSections = (service.extras || [])
-    .filter((extra) => equipmentState.selectedExtraIds.has(extra.id))
-    .map((extra, index) => {
-      const sectionKey = equipmentSectionKey(extra, index, "extra", equipmentState.selectedServiceId);
+  const services = currentEquipmentServices();
+  if (!services.length) return [];
+  const hasMultipleServices = services.length > 1;
+  const mainSections = services.flatMap((service) => {
+    return (service.mainSections || []).map((section, index) => {
+      const sectionKey = equipmentSectionKey(section, index, "main", service.id);
       return {
-      ...extra,
-      id: sectionKey,
-      items: editableEquipmentItems(extra, sectionKey)
-    };
-  }).filter((section) => section.items.length);
+        ...section,
+        id: sectionKey,
+        title: hasMultipleServices ? `${service.name} / ${section.title}` : section.title,
+        items: editableEquipmentItems(section, sectionKey)
+      };
+    }).filter((section) => section.items.length);
+  });
+  const manualMainSection = manualMainSectionsForTable();
+  const selectedExtrasSections = services.flatMap((service) => {
+    return (service.extras || [])
+      .filter((extra) => isEquipmentExtraSelected(service.id, extra.id, services.length <= 1))
+      .map((extra, index) => {
+        const sectionKey = equipmentSectionKey(extra, index, "extra", service.id);
+        return {
+          ...extra,
+          id: sectionKey,
+          title: hasMultipleServices ? `${service.name} / ${extra.title}` : extra.title,
+          items: editableEquipmentItems(extra, sectionKey)
+        };
+      })
+      .filter((section) => section.items.length);
+  });
   const manualExtrasSection = equipmentState.manualExtras.length
     ? [
         {
@@ -6148,10 +6253,12 @@ function equipmentEntriesToMap(entries = []) {
 }
 
 function captureEquipmentEventSnapshot() {
-  const service = currentEquipmentService();
+  const services = currentEquipmentServices();
+  const serviceIds = selectedEquipmentServiceIds();
   return {
-    serviceId: equipmentState.selectedServiceId,
-    serviceName: service?.name || "",
+    serviceIds,
+    serviceId: serviceIds[0] || "",
+    serviceName: equipmentServicesLabel(services, ""),
     djAudioType: equipmentState.djAudioType,
     selectedExtraIds: [...equipmentState.selectedExtraIds],
     manualMainItems: cloneEquipmentSnapshotItems(equipmentState.manualMainItems),
@@ -6169,7 +6276,10 @@ function captureEquipmentEventSnapshot() {
 
 function restoreEquipmentEventSnapshot(event) {
   if (!event) return;
-  equipmentState.selectedServiceId = event.serviceId || equipmentState.selectedServiceId;
+  const restoredServiceIds = Array.isArray(event.serviceIds) && event.serviceIds.length
+    ? event.serviceIds
+    : event.serviceId;
+  setEquipmentServiceSelection(restoredServiceIds);
   equipmentState.djAudioType = event.djAudioType || "qsc";
   equipmentState.selectedExtraIds = new Set(event.selectedExtraIds || []);
   equipmentState.manualMainItems = cloneEquipmentSnapshotItems(event.manualMainItems || []);
@@ -6181,9 +6291,7 @@ function restoreEquipmentEventSnapshot(event) {
   equipmentState.manualExtras = cloneEquipmentSnapshotItems(event.manualExtras || []);
   equipmentState.itemOverrides = equipmentEntriesToMap(event.itemOverrides || []);
   equipmentState.removedItemIds = new Set(event.removedItemIds || []);
-
-  const serviceSelect = equipmentQuery("#equipmentServiceSelect");
-  if (serviceSelect) serviceSelect.value = equipmentState.selectedServiceId;
+  updateNativeEquipmentServiceSelect();
 }
 
 function populateEquipmentEventFields(event) {
@@ -6558,30 +6666,38 @@ function addManualEquipmentSubtitle() {
 function renderEquipmentPredefinedExtras() {
   const host = equipmentQuery("#equipmentPredefinedExtras");
   if (!host) return;
-  const service = currentEquipmentService();
-  if (!service?.extras?.length) {
+  const services = currentEquipmentServices();
+  const extraEntries = services.flatMap((service) => {
+    return (service.extras || []).map((extra) => ({ service, extra }));
+  });
+  if (!extraEntries.length) {
     host.innerHTML = `<p class="equipment-empty">Este servicio no tiene extras cargados.</p>`;
     return;
   }
-  host.innerHTML = service.extras
-    .map((extra) => {
-      const checked = equipmentState.selectedExtraIds.has(extra.id) ? "checked" : "";
+  const hasMultipleServices = services.length > 1;
+  host.innerHTML = extraEntries
+    .map(({ service, extra }) => {
+      const extraKey = equipmentExtraSelectionKey(service.id, extra.id);
+      const checked = isEquipmentExtraSelected(service.id, extra.id, services.length <= 1) ? "checked" : "";
       const itemCount = extra.items?.length || 0;
+      const title = hasMultipleServices ? `${service.name} / ${extra.title}` : extra.title;
       return `
         <label class="equipment-extra-card">
-          <input type="checkbox" data-extra-id="${escapeEquipmentHtml(extra.id)}" ${checked} />
+          <input type="checkbox" data-extra-key="${escapeEquipmentHtml(extraKey)}" data-extra-id="${escapeEquipmentHtml(extra.id)}" ${checked} />
           <span>
-            <strong>${escapeEquipmentHtml(extra.title)}</strong>
+            <strong>${escapeEquipmentHtml(title)}</strong>
             <span>${escapeEquipmentHtml(itemCount)} línea(s) de equipo</span>
           </span>
         </label>`;
     })
     .join("");
-  host.querySelectorAll("[data-extra-id]").forEach((input) => {
+  host.querySelectorAll("[data-extra-key]").forEach((input) => {
     input.addEventListener("change", () => {
       if (input.checked) {
-        equipmentState.selectedExtraIds.add(input.dataset.extraId);
+        equipmentState.selectedExtraIds.add(input.dataset.extraKey);
+        equipmentState.selectedExtraIds.delete(input.dataset.extraId);
       } else {
+        equipmentState.selectedExtraIds.delete(input.dataset.extraKey);
         equipmentState.selectedExtraIds.delete(input.dataset.extraId);
       }
       renderEquipmentModule();
@@ -6810,6 +6926,7 @@ function switchEquipmentWindow(windowName) {
 function resetEquipmentWindowDraft() {
   equipmentState.selectedEventId = "";
   equipmentState.selectedServiceId = "";
+  equipmentState.selectedServiceIds.clear();
   equipmentState.djAudioType = "qsc";
   equipmentState.selectedExtraIds.clear();
   equipmentState.manualMainItems = [];
@@ -6819,8 +6936,7 @@ function resetEquipmentWindowDraft() {
   equipmentState.removedItemIds.clear();
   equipmentState.deletedStack = [];
   equipmentState.activeWindow = "review";
-  const serviceSelect = equipmentQuery("#equipmentServiceSelect");
-  if (serviceSelect) serviceSelect.value = "";
+  updateNativeEquipmentServiceSelect();
   populateEquipmentEventFields(null);
   const notesInput = equipmentQuery("#equipmentNotes");
   if (notesInput) notesInput.value = "";
@@ -6964,16 +7080,19 @@ function renderEquipmentModule() {
 function renderDjAudioOptions() {
   const audioOptions = equipmentQuery("#equipmentDjAudioOptions");
   if (!audioOptions) return;
-  const service = equipmentServices[equipmentState.selectedServiceId] || null;
-  const hasAudioOptions = Boolean(service?.audioOptions);
+  const audioServices = currentEquipmentServices().filter((service) => service.audioOptions);
+  const service = audioServices[0] || null;
+  const hasAudioOptions = Boolean(service);
   audioOptions.classList.toggle("is-hidden", !hasAudioOptions);
   const label = audioOptions.querySelector("[data-audio-options-label]");
   if (label) {
-    label.textContent = hasAudioOptions ? `Tipo de audio para ${service.name}` : "Tipo de audio";
+    label.textContent = audioServices.length > 1
+      ? `Tipo de audio para ${audioServices.length} servicios`
+      : hasAudioOptions ? `Tipo de audio para ${service.name}` : "Tipo de audio";
   }
   audioOptions.querySelectorAll("[data-dj-audio-type]").forEach((button) => {
     const audioType = button.dataset.djAudioType;
-    const isAvailable = hasAudioOptions && Boolean(service.audioOptions?.[audioType]);
+    const isAvailable = hasAudioOptions && audioServices.some((audioService) => Boolean(audioService.audioOptions?.[audioType]));
     button.hidden = hasAudioOptions && !isAvailable;
     button.classList.toggle("is-active", button.dataset.djAudioType === equipmentState.djAudioType);
   });
@@ -7156,7 +7275,7 @@ async function saveEquipmentPdf(mode = "full") {
 function initEquipmentModule() {
   const serviceSelect = equipmentQuery("#equipmentServiceSelect");
   if (!serviceSelect) return;
-  serviceSelect.addEventListener("change", () => selectEquipmentService(serviceSelect.value));
+  serviceSelect.addEventListener("change", () => selectEquipmentService());
   document.querySelectorAll("[data-dj-audio-type]").forEach((button) => {
     button.addEventListener("click", () => {
       equipmentState.djAudioType = button.dataset.djAudioType || "qsc";
