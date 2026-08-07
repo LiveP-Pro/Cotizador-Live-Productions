@@ -13838,6 +13838,73 @@ function equipmentPdfFileName(mode = "full") {
   return `${eventName} - ${plannerName} - ${documentType} - ${eventDates}.pdf`;
 }
 
+function equipmentEditableJsonFileName(fileName) {
+  const pdfName = cleanEquipmentFilePart(fileName || equipmentPdfFileName(), "Cuadro de Equipo.pdf");
+  return pdfName.replace(/\.pdf$/i, "") + ".requerimiento-equipo.json";
+}
+
+function cleanEquipmentJsonFilePart(value, fallback = "Cuadro de Equipo.requerimiento-equipo.json") {
+  const baseName = cleanEquipmentFilePart(value || fallback, fallback).replace(/\.pdf$/i, "");
+  return baseName.toLocaleLowerCase("es-GT").endsWith(".json") ? baseName : `${baseName}.json`;
+}
+
+function cloneEquipmentEventForEditable(event, index = 0) {
+  return {
+    id: event?.id || `event-editable-${index}`,
+    place: event?.place || "",
+    name: event?.name || "",
+    phone: event?.phone || "",
+    date: event?.date || "",
+    responsible: event?.responsible || "",
+    serviceIds: equipmentNormalizeServiceIds(event?.serviceIds?.length ? event.serviceIds : event?.serviceId),
+    serviceId: equipmentNormalizeServiceIds(event?.serviceIds?.length ? event.serviceIds : event?.serviceId)[0] || "",
+    serviceName: event?.serviceName || "",
+    djAudioType: event?.djAudioType || "qsc",
+    selectedExtraIds: Array.isArray(event?.selectedExtraIds) ? [...event.selectedExtraIds] : [],
+    manualMainItems: cloneEquipmentSnapshotItems(event?.manualMainItems || []),
+    manualMainSections: (event?.manualMainSections || []).map((section, sectionIndex) => ({
+      id: section.id || `manual-section-${index}-${sectionIndex}`,
+      title: section.title || "",
+      items: cloneEquipmentSnapshotItems(section.items || [])
+    })),
+    manualExtras: cloneEquipmentSnapshotItems(event?.manualExtras || []),
+    itemOverrides: Array.isArray(event?.itemOverrides) ? event.itemOverrides.map(([key, value]) => [key, { ...(value || {}) }]) : [],
+    removedItemIds: Array.isArray(event?.removedItemIds) ? [...event.removedItemIds] : [],
+    sections: cloneEquipmentSnapshotSections(event?.sections || [])
+  };
+}
+
+function currentEquipmentEditableEvent() {
+  return cloneEquipmentEventForEditable({
+    ...currentEquipmentEventDraft(),
+    ...captureEquipmentEventSnapshot(),
+    id: equipmentState.selectedEventId || "event-draft"
+  });
+}
+
+function equipmentEditablePayload(mode = "full", savedData = {}) {
+  const currentEvent = currentEquipmentEditableEvent();
+  const events = mode === "rent"
+    ? (equipmentState.events.length ? equipmentState.events.map(cloneEquipmentEventForEditable) : [currentEvent])
+    : [currentEvent];
+  return {
+    type: "live-productions-equipment-requirement",
+    version: 1,
+    mode,
+    savedAt: new Date().toISOString(),
+    fileName: savedData.fileName || equipmentPdfFileName(mode),
+    pdfFileName: savedData.fileName || equipmentPdfFileName(mode),
+    jsonFileName: savedData.jsonFileName || equipmentEditableJsonFileName(savedData.fileName || equipmentPdfFileName(mode)),
+    pdfUrl: savedData.pdfUrl || "",
+    jsonUrl: savedData.jsonUrl || "",
+    event: currentEvent,
+    events,
+    inventory: [...equipmentState.inventory.entries()],
+    observations: [...equipmentState.observations.entries()],
+    notes: equipmentQuery("#equipmentNotes")?.value || ""
+  };
+}
+
 function equipmentPdfDownloadUrl(pdfUrl) {
   try {
     return new URL(pdfUrl, window.location.origin).href;
@@ -13846,14 +13913,25 @@ function equipmentPdfDownloadUrl(pdfUrl) {
   }
 }
 
-function downloadEquipmentPdfFallback(fileName, pdfBlob) {
+function downloadEquipmentBlobFallback(fileName, blob) {
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(pdfBlob);
+  link.href = URL.createObjectURL(blob);
   link.download = fileName;
   document.body.appendChild(link);
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function downloadEquipmentPdfFallback(fileName, pdfBlob) {
+  downloadEquipmentBlobFallback(fileName, pdfBlob);
+}
+
+function downloadEquipmentJsonFallback(fileName, editablePayload) {
+  downloadEquipmentBlobFallback(
+    fileName,
+    new Blob([JSON.stringify(editablePayload, null, 2)], { type: "application/json;charset=utf-8" })
+  );
 }
 
 async function writableEquipmentFolderHandle(directoryHandle) {
@@ -13869,15 +13947,26 @@ async function writableEquipmentFolderHandle(directoryHandle) {
   return null;
 }
 
-async function saveEquipmentPdfCopyToComputer(data, savedLabel) {
+async function saveEquipmentPdfCopyToComputer(data, savedLabel, editablePayload) {
   const fileName = cleanEquipmentFilePart(data?.fileName || "Cuadro de Equipo.pdf", "Cuadro de Equipo.pdf");
+  const jsonFileName = cleanEquipmentJsonFilePart(data?.jsonFileName || equipmentEditableJsonFileName(fileName), equipmentEditableJsonFileName(fileName));
+  const finalEditablePayload = {
+    ...editablePayload,
+    fileName,
+    pdfFileName: fileName,
+    jsonFileName,
+    pdfUrl: data?.pdfUrl || "",
+    jsonUrl: data?.jsonUrl || "",
+    absolutePdfUrl: data?.absolutePdfUrl || "",
+    absoluteJsonUrl: data?.absoluteJsonUrl || ""
+  };
   const isLocalApp = ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname);
   if (isLocalApp && data?.folder && !String(data.folder).startsWith("/data/")) {
-    return `${savedLabel}: ${data.fileName} en ${data.folder}`;
+    return `${savedLabel}: ${fileName} + editable ${jsonFileName} en ${data.folder}`;
   }
 
   const pdfUrl = data?.pdfUrl || data?.absolutePdfUrl;
-  if (!pdfUrl) return `${savedLabel}: ${fileName}`;
+  if (!pdfUrl) return `${savedLabel}: ${fileName} + editable ${jsonFileName}`;
 
   const pdfResponse = await fetch(equipmentPdfDownloadUrl(pdfUrl), { credentials: "same-origin" });
   if (!pdfResponse.ok) throw new Error("No se pudo descargar el PDF generado para guardarlo en esta Mac.");
@@ -13885,7 +13974,8 @@ async function saveEquipmentPdfCopyToComputer(data, savedLabel) {
 
   if (!window.showDirectoryPicker) {
     downloadEquipmentPdfFallback(fileName, pdfBlob);
-    return `${savedLabel}: ${fileName}. Se descargó el PDF; este navegador no permite guardar directo en ${equipmentPreferredPdfFolderName}.`;
+    downloadEquipmentJsonFallback(jsonFileName, finalEditablePayload);
+    return `${savedLabel}: ${fileName}. También se descargó el editable ${jsonFileName}.`;
   }
 
   const directoryHandle = await window.showDirectoryPicker({
@@ -13904,7 +13994,15 @@ async function saveEquipmentPdfCopyToComputer(data, savedLabel) {
   const writable = await fileHandle.createWritable();
   await writable.write(pdfBlob);
   await writable.close();
-  return `${savedLabel}: ${fileName} en ${equipmentPreferredPdfFolderName}`;
+
+  const jsonHandle = await writableHandle.getFileHandle(jsonFileName, { create: true });
+  const jsonWritable = await jsonHandle.createWritable();
+  await jsonWritable.write(
+    new Blob([JSON.stringify(finalEditablePayload, null, 2)], { type: "application/json;charset=utf-8" })
+  );
+  await jsonWritable.close();
+
+  return `${savedLabel}: ${fileName} + editable ${jsonFileName} en ${equipmentPreferredPdfFolderName}`;
 }
 
 async function saveEquipmentPdf(mode = "full") {
@@ -13926,30 +14024,91 @@ async function saveEquipmentPdf(mode = "full") {
     const documentSelector = mode === "rent" ? "#equipmentRentPdfDocument" : "#equipmentPdfDocument";
     const title = mode === "rent" ? "Resumen de equipo para renta" : "Equipo y extras para bodega";
     const html = await equipmentPdfHtml(documentSelector, title);
+    const requestedFileName = equipmentPdfFileName(mode);
+    const editablePayload = equipmentEditablePayload(mode, { fileName: requestedFileName });
     const response = await fetch("/api/cuadros-equipo", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        fileName: equipmentPdfFileName(mode),
-        html
+        fileName: requestedFileName,
+        html,
+        editableData: editablePayload
       })
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "No se pudo guardar el cuadro de equipo.");
-    const savedLabel = mode === "rent" ? "PDF de renta guardado" : "PDF de bodega guardado";
-    let statusMessage = `${savedLabel}: ${data.fileName} en ${data.folder}`;
+    const savedLabel = mode === "rent" ? "PDF + JSON de renta guardado" : "PDF + JSON de bodega guardado";
+    let statusMessage = `${savedLabel}: ${data.fileName} + ${data.jsonFileName} en ${data.folder}`;
     try {
-      statusMessage = await saveEquipmentPdfCopyToComputer(data, savedLabel);
+      statusMessage = await saveEquipmentPdfCopyToComputer(data, savedLabel, equipmentEditablePayload(mode, data));
     } catch (saveError) {
       statusMessage = saveError?.name === "AbortError"
-        ? `${savedLabel}: ${data.fileName}. Selección de carpeta cancelada.`
-        : `${savedLabel}: ${data.fileName}. No se copió a ${equipmentPreferredPdfFolderName}: ${saveError.message}`;
+        ? `${savedLabel}: ${data.fileName} + ${data.jsonFileName}. Selección de carpeta cancelada.`
+        : `${savedLabel}: ${data.fileName} + ${data.jsonFileName}. No se copió a ${equipmentPreferredPdfFolderName}: ${saveError.message}`;
     }
     if (status) status.textContent = statusMessage;
     window.open(data.pdfUrl, "_blank", "noopener");
   } catch (error) {
     if (status) status.textContent = error.message || "No se pudo guardar el PDF.";
+  }
+}
+
+function equipmentSimpleEntriesToMap(entries = []) {
+  if (!Array.isArray(entries)) return new Map();
+  return new Map(entries.map(([key, value]) => [String(key || ""), String(value ?? "")]).filter(([key]) => key));
+}
+
+function importedEquipmentEvent(rawEvent, index = 0) {
+  const serviceIds = equipmentNormalizeServiceIds(rawEvent?.serviceIds?.length ? rawEvent.serviceIds : rawEvent?.serviceId);
+  return {
+    ...cloneEquipmentEventForEditable({ ...rawEvent, serviceIds }, index),
+    id: `event-${Date.now()}-${equipmentEventCounter++}`,
+    place: rawEvent?.place || "",
+    name: rawEvent?.name || "",
+    phone: rawEvent?.phone || "",
+    date: rawEvent?.date || "",
+    responsible: rawEvent?.responsible || "",
+    serviceIds,
+    serviceId: serviceIds[0] || "",
+    serviceName: rawEvent?.serviceName || equipmentServicesLabel(serviceIds.map(serviceWithEquipmentAudioOption).filter(Boolean), "Sin servicio")
+  };
+}
+
+function importEquipmentEditablePayload(payload) {
+  if (payload?.type !== "live-productions-equipment-requirement") {
+    throw new Error("Este JSON no pertenece a Requerimiento de Equipo.");
+  }
+  const rawEvents = Array.isArray(payload.events) && payload.events.length
+    ? payload.events
+    : payload.event
+      ? [payload.event]
+      : [];
+  const events = rawEvents.map(importedEquipmentEvent).filter((event) => event.serviceIds.length || event.sections.length);
+  if (!events.length) throw new Error("El JSON no contiene una ventana editable válida.");
+  equipmentState.events = events;
+  equipmentState.inventory = equipmentSimpleEntriesToMap(payload.inventory);
+  equipmentState.observations = equipmentSimpleEntriesToMap(payload.observations);
+  equipmentState.deletedStack = [];
+  equipmentState.activeWindow = "review";
+  const notesInput = equipmentQuery("#equipmentNotes");
+  if (notesInput) notesInput.value = payload.notes || "";
+  loadEquipmentEvent(events[0].id);
+}
+
+async function openEquipmentEditableFile(event) {
+  const file = event?.target?.files?.[0];
+  const status = equipmentQuery("#equipmentSaveStatus");
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    importEquipmentEditablePayload(payload);
+    if (status) status.textContent = `Editable cargado: ${file.name}`;
+  } catch (error) {
+    if (status) status.textContent = error.message || "No se pudo abrir el JSON editable.";
+  } finally {
+    if (event?.target) event.target.value = "";
   }
 }
 
@@ -13997,6 +14156,8 @@ function initEquipmentModule() {
   });
   equipmentQuery("#equipmentSavePdfButton")?.addEventListener("click", () => saveEquipmentPdf("full"));
   equipmentQuery("#equipmentSaveRentPdfButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
+  equipmentQuery("#equipmentOpenEditableButton")?.addEventListener("click", () => equipmentQuery("#equipmentEditableFileInput")?.click());
+  equipmentQuery("#equipmentEditableFileInput")?.addEventListener("change", openEquipmentEditableFile);
   equipmentQuery("#equipmentReviewWindowButton")?.addEventListener("click", () => switchEquipmentWindow("review"));
   equipmentQuery("#equipmentSummaryWindowButton")?.addEventListener("click", () => switchEquipmentWindow("summary"));
   equipmentQuery("#equipmentAddWindowButton")?.addEventListener("click", saveCurrentEquipmentWindow);

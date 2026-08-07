@@ -419,6 +419,15 @@ function publicEquipmentPdfPath(fileName) {
   return `/cuadros-equipo/${encodeURIComponent(fileName)}`;
 }
 
+function equipmentEditableJsonFileName(fileName) {
+  const parsed = path.parse(cleanFileName(fileName || "cuadro-equipo.pdf"));
+  return `${parsed.name}.requerimiento-equipo.json`;
+}
+
+function publicEquipmentFilePath(fileName) {
+  return `/cuadros-equipo/${encodeURIComponent(fileName)}`;
+}
+
 function uniquePdfTarget(fileName) {
   const parsed = path.parse(cleanFileName(fileName));
   let candidate = `${parsed.name}${parsed.ext}`;
@@ -2521,6 +2530,8 @@ async function saveEquipmentBoard(payload, request, response) {
 
   const requestedName = cleanFileName(payload?.fileName || "Cuadro-Equipo-Live-Productions.pdf");
   const { fileName, target } = uniqueEquipmentPdfTarget(requestedName);
+  const jsonFileName = equipmentEditableJsonFileName(fileName);
+  const jsonTarget = path.join(equipmentPdfDir, jsonFileName);
   await generatePdf(html, target, {
     documentSelector: ".equipment-pdf-document",
     pageSelector: ".equipment-pdf-document",
@@ -2533,12 +2544,34 @@ async function saveEquipmentBoard(payload, request, response) {
   });
 
   const publicPath = publicEquipmentPdfPath(fileName);
+  const jsonPath = publicEquipmentFilePath(jsonFileName);
   const origin = publicOrigin(request);
+  const editableData = payload?.editableData && typeof payload.editableData === "object" && !Array.isArray(payload.editableData)
+    ? payload.editableData
+    : {};
+  const savedEditableData = {
+    ...editableData,
+    type: "live-productions-equipment-requirement",
+    version: Number(editableData.version || 1) || 1,
+    savedAt: new Date().toISOString(),
+    fileName,
+    pdfFileName: fileName,
+    jsonFileName,
+    pdfUrl: publicPath,
+    jsonUrl: jsonPath,
+    absolutePdfUrl: origin ? new URL(publicPath, origin).href : publicPath,
+    absoluteJsonUrl: origin ? new URL(jsonPath, origin).href : jsonPath
+  };
+  await fsp.writeFile(jsonTarget, JSON.stringify(savedEditableData, null, 2), "utf8");
+
   jsonResponse(response, 200, {
     fileName,
+    jsonFileName,
     folder: equipmentPdfDir,
     pdfUrl: publicPath,
-    absolutePdfUrl: origin ? new URL(publicPath, origin).href : publicPath
+    jsonUrl: jsonPath,
+    absolutePdfUrl: origin ? new URL(publicPath, origin).href : publicPath,
+    absoluteJsonUrl: origin ? new URL(jsonPath, origin).href : jsonPath
   });
 }
 
