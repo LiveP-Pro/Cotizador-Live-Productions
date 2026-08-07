@@ -9741,6 +9741,1710 @@ const saxofonicSheetServices = {
     extras: []
   }
 };
+const pantallaLedServiceIds = [
+  "pantalla-led-en-modulos-3mts-al-ras-de-piso",
+  "pantalla-led-en-modulos-3mts-sobre-tarima",
+  "pantalla-led-en-modulos-2mts-sobre-tarima",
+  "pantalla-led-en-modulos-2mts-al-ras-de-piso",
+  "pantalla-led-3-x-2mts-al-ras-de-piso",
+  "pantalla-led-3-x-2mts-sobre-tarima",
+  "pantalla-led-6-x-2mts-al-ras-de-piso",
+  "pantalla-led-6-x-2mts-sobre-tarima",
+  "pantalla-led-6-x-3mts-al-ras-de-piso",
+  "pantalla-led-6-x-3mts-sobre-tarima",
+  "pantalla-led-6-x-4mts-al-ras-de-piso",
+  "pantalla-led-6-x-4mts-sobre-tarima",
+  "pantalla-led-dj-booth"
+];
+
+const pantallaLedServices = {
+  "pantalla-led-en-modulos-3mts-al-ras-de-piso": {
+    "name": "PANTALLA LED EN MODULOS 3MTS AL RAS DE PISO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            24,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            24,
+            "Cable de corriente"
+          ],
+          [
+            24,
+            "Cable de señal"
+          ],
+          [
+            8,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de DVI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            2,
+            "Cable de USB a datos"
+          ],
+          [
+            4,
+            "Cat 5 de 50mts."
+          ],
+          [
+            2,
+            "Cat 5 de 10mts."
+          ],
+          [
+            2,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            6,
+            "Truss 1 mt"
+          ],
+          [
+            12,
+            "Truss 0.50 mt"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            100,
+            "Pin"
+          ],
+          [
+            40,
+            "Chiche"
+          ],
+          [
+            2,
+            "Strap"
+          ],
+          [
+            7,
+            "Chaco"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            2,
+            "retazos de tela de 8 metros color negro"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-en-modulos-3mts-sobre-tarima": {
+    "name": "PANTALLA LED EN MODULOS 3MTS - SOBRE TARIMA",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            24,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            24,
+            "Cable de corriente"
+          ],
+          [
+            24,
+            "Cable de señal"
+          ],
+          [
+            8,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de DVI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            2,
+            "Cable de USB a datos"
+          ],
+          [
+            4,
+            "Cat 5 de 50mts."
+          ],
+          [
+            2,
+            "Cat 5 de 10mts."
+          ],
+          [
+            2,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            6,
+            "Truss 1 mt"
+          ],
+          [
+            6,
+            "Truss 0.50 mt"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            100,
+            "Pin"
+          ],
+          [
+            40,
+            "Chiche"
+          ],
+          [
+            2,
+            "Strap"
+          ],
+          [
+            7,
+            "Chaco"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            2,
+            "retazos de tela de 8 metros color negro"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-en-modulos-2mts-sobre-tarima": {
+    "name": "PANTALLA LED EN MODULOS 2MTS - SOBRE TARIMA",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            15,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            15,
+            "Cable de corriente"
+          ],
+          [
+            15,
+            "Cable de señal"
+          ],
+          [
+            5,
+            "Cable power spicon"
+          ],
+          [
+            1,
+            "Cable de DVI A DVI"
+          ],
+          [
+            1,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            1,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            1,
+            "Cable de USB a datos"
+          ],
+          [
+            1,
+            "Cat 5 de 10mts."
+          ],
+          [
+            1,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            4,
+            "Truss 0.50 mt"
+          ],
+          [
+            5,
+            "Platina pequeña"
+          ],
+          [
+            5,
+            "Platina grande"
+          ],
+          [
+            50,
+            "Pin"
+          ],
+          [
+            40,
+            "Chiche"
+          ],
+          [
+            5,
+            "Strap"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            2,
+            "retazos de tela de 8 metros color negro"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-en-modulos-2mts-al-ras-de-piso": {
+    "name": "PANTALLA LED EN MODULOS 2MTS - AL RAS DE PISO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            15,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            15,
+            "Cable de corriente"
+          ],
+          [
+            15,
+            "Cable de señal"
+          ],
+          [
+            5,
+            "Cable power spicon"
+          ],
+          [
+            1,
+            "Cable de DVI A DVI"
+          ],
+          [
+            1,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            1,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            1,
+            "Cable de USB a datos"
+          ],
+          [
+            1,
+            "Cat 5 de 10mts."
+          ],
+          [
+            1,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            6,
+            "Truss 0.50 mt"
+          ],
+          [
+            5,
+            "Platina pequeña"
+          ],
+          [
+            5,
+            "Platina grande"
+          ],
+          [
+            50,
+            "Pin"
+          ],
+          [
+            40,
+            "Chiche"
+          ],
+          [
+            5,
+            "Strap"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            2,
+            "retazos de tela de 8 metros color negro"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-3-x-2mts-al-ras-de-piso": {
+    "name": "PANTALLA LED 3 X 2MTS AL RAS DE PISO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            14,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ],
+          [
+            1,
+            "Clickers completo"
+          ],
+          [
+            1,
+            "Interfaz de audio volth 2"
+          ],
+          [
+            1,
+            "Splitter de HDMI"
+          ],
+          [
+            1,
+            "Atem mini con cargador"
+          ],
+          [
+            1,
+            "Interfaz Akai con cargador"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            15,
+            "Cable de corriente"
+          ],
+          [
+            15,
+            "Cable de señal"
+          ],
+          [
+            4,
+            "Cable power spicon"
+          ],
+          [
+            1,
+            "Cable de DVI A DVI"
+          ],
+          [
+            1,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            1,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            1,
+            "Cable de USB a datos"
+          ],
+          [
+            2,
+            "Cat 5 de 50mts."
+          ],
+          [
+            1,
+            "HDMI de 5mts"
+          ],
+          [
+            1,
+            "HDMI de 15mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            2,
+            "Truss 2 mt"
+          ],
+          [
+            2,
+            "Truss 0.50 mt"
+          ],
+          [
+            4,
+            "Platina grande"
+          ],
+          [
+            4,
+            "Platina pequeña"
+          ],
+          [
+            50,
+            "Pin"
+          ],
+          [
+            25,
+            "Chiche"
+          ],
+          [
+            2,
+            "Strap"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            5,
+            "retazos de tela grandes color negro"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-3-x-2mts-sobre-tarima": {
+    "name": "PANTALLA LED 3 X 2MTS - SOBRE TARIMA",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            14,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ],
+          [
+            1,
+            "Clickers completo"
+          ],
+          [
+            1,
+            "Interfaz de audio volth 2"
+          ],
+          [
+            1,
+            "Splitter de HDMI"
+          ],
+          [
+            1,
+            "Atem mini con cargador"
+          ],
+          [
+            1,
+            "Interfaz akain con cargador"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            15,
+            "Cable de corriente"
+          ],
+          [
+            15,
+            "Cable de señal"
+          ],
+          [
+            4,
+            "Cable power spicon"
+          ],
+          [
+            1,
+            "Cable de DVI A DVI"
+          ],
+          [
+            1,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            1,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            1,
+            "Cable de USB a datos"
+          ],
+          [
+            2,
+            "Cat 5 de 50mts."
+          ],
+          [
+            1,
+            "HDMI de 5mts"
+          ],
+          [
+            1,
+            "HDMI de 15mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            2,
+            "Truss 2 mt"
+          ],
+          [
+            4,
+            "Truss 0.50 mt"
+          ],
+          [
+            4,
+            "Platina grande"
+          ],
+          [
+            4,
+            "Platina pequeña"
+          ],
+          [
+            50,
+            "Pin"
+          ],
+          [
+            25,
+            "Chiche"
+          ],
+          [
+            2,
+            "Strap"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            5,
+            "retazos de tela grandes color negro"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-6-x-2mts-al-ras-de-piso": {
+    "name": "PANTALLA LED 6 X 2MTS - AL RAS DE PISO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            24,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ],
+          [
+            1,
+            "Capturadora de video"
+          ],
+          [
+            1,
+            "Clickers completo"
+          ],
+          [
+            1,
+            "Interfaz de audio volth 2"
+          ],
+          [
+            1,
+            "Atem mini con cargador"
+          ],
+          [
+            1,
+            "Interfaz akain con cargador"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            24,
+            "Cable de corriente"
+          ],
+          [
+            24,
+            "Cable de señal"
+          ],
+          [
+            6,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de DVI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            2,
+            "Cable de USB a datos"
+          ],
+          [
+            2,
+            "Cat 5 de 50mts."
+          ],
+          [
+            2,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            6,
+            "Truss 0.50 mt"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            120,
+            "Pin"
+          ],
+          [
+            72,
+            "Chiche"
+          ],
+          [
+            2,
+            "Strap"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            2,
+            "retazos de tela color negro de 8 mts"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-6-x-2mts-sobre-tarima": {
+    "name": "PANTALLA LED 6 X 2MTS - SOBRE TARIMA",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            24,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ],
+          [
+            1,
+            "Capturadora de video"
+          ],
+          [
+            1,
+            "Clickers completo"
+          ],
+          [
+            1,
+            "Interfaz de audio volth 2"
+          ],
+          [
+            1,
+            "Atem mini con cargador"
+          ],
+          [
+            1,
+            "Interfaz akain con cargador"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            24,
+            "Cable de corriente"
+          ],
+          [
+            24,
+            "Cable de señal"
+          ],
+          [
+            6,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de DVI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            2,
+            "Cable de USB a datos"
+          ],
+          [
+            2,
+            "Cat 5 de 50mts."
+          ],
+          [
+            2,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            12,
+            "Truss 0.50 mt"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            120,
+            "Pin"
+          ],
+          [
+            72,
+            "Chiche"
+          ],
+          [
+            2,
+            "Strap"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            2,
+            "retazos de tela color negro de 8 mts"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-6-x-3mts-al-ras-de-piso": {
+    "name": "PANTALLA LED 6 X 3MTS - AL RAS DE PISO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            40,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ],
+          [
+            1,
+            "Capturadora de video"
+          ],
+          [
+            1,
+            "Clickers completo"
+          ],
+          [
+            1,
+            "Interfaz de audio volth 2"
+          ],
+          [
+            1,
+            "Atem mini con cargador"
+          ],
+          [
+            1,
+            "Interfaz akain con cargador"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            40,
+            "Cable de corriente"
+          ],
+          [
+            40,
+            "Cable de señal"
+          ],
+          [
+            10,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de DVI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            2,
+            "Cable de USB a datos"
+          ],
+          [
+            4,
+            "Cat 5 de 50mts."
+          ],
+          [
+            2,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            6,
+            "Truss 1 mt"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            120,
+            "Pin"
+          ],
+          [
+            72,
+            "Chiche"
+          ],
+          [
+            2,
+            "Strap"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            2,
+            "retazos de tela color negro de 8 mts"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-6-x-3mts-sobre-tarima": {
+    "name": "PANTALLA LED 6 X 3MTS - SOBRE TARIMA",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            40,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ],
+          [
+            1,
+            "Capturadora de video"
+          ],
+          [
+            1,
+            "Clickers completo"
+          ],
+          [
+            1,
+            "Interfaz de audio volth 2"
+          ],
+          [
+            1,
+            "Atem mini con cargador"
+          ],
+          [
+            1,
+            "Interfaz akain con cargador"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            40,
+            "Cable de corriente"
+          ],
+          [
+            40,
+            "Cable de señal"
+          ],
+          [
+            10,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de DVI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            2,
+            "Cable de USB a datos"
+          ],
+          [
+            4,
+            "Cat 5 de 50mts."
+          ],
+          [
+            2,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            6,
+            "Truss 1 mt"
+          ],
+          [
+            6,
+            "Truss 0.50 mt"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            120,
+            "Pin"
+          ],
+          [
+            72,
+            "Chiche"
+          ],
+          [
+            2,
+            "Strap"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            2,
+            "retazos de tela color negro de 8 mts"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-6-x-4mts-al-ras-de-piso": {
+    "name": "PANTALLA LED 6 X 4MTS - AL RAS DE PISO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            54,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ],
+          [
+            1,
+            "Capturadora de video"
+          ],
+          [
+            1,
+            "Clickers completo"
+          ],
+          [
+            1,
+            "Interfaz de audio volth 2"
+          ],
+          [
+            1,
+            "Atem mini con cargador"
+          ],
+          [
+            1,
+            "Interfaz akain con cargador"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            54,
+            "Cable de corriente"
+          ],
+          [
+            54,
+            "Cable de señal"
+          ],
+          [
+            15,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de DVI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            2,
+            "Cable de USB a datos"
+          ],
+          [
+            4,
+            "Cat 5 de 50mts."
+          ],
+          [
+            2,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            14,
+            "Truss 2 mt"
+          ],
+          [
+            7,
+            "Platina pequeña"
+          ],
+          [
+            7,
+            "Platina grande"
+          ],
+          [
+            140,
+            "Pin"
+          ],
+          [
+            72,
+            "Chiche"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            2,
+            "retazos de tela color negro de 8 mts"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-6-x-4mts-sobre-tarima": {
+    "name": "PANTALLA LED 6 X 4MTS - SOBRE TARIMA",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            54,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ],
+          [
+            1,
+            "Capturadora de video"
+          ],
+          [
+            1,
+            "Clickers completo"
+          ],
+          [
+            1,
+            "Interfaz de audio volth 2"
+          ],
+          [
+            1,
+            "Atem mini con cargador"
+          ],
+          [
+            1,
+            "Interfaz akain con cargador"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            54,
+            "Cable de corriente"
+          ],
+          [
+            54,
+            "Cable de señal"
+          ],
+          [
+            15,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de DVI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            2,
+            "Cable de USB a datos"
+          ],
+          [
+            4,
+            "Cat 5 de 50mts."
+          ],
+          [
+            2,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        "title": "Estructura para pantalla",
+        "items": [
+          [
+            14,
+            "Truss 2 mt"
+          ],
+          [
+            7,
+            "Truss 0.50 mt"
+          ],
+          [
+            7,
+            "Platina pequeña"
+          ],
+          [
+            7,
+            "Platina grande"
+          ],
+          [
+            170,
+            "Pin"
+          ],
+          [
+            87,
+            "Chiche"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar estructuras",
+        "items": [
+          [
+            2,
+            "retazos de tela color negro de 8 mts"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pantalla-led-dj-booth": {
+    "name": "PANTALLA LED - DJ BOOTH",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PANTALLA LED",
+    "mainSections": [
+      {
+        "title": "PANTALLA EN MODULOS",
+        "items": [
+          [
+            3,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ]
+        ]
+      },
+      {
+        "title": "CABLES PARA PANTALLA",
+        "items": [
+          [
+            3,
+            "Cable de corriente"
+          ],
+          [
+            3,
+            "Cable de señal"
+          ],
+          [
+            1,
+            "Cable power spicon"
+          ],
+          [
+            1,
+            "Cable de DVI A DVI"
+          ],
+          [
+            1,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            1,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            1,
+            "Cable de USB a datos"
+          ],
+          [
+            1,
+            "Cat 5 de 10mts."
+          ],
+          [
+            1,
+            "HDMI de 5mts"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  }
+};
+
+const estructuraEnLServiceIds = [
+  "estructura-en-l"
+];
+
+const estructuraEnLServices = {
+  "estructura-en-l": {
+    "name": "Estructuras en L",
+    "source": "EQUIPO-DE-AUDIO.xlsx / ESTRUCTURA EN L",
+    "mainSections": [
+      {
+        "title": "Equipo",
+        "items": [
+          [
+            2,
+            "Truss 2 mt"
+          ],
+          [
+            2,
+            "Truss 1 mt"
+          ],
+          [
+            4,
+            "Truss 0.50 mt"
+          ],
+          [
+            2,
+            "Cubo de diseño"
+          ],
+          [
+            2,
+            "Contrapeso"
+          ],
+          [
+            2,
+            "Zapata"
+          ],
+          [
+            2,
+            "straps"
+          ],
+          [
+            2,
+            "polipastos"
+          ],
+          [
+            2,
+            "slingas"
+          ],
+          [
+            120,
+            "pines"
+          ],
+          [
+            70,
+            "chiches"
+          ]
+        ]
+      },
+      {
+        "title": "Telas para forrar",
+        "items": [
+          [
+            2,
+            "telas de 4 metros en color blanco y negro"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  }
+};
+
+const ceremoniaServiceIds = [
+  "ceremonia-cuadro-de-montaje"
+];
+
+const ceremoniaServices = {
+  "ceremonia-cuadro-de-montaje": {
+    "name": "CEREMONIA",
+    "source": "EQUIPO-DE-AUDIO.xlsx / CEREMONIA",
+    "mainSections": [
+      {
+        "title": "Consola",
+        "items": [
+          [
+            1,
+            "Consola analoga con cable ac"
+          ]
+        ]
+      },
+      {
+        "title": "Telefono (Mochila)",
+        "items": [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        "title": "Audio",
+        "items": [
+          [
+            2,
+            "Bocina IP 2000 con funda"
+          ]
+        ]
+      },
+      {
+        "title": "In ears",
+        "items": [
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ]
+        ]
+      },
+      {
+        "title": "Microfonia para voces",
+        "items": [
+          [
+            1,
+            "Mic. Sm 58 inalambrico"
+          ],
+          [
+            2,
+            "Caja directa"
+          ],
+          [
+            1,
+            "Mic. de diadema SHURE color piel"
+          ]
+        ]
+      },
+      {
+        "title": "Pedestales",
+        "items": [
+          [
+            2,
+            "Pedestal de brazo"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  }
+};
+
 const sundayFundayOperationalExtras = [];
 
 const equipmentServices = {
@@ -9768,7 +11472,10 @@ const equipmentServices = {
   ...novaloopsServices,
   ...estuardoReynaServices,
   ...djSheetServices,
-  ...saxofonicSheetServices
+  ...saxofonicSheetServices,
+  ...pantallaLedServices,
+  ...estructuraEnLServices,
+  ...ceremoniaServices
 };
 
 const operationalFixedExtraIds = new Set([
@@ -9825,6 +11532,18 @@ const equipmentServiceGroups = [
   {
     label: "SAXOFONIC",
     serviceIds: saxofonicSheetServiceIds
+  },
+  {
+    label: "PANTALLA LED",
+    serviceIds: pantallaLedServiceIds
+  },
+  {
+    label: "ESTRUCTURA EN L",
+    serviceIds: estructuraEnLServiceIds
+  },
+  {
+    label: "CEREMONIA",
+    serviceIds: ceremoniaServiceIds
   }
 ];
 
