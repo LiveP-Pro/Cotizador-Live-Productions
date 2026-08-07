@@ -5749,6 +5749,483 @@ const sundayFundayServices = {
   }
 };
 
+const novaloopsServiceIds = [
+  "novaloops-completo"
+];
+
+const novaloopsServices = {
+  "novaloops-completo": {
+    name: "NOVALOOPS - COMPLETO",
+    source: "EQUIPO-DE-AUDIO.xlsx / NOVALOOPS",
+    mainSections: [
+      {
+        title: "Consola",
+        items: [
+          [
+            1,
+            "Consola X32 mesa digital con cable ac"
+          ],
+          [
+            1,
+            "Router con cargador y funda"
+          ],
+          [
+            2,
+            "Ipad con cargador"
+          ]
+        ]
+      },
+      {
+        title: "Telefono (Mochila)",
+        items: [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        title: "Audio",
+        items: [
+          [
+            4,
+            "Bocinas QSC con 2 cables power spicon y 2 cables puente"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ],
+          [
+            1,
+            "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac"
+          ],
+          [
+            2,
+            "Sub QSC 18 pasivo"
+          ],
+          [
+            1,
+            "Snake de 18 canales"
+          ],
+          [
+            1,
+            "Grabadora de audio"
+          ]
+        ]
+      },
+      {
+        title: "Monitoreo",
+        items: [
+          [
+            2,
+            "Bocina Turbosound IQ15 con 2 cables power spicon"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ]
+        ]
+      },
+      {
+        title: "In ears",
+        items: [
+          [
+            2,
+            "In ears Phenyx con cargador y case"
+          ],
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ],
+          [
+            1,
+            "Porta bateria cuadrada Bonai"
+          ],
+          [
+            4,
+            "Intercomunicador Hollyland"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para bateria",
+        items: [
+          [
+            4,
+            "Mic. SM57 alambrico"
+          ],
+          [
+            1,
+            "Mic. Beta 52A"
+          ],
+          [
+            2,
+            "Mic. Pg81"
+          ],
+          [
+            4,
+            "Clamp para microfono de metal"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para voces",
+        items: [
+          [
+            3,
+            "Mic. Sm 58 alambrico"
+          ],
+          [
+            2,
+            "Mic. Sm 58 inalambrico"
+          ],
+          [
+            2,
+            "Caja directa"
+          ]
+        ]
+      },
+      {
+        title: "Pedestales",
+        items: [
+          [
+            1,
+            "Pedestal recto"
+          ],
+          [
+            6,
+            "Pedestal de brazo"
+          ]
+        ]
+      },
+      {
+        title: "Luces",
+        items: [
+          [
+            6,
+            "Beam 260 con cable power spicon"
+          ],
+          [
+            6,
+            "Par LED RGB con cable ac"
+          ],
+          [
+            2,
+            "Laser con cable power spicon"
+          ],
+          [
+            2,
+            "Wash con cable power spicon"
+          ],
+          [
+            24,
+            "Clamp para luces"
+          ],
+          [
+            24,
+            "Base de clamp"
+          ],
+          [
+            4,
+            "Tubo galvanizado"
+          ],
+          [
+            4,
+            "Hamburguesa doble"
+          ],
+          [
+            2,
+            "Spliter American DJ con cable ac"
+          ],
+          [
+            2,
+            "Blinder RGB con cable power spicon"
+          ],
+          [
+            1,
+            "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)"
+          ]
+        ]
+      },
+      {
+        title: "Maquina de humo",
+        items: [
+          [
+            2,
+            "Maquina de humo con control, cable ac y ventilador"
+          ],
+          [
+            1,
+            "Galon liquido de humo"
+          ]
+        ]
+      },
+      {
+        title: "Estructura DJ",
+        items: [
+          [
+            2,
+            "Marco DJ booth grande"
+          ],
+          [
+            1,
+            "Marco DJ booth pequeño"
+          ],
+          [
+            1,
+            "DJ booth"
+          ]
+        ]
+      },
+      {
+        title: "Estructura Luces",
+        items: [
+          [
+            4,
+            "Truss 2 mt"
+          ],
+          [
+            8,
+            "Truss 0.50 cm"
+          ],
+          [
+            4,
+            "Platina pequeña"
+          ],
+          [
+            4,
+            "Platina grande"
+          ],
+          [
+            50,
+            "Pin"
+          ],
+          [
+            24,
+            "Chiche"
+          ]
+        ]
+      },
+      {
+        title: "Telas para forrar estructuras",
+        items: [
+          [
+            4,
+            "Funda para truss color negro de 3 mts"
+          ],
+          [
+            1,
+            "Tela pequeña para forrar DJ booth color negro (DJ)"
+          ],
+          [
+            2,
+            "Tela grande para forrar DJ booth color negro (controles)"
+          ]
+        ]
+      },
+      {
+        title: "Case de Cableado",
+        items: [
+          [
+            1,
+            "Distro de corriente"
+          ],
+          [
+            5,
+            "Cable ac"
+          ],
+          [
+            5,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de 1/4\" a 1/4\""
+          ],
+          [
+            1,
+            "Case de pulpos (6 grandes y 6 pequeños)"
+          ],
+          [
+            1,
+            "Cable TCJ"
+          ],
+          [
+            6,
+            "Cuadro de corriente"
+          ],
+          [
+            6,
+            "Regleta"
+          ],
+          [
+            60,
+            "Cable XLR"
+          ],
+          [
+            40,
+            "Extensión"
+          ]
+        ]
+      },
+      {
+        title: "Extras",
+        items: [
+          [
+            1,
+            "Extintor"
+          ],
+          [
+            1,
+            "Bolsa de agua pura"
+          ]
+        ]
+      },
+      {
+        title: "Caja de Herramientas",
+        items: [
+          [
+            1,
+            "Macho"
+          ],
+          [
+            2,
+            "Pata de Gallo"
+          ],
+          [
+            1,
+            "Flipon doble de 50 amp"
+          ],
+          [
+            1,
+            "Desarmador de estrella"
+          ],
+          [
+            1,
+            "Desarmador de castigaderas"
+          ],
+          [
+            1,
+            "Cuchilla"
+          ],
+          [
+            1,
+            "Estuche llaves Allen (25 unidades)"
+          ],
+          [
+            1,
+            "Alicate"
+          ],
+          [
+            1,
+            "Tenaza"
+          ],
+          [
+            1,
+            "Pinza"
+          ],
+          [
+            1,
+            "Espiga tipo tester"
+          ],
+          [
+            1,
+            "Multímetro Fluke con estuche"
+          ],
+          [
+            5,
+            "Duc tape"
+          ],
+          [
+            3,
+            "Paquete de cinchos 0.35 cm"
+          ],
+          [
+            7,
+            "Cinta de aislar Electrica PVC"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Limpieza",
+        items: [
+          [
+            5,
+            "Trapo"
+          ],
+          [
+            1,
+            "Escoba"
+          ],
+          [
+            1,
+            "Pala"
+          ],
+          [
+            5,
+            "Trapiador"
+          ],
+          [
+            1,
+            "Atomizador con desinfectante"
+          ],
+          [
+            1,
+            "Atomizador con silicón"
+          ],
+          [
+            2,
+            "Espuma limpiadora"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de proteccion",
+        items: [
+          [
+            10,
+            "Bolsa jardinera de tonel"
+          ],
+          [
+            3,
+            "Retazo de nylon (para tapar equipo)"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Seguridad Industrial",
+        items: [
+          [
+            6,
+            "Casco"
+          ],
+          [
+            6,
+            "Chaleco"
+          ],
+          [
+            0,
+            "Par de botas"
+          ],
+          [
+            6,
+            "Par de guantes"
+          ],
+          [
+            1,
+            "Arnes completo"
+          ]
+        ]
+      }
+    ],
+    extras: []
+  }
+};
+
 const sundayFundayOperationalExtras = [];
 
 const equipmentServices = {
@@ -5772,7 +6249,8 @@ const equipmentServices = {
     mainSections: saxofonicConAudioMainSections,
     extras: []
   },
-  ...sundayFundayServices
+  ...sundayFundayServices,
+  ...novaloopsServices
 };
 
 const operationalFixedExtraIds = new Set([
@@ -5813,6 +6291,10 @@ const equipmentServiceGroups = [
   {
     label: "SUNDAY FUNDAY",
     serviceIds: sundayFundayServiceIds
+  },
+  {
+    label: "NOVALOOPS",
+    serviceIds: novaloopsServiceIds
   }
 ];
 
