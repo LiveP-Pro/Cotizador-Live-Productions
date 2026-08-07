@@ -5813,10 +5813,6 @@ const equipmentServiceGroups = [
   {
     label: "SUNDAY FUNDAY",
     serviceIds: sundayFundayServiceIds
-  },
-  {
-    label: "OTROS SERVICIOS",
-    serviceIds: ["dj-completo", "saxofonic-completo", "saxofonic-con-audio"]
   }
 ];
 
@@ -5920,7 +5916,7 @@ function renderEquipmentServicePicker() {
         .filter((entry) => entry.service);
       if (!services.length) return "";
       const groupHasSelectedService = services.some((entry) => entry.serviceId === selectedId);
-      const openAttribute = groupHasSelectedService || (!selectedId && index === 0) ? " open" : "";
+      const openAttribute = groupHasSelectedService ? " open" : "";
       const options = services
         .map(({ serviceId, service }) => {
           const activeClass = serviceId === selectedId ? " is-active" : "";
