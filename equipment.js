@@ -13180,19 +13180,17 @@ function addEquipmentEvent() {
     if (status) status.textContent = "Escriba el nombre del evento antes de crear la ventana.";
     return;
   }
-  const createdEvents = serviceIds.map((serviceId) => ({
+  const createdEvent = {
     ...draft,
-    ...captureEquipmentEventSnapshotForServiceIds([serviceId]),
+    ...captureEquipmentEventSnapshot(),
     id: `event-${Date.now()}-${equipmentEventCounter++}`
-  }));
-  equipmentState.events.push(...createdEvents);
+  };
+  equipmentState.events.push(createdEvent);
   resetEquipmentWindowDraft();
   renderEquipmentModule();
   const nextStatus = equipmentQuery("#equipmentSaveStatus");
   if (nextStatus) {
-    nextStatus.textContent = createdEvents.length > 1
-      ? `${createdEvents.length} ventanas independientes agregadas para ${draft.place}. Ya puede capturar el siguiente evento.`
-      : `Ventana agregada para ${draft.place}. Ya puede capturar el siguiente evento.`;
+    nextStatus.textContent = `Ventana agregada para ${draft.place}. Ya puede capturar el siguiente evento.`;
   }
 }
 
@@ -13670,10 +13668,6 @@ function saveCurrentEquipmentWindow() {
   const event = selectedEquipmentEvent();
   if (!event) {
     addEquipmentEvent();
-    return;
-  }
-  if (selectedEquipmentServiceIds().length > 1) {
-    if (status) status.textContent = "Una ventana solo puede guardar un servicio. Use Agregar ventana para separar los servicios seleccionados.";
     return;
   }
   updateEquipmentEventFromCurrent(event);
