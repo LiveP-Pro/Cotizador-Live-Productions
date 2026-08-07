@@ -11445,6 +11445,883 @@ const ceremoniaServices = {
   }
 };
 
+const coctelServiceIds = [
+  "coctel-saxofonic",
+  "coctel-violin",
+  "coctel-playlist"
+];
+
+const coctelServices = {
+  "coctel-saxofonic": {
+    "name": "COCTEL - SAXOFONIC",
+    "source": "EQUIPO-DE-AUDIO.xlsx / COCTEL",
+    "mainSections": [
+      {
+        "title": "Consola",
+        "items": [
+          [
+            1,
+            "Consola analoga con cable ac"
+          ]
+        ]
+      },
+      {
+        "title": "Telefono (Mochila)",
+        "items": [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        "title": "Audio",
+        "items": [
+          [
+            2,
+            "Bocina IP 2000 con funda"
+          ]
+        ]
+      },
+      {
+        "title": "In ears",
+        "items": [
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ]
+        ]
+      },
+      {
+        "title": "Microfonia para voces",
+        "items": [
+          [
+            1,
+            "Mic. inalambrico de saxo"
+          ]
+        ]
+      },
+      {
+        "title": "Case de Cableado",
+        "items": [
+          [
+            2,
+            "Regleta"
+          ],
+          [
+            6,
+            "Cable XLR"
+          ],
+          [
+            4,
+            "Extensión"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "coctel-violin": {
+    "name": "COCTEL - VIOLIN",
+    "source": "EQUIPO-DE-AUDIO.xlsx / COCTEL",
+    "mainSections": [
+      {
+        "title": "Consola",
+        "items": [
+          [
+            1,
+            "Consola analoga con cable ac"
+          ]
+        ]
+      },
+      {
+        "title": "Telefono (Mochila)",
+        "items": [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        "title": "Audio",
+        "items": [
+          [
+            2,
+            "Bocina IP 2000 con funda"
+          ]
+        ]
+      },
+      {
+        "title": "In ears",
+        "items": [
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ]
+        ]
+      },
+      {
+        "title": "Microfonia para voces",
+        "items": [
+          [
+            1,
+            "Mic. inalambrico de violin"
+          ],
+          [
+            2,
+            "Caja directa"
+          ]
+        ]
+      },
+      {
+        "title": "Case de Cableado",
+        "items": [
+          [
+            2,
+            "Regleta"
+          ],
+          [
+            6,
+            "Cable XLR"
+          ],
+          [
+            4,
+            "Extensión"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "coctel-playlist": {
+    "name": "COCTEL - PLAYLIST",
+    "source": "EQUIPO-DE-AUDIO.xlsx / COCTEL",
+    "mainSections": [
+      {
+        "title": "Consola",
+        "items": [
+          [
+            1,
+            "Consola analoga con cable ac"
+          ]
+        ]
+      },
+      {
+        "title": "Telefono (Mochila)",
+        "items": [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        "title": "Audio",
+        "items": [
+          [
+            2,
+            "Bocina IP 2000 con funda"
+          ]
+        ]
+      },
+      {
+        "title": "In ears",
+        "items": [
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ]
+        ]
+      },
+      {
+        "title": "Case de Cableado",
+        "items": [
+          [
+            2,
+            "Regleta"
+          ],
+          [
+            6,
+            "Cable XLR"
+          ],
+          [
+            4,
+            "Extensión"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  }
+};
+
+const tarimaServiceIds = [
+  "tarima-6-x-4mts-negro",
+  "tarima-6-x-4mts-con-diseno",
+  "tarima-6-x-5-mts-negro",
+  "tarima-5-x-4mts-negro",
+  "tarima-3-x-4mts-negro"
+];
+
+const tarimaServices = {
+  "tarima-6-x-4mts-negro": {
+    "name": "TARIMA 6 X 4MTS - NEGRO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / TARIMA",
+    "mainSections": [
+      {
+        "title": "Tarima de 6.10 x 3.66 mts.",
+        "items": [
+          [
+            15,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            1,
+            "Grada de 0.50cm."
+          ],
+          [
+            6,
+            "Andamio 0.60 cm"
+          ],
+          [
+            20,
+            "Corona para tarima"
+          ],
+          [
+            8,
+            "Trabesaño"
+          ],
+          [
+            4,
+            "Esquinero"
+          ],
+          [
+            1,
+            "Caja de Calzas"
+          ],
+          [
+            1,
+            "Rollo de vinil color negro"
+          ],
+          [
+            1,
+            "Rollo de mounting tape"
+          ],
+          [
+            1,
+            "Faldon de 24mts color negro / blanco"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "tarima-6-x-4mts-con-diseno": {
+    "name": "TARIMA 6 X 4MTS - CON DISEÑO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / TARIMA",
+    "mainSections": [
+      {
+        "title": "Tarima de 6.10 x 3.66 mts. con diseño",
+        "items": [
+          [
+            15,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            1,
+            "Grada de 0.50 cm."
+          ],
+          [
+            6,
+            "Andamio 0.50 cm"
+          ],
+          [
+            20,
+            "Corona para tarima"
+          ],
+          [
+            8,
+            "Trabesaño"
+          ],
+          [
+            4,
+            "Esquinero"
+          ],
+          [
+            1,
+            "Caja de Calzas"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "tarima-6-x-5-mts-negro": {
+    "name": "TARIMA 6 X 5 MTS - NEGRO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / TARIMA",
+    "mainSections": [
+      {
+        "title": "Tarima de 6.10 x 4.88 mts.",
+        "items": [
+          [
+            20,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            1,
+            "Grada de 0.50cm."
+          ],
+          [
+            8,
+            "Andamio 0.60 cm"
+          ],
+          [
+            22,
+            "Corona para tarima"
+          ],
+          [
+            12,
+            "Trabesaño"
+          ],
+          [
+            4,
+            "Esquinero"
+          ],
+          [
+            1,
+            "Caja de Calzas"
+          ],
+          [
+            1,
+            "Rollo de vinil color negro"
+          ],
+          [
+            2,
+            "Rollo de mounting tape"
+          ],
+          [
+            1,
+            "Faldon de 24mts color negro / blanco"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "tarima-5-x-4mts-negro": {
+    "name": "TARIMA 5 X 4MTS - NEGRO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / TARIMA",
+    "mainSections": [
+      {
+        "title": "Tarima de 4.88 x 3.66 mts.",
+        "items": [
+          [
+            12,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            1,
+            "Grada de 0.50cm."
+          ],
+          [
+            6,
+            "Andamio 0.60 cm"
+          ],
+          [
+            18,
+            "Corona para tarima"
+          ],
+          [
+            6,
+            "Trabesaño"
+          ],
+          [
+            4,
+            "Esquinero"
+          ],
+          [
+            1,
+            "Caja de Calzas"
+          ],
+          [
+            1,
+            "Rollo de vinil color negro"
+          ],
+          [
+            1,
+            "Rollo de mounting tape"
+          ],
+          [
+            1,
+            "Faldon de 24mts color negro / blanco"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "tarima-3-x-4mts-negro": {
+    "name": "TARIMA 3 X 4MTS - NEGRO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / TARIMA",
+    "mainSections": [
+      {
+        "title": "Tarima de 2.44 x 3.66 mts.",
+        "items": [
+          [
+            6,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            4,
+            "Andamio 0.30 cm"
+          ],
+          [
+            10,
+            "Corona para tarima"
+          ],
+          [
+            4,
+            "Trabesaño"
+          ],
+          [
+            4,
+            "Esquinero"
+          ],
+          [
+            1,
+            "Caja de Calzas"
+          ],
+          [
+            1,
+            "Rollo de vinil color negro"
+          ],
+          [
+            1,
+            "Rollo de mounting tape"
+          ],
+          [
+            1,
+            "Faldon de 12mts color negro / blanco"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  }
+};
+
+const cuadrilateroServiceIds = [
+  "cuadrilatero-de-5-x-7-x-4mts-de-alto",
+  "cuadrilatero-de-7-x-7-x-4mts-de-alto",
+  "cuadrilatero-de-8-x-8-x-4mts-de-alto"
+];
+
+const cuadrilateroServices = {
+  "cuadrilatero-de-5-x-7-x-4mts-de-alto": {
+    "name": "CUADRILATERO DE 5 X 7 X 4MTS DE ALTO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / CUADRILATERO",
+    "mainSections": [
+      {
+        "title": "Cuadrilatero 5 X 7mts X 4mts de alto con travesaños 5mts",
+        "items": [
+          [
+            18,
+            "Truss de 2 mt"
+          ],
+          [
+            8,
+            "truss de 1 mt"
+          ],
+          [
+            6,
+            "Cubo de diseño"
+          ],
+          [
+            4,
+            "Platina grande"
+          ],
+          [
+            190,
+            "Pin"
+          ],
+          [
+            110,
+            "Chiche"
+          ],
+          [
+            3,
+            "Martillo"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "cuadrilatero-de-7-x-7-x-4mts-de-alto": {
+    "name": "CUADRILATERO DE 7 X 7 X 4MTS DE ALTO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / CUADRILATERO",
+    "mainSections": [
+      {
+        "title": "Cuadrilatero 7 X 7mts X 4mts de alto",
+        "items": [
+          [
+            16,
+            "Truss de 2 mt"
+          ],
+          [
+            12,
+            "truss de 1 mt"
+          ],
+          [
+            4,
+            "Cubo de diseño"
+          ],
+          [
+            4,
+            "Platina grande"
+          ],
+          [
+            200,
+            "Pin"
+          ],
+          [
+            100,
+            "Chiche"
+          ],
+          [
+            2,
+            "Martillo"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "cuadrilatero-de-8-x-8-x-4mts-de-alto": {
+    "name": "CUADRILATERO DE 8 X 8 X 4MTS DE ALTO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / CUADRILATERO",
+    "mainSections": [
+      {
+        "title": "Cuadrilatero 8 X 8mts X 4mts de alto",
+        "items": [
+          [
+            16,
+            "Truss de 2 mt"
+          ],
+          [
+            16,
+            "truss de 1 mt"
+          ],
+          [
+            4,
+            "Cubo de diseño"
+          ],
+          [
+            4,
+            "Platina grande"
+          ],
+          [
+            240,
+            "Pin"
+          ],
+          [
+            118,
+            "Chiche"
+          ],
+          [
+            2,
+            "Martillo"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  }
+};
+
+const pistaDeBaileServiceIds = [
+  "pista-de-baile-7-x-7mts-blanca",
+  "pista-de-baile-7-x-7mts-con-diseno",
+  "pista-de-baile-6-x-6mts-blanca",
+  "pista-de-baile-6-x-6mts-con-diseno",
+  "pista-de-baile-6-x-4mts-blanca",
+  "pista-de-baile-6-x-4mts-diseno",
+  "pista-de-baile-4-x-4mts-blanca",
+  "pista-de-baile-4-x-4mts-diseno"
+];
+
+const pistaDeBaileServices = {
+  "pista-de-baile-7-x-7mts-blanca": {
+    "name": "PISTA DE BAILE 7 x 7MTS - BLANCA",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PISTA DE BAILE",
+    "mainSections": [
+      {
+        "title": "Pista de baile 7.32 X 7.32 mts.",
+        "items": [
+          [
+            36,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            35,
+            "Corona para pista"
+          ],
+          [
+            35,
+            "Pedazo de alfombra (en pedacitos)"
+          ],
+          [
+            2,
+            "Rollo de mounting tape"
+          ],
+          [
+            2,
+            "Caja de Calzas"
+          ],
+          [
+            1,
+            "Rollo de vinil color blanco"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pista-de-baile-7-x-7mts-con-diseno": {
+    "name": "PISTA DE BAILE 7 x 7MTS - CON DISEÑO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PISTA DE BAILE",
+    "mainSections": [
+      {
+        "title": "Pista de baile 7.32 X 7.32 mts.",
+        "items": [
+          [
+            36,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            35,
+            "Corona para pista"
+          ],
+          [
+            35,
+            "Pedazo de alfombra (en pedacitos)"
+          ],
+          [
+            2,
+            "Caja de Calzas"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pista-de-baile-6-x-6mts-blanca": {
+    "name": "PISTA DE BAILE 6 x 6MTS - BLANCA",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PISTA DE BAILE",
+    "mainSections": [
+      {
+        "title": "Pista de baile 6.10 x 6.10 mts.",
+        "items": [
+          [
+            25,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            25,
+            "Corona para pista"
+          ],
+          [
+            25,
+            "Pedazo de alfombra (en pedacitos)"
+          ],
+          [
+            2,
+            "Rollo de mounting tape"
+          ],
+          [
+            2,
+            "Caja de Calzas"
+          ],
+          [
+            1,
+            "Rollo de vinil color blanco"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pista-de-baile-6-x-6mts-con-diseno": {
+    "name": "PISTA DE BAILE 6 x 6MTS - CON DISEÑO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PISTA DE BAILE",
+    "mainSections": [
+      {
+        "title": "Pista de baile 6.10 x 6.10 mts.",
+        "items": [
+          [
+            25,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            25,
+            "Corona para pista"
+          ],
+          [
+            25,
+            "Pedazo de alfombra (en pedacitos)"
+          ],
+          [
+            2,
+            "Caja de Calzas"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pista-de-baile-6-x-4mts-blanca": {
+    "name": "PISTA DE BAILE 6 x 4MTS - BLANCA",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PISTA DE BAILE",
+    "mainSections": [
+      {
+        "title": "Pista de baile 6.10 x 3.66 mts.",
+        "items": [
+          [
+            15,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            15,
+            "Corona para pista"
+          ],
+          [
+            15,
+            "Pedazo de alfombra (en pedacitos)"
+          ],
+          [
+            1,
+            "Rollo de mounting tape"
+          ],
+          [
+            2,
+            "Caja de Calzas"
+          ],
+          [
+            1,
+            "Rollo de vinil color blanco"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pista-de-baile-6-x-4mts-diseno": {
+    "name": "PISTA DE BAILE 6 x 4MTS - DISEÑO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PISTA DE BAILE",
+    "mainSections": [
+      {
+        "title": "Pista de baile 6.10 x 3.66 mts.",
+        "items": [
+          [
+            15,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            15,
+            "Corona para pista"
+          ],
+          [
+            15,
+            "Pedazo de alfombra (en pedacitos)"
+          ],
+          [
+            2,
+            "Caja de Calzas"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pista-de-baile-4-x-4mts-blanca": {
+    "name": "PISTA DE BAILE 4 x 4MTS - BLANCA",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PISTA DE BAILE",
+    "mainSections": [
+      {
+        "title": "Pista de baile 4.88 x 4.88 mts.",
+        "items": [
+          [
+            16,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            16,
+            "Corona para pista"
+          ],
+          [
+            16,
+            "Pedazo de alfombra (en pedacitos)"
+          ],
+          [
+            1,
+            "Rollo de mounting tape"
+          ],
+          [
+            1,
+            "Caja de Calzas"
+          ],
+          [
+            1,
+            "Rollo de vinil color blanco"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  },
+  "pista-de-baile-4-x-4mts-diseno": {
+    "name": "PISTA DE BAILE 4 x 4MTS - DISEÑO",
+    "source": "EQUIPO-DE-AUDIO.xlsx / PISTA DE BAILE",
+    "mainSections": [
+      {
+        "title": "Pista de baile 4.88 x 4.88 mts.",
+        "items": [
+          [
+            16,
+            "Plancha de 1.22 x 1.22"
+          ],
+          [
+            16,
+            "Corona para pista"
+          ],
+          [
+            16,
+            "Pedazo de alfombra (en pedacitos)"
+          ],
+          [
+            1,
+            "Caja de Calzas"
+          ]
+        ]
+      }
+    ],
+    "extras": []
+  }
+};
+
 const sundayFundayOperationalExtras = [];
 
 const equipmentServices = {
@@ -11475,7 +12352,11 @@ const equipmentServices = {
   ...saxofonicSheetServices,
   ...pantallaLedServices,
   ...estructuraEnLServices,
-  ...ceremoniaServices
+  ...ceremoniaServices,
+  ...coctelServices,
+  ...tarimaServices,
+  ...cuadrilateroServices,
+  ...pistaDeBaileServices
 };
 
 const operationalFixedExtraIds = new Set([
@@ -11544,6 +12425,22 @@ const equipmentServiceGroups = [
   {
     label: "CEREMONIA",
     serviceIds: ceremoniaServiceIds
+  },
+  {
+    label: "COCTEL",
+    serviceIds: coctelServiceIds
+  },
+  {
+    label: "TARIMA",
+    serviceIds: tarimaServiceIds
+  },
+  {
+    label: "CUADRILATERO",
+    serviceIds: cuadrilateroServiceIds
+  },
+  {
+    label: "PISTA DE BAILE",
+    serviceIds: pistaDeBaileServiceIds
   }
 ];
 
