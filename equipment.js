@@ -6199,6 +6199,7 @@ function warehousePdfSections() {
 function currentEquipmentEventDraft() {
   return {
     id: "event-draft",
+    place: equipmentQuery("#equipmentEventPlace")?.value.trim() || "Lugar por definir",
     name: equipmentQuery("#equipmentEventName")?.value.trim() || "Evento por definir",
     phone: equipmentQuery("#equipmentEventPhone")?.value.trim() || "Por definir",
     date: equipmentQuery("#equipmentEventDate")?.value || "",
@@ -6305,10 +6306,12 @@ function restoreEquipmentEventSnapshot(event) {
 }
 
 function populateEquipmentEventFields(event) {
+  const placeInput = equipmentQuery("#equipmentEventPlace");
   const nameInput = equipmentQuery("#equipmentEventName");
   const plannerInput = equipmentQuery("#equipmentEventPhone");
   const dateInput = equipmentQuery("#equipmentEventDate");
   const responsibleInput = equipmentQuery("#equipmentEventResponsible");
+  if (placeInput) placeInput.value = event?.place || "";
   if (nameInput) nameInput.value = event?.name || "";
   if (plannerInput) plannerInput.value = event?.phone || "";
   if (dateInput) dateInput.value = event?.date || "";
@@ -6343,7 +6346,15 @@ function loadEquipmentEvent(eventId) {
 }
 
 function eventColumnName(event) {
-  return event?.name?.trim() || "Evento por definir";
+  return event?.place?.trim() || event?.name?.trim() || "Lugar por definir";
+}
+
+function equipmentEventCardTitle(event, index = 0) {
+  return event?.place?.trim() || event?.name?.trim() || `Ventana ${index + 1}`;
+}
+
+function equipmentEventNameForFile(event) {
+  return event?.name?.trim() || event?.place?.trim() || "Evento por definir";
 }
 
 function eventSummaryText(events, field, fallback = "Por definir") {
@@ -6456,17 +6467,20 @@ function renderEquipmentEvents() {
       const serviceName = event.serviceName || "Sin servicio";
       const planner = event.phone || "Planner por definir";
       const date = formatEquipmentDate(event.date);
-      const name = event.name || `Ventana ${index + 1}`;
+      const cardTitle = equipmentEventCardTitle(event, index);
+      const eventName = event.name && event.name !== "Evento por definir" ? event.name : "";
+      const eventNameLine = eventName ? `<span>Evento: ${escapeEquipmentHtml(eventName)}</span>` : "";
       return `
         <article class="equipment-event-card${activeClass}">
           <button class="equipment-event-open" type="button" data-open-event="${escapeEquipmentHtml(event.id)}">
-            <strong>${escapeEquipmentHtml(`${index + 1}. ${name}`)}</strong>
+            <strong>${escapeEquipmentHtml(`${index + 1}. ${cardTitle}`)}</strong>
             <small>${escapeEquipmentHtml(serviceName)}</small>
+            ${eventNameLine}
             <span>${escapeEquipmentHtml(date)} · ${escapeEquipmentHtml(planner)}</span>
             <span>${escapeEquipmentHtml(lineCount)} líneas de equipo</span>
           </button>
           <div class="equipment-event-card-actions">
-            <button class="equipment-event-pdf-button" type="button" data-save-event="${escapeEquipmentHtml(event.id)}" aria-label="Guardar PDF de ${escapeEquipmentHtml(name)}">PDF</button>
+            <button class="equipment-event-pdf-button" type="button" data-save-event="${escapeEquipmentHtml(event.id)}" aria-label="Guardar PDF de ${escapeEquipmentHtml(cardTitle)}">PDF</button>
             <button class="equipment-event-remove-button" type="button" data-remove-event="${escapeEquipmentHtml(event.id)}" aria-label="Eliminar ventana">X</button>
           </div>
         </article>`;
@@ -6494,6 +6508,10 @@ function addEquipmentEvent() {
     if (status) status.textContent = "Seleccione el tipo de servicio antes de crear una ventana.";
     return;
   }
+  if (!draft.place || draft.place === "Lugar por definir") {
+    if (status) status.textContent = "Escriba el lugar del evento antes de crear la ventana.";
+    return;
+  }
   if (!draft.name || draft.name === "Evento por definir") {
     if (status) status.textContent = "Escriba el nombre del evento antes de crear la ventana.";
     return;
@@ -6504,12 +6522,13 @@ function addEquipmentEvent() {
     id: `event-${Date.now()}-${equipmentEventCounter++}`
   }));
   equipmentState.events.push(...createdEvents);
-  const eventToLoad = createdEvents[0];
-  if (eventToLoad) loadEquipmentEvent(eventToLoad.id);
-  if (status) {
-    status.textContent = createdEvents.length > 1
-      ? `${createdEvents.length} ventanas independientes creadas: ${draft.name}`
-      : `Ventana creada: ${draft.name}`;
+  resetEquipmentWindowDraft();
+  renderEquipmentModule();
+  const nextStatus = equipmentQuery("#equipmentSaveStatus");
+  if (nextStatus) {
+    nextStatus.textContent = createdEvents.length > 1
+      ? `${createdEvents.length} ventanas independientes agregadas para ${draft.place}. Ya puede capturar el siguiente evento.`
+      : `Ventana agregada para ${draft.place}. Ya puede capturar el siguiente evento.`;
   }
 }
 
@@ -6960,6 +6979,10 @@ function saveCurrentEquipmentWindow() {
     if (status) status.textContent = "Seleccione el tipo de servicio antes de guardar la ventana.";
     return;
   }
+  if (!draft.place || draft.place === "Lugar por definir") {
+    if (status) status.textContent = "Escriba el lugar del evento antes de guardar la ventana.";
+    return;
+  }
   if (!draft.name || draft.name === "Evento por definir") {
     if (status) status.textContent = "Escriba el nombre del evento antes de guardar la ventana.";
     return;
@@ -6970,11 +6993,11 @@ function saveCurrentEquipmentWindow() {
     return;
   }
   if (selectedEquipmentServiceIds().length > 1) {
-    if (status) status.textContent = "Una ventana solo puede guardar un servicio. Use Crear ventana para separar los servicios seleccionados.";
+    if (status) status.textContent = "Una ventana solo puede guardar un servicio. Use Agregar ventana para separar los servicios seleccionados.";
     return;
   }
   updateEquipmentEventFromCurrent(event);
-  if (status) status.textContent = `Ventana actualizada: ${event.name}`;
+  if (status) status.textContent = `Ventana actualizada: ${event.place || event.name}`;
   renderEquipmentModule();
 }
 
@@ -6994,12 +7017,12 @@ function removeEquipmentEventById(eventId) {
     equipmentState.selectedEventId = "";
     if (nextEvent) {
       loadEquipmentEvent(nextEvent.id);
-      if (status) status.textContent = `Ventana eliminada: ${removed.name || "sin nombre"}`;
+      if (status) status.textContent = `Ventana eliminada: ${removed.place || removed.name || "sin nombre"}`;
       return;
     }
     resetEquipmentWindowDraft();
   }
-  if (status) status.textContent = `Ventana eliminada: ${removed.name || "sin nombre"}`;
+  if (status) status.textContent = `Ventana eliminada: ${removed.place || removed.name || "sin nombre"}`;
   renderEquipmentModule();
 }
 
@@ -7026,23 +7049,23 @@ function renderEquipmentPdfPreview() {
   const sections = selectedEquipmentSections();
   const events = equipmentPdfEvents();
   const summaryEvents = activeEquipmentEvents();
+  const place = eventSummaryText(events, "place", "Lugar por definir");
   const eventName = eventSummaryText(events, "name");
   const phone = eventSummaryText(events, "phone");
-  const responsible = eventSummaryText(events, "responsible");
   const date = eventSummaryText(events, "date");
+  const rentPlace = eventSummaryText(summaryEvents, "place", "Lugar por definir");
   const rentEventName = eventSummaryText(summaryEvents, "name");
   const rentPhone = eventSummaryText(summaryEvents, "phone");
-  const rentResponsible = eventSummaryText(summaryEvents, "responsible");
   const rentDate = eventSummaryText(summaryEvents, "date");
   const notes = equipmentQuery("#equipmentNotes")?.value.trim() || "";
   const rentalRows = equipmentRentalRows();
 
   const title = service?.name || "Cuadro de equipo";
   if (equipmentQuery("#equipmentPdfTitle")) equipmentQuery("#equipmentPdfTitle").textContent = title;
+  if (equipmentQuery("#equipmentPdfPlace")) equipmentQuery("#equipmentPdfPlace").textContent = place;
   if (equipmentQuery("#equipmentPdfEvent")) equipmentQuery("#equipmentPdfEvent").textContent = eventName;
   if (equipmentQuery("#equipmentPdfPhone")) equipmentQuery("#equipmentPdfPhone").textContent = phone;
   if (equipmentQuery("#equipmentPdfDate")) equipmentQuery("#equipmentPdfDate").textContent = date;
-  if (equipmentQuery("#equipmentPdfResponsible")) equipmentQuery("#equipmentPdfResponsible").textContent = responsible;
 
   const notesEl = equipmentQuery("#equipmentPdfNotes");
   if (notesEl) {
@@ -7054,10 +7077,10 @@ function renderEquipmentPdfPreview() {
     equipmentQuery("#equipmentPdfMainTable").innerHTML = tableForEquipmentSections(sections, true);
   }
   if (equipmentQuery("#equipmentRentPdfTitle")) equipmentQuery("#equipmentRentPdfTitle").textContent = `Renta - ${title}`;
+  if (equipmentQuery("#equipmentRentPdfPlace")) equipmentQuery("#equipmentRentPdfPlace").textContent = rentPlace;
   if (equipmentQuery("#equipmentRentPdfEvents")) equipmentQuery("#equipmentRentPdfEvents").textContent = rentEventName;
   if (equipmentQuery("#equipmentRentPdfPhone")) equipmentQuery("#equipmentRentPdfPhone").textContent = rentPhone;
   if (equipmentQuery("#equipmentRentPdfDate")) equipmentQuery("#equipmentRentPdfDate").textContent = rentDate;
-  if (equipmentQuery("#equipmentRentPdfResponsible")) equipmentQuery("#equipmentRentPdfResponsible").textContent = rentResponsible;
   const rentNotesEl = equipmentQuery("#equipmentRentPdfNotes");
   if (rentNotesEl) {
     rentNotesEl.textContent = notes;
@@ -7166,7 +7189,7 @@ const equipmentPreferredPdfFolderName = "Cuadros de Equipo";
 function equipmentPdfFileName(mode = "full") {
   const service = currentEquipmentService();
   const events = mode === "rent" ? activeEquipmentEvents() : equipmentPdfEvents();
-  const eventName = cleanEquipmentFilePart(events.map((event) => event.name).join(" - ") || "Evento por definir", "Evento por definir");
+  const eventName = cleanEquipmentFilePart(events.map(equipmentEventNameForFile).join(" - ") || "Evento por definir", "Evento por definir");
   const plannerName = cleanEquipmentFilePart(events.map((event) => event.phone).join(" - ") || "Planner por definir", "Planner por definir");
   const serviceName = cleanEquipmentFilePart(service?.name || "Extras", "Extras");
   const documentType = mode === "rent" ? `Renta ${serviceName}` : serviceName;
@@ -7261,7 +7284,7 @@ async function saveEquipmentPdf(mode = "full") {
   try {
     const documentSelector = mode === "rent" ? "#equipmentRentPdfDocument" : "#equipmentPdfDocument";
     const title = mode === "rent" ? "Resumen de equipo para renta" : "Equipo y extras para bodega";
-    const html = mode === "rent" ? await equipmentPdfHtml(documentSelector, title) : await equipmentUsagePdfHtml();
+    const html = await equipmentPdfHtml(documentSelector, title);
     const response = await fetch("/api/cuadros-equipo", {
       method: "POST",
       credentials: "same-origin",
@@ -7300,6 +7323,7 @@ function initEquipmentModule() {
     });
   });
   [
+    "#equipmentEventPlace",
     "#equipmentEventName",
     "#equipmentEventPhone",
     "#equipmentEventDate",
