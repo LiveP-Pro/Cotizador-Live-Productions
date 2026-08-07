@@ -12996,6 +12996,12 @@ function eventColumnName(event) {
   return event?.place?.trim() || event?.name?.trim() || "Lugar por definir";
 }
 
+function equipmentSummaryColumnName(event, index = 0) {
+  const serviceName = event?.serviceName?.trim() || "";
+  const name = event?.place?.trim() || event?.name?.trim() || serviceName;
+  return name || `Ventana ${index + 1}`;
+}
+
 function equipmentEventCardTitle(event, index = 0) {
   return event?.place?.trim() || event?.name?.trim() || `Ventana ${index + 1}`;
 }
@@ -13454,7 +13460,7 @@ function addManualEquipmentExtra() {
 
 function inventoryValueFor(row) {
   if (equipmentState.inventory.has(row.key)) return Number(equipmentState.inventory.get(row.key)) || 0;
-  return row.quantity;
+  return 0;
 }
 
 function tableForEquipmentInventory(rows, editable = true) {
@@ -13463,14 +13469,17 @@ function tableForEquipmentInventory(rows, editable = true) {
   }
   const events = activeEquipmentEvents();
   const eventHeaders = events
-    .map((event) => `<th>${escapeEquipmentHtml(eventColumnName(event))}</th>`)
+    .map((event, index) => `<th>${escapeEquipmentHtml(equipmentSummaryColumnName(event, index))}</th>`)
     .join("");
+  const eventQuantityHeaders = events.map(() => `<th>CANTIDAD</th>`).join("");
   const body = rows
     .map((row) => {
       const inventory = inventoryValueFor(row);
-      const difference = inventory - row.quantity;
-      const missing = Math.max(0, row.quantity - inventory);
-      const rentClass = missing > 0 ? " equipment-rent-needed" : "";
+      const required = Number(row.quantity) || 0;
+      const shortage = inventory - required;
+      const needsRent = shortage < 0;
+      const shortageClass = needsRent ? "equipment-shortage-cell" : "equipment-rest-ok";
+      const actionClass = needsRent ? "equipment-action-rent" : "equipment-action-empty";
       const observation = equipmentState.observations.get(row.key) || "";
       const eventCells = events
         .map((event) => `<td class="equipment-qty">${escapeEquipmentHtml(row.eventQuantities.get(event.id) || 0)}</td>`)
@@ -13479,6 +13488,7 @@ function tableForEquipmentInventory(rows, editable = true) {
         <tr data-equipment-key="${escapeEquipmentHtml(row.key)}">
           <td>${escapeEquipmentHtml(row.description)}</td>
           ${eventCells}
+          <td class="equipment-qty equipment-required-total">${escapeEquipmentHtml(required)}</td>
           <td>
             ${
               editable
@@ -13486,8 +13496,8 @@ function tableForEquipmentInventory(rows, editable = true) {
                 : escapeEquipmentHtml(inventory)
             }
           </td>
-          <td class="${difference < 0 ? "equipment-missing" : ""}">${escapeEquipmentHtml(difference)}</td>
-          <td class="${rentClass}">${missing > 0 ? `RENTA ${missing}` : ""}</td>
+          <td class="equipment-qty ${shortageClass}">${escapeEquipmentHtml(shortage)}</td>
+          <td class="${actionClass}">${needsRent ? "RENTA" : ""}</td>
           <td>
             ${
               editable
@@ -13503,12 +13513,21 @@ function tableForEquipmentInventory(rows, editable = true) {
     <table class="equipment-base-table equipment-inventory-table${editable ? "" : " equipment-table-compact"}">
       <thead>
         <tr>
-          <th>Equipo</th>
+          <th rowspan="2">DESCRIPCION DE EQUIPO</th>
           ${eventHeaders}
-          <th>Inventario físico bodega PP</th>
-          <th>Faltante o restante de equipo</th>
-          <th>Equipo para renta</th>
-          <th>Observaciones</th>
+          <th>EQUIPO REQUERIDO</th>
+          <th>INVENTARIO FISICO BODEGA PP</th>
+          <th>FALTANTE DE EQUIPO PARA RENTA</th>
+          <th>ACCION</th>
+          <th>OBSERVACIONES</th>
+        </tr>
+        <tr class="equipment-inventory-subhead">
+          ${eventQuantityHeaders}
+          <th>TOTAL</th>
+          <th>TOTAL</th>
+          <th>TOTAL</th>
+          <th></th>
+          <th></th>
         </tr>
       </thead>
       <tbody>${body}</tbody>

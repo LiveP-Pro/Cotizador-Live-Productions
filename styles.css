@@ -977,6 +977,42 @@ body {
   font: inherit;
 }
 
+.equipment-inventory-table th {
+  min-width: 120px;
+  white-space: normal;
+  vertical-align: middle;
+}
+
+.equipment-inventory-table th:first-child {
+  min-width: 320px;
+}
+
+.equipment-inventory-subhead th {
+  color: var(--ink);
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.equipment-required-total,
+.equipment-shortage-cell,
+.equipment-action-rent,
+.equipment-action-empty {
+  font-weight: 900;
+  text-align: center;
+}
+
+.equipment-shortage-cell {
+  color: #ffffff !important;
+  background: #df1717 !important;
+}
+
+.equipment-action-rent {
+  color: var(--ink);
+  background: #ffffff;
+}
+
 .equipment-rent-needed {
   color: #ffffff !important;
   background: #df1717 !important;
