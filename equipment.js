@@ -6193,7 +6193,6 @@ function selectedEquipmentSections() {
 }
 
 function warehousePdfSections() {
-  syncActiveEquipmentEvent();
   return selectedEquipmentSections();
 }
 
@@ -6216,9 +6215,7 @@ function activeEquipmentEvents() {
 }
 
 function equipmentPdfEvents() {
-  syncActiveEquipmentEvent();
-  const event = selectedEquipmentEvent();
-  return event ? [event] : [currentEquipmentEventDraft()];
+  return [currentEquipmentEventDraft()];
 }
 
 function cloneEquipmentSnapshotItem(item, index = 0) {
@@ -6274,6 +6271,19 @@ function captureEquipmentEventSnapshot() {
   };
 }
 
+function captureEquipmentEventSnapshotForServiceIds(serviceIds) {
+  const previousServiceIds = selectedEquipmentServiceIds();
+  const previousSelectedServiceId = equipmentState.selectedServiceId;
+  const previousDjAudioType = equipmentState.djAudioType;
+  setEquipmentServiceSelection(serviceIds);
+  const snapshot = captureEquipmentEventSnapshot();
+  setEquipmentServiceSelection(previousServiceIds);
+  equipmentState.selectedServiceId = previousSelectedServiceId;
+  equipmentState.djAudioType = previousDjAudioType;
+  updateNativeEquipmentServiceSelect();
+  return snapshot;
+}
+
 function restoreEquipmentEventSnapshot(event) {
   if (!event) return;
   const restoredServiceIds = Array.isArray(event.serviceIds) && event.serviceIds.length
@@ -6323,9 +6333,6 @@ function sectionsForEquipmentEvent(event) {
 }
 
 function loadEquipmentEvent(eventId) {
-  if (equipmentState.selectedEventId && equipmentState.selectedEventId !== eventId) {
-    syncActiveEquipmentEvent();
-  }
   const event = equipmentState.events.find((item) => item.id === eventId);
   if (!event) return;
   equipmentState.selectedEventId = event.id;
@@ -6347,7 +6354,6 @@ function eventSummaryText(events, field, fallback = "Por definir") {
 }
 
 function equipmentRowsSummary() {
-  syncActiveEquipmentEvent();
   const rows = new Map();
   const events = activeEquipmentEvents();
   events.forEach((event) => {
@@ -6483,7 +6489,8 @@ function renderEquipmentEvents() {
 function addEquipmentEvent() {
   const draft = currentEquipmentEventDraft();
   const status = equipmentQuery("#equipmentSaveStatus");
-  if (!currentEquipmentService()) {
+  const serviceIds = selectedEquipmentServiceIds();
+  if (!serviceIds.length) {
     if (status) status.textContent = "Seleccione el tipo de servicio antes de crear una ventana.";
     return;
   }
@@ -6491,15 +6498,19 @@ function addEquipmentEvent() {
     if (status) status.textContent = "Escriba el nombre del evento antes de crear la ventana.";
     return;
   }
-  const event = {
+  const createdEvents = serviceIds.map((serviceId) => ({
     ...draft,
-    ...captureEquipmentEventSnapshot(),
+    ...captureEquipmentEventSnapshotForServiceIds([serviceId]),
     id: `event-${Date.now()}-${equipmentEventCounter++}`
-  };
-  equipmentState.events.push(event);
-  equipmentState.selectedEventId = event.id;
-  if (status) status.textContent = `Ventana creada: ${draft.name}`;
-  renderEquipmentModule();
+  }));
+  equipmentState.events.push(...createdEvents);
+  const eventToLoad = createdEvents[0];
+  if (eventToLoad) loadEquipmentEvent(eventToLoad.id);
+  if (status) {
+    status.textContent = createdEvents.length > 1
+      ? `${createdEvents.length} ventanas independientes creadas: ${draft.name}`
+      : `Ventana creada: ${draft.name}`;
+  }
 }
 
 function refreshEquipmentSummaryAndPreview() {
@@ -6958,6 +6969,10 @@ function saveCurrentEquipmentWindow() {
     addEquipmentEvent();
     return;
   }
+  if (selectedEquipmentServiceIds().length > 1) {
+    if (status) status.textContent = "Una ventana solo puede guardar un servicio. Use Crear ventana para separar los servicios seleccionados.";
+    return;
+  }
   updateEquipmentEventFromCurrent(event);
   if (status) status.textContent = `Ventana actualizada: ${event.name}`;
   renderEquipmentModule();
@@ -7055,7 +7070,6 @@ function renderEquipmentPdfPreview() {
 
 function renderEquipmentModule() {
   syncSelectedEquipmentService();
-  if (equipmentState.selectedEventId) syncActiveEquipmentEvent();
   const service = currentEquipmentService();
   const workspace = equipmentQuery("#equipmentWorkspace");
   if (workspace) workspace.classList.toggle("is-hidden", !service);
@@ -7151,7 +7165,6 @@ const equipmentPreferredPdfFolderName = "Cuadros de Equipo";
 
 function equipmentPdfFileName(mode = "full") {
   const service = currentEquipmentService();
-  if (mode === "rent") syncActiveEquipmentEvent();
   const events = mode === "rent" ? activeEquipmentEvents() : equipmentPdfEvents();
   const eventName = cleanEquipmentFilePart(events.map((event) => event.name).join(" - ") || "Evento por definir", "Evento por definir");
   const plannerName = cleanEquipmentFilePart(events.map((event) => event.phone).join(" - ") || "Planner por definir", "Planner por definir");
@@ -7234,6 +7247,10 @@ async function saveEquipmentPdf(mode = "full") {
   const status = equipmentQuery("#equipmentSaveStatus");
   if (!currentEquipmentService()) {
     if (status) status.textContent = "Seleccione un servicio antes de guardar.";
+    return;
+  }
+  if (mode === "full" && selectedEquipmentServiceIds().length > 1) {
+    if (status) status.textContent = "Para varios servicios, primero cree ventanas independientes. Cada ventana guarda su propio PDF.";
     return;
   }
   if (mode === "rent" && !equipmentRentalRows().length) {
