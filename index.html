@@ -6,9 +6,9 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260731-01" />
+    <link rel="stylesheet" href="styles.css?v=20260807-01" />
     <script src="app.js?v=20260731-01" defer></script>
-    <script src="equipment.js?v=20260703-03" defer></script>
+    <script src="equipment.js?v=20260807-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -221,14 +221,25 @@
             </div>
             <label class="equipment-field-wide equipment-service-label">
               Tipo de Servicio
-              <select id="equipmentServiceSelect">
+              <select id="equipmentServiceSelect" class="equipment-native-service-select">
                 <option value="">Seleccione el tipo de servicio</option>
-                <option value="dj-completo">DJ COMPLETO</option>
-                <option value="saxofonic-completo">SAXOFONIC COMPLETO</option>
-                <option value="saxofonic-con-audio">SAXOFONIC CON AUDIO</option>
-                <option value="sunday-funday-a">SUNDAY FUNDAY COMPLETO A</option>
-                <option value="sunday-funday-b">SUNDAY FUNDAY COMPLETO B</option>
+                <optgroup label="SUNDAY FUNDAY">
+                  <option value="sunday-funday-bateria-acustica-opcion-a">SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A</option>
+                  <option value="sunday-funday-bateria-acustica-opcion-b">SUNDAY FUNDAY - BATERIA ACUSTICA OPCION B</option>
+                  <option value="sunday-funday-bateria-electrica-opcion-a">SUNDAY FUNDAY - BATERIA ELECTRICA OPCION A</option>
+                  <option value="sunday-funday-bateria-electrica-opcion-b">SUNDAY FUNDAY - BATERIA ELECTRICA OPCION B</option>
+                  <option value="sunday-funday-bateria-acustica-opcion-a-pantalla-led-6x3mts-sobre-tarima">SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A PANTALLA LED 6x3MTS SOBRE TARIMA</option>
+                  <option value="sunday-funday-bateria-acustica-opcion-a-pantalla-led-6x3mts-al-ras-de-piso">SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A PANTALLA LED 6x3MTS AL RAS DE PISO</option>
+                  <option value="sunday-funday-bateria-acustica-opcion-a-solo-show">SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A SOLO SHOW</option>
+                  <option value="sunday-funday-opcion-a-pantalla-en-modulos">SUNDAY FUNDAY - OPCION A PANTALLA EN MODULOS</option>
+                </optgroup>
+                <optgroup label="OTROS SERVICIOS">
+                  <option value="dj-completo">DJ COMPLETO</option>
+                  <option value="saxofonic-completo">SAXOFONIC COMPLETO</option>
+                  <option value="saxofonic-con-audio">SAXOFONIC CON AUDIO</option>
+                </optgroup>
               </select>
+              <div id="equipmentServicePicker" class="equipment-service-picker"></div>
             </label>
             <div id="equipmentDjAudioOptions" class="equipment-field-wide equipment-audio-options is-hidden">
               <span data-audio-options-label>Tipo de audio</span>
@@ -290,7 +301,7 @@
             <section id="equipmentMainPanel" class="equipment-panel">
               <div class="equipment-section-title">
                 <span>Equipo principal</span>
-                <small id="equipmentServiceName">SUNDAY FUNDAY COMPLETO B</small>
+                <small id="equipmentServiceName">Seleccione un servicio</small>
               </div>
             <div id="equipmentMainTable" class="equipment-table-wrap"></div>
           </section>
@@ -331,7 +342,7 @@
               <header class="equipment-pdf-header">
                 <div>
                   <p>Live Productions</p>
-                  <h2 id="equipmentPdfTitle">SUNDAY FUNDAY COMPLETO B</h2>
+                  <h2 id="equipmentPdfTitle">Seleccione un servicio</h2>
                   <span id="equipmentPdfSubtitle">Equipo y extras para bodega</span>
                 </div>
                 <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />

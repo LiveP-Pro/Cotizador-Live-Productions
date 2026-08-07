@@ -393,6 +393,5364 @@ const saxofonicConAudioMainSections = saxofonicConAudioExtra
   ? [{ title: saxofonicConAudioExtra.title, items: saxofonicConAudioExtra.items.map((item) => [...item]) }]
   : [];
 
+const sundayFundayServiceIds = [
+  "sunday-funday-bateria-acustica-opcion-a",
+  "sunday-funday-bateria-acustica-opcion-b",
+  "sunday-funday-bateria-electrica-opcion-a",
+  "sunday-funday-bateria-electrica-opcion-b",
+  "sunday-funday-bateria-acustica-opcion-a-pantalla-led-6x3mts-sobre-tarima",
+  "sunday-funday-bateria-acustica-opcion-a-pantalla-led-6x3mts-al-ras-de-piso",
+  "sunday-funday-bateria-acustica-opcion-a-solo-show",
+  "sunday-funday-opcion-a-pantalla-en-modulos"
+];
+
+const sundayFundayServices = {
+  "sunday-funday-bateria-acustica-opcion-a": {
+    name: "SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A",
+    source: "EQUIPO-DE-AUDIO.xlsx / SUNDAY FUNDAY",
+    mainSections: [
+      {
+        title: "Consola",
+        items: [
+          [
+            1,
+            "Consola X32 mesa digital con cable ac"
+          ],
+          [
+            1,
+            "Router con cargador y funda"
+          ],
+          [
+            2,
+            "Ipad con cargador"
+          ]
+        ]
+      },
+      {
+        title: "Telefono (Mochila)",
+        items: [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        title: "Audio",
+        items: [
+          [
+            4,
+            "Bocinas QSC con 2 cables power spicon y 2 cables puente"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ],
+          [
+            1,
+            "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac"
+          ],
+          [
+            2,
+            "Sub QSC 18 pasivo"
+          ],
+          [
+            1,
+            "Snake de 18 canales"
+          ],
+          [
+            1,
+            "Grabadora de audio"
+          ]
+        ]
+      },
+      {
+        title: "Monitoreo",
+        items: [
+          [
+            2,
+            "Bocina Turbosound IQ15 con 2 cables power spicon"
+          ],
+          [
+            1,
+            "Bajo Turbosound IQ18 con cable power spicon"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ]
+        ]
+      },
+      {
+        title: "Computadora",
+        items: [
+          [
+            1,
+            "Computadora para prueba Macbookpro (Mochila con, Computador Mac, Cargador de Mac, Cable, Cable para Impresora, Cables de C a B, Cleaning Kit, Jet Dryer Blower Air Duster, Quick Charging portable, Juego de llaves combinadas con matraca, Uña para mic SM57 Alambrico y Estuche)"
+          ]
+        ]
+      },
+      {
+        title: "In ears",
+        items: [
+          [
+            8,
+            "In ears Acemic (Belpack y transmisor)"
+          ],
+          [
+            6,
+            "In ears Shure (Belpack y transmisor)"
+          ],
+          [
+            2,
+            "Antena pasivas Shure"
+          ],
+          [
+            1,
+            "Antena In ears Shure"
+          ],
+          [
+            6,
+            "Bateria cuadrada Shure"
+          ],
+          [
+            3,
+            "Cargador para bateria cuadrada"
+          ],
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ],
+          [
+            1,
+            "Porta bateria cuadrada Bonai"
+          ],
+          [
+            4,
+            "Intercomunicador Hollyland"
+          ]
+        ]
+      },
+      {
+        title: "Case de Pedestales de Bateria",
+        items: [
+          [
+            1,
+            "Bombo DW con funda"
+          ],
+          [
+            1,
+            "Alfombra"
+          ],
+          [
+            1,
+            "Banquito DW"
+          ],
+          [
+            2,
+            "Par de baquetas con estuche"
+          ],
+          [
+            1,
+            "Caja DW con funda"
+          ],
+          [
+            1,
+            "Tom no.1 DW con funda"
+          ],
+          [
+            1,
+            "Tom no.2 con funda"
+          ],
+          [
+            1,
+            "Pedal de bombo"
+          ],
+          [
+            1,
+            "Floortom DW con funda"
+          ]
+        ]
+      },
+      {
+        title: "Case de platos",
+        items: [
+          [
+            1,
+            "Hit hat zildjan con funda"
+          ],
+          [
+            1,
+            "China zildjan con funda"
+          ],
+          [
+            1,
+            "Ride zildjan con funda"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para bateria",
+        items: [
+          [
+            4,
+            "Mic. SM57 alambrico"
+          ],
+          [
+            1,
+            "Mic. Beta 52A"
+          ],
+          [
+            2,
+            "Mic. Pg81"
+          ],
+          [
+            4,
+            "Clamp para microfono de metal"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para voces",
+        items: [
+          [
+            2,
+            "Mic. Sm 58 alambrico"
+          ],
+          [
+            2,
+            "Mic. Sm 58 inalambrico"
+          ],
+          [
+            1,
+            "Mic. inalambrico de saxo"
+          ],
+          [
+            1,
+            "Mic. inalambrico de violin"
+          ],
+          [
+            1,
+            "Mic QLX-D2-J50"
+          ],
+          [
+            1,
+            "Mic. BLX2 M15 con funda (rosado)"
+          ],
+          [
+            2,
+            "Caja directa"
+          ]
+        ]
+      },
+      {
+        title: "Pedestales",
+        items: [
+          [
+            4,
+            "Pedestal recto"
+          ],
+          [
+            2,
+            "Pedestal de brazo"
+          ]
+        ]
+      },
+      {
+        title: "Luces",
+        items: [
+          [
+            6,
+            "Beam 260 con cable power spicon"
+          ],
+          [
+            6,
+            "Par LED RGB con cable ac"
+          ],
+          [
+            2,
+            "Luz circular con cable power spicon"
+          ],
+          [
+            2,
+            "Laser con cable power spicon"
+          ],
+          [
+            2,
+            "Wash con cable power spicon"
+          ],
+          [
+            24,
+            "Clamp para luces"
+          ],
+          [
+            24,
+            "Base de clamp"
+          ],
+          [
+            4,
+            "Tubo galvanizado"
+          ],
+          [
+            4,
+            "Hamburguesa doble"
+          ],
+          [
+            2,
+            "Spliter American DJ con cable ac"
+          ],
+          [
+            2,
+            "Blinder RGB con cable power spicon"
+          ],
+          [
+            1,
+            "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)"
+          ]
+        ]
+      },
+      {
+        title: "Maquina de humo",
+        items: [
+          [
+            2,
+            "Maquina de humo con control, cable ac y ventilador"
+          ],
+          [
+            1,
+            "Galon liquido de humo"
+          ]
+        ]
+      },
+      {
+        title: "Pistola LED CO2",
+        items: [
+          [
+            1,
+            "Pistola de CO2"
+          ],
+          [
+            1,
+            "Manguera de 10mts."
+          ],
+          [
+            1,
+            "Cilindro CO2"
+          ],
+          [
+            1,
+            "Cangrejo"
+          ],
+          [
+            1,
+            "Trocket"
+          ],
+          [
+            1,
+            "Strap pequeño"
+          ],
+          [
+            1,
+            "Funda para cilindro CO2"
+          ]
+        ]
+      },
+      {
+        title: "Pirotecnia Fria",
+        items: [
+          [
+            2,
+            "Maquina de pirotecnia fria"
+          ],
+          [
+            2,
+            "Sobre para pirotecnia medium"
+          ],
+          [
+            1,
+            "DMX"
+          ]
+        ]
+      },
+      {
+        title: "Estructura DJ",
+        items: [
+          [
+            2,
+            "Cajon de madera negro para músicos"
+          ],
+          [
+            2,
+            "Marco DJ booth grande"
+          ],
+          [
+            1,
+            "Marco DJ booth pequeño"
+          ],
+          [
+            1,
+            "DJ booth"
+          ]
+        ]
+      },
+      {
+        title: "Estructura Luces",
+        items: [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            8,
+            "Truss 0.50 cm"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            100,
+            "Pin"
+          ],
+          [
+            40,
+            "Chiche"
+          ]
+        ]
+      },
+      {
+        title: "Telas para forrar estructuras",
+        items: [
+          [
+            6,
+            "Funda para truss color negro de 3 mts"
+          ],
+          [
+            1,
+            "Tela pequeña para forrar DJ booth color negro (DJ)"
+          ],
+          [
+            2,
+            "Tela grande para forrar DJ booth color negro (controles)"
+          ]
+        ]
+      },
+      {
+        title: "Case de Cableado",
+        items: [
+          [
+            1,
+            "Distro de corriente"
+          ],
+          [
+            5,
+            "Cable ac"
+          ],
+          [
+            5,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de 1/4\" a 1/4\""
+          ],
+          [
+            1,
+            "Case de pulpos (6 grandes y 6 pequeños)"
+          ],
+          [
+            1,
+            "Cable TCJ"
+          ],
+          [
+            10,
+            "Cuadro de corriente"
+          ],
+          [
+            10,
+            "Regleta"
+          ],
+          [
+            60,
+            "Cable XLR"
+          ],
+          [
+            40,
+            "Extensión"
+          ]
+        ]
+      },
+      {
+        title: "Extras",
+        items: [
+          [
+            1,
+            "Extintor"
+          ],
+          [
+            1,
+            "Bolsa de agua pura"
+          ]
+        ]
+      },
+      {
+        title: "Caja de Herramientas",
+        items: [
+          [
+            1,
+            "Macho"
+          ],
+          [
+            2,
+            "Pata de Gallo"
+          ],
+          [
+            1,
+            "Flipon doble de 50 amp"
+          ],
+          [
+            1,
+            "Desarmador de estrella"
+          ],
+          [
+            1,
+            "Desarmador de castigaderas"
+          ],
+          [
+            1,
+            "Cuchilla"
+          ],
+          [
+            1,
+            "Estuche llaves Allen (25 unidades)"
+          ],
+          [
+            1,
+            "Alicate"
+          ],
+          [
+            1,
+            "Tenaza"
+          ],
+          [
+            1,
+            "Pinza"
+          ],
+          [
+            1,
+            "Espiga tipo tester"
+          ],
+          [
+            1,
+            "Multímetro Fluke con estuche"
+          ],
+          [
+            5,
+            "Duc tape"
+          ],
+          [
+            3,
+            "Paquete de cinchos 0.35 cm"
+          ],
+          [
+            7,
+            "Cinta de aislar Electrica PVC"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Limpieza",
+        items: [
+          [
+            5,
+            "Trapo"
+          ],
+          [
+            1,
+            "Escoba"
+          ],
+          [
+            1,
+            "Pala"
+          ],
+          [
+            5,
+            "Trapiador"
+          ],
+          [
+            1,
+            "Atomizador con desinfectante"
+          ],
+          [
+            1,
+            "Atomizador con silicón"
+          ],
+          [
+            2,
+            "Espuma limpiadora"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de proteccion",
+        items: [
+          [
+            10,
+            "Bolsa jardinera de tonel"
+          ],
+          [
+            3,
+            "Retazo de nylon (para tapar equipo)"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Seguridad Industrial",
+        items: [
+          [
+            6,
+            "Casco"
+          ],
+          [
+            6,
+            "Chaleco"
+          ],
+          [
+            0,
+            "Par de botas"
+          ],
+          [
+            6,
+            "Par de guantes"
+          ],
+          [
+            1,
+            "Arnes completo"
+          ]
+        ]
+      },
+      {
+        title: "Toldos",
+        items: [
+          [
+            1,
+            "Toldo 3x3 blanco"
+          ],
+          [
+            1,
+            "Toldo 2x2 blanco"
+          ],
+          [
+            2,
+            "Mesa plegable"
+          ],
+          [
+            2,
+            "Par LED con cable ac"
+          ]
+        ]
+      }
+    ],
+    extras: []
+  },
+  "sunday-funday-bateria-acustica-opcion-b": {
+    name: "SUNDAY FUNDAY - BATERIA ACUSTICA OPCION B",
+    source: "EQUIPO-DE-AUDIO.xlsx / SUNDAY FUNDAY",
+    mainSections: [
+      {
+        title: "Consola",
+        items: [
+          [
+            1,
+            "Consola X32 rack con cable ac"
+          ],
+          [
+            1,
+            "Router con cargador y funda"
+          ],
+          [
+            2,
+            "Ipad con cargador"
+          ]
+        ]
+      },
+      {
+        title: "Telefono (Mochila)",
+        items: [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        title: "Audio",
+        items: [
+          [
+            4,
+            "Bocinas QSC con 2 cables power spicon y 2 cables puente"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ],
+          [
+            1,
+            "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac"
+          ],
+          [
+            2,
+            "Sub QSC 18 pasivo"
+          ],
+          [
+            1,
+            "Snake de 18 canales"
+          ],
+          [
+            1,
+            "Grabadora de audio"
+          ]
+        ]
+      },
+      {
+        title: "Monitoreo",
+        items: [
+          [
+            2,
+            "Bocina Dass con power spicon"
+          ],
+          [
+            1,
+            "Bajo Turbosound IQ18 con cable power spicon"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ]
+        ]
+      },
+      {
+        title: "Computadora",
+        items: [
+          [
+            1,
+            "Computadora para prueba Macbookpro (Mochila con, Computador Mac, Cargador de Mac, Cable, Cable para Impresora, Cables de C a B, Cleaning Kit, Jet Dryer Blower Air Duster, Quick Charging portable, Juego de llaves combinadas con matraca, Uña para mic SM57 Alambrico y Estuche)"
+          ]
+        ]
+      },
+      {
+        title: "In ears",
+        items: [
+          [
+            8,
+            "In ears Acemic (Belpack y transmisor)"
+          ],
+          [
+            6,
+            "In ears Shure (Belpack y transmisor)"
+          ],
+          [
+            2,
+            "Antena pasivas Shure"
+          ],
+          [
+            1,
+            "Antena In ears Shure"
+          ],
+          [
+            6,
+            "Bateria cuadrada Shure"
+          ],
+          [
+            3,
+            "Cargador para bateria cuadrada"
+          ],
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ],
+          [
+            1,
+            "Porta bateria cuadrada Bonai"
+          ],
+          [
+            4,
+            "Intercomunicador Hollyland"
+          ]
+        ]
+      },
+      {
+        title: "Case de Pedestales de Bateria",
+        items: [
+          [
+            1,
+            "Bombo Grech con funda"
+          ],
+          [
+            1,
+            "Alfombra"
+          ],
+          [
+            1,
+            "Banquito DW"
+          ],
+          [
+            2,
+            "Par de baquetas con estuche"
+          ],
+          [
+            1,
+            "Caja Grech con funda"
+          ],
+          [
+            1,
+            "Tom no.1 Grech con funda"
+          ],
+          [
+            1,
+            "Tom no.2 con funda"
+          ],
+          [
+            1,
+            "Pedal de bombo"
+          ],
+          [
+            1,
+            "Floortom Grech con funda"
+          ]
+        ]
+      },
+      {
+        title: "Case de platos",
+        items: [
+          [
+            1,
+            "Hit hat zildjan con funda"
+          ],
+          [
+            1,
+            "China zildjan con funda"
+          ],
+          [
+            1,
+            "Ride zildjan con funda"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para bateria",
+        items: [
+          [
+            4,
+            "Mic. SM57 alambrico"
+          ],
+          [
+            1,
+            "Mic. Beta 52A"
+          ],
+          [
+            2,
+            "Mic. Pg81"
+          ],
+          [
+            4,
+            "Clamp para microfono de metal"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para voces",
+        items: [
+          [
+            2,
+            "Mic. Sm 58 alambrico"
+          ],
+          [
+            2,
+            "Mic. Sm 58 inalambrico"
+          ],
+          [
+            1,
+            "Mic. inalambrico de saxo"
+          ],
+          [
+            1,
+            "Mic. inalambrico de violin"
+          ],
+          [
+            1,
+            "Mic QLX-D2-J50"
+          ],
+          [
+            1,
+            "Mic. BLX2 M15 con funda (rosado)"
+          ],
+          [
+            2,
+            "Caja directa"
+          ]
+        ]
+      },
+      {
+        title: "Pedestales",
+        items: [
+          [
+            4,
+            "Pedestal recto"
+          ],
+          [
+            2,
+            "Pedestal de brazo"
+          ]
+        ]
+      },
+      {
+        title: "Luces",
+        items: [
+          [
+            6,
+            "Beam 260 con cable power spicon"
+          ],
+          [
+            6,
+            "Par LED RGB con cable ac"
+          ],
+          [
+            2,
+            "Luz circular con cable power spicon"
+          ],
+          [
+            2,
+            "Laser con cable power spicon"
+          ],
+          [
+            2,
+            "Wash con cable power spicon"
+          ],
+          [
+            24,
+            "Clamp para luces"
+          ],
+          [
+            24,
+            "Base de clamp"
+          ],
+          [
+            4,
+            "Tubo galvanizado"
+          ],
+          [
+            4,
+            "Hamburguesa doble"
+          ],
+          [
+            2,
+            "Spliter American DJ con cable ac"
+          ],
+          [
+            2,
+            "Blinder RGB con cable power spicon"
+          ],
+          [
+            1,
+            "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)"
+          ]
+        ]
+      },
+      {
+        title: "Maquina de humo",
+        items: [
+          [
+            2,
+            "Maquina de humo con control, cable ac y ventilador"
+          ],
+          [
+            1,
+            "Galon liquido de humo"
+          ]
+        ]
+      },
+      {
+        title: "Pistola LED CO2",
+        items: [
+          [
+            1,
+            "Pistola de CO2"
+          ],
+          [
+            1,
+            "Manguera de 10mts."
+          ],
+          [
+            1,
+            "Cilindro CO2"
+          ],
+          [
+            1,
+            "Cangrejo"
+          ],
+          [
+            1,
+            "Trocket"
+          ],
+          [
+            1,
+            "Strap pequeño"
+          ],
+          [
+            1,
+            "Funda para cilindro CO2"
+          ]
+        ]
+      },
+      {
+        title: "Pirotecnia Fria",
+        items: [
+          [
+            2,
+            "Maquina de pirotecnia fria"
+          ],
+          [
+            2,
+            "Sobre para pirotecnia medium"
+          ],
+          [
+            1,
+            "DMX"
+          ]
+        ]
+      },
+      {
+        title: "Estructura DJ",
+        items: [
+          [
+            2,
+            "Cajon de madera negro para músicos"
+          ],
+          [
+            2,
+            "Marco DJ booth grande"
+          ],
+          [
+            1,
+            "Marco DJ booth pequeño"
+          ],
+          [
+            1,
+            "DJ booth"
+          ]
+        ]
+      },
+      {
+        title: "Estructura Luces",
+        items: [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            8,
+            "Truss 0.50 cm"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            100,
+            "Pin"
+          ],
+          [
+            40,
+            "Chiche"
+          ]
+        ]
+      },
+      {
+        title: "Telas para forrar estructuras",
+        items: [
+          [
+            6,
+            "Funda para truss color blanco de 3 mts"
+          ],
+          [
+            1,
+            "Tela pequeña para forrar DJ booth color blanco (DJ)"
+          ],
+          [
+            2,
+            "Tela grande para forrar DJ booth color negro (controles)"
+          ]
+        ]
+      },
+      {
+        title: "Case de Cableado",
+        items: [
+          [
+            1,
+            "Distro de corriente"
+          ],
+          [
+            5,
+            "Cable ac"
+          ],
+          [
+            5,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de 1/4\" a 1/4\""
+          ],
+          [
+            1,
+            "Case de pulpos (6 grandes y 6 pequeños)"
+          ],
+          [
+            1,
+            "Cable TCJ"
+          ],
+          [
+            10,
+            "Cuadro de corriente"
+          ],
+          [
+            10,
+            "Regleta"
+          ],
+          [
+            60,
+            "Cable XLR"
+          ],
+          [
+            40,
+            "Extensión"
+          ]
+        ]
+      },
+      {
+        title: "Extras",
+        items: [
+          [
+            1,
+            "Extintor"
+          ],
+          [
+            1,
+            "Bolsa de agua pura"
+          ]
+        ]
+      },
+      {
+        title: "Caja de Herramientas",
+        items: [
+          [
+            1,
+            "Macho"
+          ],
+          [
+            2,
+            "Pata de Gallo"
+          ],
+          [
+            1,
+            "Flipon doble de 50 amp"
+          ],
+          [
+            1,
+            "Desarmador de estrella"
+          ],
+          [
+            1,
+            "Desarmador de castigaderas"
+          ],
+          [
+            1,
+            "Cuchilla"
+          ],
+          [
+            1,
+            "Estuche llaves Allen (25 unidades)"
+          ],
+          [
+            1,
+            "Alicate"
+          ],
+          [
+            1,
+            "Tenaza"
+          ],
+          [
+            1,
+            "Pinza"
+          ],
+          [
+            1,
+            "Espiga tipo tester"
+          ],
+          [
+            1,
+            "Multímetro Fluke con estuche"
+          ],
+          [
+            5,
+            "Duc tape"
+          ],
+          [
+            3,
+            "Paquete de cinchos 0.35 cm"
+          ],
+          [
+            7,
+            "Cinta de aislar Electrica PVC"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Limpieza",
+        items: [
+          [
+            5,
+            "Trapo"
+          ],
+          [
+            1,
+            "Escoba"
+          ],
+          [
+            1,
+            "Pala"
+          ],
+          [
+            5,
+            "Trapiador"
+          ],
+          [
+            1,
+            "Atomizador con desinfectante"
+          ],
+          [
+            1,
+            "Atomizador con silicón"
+          ],
+          [
+            2,
+            "Espuma limpiadora"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de proteccion",
+        items: [
+          [
+            10,
+            "Bolsa jardinera de tonel"
+          ],
+          [
+            3,
+            "Retazo de nylon (para tapar equipo)"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Seguridad Industrial",
+        items: [
+          [
+            6,
+            "Casco"
+          ],
+          [
+            6,
+            "Chaleco"
+          ],
+          [
+            0,
+            "Par de botas"
+          ],
+          [
+            6,
+            "Par de guantes"
+          ],
+          [
+            1,
+            "Arnes completo"
+          ]
+        ]
+      },
+      {
+        title: "Toldos",
+        items: [
+          [
+            1,
+            "Toldo 3x3 blanco"
+          ],
+          [
+            1,
+            "Toldo 2x2 blanco"
+          ],
+          [
+            2,
+            "Mesa plegable"
+          ],
+          [
+            2,
+            "Par LED con cable ac"
+          ]
+        ]
+      }
+    ],
+    extras: []
+  },
+  "sunday-funday-bateria-electrica-opcion-a": {
+    name: "SUNDAY FUNDAY - BATERIA ELECTRICA OPCION A",
+    source: "EQUIPO-DE-AUDIO.xlsx / SUNDAY FUNDAY",
+    mainSections: [
+      {
+        title: "Consola",
+        items: [
+          [
+            1,
+            "Consola X32 mesa digital con cable ac"
+          ],
+          [
+            1,
+            "Router con cargador y funda"
+          ],
+          [
+            2,
+            "Ipad con cargador"
+          ]
+        ]
+      },
+      {
+        title: "Telefono (Mochila)",
+        items: [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        title: "Audio",
+        items: [
+          [
+            4,
+            "Bocinas QSC con 2 cables power spicon y 2 cables puente"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ],
+          [
+            1,
+            "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac"
+          ],
+          [
+            2,
+            "Sub QSC 18 pasivo"
+          ],
+          [
+            1,
+            "Snake de 18 canales"
+          ],
+          [
+            1,
+            "Grabadora de audio"
+          ]
+        ]
+      },
+      {
+        title: "Monitoreo",
+        items: [
+          [
+            2,
+            "Bocina Turbosound IQ15 con 2 cables power spicon"
+          ],
+          [
+            1,
+            "Bajo Turbosound IQ18 con cable power spicon"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ]
+        ]
+      },
+      {
+        title: "Computadora",
+        items: [
+          [
+            1,
+            "Computadora para prueba Macbookpro (Mochila con, Computador Mac, Cargador de Mac, Cable, Cable para Impresora, Cables de C a B, Cleaning Kit, Jet Dryer Blower Air Duster, Quick Charging portable, Juego de llaves combinadas con matraca, Uña para mic SM57 Alambrico y Estuche)"
+          ]
+        ]
+      },
+      {
+        title: "In ears",
+        items: [
+          [
+            8,
+            "In ears Acemic (Belpack y transmisor)"
+          ],
+          [
+            6,
+            "In ears Shure (Belpack y transmisor)"
+          ],
+          [
+            2,
+            "Antena pasivas Shure"
+          ],
+          [
+            1,
+            "Antena In ears Shure"
+          ],
+          [
+            6,
+            "Bateria cuadrada Shure"
+          ],
+          [
+            3,
+            "Cargador para bateria cuadrada"
+          ],
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ],
+          [
+            1,
+            "Porta bateria cuadrada Bonai"
+          ],
+          [
+            4,
+            "Intercomunicador Hollyland"
+          ]
+        ]
+      },
+      {
+        title: "Bateria Electrica",
+        items: [
+          [
+            1,
+            "Bateria electrica con cable de corriente"
+          ],
+          [
+            2,
+            "cable XLR de 1/4\" a XLR macho"
+          ],
+          [
+            1,
+            "Alfombra"
+          ],
+          [
+            1,
+            "Banquito DW"
+          ],
+          [
+            2,
+            "Par de baquetas con estuche"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para voces",
+        items: [
+          [
+            2,
+            "Mic. Sm 58 alambrico"
+          ],
+          [
+            2,
+            "Mic. Sm 58 inalambrico"
+          ],
+          [
+            1,
+            "Mic. inalambrico de saxo"
+          ],
+          [
+            1,
+            "Mic. inalambrico de violin"
+          ],
+          [
+            1,
+            "Mic QLX-D2-J50"
+          ],
+          [
+            1,
+            "Mic. BLX2 M15 con funda (rosado)"
+          ],
+          [
+            2,
+            "Caja directa"
+          ]
+        ]
+      },
+      {
+        title: "Pedestales",
+        items: [
+          [
+            4,
+            "Pedestal recto"
+          ],
+          [
+            2,
+            "Pedestal de brazo"
+          ]
+        ]
+      },
+      {
+        title: "Luces",
+        items: [
+          [
+            6,
+            "Beam 260 con cable power spicon"
+          ],
+          [
+            6,
+            "Par LED RGB con cable ac"
+          ],
+          [
+            2,
+            "Luz circular con cable power spicon"
+          ],
+          [
+            2,
+            "Laser con cable power spicon"
+          ],
+          [
+            2,
+            "Wash con cable power spicon"
+          ],
+          [
+            24,
+            "Clamp para luces"
+          ],
+          [
+            24,
+            "Base de clamp"
+          ],
+          [
+            4,
+            "Tubo galvanizado"
+          ],
+          [
+            4,
+            "Hamburguesa doble"
+          ],
+          [
+            2,
+            "Spliter American DJ con cable ac"
+          ],
+          [
+            2,
+            "Blinder RGB con cable power spicon"
+          ],
+          [
+            1,
+            "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)"
+          ]
+        ]
+      },
+      {
+        title: "Maquina de humo",
+        items: [
+          [
+            2,
+            "Maquina de humo con control, cable ac y ventilador"
+          ],
+          [
+            1,
+            "Galon liquido de humo"
+          ]
+        ]
+      },
+      {
+        title: "Pistola LED CO2",
+        items: [
+          [
+            1,
+            "Pistola de CO2"
+          ],
+          [
+            1,
+            "Manguera de 10mts."
+          ],
+          [
+            1,
+            "Cilindro CO2"
+          ],
+          [
+            1,
+            "Cangrejo"
+          ],
+          [
+            1,
+            "Trocket"
+          ],
+          [
+            1,
+            "Strap pequeño"
+          ],
+          [
+            1,
+            "Funda para cilindro CO2"
+          ]
+        ]
+      },
+      {
+        title: "Pirotecnia Fria",
+        items: [
+          [
+            2,
+            "Maquina de pirotecnia fria"
+          ],
+          [
+            2,
+            "Sobre para pirotecnia medium"
+          ],
+          [
+            1,
+            "DMX"
+          ]
+        ]
+      },
+      {
+        title: "Estructura DJ",
+        items: [
+          [
+            2,
+            "Cajon de madera negro para músicos"
+          ],
+          [
+            2,
+            "Marco DJ booth grande"
+          ],
+          [
+            1,
+            "Marco DJ booth pequeño"
+          ],
+          [
+            1,
+            "DJ booth"
+          ]
+        ]
+      },
+      {
+        title: "Estructura Luces",
+        items: [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            8,
+            "Truss 0.50 cm"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            100,
+            "Pin"
+          ],
+          [
+            40,
+            "Chiche"
+          ]
+        ]
+      },
+      {
+        title: "Telas para forrar estructuras",
+        items: [
+          [
+            6,
+            "Funda para truss color negro de 3 mts"
+          ],
+          [
+            1,
+            "Tela pequeña para forrar DJ booth color negro (DJ)"
+          ],
+          [
+            2,
+            "Tela grande para forrar DJ booth color negro (controles)"
+          ]
+        ]
+      },
+      {
+        title: "Case de Cableado",
+        items: [
+          [
+            1,
+            "Distro de corriente"
+          ],
+          [
+            5,
+            "Cable ac"
+          ],
+          [
+            5,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de 1/4\" a 1/4\""
+          ],
+          [
+            1,
+            "Case de pulpos (6 grandes y 6 pequeños)"
+          ],
+          [
+            1,
+            "Cable TCJ"
+          ],
+          [
+            10,
+            "Cuadro de corriente"
+          ],
+          [
+            10,
+            "Regleta"
+          ],
+          [
+            60,
+            "Cable XLR"
+          ],
+          [
+            40,
+            "Extensión"
+          ]
+        ]
+      },
+      {
+        title: "Extras",
+        items: [
+          [
+            1,
+            "Extintor"
+          ],
+          [
+            1,
+            "Bolsa de agua pura"
+          ]
+        ]
+      },
+      {
+        title: "Caja de Herramientas",
+        items: [
+          [
+            1,
+            "Macho"
+          ],
+          [
+            2,
+            "Pata de Gallo"
+          ],
+          [
+            1,
+            "Flipon doble de 50 amp"
+          ],
+          [
+            1,
+            "Desarmador de estrella"
+          ],
+          [
+            1,
+            "Desarmador de castigaderas"
+          ],
+          [
+            1,
+            "Cuchilla"
+          ],
+          [
+            1,
+            "Estuche llaves Allen (25 unidades)"
+          ],
+          [
+            1,
+            "Alicate"
+          ],
+          [
+            1,
+            "Tenaza"
+          ],
+          [
+            1,
+            "Pinza"
+          ],
+          [
+            1,
+            "Espiga tipo tester"
+          ],
+          [
+            1,
+            "Multímetro Fluke con estuche"
+          ],
+          [
+            5,
+            "Duc tape"
+          ],
+          [
+            3,
+            "Paquete de cinchos 0.35 cm"
+          ],
+          [
+            7,
+            "Cinta de aislar Electrica PVC"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Limpieza",
+        items: [
+          [
+            5,
+            "Trapo"
+          ],
+          [
+            1,
+            "Escoba"
+          ],
+          [
+            1,
+            "Pala"
+          ],
+          [
+            5,
+            "Trapiador"
+          ],
+          [
+            1,
+            "Atomizador con desinfectante"
+          ],
+          [
+            1,
+            "Atomizador con silicón"
+          ],
+          [
+            2,
+            "Espuma limpiadora"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de proteccion",
+        items: [
+          [
+            10,
+            "Bolsa jardinera de tonel"
+          ],
+          [
+            3,
+            "Retazo de nylon (para tapar equipo)"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Seguridad Industrial",
+        items: [
+          [
+            6,
+            "Casco"
+          ],
+          [
+            6,
+            "Chaleco"
+          ],
+          [
+            0,
+            "Par de botas"
+          ],
+          [
+            6,
+            "Par de guantes"
+          ],
+          [
+            1,
+            "Arnes completo"
+          ]
+        ]
+      },
+      {
+        title: "Toldos",
+        items: [
+          [
+            1,
+            "Toldo 3x3 blanco"
+          ],
+          [
+            1,
+            "Toldo 2x2 blanco"
+          ],
+          [
+            2,
+            "Mesa plegable"
+          ],
+          [
+            2,
+            "Par LED con cable ac"
+          ]
+        ]
+      }
+    ],
+    extras: []
+  },
+  "sunday-funday-bateria-electrica-opcion-b": {
+    name: "SUNDAY FUNDAY - BATERIA ELECTRICA OPCION B",
+    source: "EQUIPO-DE-AUDIO.xlsx / SUNDAY FUNDAY",
+    mainSections: [
+      {
+        title: "Consola",
+        items: [
+          [
+            1,
+            "Consola X32 rack con cable ac"
+          ],
+          [
+            1,
+            "Router con cargador y funda"
+          ],
+          [
+            2,
+            "Ipad con cargador"
+          ]
+        ]
+      },
+      {
+        title: "Telefono (Mochila)",
+        items: [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        title: "Audio",
+        items: [
+          [
+            4,
+            "Bocinas QSC con 2 cables power spicon y 2 cables puente"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ],
+          [
+            1,
+            "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac"
+          ],
+          [
+            2,
+            "Sub QSC 18 pasivo"
+          ],
+          [
+            1,
+            "Snake de 18 canales"
+          ],
+          [
+            1,
+            "Grabadora de audio"
+          ]
+        ]
+      },
+      {
+        title: "Monitoreo",
+        items: [
+          [
+            2,
+            "Bocina Dass con power spicon"
+          ],
+          [
+            1,
+            "Bajo Turbosound IQ18 con cable power spicon"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ]
+        ]
+      },
+      {
+        title: "Computadora",
+        items: [
+          [
+            1,
+            "Computadora para prueba Macbookpro (Mochila con, Computador Mac, Cargador de Mac, Cable, Cable para Impresora, Cables de C a B, Cleaning Kit, Jet Dryer Blower Air Duster, Quick Charging portable, Juego de llaves combinadas con matraca, Uña para mic SM57 Alambrico y Estuche)"
+          ]
+        ]
+      },
+      {
+        title: "In ears",
+        items: [
+          [
+            8,
+            "In ears Acemic (Belpack y transmisor)"
+          ],
+          [
+            6,
+            "In ears Shure (Belpack y transmisor)"
+          ],
+          [
+            2,
+            "Antena pasivas Shure"
+          ],
+          [
+            1,
+            "Antena In ears Shure"
+          ],
+          [
+            6,
+            "Bateria cuadrada Shure"
+          ],
+          [
+            3,
+            "Cargador para bateria cuadrada"
+          ],
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ],
+          [
+            1,
+            "Porta bateria cuadrada Bonai"
+          ],
+          [
+            4,
+            "Intercomunicador Hollyland"
+          ]
+        ]
+      },
+      {
+        title: "Bateria Electrica",
+        items: [
+          [
+            1,
+            "Bateria electrica con cable de corriente"
+          ],
+          [
+            2,
+            "cable XLR de 1/4\" a XLR macho"
+          ],
+          [
+            1,
+            "Alfombra"
+          ],
+          [
+            1,
+            "Banquito DW"
+          ],
+          [
+            2,
+            "Par de baquetas con estuche"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para voces",
+        items: [
+          [
+            2,
+            "Mic. Sm 58 alambrico"
+          ],
+          [
+            2,
+            "Mic. Sm 58 inalambrico"
+          ],
+          [
+            1,
+            "Mic. inalambrico de saxo"
+          ],
+          [
+            1,
+            "Mic. inalambrico de violin"
+          ],
+          [
+            1,
+            "Mic QLX-D2-J50"
+          ],
+          [
+            1,
+            "Mic. BLX2 M15 con funda (rosado)"
+          ],
+          [
+            2,
+            "Caja directa"
+          ]
+        ]
+      },
+      {
+        title: "Pedestales",
+        items: [
+          [
+            4,
+            "Pedestal recto"
+          ],
+          [
+            2,
+            "Pedestal de brazo"
+          ]
+        ]
+      },
+      {
+        title: "Luces",
+        items: [
+          [
+            6,
+            "Beam 260 con cable power spicon"
+          ],
+          [
+            6,
+            "Par LED RGB con cable ac"
+          ],
+          [
+            2,
+            "Luz circular con cable power spicon"
+          ],
+          [
+            2,
+            "Laser con cable power spicon"
+          ],
+          [
+            2,
+            "Wash con cable power spicon"
+          ],
+          [
+            24,
+            "Clamp para luces"
+          ],
+          [
+            24,
+            "Base de clamp"
+          ],
+          [
+            4,
+            "Tubo galvanizado"
+          ],
+          [
+            4,
+            "Hamburguesa doble"
+          ],
+          [
+            2,
+            "Spliter American DJ con cable ac"
+          ],
+          [
+            2,
+            "Blinder RGB con cable power spicon"
+          ],
+          [
+            1,
+            "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)"
+          ]
+        ]
+      },
+      {
+        title: "Maquina de humo",
+        items: [
+          [
+            2,
+            "Maquina de humo con control, cable ac y ventilador"
+          ],
+          [
+            1,
+            "Galon liquido de humo"
+          ]
+        ]
+      },
+      {
+        title: "Pistola LED CO2",
+        items: [
+          [
+            1,
+            "Pistola de CO2"
+          ],
+          [
+            1,
+            "Manguera de 10mts."
+          ],
+          [
+            1,
+            "Cilindro CO2"
+          ],
+          [
+            1,
+            "Cangrejo"
+          ],
+          [
+            1,
+            "Trocket"
+          ],
+          [
+            1,
+            "Strap pequeño"
+          ],
+          [
+            1,
+            "Funda para cilindro CO2"
+          ]
+        ]
+      },
+      {
+        title: "Pirotecnia Fria",
+        items: [
+          [
+            2,
+            "Maquina de pirotecnia fria"
+          ],
+          [
+            2,
+            "Sobre para pirotecnia medium"
+          ],
+          [
+            1,
+            "DMX"
+          ]
+        ]
+      },
+      {
+        title: "Estructuras DJ",
+        items: [
+          [
+            2,
+            "Cajon de madera negro para músicos"
+          ],
+          [
+            2,
+            "Marco DJ booth grande"
+          ],
+          [
+            1,
+            "Marco DJ booth pequeño"
+          ],
+          [
+            1,
+            "DJ booth"
+          ]
+        ]
+      },
+      {
+        title: "Estructura Luces",
+        items: [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            8,
+            "Truss 0.50 cm"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            100,
+            "Pin"
+          ],
+          [
+            40,
+            "Chiche"
+          ]
+        ]
+      },
+      {
+        title: "Telas para forrar estructuras",
+        items: [
+          [
+            6,
+            "Funda para truss color blanco de 3 mts"
+          ],
+          [
+            1,
+            "Tela pequeña para forrar DJ booth color blanco (DJ)"
+          ],
+          [
+            2,
+            "Tela grande para forrar DJ booth color negro (controles)"
+          ]
+        ]
+      },
+      {
+        title: "Case de Cableado",
+        items: [
+          [
+            1,
+            "Distro de corriente"
+          ],
+          [
+            5,
+            "Cable ac"
+          ],
+          [
+            5,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de 1/4\" a 1/4\""
+          ],
+          [
+            1,
+            "Case de pulpos (6 grandes y 6 pequeños)"
+          ],
+          [
+            1,
+            "Cable TCJ"
+          ],
+          [
+            10,
+            "Cuadro de corriente"
+          ],
+          [
+            10,
+            "Regleta"
+          ],
+          [
+            60,
+            "Cable XLR"
+          ],
+          [
+            40,
+            "Extensión"
+          ]
+        ]
+      },
+      {
+        title: "Extras",
+        items: [
+          [
+            1,
+            "Extintor"
+          ],
+          [
+            1,
+            "Bolsa de agua pura"
+          ]
+        ]
+      },
+      {
+        title: "Caja de Herramientas",
+        items: [
+          [
+            1,
+            "Macho"
+          ],
+          [
+            2,
+            "Pata de Gallo"
+          ],
+          [
+            1,
+            "Flipon doble de 50 amp"
+          ],
+          [
+            1,
+            "Desarmador de estrella"
+          ],
+          [
+            1,
+            "Desarmador de castigaderas"
+          ],
+          [
+            1,
+            "Cuchilla"
+          ],
+          [
+            1,
+            "Estuche llaves Allen (25 unidades)"
+          ],
+          [
+            1,
+            "Alicate"
+          ],
+          [
+            1,
+            "Tenaza"
+          ],
+          [
+            1,
+            "Pinza"
+          ],
+          [
+            1,
+            "Espiga tipo tester"
+          ],
+          [
+            1,
+            "Multímetro Fluke con estuche"
+          ],
+          [
+            5,
+            "Duc tape"
+          ],
+          [
+            3,
+            "Paquete de cinchos 0.35 cm"
+          ],
+          [
+            7,
+            "Cinta de aislar Electrica PVC"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Limpieza",
+        items: [
+          [
+            5,
+            "Trapo"
+          ],
+          [
+            1,
+            "Escoba"
+          ],
+          [
+            1,
+            "Pala"
+          ],
+          [
+            5,
+            "Trapiador"
+          ],
+          [
+            1,
+            "Atomizador con desinfectante"
+          ],
+          [
+            1,
+            "Atomizador con silicón"
+          ],
+          [
+            2,
+            "Espuma limpiadora"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de proteccion",
+        items: [
+          [
+            10,
+            "Bolsa jardinera de tonel"
+          ],
+          [
+            3,
+            "Retazo de nylon (para tapar equipo)"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Seguridad Industrial",
+        items: [
+          [
+            6,
+            "Casco"
+          ],
+          [
+            6,
+            "Chaleco"
+          ],
+          [
+            0,
+            "Par de botas"
+          ],
+          [
+            6,
+            "Par de guantes"
+          ],
+          [
+            1,
+            "Arnes completo"
+          ]
+        ]
+      },
+      {
+        title: "Toldos",
+        items: [
+          [
+            1,
+            "Toldo 3x3 blanco"
+          ],
+          [
+            1,
+            "Toldo 2x2 blanco"
+          ],
+          [
+            2,
+            "Mesa plegable"
+          ],
+          [
+            2,
+            "Par LED con cable ac"
+          ]
+        ]
+      }
+    ],
+    extras: []
+  },
+  "sunday-funday-bateria-acustica-opcion-a-pantalla-led-6x3mts-sobre-tarima": {
+    name: "SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A PANTALLA LED 6x3MTS SOBRE TARIMA",
+    source: "EQUIPO-DE-AUDIO.xlsx / SUNDAY FUNDAY",
+    mainSections: [
+      {
+        title: "Consola",
+        items: [
+          [
+            1,
+            "Consola X32 mesa digital con cable ac"
+          ],
+          [
+            1,
+            "Router con cargador y funda"
+          ],
+          [
+            2,
+            "Ipad con cargador"
+          ]
+        ]
+      },
+      {
+        title: "Telefono (Mochila)",
+        items: [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        title: "Audio",
+        items: [
+          [
+            4,
+            "Bocinas QSC con 2 cables power spicon y 2 cables puente"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ],
+          [
+            1,
+            "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac"
+          ],
+          [
+            2,
+            "Sub QSC 18 pasivo"
+          ],
+          [
+            1,
+            "Snake de 18 canales"
+          ],
+          [
+            1,
+            "Grabadora de audio"
+          ]
+        ]
+      },
+      {
+        title: "Monitoreo",
+        items: [
+          [
+            2,
+            "Bocina Turbosound IQ15 con 2 cables power spicon"
+          ],
+          [
+            1,
+            "Bajo Turbosound IQ18 con cable power spicon"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ]
+        ]
+      },
+      {
+        title: "Computadora",
+        items: [
+          [
+            1,
+            "Computadora para prueba Macbookpro (Mochila con, Computador Mac, Cargador de Mac, Cable, Cable para Impresora, Cables de C a B, Cleaning Kit, Jet Dryer Blower Air Duster, Quick Charging portable, Juego de llaves combinadas con matraca, Uña para mic SM57 Alambrico y Estuche)"
+          ]
+        ]
+      },
+      {
+        title: "In ears",
+        items: [
+          [
+            8,
+            "In ears Acemic (Belpack y transmisor)"
+          ],
+          [
+            6,
+            "In ears Shure (Belpack y transmisor)"
+          ],
+          [
+            2,
+            "Antena pasivas Shure"
+          ],
+          [
+            1,
+            "Antena In ears Shure"
+          ],
+          [
+            6,
+            "Bateria cuadrada Shure"
+          ],
+          [
+            3,
+            "Cargador para bateria cuadrada"
+          ],
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ],
+          [
+            1,
+            "Porta bateria cuadrada Bonai"
+          ],
+          [
+            4,
+            "Intercomunicador Hollyland"
+          ]
+        ]
+      },
+      {
+        title: "Case de Pedestales de Bateria",
+        items: [
+          [
+            1,
+            "Bombo DW con funda"
+          ],
+          [
+            1,
+            "Alfombra"
+          ],
+          [
+            1,
+            "Banquito DW"
+          ],
+          [
+            2,
+            "Par de baquetas con estuche"
+          ],
+          [
+            1,
+            "Caja DW con funda"
+          ],
+          [
+            1,
+            "Tom no.1 DW con funda"
+          ],
+          [
+            1,
+            "Tom no.2 con funda"
+          ],
+          [
+            1,
+            "Pedal de bombo"
+          ],
+          [
+            1,
+            "Floortom DW con funda"
+          ]
+        ]
+      },
+      {
+        title: "Case de platos",
+        items: [
+          [
+            1,
+            "Hit hat zildjan con funda"
+          ],
+          [
+            1,
+            "China zildjan con funda"
+          ],
+          [
+            1,
+            "Ride zildjan con funda"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para bateria",
+        items: [
+          [
+            4,
+            "Mic. SM57 alambrico"
+          ],
+          [
+            1,
+            "Mic. Beta 52A"
+          ],
+          [
+            2,
+            "Mic. Pg81"
+          ],
+          [
+            4,
+            "Clamp para microfono de metal"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para voces",
+        items: [
+          [
+            2,
+            "Mic. Sm 58 alambrico"
+          ],
+          [
+            2,
+            "Mic. Sm 58 inalambrico"
+          ],
+          [
+            1,
+            "Mic. inalambrico de saxo"
+          ],
+          [
+            1,
+            "Mic. inalambrico de violin"
+          ],
+          [
+            1,
+            "Mic QLX-D2-J50"
+          ],
+          [
+            1,
+            "Mic. BLX2 M15 con funda (rosado)"
+          ],
+          [
+            2,
+            "Caja directa"
+          ]
+        ]
+      },
+      {
+        title: "Pedestales",
+        items: [
+          [
+            4,
+            "Pedestal recto"
+          ],
+          [
+            2,
+            "Pedestal de brazo"
+          ]
+        ]
+      },
+      {
+        title: "Luces",
+        items: [
+          [
+            6,
+            "Beam 260 con cable power spicon"
+          ],
+          [
+            6,
+            "Par LED RGB con cable ac"
+          ],
+          [
+            2,
+            "Luz circular con cable power spicon"
+          ],
+          [
+            2,
+            "Laser con cable power spicon"
+          ],
+          [
+            2,
+            "Wash con cable power spicon"
+          ],
+          [
+            24,
+            "Clamp para luces"
+          ],
+          [
+            24,
+            "Base de clamp"
+          ],
+          [
+            4,
+            "Tubo galvanizado"
+          ],
+          [
+            4,
+            "Hamburguesa doble"
+          ],
+          [
+            2,
+            "Spliter American DJ con cable ac"
+          ],
+          [
+            2,
+            "Blinder RGB con cable power spicon"
+          ],
+          [
+            1,
+            "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)"
+          ]
+        ]
+      },
+      {
+        title: "Maquina de humo",
+        items: [
+          [
+            2,
+            "Maquina de humo con control, cable ac y ventilador"
+          ],
+          [
+            1,
+            "Galon liquido de humo"
+          ]
+        ]
+      },
+      {
+        title: "Pistola LED CO2",
+        items: [
+          [
+            1,
+            "Pistola de CO2"
+          ],
+          [
+            1,
+            "Manguera de 10mts."
+          ],
+          [
+            1,
+            "Cilindro CO2"
+          ],
+          [
+            1,
+            "Cangrejo"
+          ],
+          [
+            1,
+            "Trocket"
+          ],
+          [
+            1,
+            "Strap pequeño"
+          ],
+          [
+            1,
+            "Funda para cilindro CO2"
+          ]
+        ]
+      },
+      {
+        title: "Pirotecnia Fria",
+        items: [
+          [
+            2,
+            "Maquina de pirotecnia fria"
+          ],
+          [
+            2,
+            "Sobre para pirotecnia medium"
+          ],
+          [
+            1,
+            "DMX"
+          ]
+        ]
+      },
+      {
+        title: "Estructura DJ",
+        items: [
+          [
+            2,
+            "Cajon de madera negro para músicos"
+          ],
+          [
+            2,
+            "Marco DJ booth grande"
+          ],
+          [
+            1,
+            "Marco DJ booth pequeño"
+          ],
+          [
+            1,
+            "DJ booth"
+          ]
+        ]
+      },
+      {
+        title: "Estructura Luces",
+        items: [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            8,
+            "Truss 0.50 cm"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            100,
+            "Pin"
+          ],
+          [
+            40,
+            "Chiche"
+          ]
+        ]
+      },
+      {
+        title: "PANTALLA 6 X 3 METROS",
+        items: [
+          [
+            40,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ],
+          [
+            1,
+            "Capturadora de video"
+          ],
+          [
+            1,
+            "Clickers completo"
+          ],
+          [
+            1,
+            "Interfaz de audio volth 2"
+          ],
+          [
+            1,
+            "Switcher Atem mini con cargador"
+          ],
+          [
+            1,
+            "Interfaz Akai con cargador"
+          ]
+        ]
+      },
+      {
+        title: "CABLES PARA PANTALLA 6 X 3 METROS",
+        items: [
+          [
+            40,
+            "Cable de corriente"
+          ],
+          [
+            40,
+            "Cable de señal"
+          ],
+          [
+            10,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de DVI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            2,
+            "Cable de USB a datos"
+          ],
+          [
+            4,
+            "Cat 5 de 50mts."
+          ],
+          [
+            2,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        title: "Estructura para pantalla",
+        items: [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            6,
+            "Truss 1 mt"
+          ],
+          [
+            6,
+            "Truss 0.50 cm"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            120,
+            "Pin"
+          ],
+          [
+            72,
+            "Chiche"
+          ],
+          [
+            2,
+            "Strap"
+          ]
+        ]
+      },
+      {
+        title: "Telas para forrar estructuras",
+        items: [
+          [
+            1,
+            "Tela pequeña para forrar DJ booth color negro (DJ)"
+          ],
+          [
+            2,
+            "Tela grande para forrar DJ booth color negro (controles)"
+          ],
+          [
+            2,
+            "retazos de tela color negro de 8 mts"
+          ]
+        ]
+      },
+      {
+        title: "Case de Cableado",
+        items: [
+          [
+            1,
+            "Distro de corriente"
+          ],
+          [
+            1,
+            "Distro pequeño"
+          ],
+          [
+            5,
+            "Cable ac"
+          ],
+          [
+            5,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de 1/4\" a 1/4\""
+          ],
+          [
+            1,
+            "Case de pulpos (6 grandes y 6 pequeños)"
+          ],
+          [
+            1,
+            "Cable TCJ"
+          ],
+          [
+            10,
+            "Cuadro de corriente"
+          ],
+          [
+            10,
+            "Regleta"
+          ],
+          [
+            60,
+            "Cable XLR"
+          ],
+          [
+            40,
+            "Extensión"
+          ]
+        ]
+      },
+      {
+        title: "Extras",
+        items: [
+          [
+            1,
+            "Extintor"
+          ],
+          [
+            1,
+            "Bolsa de agua pura"
+          ]
+        ]
+      },
+      {
+        title: "Caja de Herramientas",
+        items: [
+          [
+            1,
+            "Macho"
+          ],
+          [
+            2,
+            "Pata de Gallo"
+          ],
+          [
+            1,
+            "Flipon doble de 50 amp"
+          ],
+          [
+            1,
+            "Desarmador de estrella"
+          ],
+          [
+            1,
+            "Desarmador de castigaderas"
+          ],
+          [
+            1,
+            "Cuchilla"
+          ],
+          [
+            1,
+            "Estuche llaves Allen (25 unidades)"
+          ],
+          [
+            1,
+            "Alicate"
+          ],
+          [
+            1,
+            "Tenaza"
+          ],
+          [
+            1,
+            "Pinza"
+          ],
+          [
+            1,
+            "Espiga tipo tester"
+          ],
+          [
+            1,
+            "Multímetro Fluke con estuche"
+          ],
+          [
+            5,
+            "Duc tape"
+          ],
+          [
+            3,
+            "Paquete de cinchos 0.35 cm"
+          ],
+          [
+            7,
+            "Cinta de aislar Electrica PVC"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Limpieza",
+        items: [
+          [
+            5,
+            "Trapo"
+          ],
+          [
+            1,
+            "Escoba"
+          ],
+          [
+            1,
+            "Pala"
+          ],
+          [
+            5,
+            "Trapiador"
+          ],
+          [
+            1,
+            "Atomizador con desinfectante"
+          ],
+          [
+            1,
+            "Atomizador con silicón"
+          ],
+          [
+            2,
+            "Espuma limpiadora"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de proteccion",
+        items: [
+          [
+            10,
+            "Bolsa jardinera de tonel"
+          ],
+          [
+            3,
+            "Retazo de nylon (para tapar equipo)"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Seguridad Industrial",
+        items: [
+          [
+            6,
+            "Casco"
+          ],
+          [
+            6,
+            "Chaleco"
+          ],
+          [
+            0,
+            "Par de botas"
+          ],
+          [
+            6,
+            "Par de guantes"
+          ],
+          [
+            1,
+            "Arnes completo"
+          ]
+        ]
+      },
+      {
+        title: "Toldos",
+        items: [
+          [
+            1,
+            "Toldo 3x3 blanco"
+          ],
+          [
+            1,
+            "Toldo 2x2 blanco"
+          ],
+          [
+            2,
+            "Mesa plegable"
+          ],
+          [
+            2,
+            "Par LED con cable ac"
+          ]
+        ]
+      }
+    ],
+    extras: []
+  },
+  "sunday-funday-bateria-acustica-opcion-a-pantalla-led-6x3mts-al-ras-de-piso": {
+    name: "SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A PANTALLA LED 6x3MTS AL RAS DE PISO",
+    source: "EQUIPO-DE-AUDIO.xlsx / SUNDAY FUNDAY",
+    mainSections: [
+      {
+        title: "Consola",
+        items: [
+          [
+            1,
+            "Consola X32 mesa digital con cable ac"
+          ],
+          [
+            1,
+            "Router con cargador y funda"
+          ],
+          [
+            2,
+            "Ipad con cargador"
+          ]
+        ]
+      },
+      {
+        title: "Telefono (Mochila)",
+        items: [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        title: "Audio",
+        items: [
+          [
+            4,
+            "Bocinas QSC con 2 cables power spicon y 2 cables puente"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ],
+          [
+            1,
+            "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac"
+          ],
+          [
+            2,
+            "Sub QSC 18 pasivo"
+          ],
+          [
+            1,
+            "Snake de 18 canales"
+          ],
+          [
+            1,
+            "Grabadora de audio"
+          ]
+        ]
+      },
+      {
+        title: "Monitoreo",
+        items: [
+          [
+            2,
+            "Bocina Turbosound IQ15 con 2 cables power spicon"
+          ],
+          [
+            1,
+            "Bajo Turbosound IQ18 con cable power spicon"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ]
+        ]
+      },
+      {
+        title: "Computadora",
+        items: [
+          [
+            1,
+            "Computadora para prueba Macbookpro (Mochila con, Computador Mac, Cargador de Mac, Cable, Cable para Impresora, Cables de C a B, Cleaning Kit, Jet Dryer Blower Air Duster, Quick Charging portable, Juego de llaves combinadas con matraca, Uña para mic SM57 Alambrico y Estuche)"
+          ]
+        ]
+      },
+      {
+        title: "In ears",
+        items: [
+          [
+            8,
+            "In ears Acemic (Belpack y transmisor)"
+          ],
+          [
+            6,
+            "In ears Shure (Belpack y transmisor)"
+          ],
+          [
+            2,
+            "Antena pasivas Shure"
+          ],
+          [
+            1,
+            "Antena In ears Shure"
+          ],
+          [
+            6,
+            "Bateria cuadrada Shure"
+          ],
+          [
+            3,
+            "Cargador para bateria cuadrada"
+          ],
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ],
+          [
+            1,
+            "Porta bateria cuadrada Bonai"
+          ],
+          [
+            4,
+            "Intercomunicador Hollyland"
+          ]
+        ]
+      },
+      {
+        title: "Case de Pedestales de Bateria",
+        items: [
+          [
+            1,
+            "Bombo DW con funda"
+          ],
+          [
+            1,
+            "Alfombra"
+          ],
+          [
+            1,
+            "Banquito DW"
+          ],
+          [
+            2,
+            "Par de baquetas con estuche"
+          ],
+          [
+            1,
+            "Caja DW con funda"
+          ],
+          [
+            1,
+            "Tom no.1 DW con funda"
+          ],
+          [
+            1,
+            "Tom no.2 con funda"
+          ],
+          [
+            1,
+            "Pedal de bombo"
+          ],
+          [
+            1,
+            "Floortom DW con funda"
+          ]
+        ]
+      },
+      {
+        title: "Case de platos",
+        items: [
+          [
+            1,
+            "Hit hat zildjan con funda"
+          ],
+          [
+            1,
+            "China zildjan con funda"
+          ],
+          [
+            1,
+            "Ride zildjan con funda"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para bateria",
+        items: [
+          [
+            4,
+            "Mic. SM57 alambrico"
+          ],
+          [
+            1,
+            "Mic. Beta 52A"
+          ],
+          [
+            2,
+            "Mic. Pg81"
+          ],
+          [
+            4,
+            "Clamp para microfono de metal"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para voces",
+        items: [
+          [
+            2,
+            "Mic. Sm 58 alambrico"
+          ],
+          [
+            2,
+            "Mic. Sm 58 inalambrico"
+          ],
+          [
+            1,
+            "Mic. inalambrico de saxo"
+          ],
+          [
+            1,
+            "Mic. inalambrico de violin"
+          ],
+          [
+            1,
+            "Mic QLX-D2-J50"
+          ],
+          [
+            1,
+            "Mic. BLX2 M15 con funda (rosado)"
+          ],
+          [
+            2,
+            "Caja directa"
+          ]
+        ]
+      },
+      {
+        title: "Pedestales",
+        items: [
+          [
+            4,
+            "Pedestal recto"
+          ],
+          [
+            2,
+            "Pedestal de brazo"
+          ]
+        ]
+      },
+      {
+        title: "Luces",
+        items: [
+          [
+            6,
+            "Beam 260 con cable power spicon"
+          ],
+          [
+            6,
+            "Par LED RGB con cable ac"
+          ],
+          [
+            2,
+            "Luz circular con cable power spicon"
+          ],
+          [
+            2,
+            "Laser con cable power spicon"
+          ],
+          [
+            2,
+            "Wash con cable power spicon"
+          ],
+          [
+            24,
+            "Clamp para luces"
+          ],
+          [
+            24,
+            "Base de clamp"
+          ],
+          [
+            4,
+            "Tubo galvanizado"
+          ],
+          [
+            4,
+            "Hamburguesa doble"
+          ],
+          [
+            2,
+            "Spliter American DJ con cable ac"
+          ],
+          [
+            2,
+            "Blinder RGB con cable power spicon"
+          ],
+          [
+            1,
+            "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)"
+          ]
+        ]
+      },
+      {
+        title: "Maquina de humo",
+        items: [
+          [
+            2,
+            "Maquina de humo con control, cable ac y ventilador"
+          ],
+          [
+            1,
+            "Galon liquido de humo"
+          ]
+        ]
+      },
+      {
+        title: "Pistola LED CO2",
+        items: [
+          [
+            1,
+            "Pistola de CO2"
+          ],
+          [
+            1,
+            "Manguera de 10mts."
+          ],
+          [
+            1,
+            "Cilindro CO2"
+          ],
+          [
+            1,
+            "Cangrejo"
+          ],
+          [
+            1,
+            "Trocket"
+          ],
+          [
+            1,
+            "Strap pequeño"
+          ],
+          [
+            1,
+            "Funda para cilindro CO2"
+          ]
+        ]
+      },
+      {
+        title: "Pirotecnia Fria",
+        items: [
+          [
+            2,
+            "Maquina de pirotecnia fria"
+          ],
+          [
+            2,
+            "Sobre para pirotecnia medium"
+          ],
+          [
+            1,
+            "DMX"
+          ]
+        ]
+      },
+      {
+        title: "Estructura DJ",
+        items: [
+          [
+            2,
+            "Cajon de madera negro para músicos"
+          ],
+          [
+            2,
+            "Marco DJ booth grande"
+          ],
+          [
+            1,
+            "Marco DJ booth pequeño"
+          ],
+          [
+            1,
+            "DJ booth"
+          ]
+        ]
+      },
+      {
+        title: "Estructura Luces",
+        items: [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            8,
+            "Truss 0.50 cm"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            100,
+            "Pin"
+          ],
+          [
+            40,
+            "Chiche"
+          ]
+        ]
+      },
+      {
+        title: "PANTALLA 6 X 3 METROS",
+        items: [
+          [
+            40,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ],
+          [
+            1,
+            "Capturadora de video"
+          ],
+          [
+            1,
+            "Clickers completo"
+          ],
+          [
+            1,
+            "Interfaz de audio volth 2"
+          ],
+          [
+            1,
+            "Switcher Atem mini con cargador"
+          ],
+          [
+            1,
+            "Interfaz Akai con cargador"
+          ]
+        ]
+      },
+      {
+        title: "CABLES PARA PANTALLA 6 X 3 METROS",
+        items: [
+          [
+            40,
+            "Cable de corriente"
+          ],
+          [
+            40,
+            "Cable de señal"
+          ],
+          [
+            10,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de DVI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            2,
+            "Cable de USB a datos"
+          ],
+          [
+            4,
+            "Cat 5 de 50mts."
+          ],
+          [
+            2,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        title: "Estructura para pantalla",
+        items: [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            6,
+            "Truss 1 mt"
+          ],
+          [
+            6,
+            "Truss 0.50 cm"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            120,
+            "Pin"
+          ],
+          [
+            72,
+            "Chiche"
+          ],
+          [
+            2,
+            "Strap"
+          ]
+        ]
+      },
+      {
+        title: "Porteria para pantalla",
+        items: [
+          [
+            2,
+            "Truss 2 mt"
+          ],
+          [
+            2,
+            "Truss 1 mt"
+          ],
+          [
+            3,
+            "Truss 0.50 cm"
+          ],
+          [
+            3,
+            "Platina grande"
+          ],
+          [
+            3,
+            "Cubo 0.30 cm."
+          ],
+          [
+            80,
+            "Pin"
+          ],
+          [
+            45,
+            "Chiche"
+          ]
+        ]
+      },
+      {
+        title: "Telas para forrar estructuras",
+        items: [
+          [
+            1,
+            "Tela pequeña para forrar DJ booth color negro (DJ)"
+          ],
+          [
+            2,
+            "Tela grande para forrar DJ booth color negro (controles)"
+          ],
+          [
+            2,
+            "retazos de tela color negro de 8 mts"
+          ]
+        ]
+      },
+      {
+        title: "Case de Cableado",
+        items: [
+          [
+            1,
+            "Distro de corriente"
+          ],
+          [
+            1,
+            "Distro pequeño"
+          ],
+          [
+            5,
+            "Cable ac"
+          ],
+          [
+            5,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de 1/4\" a 1/4\""
+          ],
+          [
+            1,
+            "Case de pulpos (6 grandes y 6 pequeños)"
+          ],
+          [
+            1,
+            "Cable TCJ"
+          ],
+          [
+            10,
+            "Cuadro de corriente"
+          ],
+          [
+            10,
+            "Regleta"
+          ],
+          [
+            60,
+            "Cable XLR"
+          ],
+          [
+            40,
+            "Extensión"
+          ]
+        ]
+      },
+      {
+        title: "Extras",
+        items: [
+          [
+            1,
+            "Extintor"
+          ],
+          [
+            1,
+            "Bolsa de agua pura"
+          ]
+        ]
+      },
+      {
+        title: "Caja de Herramientas",
+        items: [
+          [
+            1,
+            "Macho"
+          ],
+          [
+            2,
+            "Pata de Gallo"
+          ],
+          [
+            1,
+            "Flipon doble de 50 amp"
+          ],
+          [
+            1,
+            "Desarmador de estrella"
+          ],
+          [
+            1,
+            "Desarmador de castigaderas"
+          ],
+          [
+            1,
+            "Cuchilla"
+          ],
+          [
+            1,
+            "Estuche llaves Allen (25 unidades)"
+          ],
+          [
+            1,
+            "Alicate"
+          ],
+          [
+            1,
+            "Tenaza"
+          ],
+          [
+            1,
+            "Pinza"
+          ],
+          [
+            1,
+            "Espiga tipo tester"
+          ],
+          [
+            1,
+            "Multímetro Fluke con estuche"
+          ],
+          [
+            5,
+            "Duc tape"
+          ],
+          [
+            3,
+            "Paquete de cinchos 0.35 cm"
+          ],
+          [
+            7,
+            "Cinta de aislar Electrica PVC"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Limpieza",
+        items: [
+          [
+            5,
+            "Trapo"
+          ],
+          [
+            1,
+            "Escoba"
+          ],
+          [
+            1,
+            "Pala"
+          ],
+          [
+            5,
+            "Trapiador"
+          ],
+          [
+            1,
+            "Atomizador con desinfectante"
+          ],
+          [
+            1,
+            "Atomizador con silicón"
+          ],
+          [
+            2,
+            "Espuma limpiadora"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de proteccion",
+        items: [
+          [
+            10,
+            "Bolsa jardinera de tonel"
+          ],
+          [
+            3,
+            "Retazo de nylon (para tapar equipo)"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Seguridad Industrial",
+        items: [
+          [
+            6,
+            "Casco"
+          ],
+          [
+            6,
+            "Chaleco"
+          ],
+          [
+            0,
+            "Par de botas"
+          ],
+          [
+            6,
+            "Par de guantes"
+          ],
+          [
+            1,
+            "Arnes completo"
+          ]
+        ]
+      },
+      {
+        title: "Toldos",
+        items: [
+          [
+            1,
+            "Toldo 3x3 blanco"
+          ],
+          [
+            1,
+            "Toldo 2x2 blanco"
+          ],
+          [
+            2,
+            "Mesa plegable"
+          ],
+          [
+            2,
+            "Par LED con cable ac"
+          ]
+        ]
+      }
+    ],
+    extras: []
+  },
+  "sunday-funday-bateria-acustica-opcion-a-solo-show": {
+    name: "SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A SOLO SHOW",
+    source: "EQUIPO-DE-AUDIO.xlsx / SUNDAY FUNDAY",
+    mainSections: [
+      {
+        title: "Consola",
+        items: [
+          [
+            1,
+            "Consola X32 mesa digital con cable ac"
+          ],
+          [
+            1,
+            "Router con cargador y funda"
+          ],
+          [
+            2,
+            "Ipad con cargador"
+          ]
+        ]
+      },
+      {
+        title: "Telefono (Mochila)",
+        items: [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        title: "Audio",
+        items: [
+          [
+            1,
+            "Snake de 18 canales"
+          ],
+          [
+            1,
+            "Grabadora de audio"
+          ]
+        ]
+      },
+      {
+        title: "Monitoreo",
+        items: [
+          [
+            2,
+            "Bocina Turbosound IQ15 con 2 cables power spicon"
+          ],
+          [
+            1,
+            "Bajo Turbosound IQ18 con cable power spicon"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ]
+        ]
+      },
+      {
+        title: "Computadora",
+        items: [
+          [
+            1,
+            "Computadora para prueba Macbookpro (Mochila con, Computador Mac, Cargador de Mac, Cable, Cable para Impresora, Cables de C a B, Cleaning Kit, Jet Dryer Blower Air Duster, Quick Charging portable, Juego de llaves combinadas con matraca, Uña para mic SM57 Alambrico y Estuche)"
+          ]
+        ]
+      },
+      {
+        title: "In ears",
+        items: [
+          [
+            8,
+            "In ears Acemic (Belpack y transmisor)"
+          ],
+          [
+            6,
+            "In ears Shure (Belpack y transmisor)"
+          ],
+          [
+            2,
+            "Antena pasivas Shure"
+          ],
+          [
+            1,
+            "Antena In ears Shure"
+          ],
+          [
+            6,
+            "Bateria cuadrada Shure"
+          ],
+          [
+            3,
+            "Cargador para bateria cuadrada"
+          ],
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ],
+          [
+            1,
+            "Porta bateria cuadrada Bonai"
+          ],
+          [
+            4,
+            "Intercomunicador Hollyland"
+          ]
+        ]
+      },
+      {
+        title: "Case de Pedestales de Bateria",
+        items: [
+          [
+            1,
+            "Bombo DW con funda"
+          ],
+          [
+            1,
+            "Alfombra"
+          ],
+          [
+            1,
+            "Banquito DW"
+          ],
+          [
+            2,
+            "Par de baquetas con estuche"
+          ],
+          [
+            1,
+            "Caja DW con funda"
+          ],
+          [
+            1,
+            "Tom no.1 DW con funda"
+          ],
+          [
+            1,
+            "Tom no.2 con funda"
+          ],
+          [
+            1,
+            "Pedal de bombo"
+          ],
+          [
+            1,
+            "Floortom DW con funda"
+          ]
+        ]
+      },
+      {
+        title: "Case de platos",
+        items: [
+          [
+            1,
+            "Hit hat zildjan con funda"
+          ],
+          [
+            1,
+            "China zildjan con funda"
+          ],
+          [
+            1,
+            "Ride zildjan con funda"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para bateria",
+        items: [
+          [
+            4,
+            "Mic. SM57 alambrico"
+          ],
+          [
+            1,
+            "Mic. Beta 52A"
+          ],
+          [
+            2,
+            "Mic. Pg81"
+          ],
+          [
+            4,
+            "Clamp para microfono de metal"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para voces",
+        items: [
+          [
+            2,
+            "Mic. Sm 58 alambrico"
+          ],
+          [
+            2,
+            "Mic. Sm 58 inalambrico"
+          ],
+          [
+            1,
+            "Mic. inalambrico de saxo"
+          ],
+          [
+            1,
+            "Mic. inalambrico de violin"
+          ],
+          [
+            1,
+            "Mic QLX-D2-J50"
+          ],
+          [
+            1,
+            "Mic. BLX2 M15 con funda (rosado)"
+          ],
+          [
+            2,
+            "Caja directa"
+          ]
+        ]
+      },
+      {
+        title: "Pedestales",
+        items: [
+          [
+            4,
+            "Pedestal recto"
+          ],
+          [
+            2,
+            "Pedestal de brazo"
+          ]
+        ]
+      },
+      {
+        title: "Pistola LED CO2",
+        items: [
+          [
+            1,
+            "Pistola de CO2"
+          ],
+          [
+            1,
+            "Manguera de 10mts."
+          ],
+          [
+            1,
+            "Cilindro CO2"
+          ],
+          [
+            1,
+            "Cangrejo"
+          ],
+          [
+            1,
+            "Trocket"
+          ],
+          [
+            1,
+            "Strap pequeño"
+          ],
+          [
+            1,
+            "Funda para cilindro CO2"
+          ]
+        ]
+      },
+      {
+        title: "Pirotecnia Fria",
+        items: [
+          [
+            2,
+            "Maquina de pirotecnia fria"
+          ],
+          [
+            2,
+            "Sobre para pirotecnia medium"
+          ],
+          [
+            1,
+            "DMX"
+          ]
+        ]
+      },
+      {
+        title: "Estructura DJ",
+        items: [
+          [
+            2,
+            "Cajon de madera negro para músicos"
+          ],
+          [
+            2,
+            "Marco DJ booth grande"
+          ]
+        ]
+      },
+      {
+        title: "Telas para forrar estructuras",
+        items: [
+          [
+            2,
+            "Tela grande para forrar DJ booth color negro (controles)"
+          ]
+        ]
+      },
+      {
+        title: "Case de Cableado",
+        items: [
+          [
+            5,
+            "Cable ac"
+          ],
+          [
+            5,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de 1/4\" a 1/4\""
+          ],
+          [
+            8,
+            "Cuadro de corriente"
+          ],
+          [
+            8,
+            "Regleta"
+          ],
+          [
+            30,
+            "Cable XLR"
+          ],
+          [
+            20,
+            "Extensión"
+          ]
+        ]
+      },
+      {
+        title: "Extras",
+        items: [
+          [
+            1,
+            "Extintor"
+          ],
+          [
+            1,
+            "Bolsa de agua pura"
+          ]
+        ]
+      },
+      {
+        title: "Caja de Herramientas",
+        items: [
+          [
+            1,
+            "Macho"
+          ],
+          [
+            2,
+            "Pata de Gallo"
+          ],
+          [
+            1,
+            "Flipon doble de 50 amp"
+          ],
+          [
+            1,
+            "Desarmador de estrella"
+          ],
+          [
+            1,
+            "Desarmador de castigaderas"
+          ],
+          [
+            1,
+            "Cuchilla"
+          ],
+          [
+            1,
+            "Estuche llaves Allen (25 unidades)"
+          ],
+          [
+            1,
+            "Alicate"
+          ],
+          [
+            1,
+            "Tenaza"
+          ],
+          [
+            1,
+            "Pinza"
+          ],
+          [
+            1,
+            "Espiga tipo tester"
+          ],
+          [
+            1,
+            "Multímetro Fluke con estuche"
+          ],
+          [
+            5,
+            "Duc tape"
+          ],
+          [
+            3,
+            "Paquete de cinchos 0.35 cm"
+          ],
+          [
+            3,
+            "Cinta de aislar Electrica PVC"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Limpieza",
+        items: [
+          [
+            5,
+            "Trapo"
+          ],
+          [
+            1,
+            "Escoba"
+          ],
+          [
+            1,
+            "Pala"
+          ],
+          [
+            5,
+            "Trapiador"
+          ],
+          [
+            1,
+            "Atomizador con desinfectante"
+          ],
+          [
+            1,
+            "Atomizador con silicón"
+          ],
+          [
+            2,
+            "Espuma limpiadora"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de proteccion",
+        items: [
+          [
+            10,
+            "Bolsa jardinera de tonel"
+          ],
+          [
+            3,
+            "Retazo de nylon (para tapar equipo)"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Seguridad Industrial",
+        items: [
+          [
+            6,
+            "Casco"
+          ],
+          [
+            6,
+            "Chaleco"
+          ],
+          [
+            0,
+            "Par de botas"
+          ],
+          [
+            6,
+            "Par de guantes"
+          ],
+          [
+            1,
+            "Arnes completo"
+          ]
+        ]
+      },
+      {
+        title: "Toldos",
+        items: [
+          [
+            1,
+            "Toldo 3x3 blanco"
+          ],
+          [
+            1,
+            "Toldo 2x2 blanco"
+          ],
+          [
+            2,
+            "Mesa plegable"
+          ],
+          [
+            2,
+            "Par LED con cable ac"
+          ]
+        ]
+      }
+    ],
+    extras: []
+  },
+  "sunday-funday-opcion-a-pantalla-en-modulos": {
+    name: "SUNDAY FUNDAY - OPCION A PANTALLA EN MODULOS",
+    source: "EQUIPO-DE-AUDIO.xlsx / SUNDAY FUNDAY",
+    mainSections: [
+      {
+        title: "Consola",
+        items: [
+          [
+            1,
+            "Consola X32 mesa digital con cable ac"
+          ],
+          [
+            1,
+            "Router con cargador y funda"
+          ],
+          [
+            2,
+            "Ipad con cargador"
+          ]
+        ]
+      },
+      {
+        title: "Telefono (Mochila)",
+        items: [
+          [
+            1,
+            "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
+          ]
+        ]
+      },
+      {
+        title: "Audio",
+        items: [
+          [
+            4,
+            "Bocinas QSC con 2 cables power spicon y 2 cables puente"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ],
+          [
+            1,
+            "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac"
+          ],
+          [
+            2,
+            "Sub QSC 18 pasivo"
+          ],
+          [
+            1,
+            "Snake de 18 canales"
+          ],
+          [
+            1,
+            "Grabadora de audio"
+          ]
+        ]
+      },
+      {
+        title: "Monitoreo",
+        items: [
+          [
+            2,
+            "Bocina Turbosound IQ15 con 2 cables power spicon"
+          ],
+          [
+            1,
+            "Bajo Turbosound IQ18 con cable power spicon"
+          ],
+          [
+            2,
+            "Pedestal hercules para bocina con funda"
+          ]
+        ]
+      },
+      {
+        title: "Computadora",
+        items: [
+          [
+            1,
+            "Computadora para prueba Macbookpro (Mochila con, Computador Mac, Cargador de Mac, Cable, Cable para Impresora, Cables de C a B, Cleaning Kit, Jet Dryer Blower Air Duster, Quick Charging portable, Juego de llaves combinadas con matraca, Uña para mic SM57 Alambrico y Estuche)"
+          ]
+        ]
+      },
+      {
+        title: "In ears",
+        items: [
+          [
+            8,
+            "In ears Acemic (Belpack y transmisor)"
+          ],
+          [
+            6,
+            "In ears Shure (Belpack y transmisor)"
+          ],
+          [
+            2,
+            "Antena pasivas Shure"
+          ],
+          [
+            1,
+            "Antena In ears Shure"
+          ],
+          [
+            6,
+            "Bateria cuadrada Shure"
+          ],
+          [
+            3,
+            "Cargador para bateria cuadrada"
+          ],
+          [
+            24,
+            "Bateria Bonai"
+          ],
+          [
+            1,
+            "Cargador para bateria Bonai"
+          ],
+          [
+            1,
+            "Porta bateria cuadrada Bonai"
+          ],
+          [
+            4,
+            "Intercomunicador Hollyland"
+          ]
+        ]
+      },
+      {
+        title: "Case de Pedestales de Bateria",
+        items: [
+          [
+            1,
+            "Bombo DW con funda"
+          ],
+          [
+            1,
+            "Alfombra"
+          ],
+          [
+            1,
+            "Banquito DW"
+          ],
+          [
+            2,
+            "Par de baquetas con estuche"
+          ],
+          [
+            1,
+            "Caja DW con funda"
+          ],
+          [
+            1,
+            "Tom no.1 DW con funda"
+          ],
+          [
+            1,
+            "Tom no.2 con funda"
+          ],
+          [
+            1,
+            "Pedal de bombo"
+          ],
+          [
+            1,
+            "Floortom DW con funda"
+          ]
+        ]
+      },
+      {
+        title: "Case de platos",
+        items: [
+          [
+            1,
+            "Hit hat zildjan con funda"
+          ],
+          [
+            1,
+            "China zildjan con funda"
+          ],
+          [
+            1,
+            "Ride zildjan con funda"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para bateria",
+        items: [
+          [
+            4,
+            "Mic. SM57 alambrico"
+          ],
+          [
+            1,
+            "Mic. Beta 52A"
+          ],
+          [
+            2,
+            "Mic. Pg81"
+          ],
+          [
+            4,
+            "Clamp para microfono de metal"
+          ]
+        ]
+      },
+      {
+        title: "Microfonia para voces",
+        items: [
+          [
+            2,
+            "Mic. Sm 58 alambrico"
+          ],
+          [
+            2,
+            "Mic. Sm 58 inalambrico"
+          ],
+          [
+            1,
+            "Mic. inalambrico de saxo"
+          ],
+          [
+            1,
+            "Mic. inalambrico de violin"
+          ],
+          [
+            1,
+            "Mic QLX-D2-J50"
+          ],
+          [
+            1,
+            "Mic. BLX2 M15 con funda (rosado)"
+          ],
+          [
+            2,
+            "Caja directa"
+          ]
+        ]
+      },
+      {
+        title: "Pedestales",
+        items: [
+          [
+            4,
+            "Pedestal recto"
+          ],
+          [
+            2,
+            "Pedestal de brazo"
+          ]
+        ]
+      },
+      {
+        title: "Luces",
+        items: [
+          [
+            6,
+            "Beam 260 con cable power spicon"
+          ],
+          [
+            6,
+            "Par LED RGB con cable ac"
+          ],
+          [
+            2,
+            "Luz circular con cable power spicon"
+          ],
+          [
+            2,
+            "Laser con cable power spicon"
+          ],
+          [
+            2,
+            "Wash con cable power spicon"
+          ],
+          [
+            24,
+            "Clamp para luces"
+          ],
+          [
+            24,
+            "Base de clamp"
+          ],
+          [
+            4,
+            "Tubo galvanizado"
+          ],
+          [
+            4,
+            "Hamburguesa doble"
+          ],
+          [
+            2,
+            "Spliter American DJ con cable ac"
+          ],
+          [
+            2,
+            "Blinder RGB con cable power spicon"
+          ],
+          [
+            1,
+            "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)"
+          ]
+        ]
+      },
+      {
+        title: "Maquina de humo",
+        items: [
+          [
+            2,
+            "Maquina de humo con control, cable ac y ventilador"
+          ],
+          [
+            1,
+            "Galon liquido de humo"
+          ]
+        ]
+      },
+      {
+        title: "Pistola LED CO2",
+        items: [
+          [
+            1,
+            "Pistola de CO2"
+          ],
+          [
+            1,
+            "Manguera de 10mts."
+          ],
+          [
+            1,
+            "Cilindro CO2"
+          ],
+          [
+            1,
+            "Cangrejo"
+          ],
+          [
+            1,
+            "Trocket"
+          ],
+          [
+            1,
+            "Strap pequeño"
+          ],
+          [
+            1,
+            "Funda para cilindro CO2"
+          ]
+        ]
+      },
+      {
+        title: "Pirotecnia Fria",
+        items: [
+          [
+            2,
+            "Maquina de pirotecnia fria"
+          ],
+          [
+            2,
+            "Sobre para pirotecnia medium"
+          ],
+          [
+            1,
+            "DMX"
+          ]
+        ]
+      },
+      {
+        title: "Estructura DJ",
+        items: [
+          [
+            2,
+            "Cajon de madera negro para músicos"
+          ],
+          [
+            2,
+            "Marco DJ booth grande"
+          ],
+          [
+            1,
+            "Marco DJ booth pequeño"
+          ],
+          [
+            1,
+            "DJ booth"
+          ]
+        ]
+      },
+      {
+        title: "pantalla en modulos 3 metros",
+        items: [
+          [
+            24,
+            "Modulo de pantalla LED 1mts X 0.50cm"
+          ],
+          [
+            1,
+            "Computadora de pantalla con su cargador, mouse"
+          ],
+          [
+            1,
+            "Procesador de pantalla con su AC"
+          ]
+        ]
+      },
+      {
+        title: "Cable para Pantalla de 3 metros",
+        items: [
+          [
+            24,
+            "Cable de corriente"
+          ],
+          [
+            24,
+            "Cable de señal"
+          ],
+          [
+            8,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de DVI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A DVI"
+          ],
+          [
+            2,
+            "Cable de HDMI A HDMI"
+          ],
+          [
+            2,
+            "Cable de USB a datos"
+          ],
+          [
+            4,
+            "Cat 5 de 50mts."
+          ],
+          [
+            2,
+            "Cat 5 de 10mts."
+          ],
+          [
+            2,
+            "HDMI de 5mts"
+          ]
+        ]
+      },
+      {
+        title: "Estructura para pantalla",
+        items: [
+          [
+            6,
+            "Truss 2 mt"
+          ],
+          [
+            6,
+            "Truss 1 mt"
+          ],
+          [
+            12,
+            "Truss 0.50 cm"
+          ],
+          [
+            6,
+            "Platina pequeña"
+          ],
+          [
+            6,
+            "Platina grande"
+          ],
+          [
+            100,
+            "Pin"
+          ],
+          [
+            40,
+            "Chiche"
+          ],
+          [
+            2,
+            "Strap"
+          ],
+          [
+            7,
+            "Chaco"
+          ]
+        ]
+      },
+      {
+        title: "Telas para forrar estructuras",
+        items: [
+          [
+            2,
+            "retazos de tela de 8 metros color negro"
+          ],
+          [
+            2,
+            "Tela grande para forrar DJ booth color negro (controles)"
+          ]
+        ]
+      },
+      {
+        title: "Case de Cableado",
+        items: [
+          [
+            1,
+            "Distro de corriente"
+          ],
+          [
+            5,
+            "Cable ac"
+          ],
+          [
+            5,
+            "Cable power spicon"
+          ],
+          [
+            2,
+            "Cable de 1/4\" a 1/4\""
+          ],
+          [
+            1,
+            "Case de pulpos (6 grandes y 6 pequeños)"
+          ],
+          [
+            2,
+            "Cable TCJ"
+          ],
+          [
+            10,
+            "Cuadro de corriente"
+          ],
+          [
+            10,
+            "Regleta"
+          ],
+          [
+            70,
+            "Cable XLR"
+          ],
+          [
+            40,
+            "Extensión"
+          ]
+        ]
+      },
+      {
+        title: "Extras",
+        items: [
+          [
+            1,
+            "Extintor"
+          ],
+          [
+            1,
+            "Bolsa de agua pura"
+          ]
+        ]
+      },
+      {
+        title: "Caja de Herramientas",
+        items: [
+          [
+            1,
+            "Macho"
+          ],
+          [
+            2,
+            "Pata de Gallo"
+          ],
+          [
+            1,
+            "Flipon doble de 50 amp"
+          ],
+          [
+            1,
+            "Desarmador de estrella"
+          ],
+          [
+            1,
+            "Desarmador de castigaderas"
+          ],
+          [
+            1,
+            "Cuchilla"
+          ],
+          [
+            1,
+            "Estuche llaves Allen (25 unidades)"
+          ],
+          [
+            1,
+            "Alicate"
+          ],
+          [
+            1,
+            "Tenaza"
+          ],
+          [
+            1,
+            "Pinza"
+          ],
+          [
+            1,
+            "Espiga tipo tester"
+          ],
+          [
+            1,
+            "Multímetro Fluke con estuche"
+          ],
+          [
+            5,
+            "Duc tape"
+          ],
+          [
+            3,
+            "Paquete de cinchos 0.35 cm"
+          ],
+          [
+            7,
+            "Cinta de aislar Electrica PVC"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Limpieza",
+        items: [
+          [
+            5,
+            "Trapo"
+          ],
+          [
+            1,
+            "Escoba"
+          ],
+          [
+            1,
+            "Pala"
+          ],
+          [
+            5,
+            "Trapiador"
+          ],
+          [
+            1,
+            "Atomizador con desinfectante"
+          ],
+          [
+            1,
+            "Atomizador con silicón"
+          ],
+          [
+            2,
+            "Espuma limpiadora"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de proteccion",
+        items: [
+          [
+            10,
+            "Bolsa jardinera de tonel"
+          ],
+          [
+            3,
+            "Retazo de nylon (para tapar equipo)"
+          ]
+        ]
+      },
+      {
+        title: "Equipo de Seguridad Industrial",
+        items: [
+          [
+            6,
+            "Casco"
+          ],
+          [
+            6,
+            "Chaleco"
+          ],
+          [
+            0,
+            "Par de botas"
+          ],
+          [
+            6,
+            "Par de guantes"
+          ],
+          [
+            1,
+            "Arnes completo"
+          ]
+        ]
+      },
+      {
+        title: "Toldos",
+        items: [
+          [
+            1,
+            "Toldo 3x3 blanco"
+          ],
+          [
+            1,
+            "Toldo 2x2 blanco"
+          ],
+          [
+            2,
+            "Mesa plegable"
+          ],
+          [
+            2,
+            "Par LED con cable ac"
+          ]
+        ]
+      }
+    ],
+    extras: []
+  }
+};
+
+const sundayFundayOperationalExtras = [];
+
 const equipmentServices = {
   "dj-completo": {
     name: "DJ COMPLETO",
@@ -414,571 +5772,8 @@ const equipmentServices = {
     mainSections: saxofonicConAudioMainSections,
     extras: []
   },
-  "sunday-funday-a": {
-    name: "SUNDAY FUNDAY COMPLETO A",
-    source: "SUNDAY A.pdf",
-    mainSections: [
-      {
-        title: "CONSOLA",
-        items: [
-          [1, "consola de mesa X32 beringer con su AC y case"],
-          [1, "router con su funda (cable de RED y cargador)"],
-          [2, "ipad nuevo con su protector y cargador de ipad con su cable"]
-        ]
-      },
-      {
-        title: "TELEFONO (MOCHILA)",
-        items: [
-          [1, "celular, cargador para telefono con su cable, cable de celular para audio"],
-          [1, "cable lighthing y cable tipo C"]
-        ]
-      },
-      {
-        title: "AUDIO",
-        items: [
-          [4, "bocinas QSC con su power spicon"],
-          [2, "pedestales de bocina hercules con su case"],
-          [1, "amplificador TP18000 con sus 2 cables spicon en case (1 DBX y 1 AC)"],
-          [2, "sub QSC con su case"],
-          [1, "snake de audio 18 entradas"],
-          [1, "grabadora de audio"]
-        ]
-      },
-      {
-        title: "MICROFONIA PARA BATERIA",
-        items: [
-          [4, "mic. SM57"],
-          [1, "mic. Beta 52"],
-          [2, "mic. Pg81 con su case"],
-          [4, "clamps para microfonos con su case"]
-        ]
-      },
-      {
-        title: "MICROFONIA PARA VOCES",
-        items: [
-          [2, "mic. Sm58 alambrico con su case (Diego y Backup de toolback)"],
-          [2, "mic. Sm 58 inalambrico con su funda (1 receptor y 1 cargador)"],
-          [1, "mic. Saxo con su funda (1 receptor y 1 cargador)"],
-          [1, "mic. Violin con su funda (1 receptor y 1 cargador)"],
-          [2, "mic. Blx4 Shure cantantes con su funda"],
-          [1, "funda para microfono Paola (rosado)"],
-          [1, "pedal para microfono tolback"],
-          [2, "cajas directas Whirlwhind"]
-        ]
-      },
-      {
-        title: "PEDESTALES",
-        items: [
-          [1, "case de teclado"],
-          [3, "pedestales para antena HD con su case"],
-          [1, "pedestal recto Paola HD con su case"],
-          [1, "pedestal de Jorge para Ipad con su case"],
-          [1, "pedestal de brazo Diego HD con su case"],
-          [1, "pedestal de hit hat Dw con su case"],
-          [1, "pedestal para teclado"],
-          [2, "pedestales OH de brazo para platos con su case"]
-        ]
-      },
-      {
-        title: "MONITOREO INTERNO",
-        items: [
-          [2, "monitores turbosound con su power spicon en su case"],
-          [1, "bajo turbosound con su power spicon en su case"],
-          [2, "pedestales para monitores con su case"]
-        ]
-      },
-      {
-        title: "COMPUTADORA",
-        items: [
-          [1, "computadora de prueba con su mochila (1 cargador con su cable, 1 cable de RED, 1 trapo)"],
-          [1, "Mochila Jorge Merida complemento de computadora de prueba (2 cargadores de IPAD, 2 IPAD, 2 in ears extras)"]
-        ]
-      },
-      {
-        title: "IN EARS",
-        items: [
-          [2, "sistemas completos in ears Acemic (8 in ears) con su cargador y case"],
-          [1, "sistema completo in ears grupo shure (6 in ears) con su cargador y case"],
-          [2, "antenas para mic. Shure cantantes con su case"],
-          [1, "antena In ears grupo con su case"]
-        ]
-      },
-      {
-        title: "BACKLINE INSTRUMENTOS - BATERIA",
-        items: [
-          [1, "bombo (pedal) DW con su funda"],
-          [1, "alfombra"],
-          [1, "banquito Diego Dw"],
-          [2, "pares de baquetas con su estuche"],
-          [1, "caja DW con su funda"],
-          [1, "tom no.1 DW con su funda"],
-          [1, "tom no.2 con su funda"],
-          [1, "pedal de bombo con su case"],
-          [1, "floortom DW con su funda"]
-        ]
-      },
-      {
-        title: "PLATOS",
-        items: [
-          [1, "hit hat zildjan con su funda"],
-          [1, "china zildjan con su funda"],
-          [1, "ride zildjan con su funda"]
-        ]
-      },
-      {
-        title: "ILUMINACION",
-        items: [
-          [6, "beam 260 con su power spicon y case"],
-          [6, "pares LED con su AC y case"],
-          [2, "luces circulares con su power spicon"],
-          [2, "lasers grandes con sus power spicon y case"],
-          [2, "luces Wash con su spicon y case"],
-          [24, "clamps"],
-          [24, "bases de clamps"],
-          [4, "tuvos galvanizados con sus hamburguesas dobles"],
-          [2, "spliter de luces 6 canales american dj con su AC"],
-          [2, "blinders multicolor con sus power spicon y case"],
-          [2, "maquinas de humo con su AC, su control y 1 caja plastica"],
-          [1, "galon de liquido de humo"],
-          [2, "ventilador con su cable de corriente y su funda"]
-        ]
-      },
-      {
-        title: "ESTRUCTURAS",
-        items: [
-          [2, "cajones de madera negro para músicos"],
-          [2, "marcos de dj both con su tela (grande) controles"],
-          [1, "marco de dj both con su tela (pequeño) DJ"],
-          [1, "dj booth case"]
-        ]
-      },
-      {
-        title: "ESTRUCTURAS DE 2 A 3.50 METROS FORRADAS",
-        items: [
-          [6, "estructuras de 2 metros"],
-          [8, "estructuras de 0.50 centimetros"],
-          [6, "platinas pequeñas"],
-          [6, "platinas grandes"],
-          [100, "pines"],
-          [40, "chiches"],
-          [1, "interfaz con su cable de RED y su cargador (compu mouse, cargador, adaptador) (monitor, HDMI, cable de corriente) con su case"]
-        ]
-      },
-      {
-        title: "TELAS PARA FORRAR",
-        items: [
-          [6, "telas de 3mts para forrar truss en color a definir"],
-          [1, "tela pequeña para forrar dj booth color a definir (DJ)"],
-          [2, "tela grande para forrar dj booth color negro (controles)"]
-        ]
-      },
-      {
-        title: "CABLEADO",
-        items: [
-          [1, "distro de corriente"],
-          [5, "cables AC"],
-          [5, "cables spicon power"],
-          [2, "cables de 1/4 a 1/4"],
-          [1, "case de pulpos (6 grandes y 6 pequeños)"],
-          [1, "tcj calibre No. 4 (30 metros)"],
-          [10, "cuadritos de corriente"],
-          [10, "regletas en case"],
-          [60, "cables XLR en case"],
-          [40, "extensiones"]
-        ]
-      },
-      {
-        title: "BATERIAS",
-        items: [
-          [7, "baterias cuadradas shure recargables con su case"],
-          [3, "cargadores dobles para baterias shure con su case"],
-          [24, "baterias recargables bonai"],
-          [1, "cargador para bateria bonai"]
-        ]
-      }
-    ],
-    extras: [
-      {
-        id: "pistola-led-co2",
-        title: "Pistola LED CO2",
-        items: [
-          [1, "pistola de co2"],
-          [1, "manguera de 10mts. Para pistola co2"],
-          [1, "cilindro de CO2 lleno con tapadera"],
-          [4, "1 cangrejo para co2, 1 funda de co2, 1 troquet y 1 strap pequeño"]
-        ]
-      },
-      {
-        id: "pirotecnia-fria",
-        title: "Pirotecnia Fria",
-        items: [
-          [2, "maquinas de pirotecnia fria"],
-          [2, "sobre de polvo para pirotecnia"],
-          [1, "DMX para pirotecnia (cases de Jorge)"]
-        ]
-      },
-      {
-        id: "toldos",
-        title: "Toldos",
-        items: [
-          [1, "toldito blanco de 3 x 3 con tubos galvanizados con paredes"],
-          [1, "toldito blanco de 2 x 2 con tubos galvanizados con paredes"],
-          [2, "mesas plegables grandes"],
-          [2, "luces par LED con su AC para toldo"]
-        ]
-      },
-      {
-        id: "extras-operativos",
-        title: "Extras operativos",
-        items: [
-          [1, "extintor"],
-          [1, "bolsa de agua pura"],
-          [5, "dop teip (caja de herramienta)"],
-          [3, "paquetes de cinchos (caja de herramienta)"],
-          [7, "cinta de aislar (caja de herramienta)"],
-          [4, "intercomunicadores hollyland con su cargadores y estuche"]
-        ]
-      },
-      {
-        id: "caja-herramientas",
-        title: "Caja de Herramienta",
-        items: [
-          [1, "macho"],
-          [2, "tomas patas de gallo"],
-          [1, "flipon doble de 50 amp"],
-          [1, "desarmador de estrella"],
-          [1, "desarmador de castigaderas"],
-          [1, "cuchilla o cutter"],
-          [1, "estuche de llaves Allen"],
-          [1, "alicate"],
-          [1, "tenaza"],
-          [1, "pinza"],
-          [1, "espiga tipo tester"],
-          [1, "multímetro o tester marca fluke (estuche)"]
-        ]
-      },
-      {
-        id: "equipo-limpieza",
-        title: "Equipo de limpieza",
-        items: [
-          [5, "trapos"],
-          [1, "escoba"],
-          [1, "pala"],
-          [5, "trapiadores"],
-          [1, "atomizador de azistin"],
-          [1, "atomizador de cera"],
-          [2, "espumas limpiadoras"]
-        ]
-      },
-      {
-        id: "equipo-proteccion",
-        title: "Equipo de Proteccion",
-        items: [
-          [10, "bolsas jardineras de tonel"],
-          [3, "retazos de nylon para tapar equipo"]
-        ]
-      },
-      {
-        id: "seguridad-industrial",
-        title: "Equipo de Seguridad Industrial",
-        items: [
-          [6, "casco"],
-          [6, "chalecos"],
-          [0, "botas"],
-          [6, "pares de guantes"],
-          [1, "arnes completo para subir"]
-        ]
-      }
-    ]
-  },
-  "sunday-funday-b": {
-    name: "SUNDAY FUNDAY COMPLETO B",
-    source: "SUNDAY B.pdf",
-    mainSections: [
-      {
-        title: "CONSOLA",
-        items: [
-          [1, "consola X32 Rack con su AC y case"],
-          [1, "router con su funda (cable de RED y cargador)"],
-          [2, "ipad viejos con su protector y cargador de ipad con su cable"]
-        ]
-      },
-      {
-        title: "TELEFONO (MOCHILA)",
-        items: [
-          [1, "celular, cargador para telefono con su cable, cable de celular para audio"],
-          [1, "cable lighthing y cable tipo C"]
-        ]
-      },
-      {
-        title: "AUDIO",
-        items: [
-          [4, "bocinas QSC con su power spicon"],
-          [2, "pedestales de bocina hercules con su case"],
-          [1, "amplificador TP18000 con sus 2 cables spicon en case (1 DBX y 1 AC)"],
-          [2, "sub QSC con su case"],
-          [1, "snake de audio 18 entradas"],
-          [1, "grabadora de audio"]
-        ]
-      },
-      {
-        title: "MICROFONIA PARA BATERIA",
-        items: [
-          [4, "mic. SM57"],
-          [1, "mic. Beta 52"],
-          [2, "mic. Pg81 con su case"],
-          [4, "clamps para microfonos con su case"]
-        ]
-      },
-      {
-        title: "MICROFONIA PARA VOCES",
-        items: [
-          [2, "mic. Sm58 alambrico con su case (Diego y Backup de toolback)"],
-          [2, "mic. Sm 58 inalambrico con su funda (1 receptor y 1 cargador)"],
-          [1, "mic. Saxo con su funda (1 receptor y 1 cargador)"],
-          [1, "mic. Violin con su funda (1 receptor y 1 cargador)"],
-          [2, "mic. Blx4 Shure cantantes con su funda"],
-          [1, "funda para microfono Paola (rosado)"],
-          [1, "pedal para microfono tolback"],
-          [2, "cajas directas Whirlwhind"]
-        ]
-      },
-      {
-        title: "PEDESTALES",
-        items: [
-          [1, "case de teclado"],
-          [3, "pedestales para antena HD con su case"],
-          [1, "pedestal recto Paola HD con su case"],
-          [1, "pedestal de Jorge para Ipad con su case"],
-          [1, "pedestal de brazo Diego HD con su case"],
-          [1, "pedestal de hit hat Dw con su case"],
-          [1, "pedestal para teclado"],
-          [2, "pedestales OH de brazo para platos con su case"]
-        ]
-      },
-      {
-        title: "MONITOREO INTERNO",
-        items: [
-          [2, "monitores Dass con su power spicon en su case"],
-          [1, "bajo turbosound con su power spicon en su case"]
-        ]
-      },
-      {
-        title: "COMPUTADORA",
-        items: [
-          [1, "computadora de prueba con su mochila (1 cargador con su cable, 1 cable de RED, 1 trapo)"],
-          [1, "Mochila Jorge Merida complemento de computadora de prueba (2 cargadores de IPAD, 2 IPAD, 2 in ears extras)"]
-        ]
-      },
-      {
-        title: "IN EARS",
-        items: [
-          [2, "sistemas completos in ears Acemic (8 in ears) con su cargador y case"],
-          [1, "sistema completo in ears grupo shure (6 in ears) con su cargador y case"],
-          [2, "antenas para mic. Shure cantantes con su case"],
-          [1, "antena In ears grupo con su case"]
-        ]
-      },
-      {
-        title: "BACKLINE INSTRUMENTOS - BATERIA",
-        items: [
-          [1, "bombo (pedal) Grech con su funda"],
-          [1, "alfombra"],
-          [1, "banquito Diego Dw"],
-          [2, "pares de baquetas con su estuche"],
-          [1, "caja Grech con su funda"],
-          [1, "tom no.1 Grech con su funda"],
-          [1, "tom no.2 con su funda"],
-          [1, "pedal de bombo con su case"],
-          [1, "floortom Grech con su funda"]
-        ]
-      },
-      {
-        title: "PLATOS",
-        items: [
-          [1, "hit hat zildjan con su funda"],
-          [1, "china zildjan con su funda"],
-          [1, "ride zildjan con su funda"]
-        ]
-      },
-      {
-        title: "ILUMINACION",
-        items: [
-          [6, "beam 260 con su power spicon y case"],
-          [6, "pares LED con su AC y case"],
-          [2, "luces circulares con su power spicon"],
-          [2, "lasers grandes con sus power spicon y case"],
-          [2, "luces Wash con su spicon y case"],
-          [24, "clamps"],
-          [24, "bases de clamps"],
-          [4, "tuvos galvanizados con sus hamburguesas dobles"],
-          [2, "spliter de luces 6 canales american dj con su AC"],
-          [2, "blinders multicolor con sus power spicon y case"],
-          [2, "maquinas de humo con su AC, su control y 1 caja plastica"],
-          [1, "galon de liquido de humo"],
-          [2, "ventilador con su cable de corriente y su funda"]
-        ]
-      },
-      {
-        title: "ESTRUCTURAS",
-        items: [
-          [2, "cajones de madera negro para músicos"],
-          [2, "marcos de dj both con su tela (grande) controles"],
-          [1, "marco de dj both con su tela (pequeño) DJ"],
-          [1, "dj booth case"]
-        ]
-      },
-      {
-        title: "ESTRUCTURAS DE 2 A 3.50 METROS FORRADAS",
-        items: [
-          [6, "estructuras de 2 metros"],
-          [8, "estructuras de 0.50 centimetros"],
-          [6, "platinas pequeñas"],
-          [6, "platinas grandes"],
-          [100, "pines"],
-          [40, "chiches"],
-          [1, "interfaz con su cable de RED y su cargador (compu mouse, cargador, adaptador) (monitor, HDMI, cable de corriente) con su case"]
-        ]
-      },
-      {
-        title: "TELAS PARA FORRAR",
-        items: [
-          [6, "telas de 3mts para forrar truss en color a definir"],
-          [1, "tela pequeña para forrar dj booth color a definir (DJ)"],
-          [2, "tela grande para forrar dj booth color negro (controles)"]
-        ]
-      },
-      {
-        title: "CABLEADO",
-        items: [
-          [1, "distro de corriente"],
-          [5, "cables AC"],
-          [5, "cables spicon power"],
-          [2, "cables de 1/4 a 1/4"],
-          [1, "case de pulpos (6 grandes y 6 pequeños)"],
-          [1, "tcj calibre No. 4 (30 metros)"],
-          [10, "cuadritos de corriente"],
-          [10, "regletas en case"],
-          [60, "cables XLR en case"],
-          [40, "extensiones"]
-        ]
-      },
-      {
-        title: "BATERIAS",
-        items: [
-          [7, "baterias cuadradas shure recargables con su case"],
-          [3, "cargadores dobles para baterias shure con su case"],
-          [24, "baterias recargables bonai"],
-          [1, "cargador para bateria bonai"]
-        ]
-      }
-    ],
-    extras: [
-      {
-        id: "pistola-led-co2",
-        title: "Pistola LED CO2",
-        items: [
-          [1, "pistola de co2"],
-          [1, "manguera de 10mts. Para pistola co2"],
-          [1, "cilindro de CO2 lleno con tapadera"],
-          [4, "1 cangrejo para co2, 1 funda de co2, 1 troquet y 1 strap pequeño"]
-        ]
-      },
-      {
-        id: "pirotecnia-fria",
-        title: "Pirotecnia Fria",
-        items: [
-          [2, "maquinas de pirotecnia fria"],
-          [2, "sobre de polvo para pirotecnia"],
-          [1, "DMX para pirotecnia (cases de Jorge)"]
-        ]
-      },
-      {
-        id: "toldos",
-        title: "Toldos",
-        items: [
-          [1, "toldito blanco de 3 x 3 con tubos galvanizados con paredes"],
-          [1, "toldito blanco de 2 x 2 con tubos galvanizados con paredes"],
-          [2, "mesas plegables grandes"],
-          [2, "luces par LED con su AC para toldo"]
-        ]
-      },
-      {
-        id: "extras-operativos",
-        title: "Extras operativos",
-        items: [
-          [1, "extintor"],
-          [1, "bolsa de agua pura"],
-          [5, "dop teip (caja de herramienta)"],
-          [3, "paquetes de cinchos (caja de herramienta)"],
-          [7, "cinta de aislar (caja de herramienta)"],
-          [4, "intercomunicadores hollyland con su cargadores y estuche"]
-        ]
-      },
-      {
-        id: "caja-herramientas",
-        title: "Caja de Herramienta",
-        items: [
-          [1, "macho"],
-          [2, "tomas patas de gallo"],
-          [1, "flipon doble de 50 amp"],
-          [1, "desarmador de estrella"],
-          [1, "desarmador de castigaderas"],
-          [1, "cuchilla o cutter"],
-          [1, "estuche de llaves Allen"],
-          [1, "alicate"],
-          [1, "tenaza"],
-          [1, "pinza"],
-          [1, "espiga tipo tester"],
-          [1, "multímetro o tester marca fluke (estuche)"]
-        ]
-      },
-      {
-        id: "equipo-limpieza",
-        title: "Equipo de limpieza",
-        items: [
-          [5, "trapos"],
-          [1, "escoba"],
-          [1, "pala"],
-          [5, "trapiadores"],
-          [1, "atomizador de azistin"],
-          [1, "atomizador de cera"],
-          [2, "espumas limpiadoras"]
-        ]
-      },
-      {
-        id: "equipo-proteccion",
-        title: "Equipo de Proteccion",
-        items: [
-          [10, "bolsas jardineras de tonel"],
-          [3, "retazos de nylon para tapar equipo"]
-        ]
-      },
-      {
-        id: "seguridad-industrial",
-        title: "Equipo de Seguridad Industrial",
-        items: [
-          [6, "casco"],
-          [6, "chalecos"],
-          [0, "botas"],
-          [6, "pares de guantes"],
-          [1, "arnes completo para subir"]
-        ]
-      }
-    ]
-  }
+  ...sundayFundayServices
 };
-
-const sundayFixedExtraIds = new Set([
-  "pistola-led-co2",
-  "pirotecnia-fria",
-  "toldos",
-  "extras-operativos",
-  "caja-herramientas",
-  "equipo-limpieza",
-  "equipo-proteccion",
-  "seguridad-industrial"
-]);
 
 const operationalFixedExtraIds = new Set([
   "extras-operativos",
@@ -996,7 +5791,7 @@ function cloneEquipmentExtra(extra) {
 }
 
 function equipmentExtrasByIds(ids) {
-  const catalog = [...(equipmentServices["sunday-funday-a"]?.extras || []), ...sharedEquipmentExtras];
+  const catalog = [...sundayFundayOperationalExtras, ...sharedEquipmentExtras];
   const used = new Set();
   return [...ids]
     .map((id) => catalog.find((extra) => extra.id === id))
@@ -1008,15 +5803,22 @@ function equipmentExtrasByIds(ids) {
     .map(cloneEquipmentExtra);
 }
 
-["sunday-funday-a", "sunday-funday-b"].forEach((serviceId) => {
-  const service = equipmentServices[serviceId];
-  if (service) service.extras = equipmentExtrasByIds(sundayFixedExtraIds);
-});
 
 ["dj-completo", "saxofonic-completo", "saxofonic-con-audio"].forEach((serviceId) => {
   const service = equipmentServices[serviceId];
   if (service) service.extras = equipmentExtrasByIds(operationalFixedExtraIds);
 });
+
+const equipmentServiceGroups = [
+  {
+    label: "SUNDAY FUNDAY",
+    serviceIds: sundayFundayServiceIds
+  },
+  {
+    label: "OTROS SERVICIOS",
+    serviceIds: ["dj-completo", "saxofonic-completo", "saxofonic-con-audio"]
+  }
+];
 
 const equipmentState = {
   selectedServiceId: "",
@@ -1105,6 +5907,53 @@ function currentEquipmentService() {
       };
     })
   };
+}
+
+function renderEquipmentServicePicker() {
+  const host = equipmentQuery("#equipmentServicePicker");
+  if (!host) return;
+  const selectedId = equipmentState.selectedServiceId;
+  host.innerHTML = equipmentServiceGroups
+    .map((group, index) => {
+      const services = group.serviceIds
+        .map((serviceId) => ({ serviceId, service: equipmentServices[serviceId] }))
+        .filter((entry) => entry.service);
+      if (!services.length) return "";
+      const groupHasSelectedService = services.some((entry) => entry.serviceId === selectedId);
+      const openAttribute = groupHasSelectedService || (!selectedId && index === 0) ? " open" : "";
+      const options = services
+        .map(({ serviceId, service }) => {
+          const activeClass = serviceId === selectedId ? " is-active" : "";
+          return `
+            <button class="equipment-service-option${activeClass}" type="button" data-equipment-service-option="${escapeEquipmentHtml(serviceId)}">
+              <span>${escapeEquipmentHtml(service.name)}</span>
+            </button>`;
+        })
+        .join("");
+      return `
+        <details class="equipment-service-group"${openAttribute}>
+          <summary>${escapeEquipmentHtml(group.label)}</summary>
+          <div class="equipment-service-options">${options}</div>
+        </details>`;
+    })
+    .join("");
+  host.querySelectorAll("[data-equipment-service-option]").forEach((button) => {
+    button.addEventListener("click", () => selectEquipmentService(button.dataset.equipmentServiceOption || ""));
+  });
+}
+
+function selectEquipmentService(serviceId) {
+  const serviceSelect = equipmentQuery("#equipmentServiceSelect");
+  if (serviceSelect) serviceSelect.value = serviceId;
+  equipmentState.selectedServiceId = serviceId;
+  equipmentState.selectedExtraIds.clear();
+  equipmentState.deletedStack = [];
+  equipmentState.activeWindow = "review";
+  const selectedService = equipmentServices[equipmentState.selectedServiceId] || null;
+  if (!selectedService?.audioOptions || !selectedService.audioOptions[equipmentState.djAudioType]) {
+    equipmentState.djAudioType = "qsc";
+  }
+  renderEquipmentModule();
 }
 
 function syncSelectedEquipmentService() {
@@ -2100,6 +6949,7 @@ function renderEquipmentModule() {
   if (workspace) workspace.classList.toggle("is-hidden", !service);
   if (equipmentQuery("#equipmentServiceName")) equipmentQuery("#equipmentServiceName").textContent = service?.name || "";
   renderDjAudioOptions();
+  renderEquipmentServicePicker();
   renderEquipmentEvents();
   if (equipmentQuery("#equipmentMainTable")) {
     equipmentQuery("#equipmentMainTable").innerHTML = tableForEquipmentSections(selectedEquipmentSections());
@@ -2310,17 +7160,7 @@ async function saveEquipmentPdf(mode = "full") {
 function initEquipmentModule() {
   const serviceSelect = equipmentQuery("#equipmentServiceSelect");
   if (!serviceSelect) return;
-  serviceSelect.addEventListener("change", () => {
-    equipmentState.selectedServiceId = serviceSelect.value;
-    equipmentState.selectedExtraIds.clear();
-    equipmentState.deletedStack = [];
-    equipmentState.activeWindow = "review";
-    const selectedService = equipmentServices[equipmentState.selectedServiceId] || null;
-    if (!selectedService?.audioOptions || !selectedService.audioOptions[equipmentState.djAudioType]) {
-      equipmentState.djAudioType = "qsc";
-    }
-    renderEquipmentModule();
-  });
+  serviceSelect.addEventListener("change", () => selectEquipmentService(serviceSelect.value));
   document.querySelectorAll("[data-dj-audio-type]").forEach((button) => {
     button.addEventListener("click", () => {
       equipmentState.djAudioType = button.dataset.djAudioType || "qsc";
