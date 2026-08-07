@@ -13128,7 +13128,18 @@ function renderEquipmentEvents() {
   });
 }
 
+function startNewEquipmentWindowDraft() {
+  resetEquipmentWindowDraft();
+  renderEquipmentModule();
+  const status = equipmentQuery("#equipmentSaveStatus");
+  if (status) status.textContent = "Nueva ventana lista. Ingrese los datos y seleccione el tipo de servicio.";
+}
+
 function addEquipmentEvent() {
+  if (equipmentState.selectedEventId) {
+    startNewEquipmentWindowDraft();
+    return;
+  }
   const draft = currentEquipmentEventDraft();
   const status = equipmentQuery("#equipmentSaveStatus");
   const serviceIds = selectedEquipmentServiceIds();
@@ -13567,11 +13578,13 @@ function renderEquipmentWindowState() {
   const summaryButton = equipmentQuery("#equipmentSummaryWindowButton");
   const undoButton = equipmentQuery("#equipmentUndoDeleteButton");
   const removeButton = equipmentQuery("#equipmentRemoveWindowButton");
+  const addEventButton = equipmentQuery("#equipmentAddEventButton");
   if (mainPanel) mainPanel.classList.toggle("is-hidden", activeWindow !== "review");
   if (extrasPanel) extrasPanel.classList.toggle("is-hidden", activeWindow !== "review");
   if (inventoryPanel) inventoryPanel.classList.toggle("is-hidden", activeWindow !== "summary");
   if (reviewButton) reviewButton.classList.toggle("is-active", activeWindow === "review");
   if (summaryButton) summaryButton.classList.toggle("is-active", activeWindow === "summary");
+  if (addEventButton) addEventButton.textContent = equipmentState.selectedEventId ? "Crear nueva ventana" : "Agregar ventana";
   if (undoButton) undoButton.disabled = !equipmentState.deletedStack.length;
   if (removeButton) removeButton.disabled = !equipmentState.selectedEventId;
 }
