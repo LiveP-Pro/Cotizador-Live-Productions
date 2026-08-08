@@ -13018,32 +13018,58 @@ function eventSummaryText(events, field, fallback = "Por definir") {
 }
 
 function equipmentRowsSummary() {
-  const rows = new Map();
+  const groups = [];
+  const groupsByKey = new Map();
+  const rowsByEquipmentKey = new Map();
   const events = activeEquipmentEvents();
   events.forEach((event) => {
     const sections = equipmentState.events.length ? sectionsForEquipmentEvent(event) : selectedEquipmentSections();
     sections.forEach((section) => {
+      const categoryTitle = String(section.title || "Equipo sin categoria").trim() || "Equipo sin categoria";
+      const categoryKey = normalizeEquipmentKey(categoryTitle) || `categoria-${groups.length + 1}`;
+      let group = groupsByKey.get(categoryKey);
+      if (!group) {
+        group = {
+          type: "category",
+          key: `category-${categoryKey}`,
+          title: categoryTitle,
+          rows: []
+        };
+        groupsByKey.set(categoryKey, group);
+        groups.push(group);
+      }
       section.items.forEach((rawItem) => {
         const { quantity, description } = normalizeEquipmentItem(rawItem);
         const key = normalizeEquipmentKey(description);
         if (!key) return;
-        const existing = rows.get(key) || {
-          key,
-          quantity: 0,
-          description,
-          eventQuantities: new Map()
-        };
+        let row = rowsByEquipmentKey.get(key);
+        if (!row) {
+          row = {
+            type: "item",
+            key,
+            quantity: 0,
+            description,
+            eventQuantities: new Map(),
+            categoryKey: group.key,
+            categoryTitle: group.title
+          };
+          rowsByEquipmentKey.set(key, row);
+          group.rows.push(row);
+        }
         const perEventQuantity = Number(quantity) || 0;
-        existing.eventQuantities.set(
+        row.eventQuantities.set(
           event.id,
-          (Number(existing.eventQuantities.get(event.id)) || 0) + perEventQuantity
+          (Number(row.eventQuantities.get(event.id)) || 0) + perEventQuantity
         );
-        existing.quantity += perEventQuantity;
-        rows.set(key, existing);
+        row.quantity += perEventQuantity;
       });
     });
   });
-  return [...rows.values()];
+  return groups.flatMap((group) => group.rows.length ? [{
+    type: "category",
+    key: group.key,
+    title: group.title
+  }, ...group.rows] : []);
 }
 
 function tableForEquipmentSections(sections, compact = false) {
@@ -13472,6 +13498,12 @@ function tableForEquipmentInventory(rows, editable = true) {
   const eventQuantityHeaders = events.map(() => `<th>CANTIDAD</th>`).join("");
   const body = rows
     .map((row) => {
+      if (row.type === "category") {
+        return `
+          <tr class="equipment-category-row">
+            <td colspan="${events.length + 6}">${escapeEquipmentHtml(row.title)}</td>
+          </tr>`;
+      }
       const inventory = inventoryValueFor(row);
       const required = Number(row.quantity) || 0;
       const shortage = inventory - required;
@@ -13535,6 +13567,7 @@ function tableForEquipmentInventory(rows, editable = true) {
 function equipmentRentalRows() {
   const events = activeEquipmentEvents();
   return equipmentRowsSummary()
+    .filter((row) => row.type !== "category")
     .map((row) => {
       const inventory = inventoryValueFor(row);
       const missing = Math.max(0, row.quantity - inventory);
@@ -13769,7 +13802,8 @@ function renderEquipmentModule() {
   syncSelectedEquipmentService();
   const service = currentEquipmentService();
   const workspace = equipmentQuery("#equipmentWorkspace");
-  if (workspace) workspace.classList.toggle("is-hidden", !service);
+  const shouldShowWorkspace = Boolean(service) || equipmentState.events.length > 0 || equipmentState.activeWindow === "summary";
+  if (workspace) workspace.classList.toggle("is-hidden", !shouldShowWorkspace);
   if (equipmentQuery("#equipmentServiceName")) equipmentQuery("#equipmentServiceName").textContent = service?.name || "";
   renderDjAudioOptions();
   renderEquipmentServicePicker();
@@ -14040,12 +14074,12 @@ async function saveEquipmentPdfCopyToComputer(data, savedLabel, editablePayload)
 
 async function saveEquipmentPdf(mode = "full") {
   const status = equipmentQuery("#equipmentSaveStatus");
-  if (!currentEquipmentService()) {
+  if (mode === "full" && !currentEquipmentService()) {
     if (status) status.textContent = "Seleccione un servicio antes de guardar.";
     return;
   }
-  if (mode === "full" && selectedEquipmentServiceIds().length > 1) {
-    if (status) status.textContent = "Para varios servicios, primero cree ventanas independientes. Cada ventana guarda su propio PDF.";
+  if (mode === "rent" && !equipmentRowsSummary().some((row) => row.type !== "category")) {
+    if (status) status.textContent = "Agregue al menos una ventana con equipo antes de guardar el resumen.";
     return;
   }
   if (mode === "rent" && !equipmentRentalRows().length) {
