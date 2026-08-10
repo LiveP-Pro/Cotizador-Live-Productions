@@ -15021,7 +15021,7 @@ async function equipmentUsagePdfHtml() {
 </html>`;
 }
 
-const equipmentPreferredPdfFolderName = "Cuadros de Equipo";
+const equipmentDirectoryPickerId = "requerimiento-equipo-cuadros";
 
 function equipmentPdfFileName(mode = "full") {
   const service = currentEquipmentService();
@@ -15145,7 +15145,29 @@ async function writableEquipmentFolderHandle(directoryHandle) {
   return null;
 }
 
-async function saveEquipmentPdfCopyToComputer(data, savedLabel, editablePayload) {
+async function chooseEquipmentSaveFolder() {
+  if (!window.showDirectoryPicker) return null;
+  const directoryHandle = await window.showDirectoryPicker({
+    id: equipmentDirectoryPickerId,
+    mode: "readwrite",
+    startIn: "documents"
+  });
+  const writableHandle = await writableEquipmentFolderHandle(directoryHandle);
+  if (!writableHandle) throw new Error("No se otorgó permiso para escribir en la carpeta seleccionada.");
+  return writableHandle;
+}
+
+async function writeEquipmentFileToFolder(directoryHandle, fileName, content) {
+  const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+  const writable = await fileHandle.createWritable();
+  try {
+    await writable.write(content);
+  } finally {
+    await writable.close();
+  }
+}
+
+async function saveEquipmentPdfCopyToComputer(data, savedLabel, editablePayload, directoryHandle = null) {
   const fileName = cleanEquipmentFilePart(data?.fileName || "Cuadro de Equipo.pdf", "Cuadro de Equipo.pdf");
   const jsonFileName = cleanEquipmentJsonFilePart(data?.jsonFileName || equipmentEditableJsonFileName(fileName), equipmentEditableJsonFileName(fileName));
   const finalEditablePayload = {
@@ -15158,11 +15180,6 @@ async function saveEquipmentPdfCopyToComputer(data, savedLabel, editablePayload)
     absolutePdfUrl: data?.absolutePdfUrl || "",
     absoluteJsonUrl: data?.absoluteJsonUrl || ""
   };
-  const isLocalApp = ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname);
-  if (isLocalApp && data?.folder && !String(data.folder).startsWith("/data/")) {
-    return `${savedLabel}: ${fileName} + editable ${jsonFileName} en ${data.folder}`;
-  }
-
   const pdfUrl = data?.pdfUrl || data?.absolutePdfUrl;
   if (!pdfUrl) return `${savedLabel}: ${fileName} + editable ${jsonFileName}`;
 
@@ -15170,37 +15187,20 @@ async function saveEquipmentPdfCopyToComputer(data, savedLabel, editablePayload)
   if (!pdfResponse.ok) throw new Error("No se pudo descargar el PDF generado para guardarlo en esta Mac.");
   const pdfBlob = await pdfResponse.blob();
 
-  if (!window.showDirectoryPicker) {
+  if (!directoryHandle) {
     downloadEquipmentPdfFallback(fileName, pdfBlob);
     downloadEquipmentJsonFallback(jsonFileName, finalEditablePayload);
     return `${savedLabel}: ${fileName}. También se descargó el editable ${jsonFileName}.`;
   }
 
-  const directoryHandle = await window.showDirectoryPicker({
-    id: "requerimiento-equipo-cuadros",
-    mode: "readwrite",
-    startIn: "documents"
-  });
-  if ((directoryHandle.name || "") !== equipmentPreferredPdfFolderName) {
-    throw new Error(`Seleccione la carpeta exacta: ${equipmentPreferredPdfFolderName}.`);
-  }
-
-  const writableHandle = await writableEquipmentFolderHandle(directoryHandle);
-  if (!writableHandle) throw new Error(`No se otorgó permiso para escribir en ${equipmentPreferredPdfFolderName}.`);
-
-  const fileHandle = await writableHandle.getFileHandle(fileName, { create: true });
-  const writable = await fileHandle.createWritable();
-  await writable.write(pdfBlob);
-  await writable.close();
-
-  const jsonHandle = await writableHandle.getFileHandle(jsonFileName, { create: true });
-  const jsonWritable = await jsonHandle.createWritable();
-  await jsonWritable.write(
+  await writeEquipmentFileToFolder(directoryHandle, fileName, pdfBlob);
+  await writeEquipmentFileToFolder(
+    directoryHandle,
+    jsonFileName,
     new Blob([JSON.stringify(finalEditablePayload, null, 2)], { type: "application/json;charset=utf-8" })
   );
-  await jsonWritable.close();
 
-  return `${savedLabel}: ${fileName} + editable ${jsonFileName} en ${equipmentPreferredPdfFolderName}`;
+  return `${savedLabel}: ${fileName} + editable ${jsonFileName} en ${directoryHandle.name || "carpeta seleccionada"}`;
 }
 
 async function saveEquipmentPdf(mode = "full") {
@@ -15217,8 +15217,15 @@ async function saveEquipmentPdf(mode = "full") {
     if (status) status.textContent = "No hay equipo para rentar con el inventario actual.";
     return;
   }
-  if (status) status.textContent = mode === "rent" ? "Generando PDF de renta..." : "Generando PDF para bodega...";
   try {
+    const canChooseFolder = typeof window.showDirectoryPicker === "function";
+    if (status) {
+      status.textContent = canChooseFolder
+        ? "Seleccione la carpeta donde desea guardar el PDF y el JSON editable."
+        : "Este navegador no permite elegir carpeta; se descargará el PDF y el JSON.";
+    }
+    const directoryHandle = canChooseFolder ? await chooseEquipmentSaveFolder() : null;
+    if (status) status.textContent = mode === "rent" ? "Generando PDF de renta..." : "Generando PDF para bodega...";
     const documentSelector = mode === "rent" ? "#equipmentRentPdfDocument" : "#equipmentPdfDocument";
     const title = mode === "rent" ? "Resumen de equipo para renta" : "Equipo y extras para bodega";
     const html = await equipmentPdfHtml(documentSelector, title);
@@ -15239,16 +15246,18 @@ async function saveEquipmentPdf(mode = "full") {
     const savedLabel = mode === "rent" ? "PDF + JSON de renta guardado" : "PDF + JSON de bodega guardado";
     let statusMessage = `${savedLabel}: ${data.fileName} + ${data.jsonFileName} en ${data.folder}`;
     try {
-      statusMessage = await saveEquipmentPdfCopyToComputer(data, savedLabel, equipmentEditablePayload(mode, data));
+      statusMessage = await saveEquipmentPdfCopyToComputer(data, savedLabel, equipmentEditablePayload(mode, data), directoryHandle);
     } catch (saveError) {
-      statusMessage = saveError?.name === "AbortError"
-        ? `${savedLabel}: ${data.fileName} + ${data.jsonFileName}. Selección de carpeta cancelada.`
-        : `${savedLabel}: ${data.fileName} + ${data.jsonFileName}. No se copió a ${equipmentPreferredPdfFolderName}: ${saveError.message}`;
+      statusMessage = `${savedLabel}: ${data.fileName} + ${data.jsonFileName}. No se copió a la carpeta seleccionada: ${saveError.message}`;
     }
     if (status) status.textContent = statusMessage;
     window.open(data.pdfUrl, "_blank", "noopener");
   } catch (error) {
-    if (status) status.textContent = error.message || "No se pudo guardar el PDF.";
+    if (status) {
+      status.textContent = error?.name === "AbortError"
+        ? "Selección de carpeta cancelada. No se guardó el PDF."
+        : error.message || "No se pudo guardar el PDF.";
+    }
   }
 }
 
