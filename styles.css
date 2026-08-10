@@ -1013,6 +1013,71 @@ body {
   background: #ffffff;
 }
 
+.equipment-summary-notice,
+.equipment-transfer-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.equipment-summary-notice.is-warning,
+.equipment-transfer-note {
+  border-color: #c08a2c;
+  background: #fff7e6;
+}
+
+.equipment-summary-notice.is-ok {
+  border-color: #1f7a45;
+  color: #17633a;
+  background: #ecf8f0;
+}
+
+.equipment-transfer-plan {
+  display: grid;
+  gap: 12px;
+}
+
+.equipment-transfer-card {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.equipment-transfer-card div {
+  display: grid;
+  gap: 4px;
+}
+
+.equipment-transfer-card span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.equipment-transfer-card strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.equipment-transfer-card small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .equipment-rent-needed {
   color: #ffffff !important;
   background: #df1717 !important;
@@ -4394,5 +4459,11 @@ body.pdf-export .additional-services-section {
   .equipment-window-sidebar {
     position: static;
     max-height: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .equipment-transfer-card {
+    grid-template-columns: 1fr;
   }
 }

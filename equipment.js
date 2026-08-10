@@ -12515,6 +12515,41 @@ function formatEquipmentDateForFile(value) {
   return `${day}-${month}-${year}`;
 }
 
+function formatEquipmentDateTime(value, fallback = "Por definir") {
+  const clean = String(value || "").trim();
+  if (!clean) return fallback;
+  const [datePart, timePart = ""] = clean.split("T");
+  const dateLabel = formatEquipmentDate(datePart);
+  const [hour, minute] = timePart.split(":");
+  const timeLabel = hour && minute ? `${hour}:${minute}` : "Hora por definir";
+  return `${dateLabel} · ${timeLabel}`;
+}
+
+function equipmentDateKeyFromDateTime(value) {
+  return String(value || "").split("T")[0] || "";
+}
+
+function equipmentEventOperationalDateKey(event) {
+  return event?.date || equipmentDateKeyFromDateTime(event?.equipmentOutAt) || equipmentDateKeyFromDateTime(event?.equipmentInAt) || "";
+}
+
+function equipmentEventSortDateTime(event) {
+  const dateKey = equipmentEventOperationalDateKey(event);
+  return event?.equipmentOutAt || event?.equipmentInAt || (dateKey ? `${dateKey}T00:00` : "9999-12-31T23:59");
+}
+
+function equipmentEventTransferDateTime(event) {
+  if (event?.equipmentOutAt) return formatEquipmentDateTime(event.equipmentOutAt);
+  const dateKey = equipmentEventOperationalDateKey(event);
+  return dateKey ? `${formatEquipmentDate(dateKey)} · Hora por definir` : "Fecha y hora por definir";
+}
+
+function equipmentEventReturnDateTime(event) {
+  if (event?.equipmentInAt) return formatEquipmentDateTime(event.equipmentInAt);
+  const dateKey = equipmentEventOperationalDateKey(event);
+  return dateKey ? `${formatEquipmentDate(dateKey)} · Hora por definir` : "Fecha y hora por definir";
+}
+
 function equipmentNormalizeServiceIds(value) {
   const values = value instanceof Set ? [...value] : Array.isArray(value) ? value : [value];
   const seen = new Set();
@@ -12850,6 +12885,8 @@ function currentEquipmentEventDraft() {
     name: equipmentQuery("#equipmentEventName")?.value.trim() || "Evento por definir",
     phone: equipmentQuery("#equipmentEventPhone")?.value.trim() || "Por definir",
     date: equipmentQuery("#equipmentEventDate")?.value || "",
+    equipmentOutAt: equipmentQuery("#equipmentEventOutAt")?.value || "",
+    equipmentInAt: equipmentQuery("#equipmentEventInAt")?.value || "",
     responsible: equipmentQuery("#equipmentEventResponsible")?.value.trim() || "Por definir"
   };
 }
@@ -12957,11 +12994,15 @@ function populateEquipmentEventFields(event) {
   const nameInput = equipmentQuery("#equipmentEventName");
   const plannerInput = equipmentQuery("#equipmentEventPhone");
   const dateInput = equipmentQuery("#equipmentEventDate");
+  const outAtInput = equipmentQuery("#equipmentEventOutAt");
+  const inAtInput = equipmentQuery("#equipmentEventInAt");
   const responsibleInput = equipmentQuery("#equipmentEventResponsible");
   if (placeInput) placeInput.value = event?.place || "";
   if (nameInput) nameInput.value = event?.name || "";
   if (plannerInput) plannerInput.value = event?.phone || "";
   if (dateInput) dateInput.value = event?.date || "";
+  if (outAtInput) outAtInput.value = event?.equipmentOutAt || "";
+  if (inAtInput) inAtInput.value = event?.equipmentInAt || "";
   if (responsibleInput) responsibleInput.value = event?.responsible || "";
 }
 
@@ -13015,6 +13056,61 @@ function eventSummaryText(events, field, fallback = "Por definir") {
     .map((event) => (field === "date" ? formatEquipmentDate(event[field]) : event[field]))
     .filter((value) => value && value !== "Por definir");
   return values.length ? values.join(" / ") : fallback;
+}
+
+function eventSummaryDateTimeText(events, field, fallback = "Por definir") {
+  const values = events
+    .map((event) => formatEquipmentDateTime(event[field], ""))
+    .filter(Boolean);
+  return values.length ? values.join(" / ") : fallback;
+}
+
+function equipmentEventsByOperationalDate(events = activeEquipmentEvents()) {
+  const groups = new Map();
+  events.forEach((event) => {
+    const dateKey = equipmentEventOperationalDateKey(event);
+    if (!dateKey) return;
+    if (!groups.has(dateKey)) groups.set(dateKey, []);
+    groups.get(dateKey).push(event);
+  });
+  return groups;
+}
+
+function equipmentSummaryDateNotice() {
+  const events = equipmentState.events;
+  if (!events.length) return { text: "", type: "" };
+  const groups = equipmentEventsByOperationalDate(events);
+  const missingDateCount = events.filter((event) => !equipmentEventOperationalDateKey(event)).length;
+  if (groups.size > 1) {
+    return {
+      type: "warning",
+      text: "El resumen combinado solo aplica para eventos del mismo día. Hay ventanas en fechas distintas; use el resumen por día y el trasego no aplica entre esas fechas."
+    };
+  }
+  if (missingDateCount) {
+    return {
+      type: "warning",
+      text: "Complete la fecha de cada ventana para confirmar si el resumen y el trasego aplican."
+    };
+  }
+  if (events.length > 1 && groups.size === 1) {
+    const [dateKey] = groups.keys();
+    return {
+      type: "ok",
+      text: `Resumen combinado para eventos del mismo día: ${formatEquipmentDate(dateKey)}.`
+    };
+  }
+  return { text: "", type: "" };
+}
+
+function renderEquipmentSummaryDateNotice() {
+  const notice = equipmentQuery("#equipmentSummaryDateNotice");
+  if (!notice) return;
+  const { text, type } = equipmentSummaryDateNotice();
+  notice.textContent = text;
+  notice.classList.toggle("is-hidden", !text);
+  notice.classList.toggle("is-warning", type === "warning");
+  notice.classList.toggle("is-ok", type === "ok");
 }
 
 function equipmentRowsSummary() {
@@ -13149,6 +13245,9 @@ function renderEquipmentEvents() {
       const cardTitle = equipmentEventCardTitle(event, index);
       const eventName = event.name && event.name !== "Evento por definir" ? event.name : "";
       const eventNameLine = eventName ? `<span>Evento: ${escapeEquipmentHtml(eventName)}</span>` : "";
+      const logisticsLine = event.equipmentOutAt || event.equipmentInAt
+        ? `<span>Salida: ${escapeEquipmentHtml(equipmentEventTransferDateTime(event))} · Ingreso: ${escapeEquipmentHtml(equipmentEventReturnDateTime(event))}</span>`
+        : "";
       return `
         <article class="equipment-event-card${activeClass}">
           <button class="equipment-event-open" type="button" data-open-event="${escapeEquipmentHtml(event.id)}">
@@ -13156,6 +13255,7 @@ function renderEquipmentEvents() {
             <small>${escapeEquipmentHtml(serviceName)}</small>
             ${eventNameLine}
             <span>${escapeEquipmentHtml(date)} · ${escapeEquipmentHtml(planner)}</span>
+            ${logisticsLine}
             <span>${escapeEquipmentHtml(lineCount)} líneas de equipo</span>
           </button>
           <div class="equipment-event-card-actions">
@@ -13224,6 +13324,8 @@ function refreshEquipmentSummaryAndPreview() {
   if (equipmentQuery("#equipmentInventoryTable")) {
     equipmentQuery("#equipmentInventoryTable").innerHTML = tableForEquipmentInventory(equipmentRowsSummary(), true);
   }
+  renderEquipmentSummaryDateNotice();
+  renderEquipmentTransferPanel();
   bindEquipmentInventoryInputs();
   renderEquipmentPdfPreview();
   renderEquipmentWindowState();
@@ -13487,6 +13589,75 @@ function inventoryValueFor(row) {
   return 0;
 }
 
+function equipmentTransferPlanData() {
+  const events = [...equipmentState.events];
+  const groups = equipmentEventsByOperationalDate(events);
+  const missingDateEvents = events.filter((event) => !equipmentEventOperationalDateKey(event));
+  const routes = [];
+  groups.forEach((groupEvents, dateKey) => {
+    const sortedEvents = [...groupEvents].sort((first, second) => equipmentEventSortDateTime(first).localeCompare(equipmentEventSortDateTime(second)));
+    for (let index = 0; index < sortedEvents.length - 1; index += 1) {
+      routes.push({
+        dateKey,
+        from: sortedEvents[index],
+        to: sortedEvents[index + 1]
+      });
+    }
+  });
+  return {
+    events,
+    groups,
+    routes,
+    missingDateEvents,
+    hasDifferentDates: groups.size > 1
+  };
+}
+
+function renderEquipmentTransferPanel() {
+  const host = equipmentQuery("#equipmentTransferPlan");
+  if (!host) return;
+  const plan = equipmentTransferPlanData();
+  if (plan.events.length < 2) {
+    host.innerHTML = `<p class="equipment-empty">Agregue al menos dos ventanas para calcular el trasego de equipo.</p>`;
+    return;
+  }
+
+  const messages = [];
+  if (plan.hasDifferentDates) {
+    messages.push("No aplica trasego entre eventos de fechas distintas. Los movimientos solo se calculan para ventanas del mismo día.");
+  }
+  if (plan.missingDateEvents.length) {
+    messages.push("Hay ventanas sin fecha operativa; complete fecha, salida o ingreso de equipo para evaluar el trasego.");
+  }
+  if (!plan.routes.length) {
+    messages.push("No hay ventanas compartiendo el mismo día, por lo que el trasego no aplica.");
+  }
+
+  const messageHtml = messages
+    .map((message) => `<p class="equipment-transfer-note">${escapeEquipmentHtml(message)}</p>`)
+    .join("");
+  const routeHtml = plan.routes
+    .map(({ dateKey, from, to }) => `
+      <article class="equipment-transfer-card">
+        <div>
+          <span>Trasegar hacia</span>
+          <strong>${escapeEquipmentHtml(to.place || "Lugar por definir")}</strong>
+        </div>
+        <div>
+          <span>Lugar de evento</span>
+          <strong>${escapeEquipmentHtml(to.place || "Lugar por definir")}</strong>
+        </div>
+        <div>
+          <span>Fecha y hora</span>
+          <strong>${escapeEquipmentHtml(equipmentEventTransferDateTime(to))}</strong>
+        </div>
+        <small>Desde ${escapeEquipmentHtml(from.place || "evento anterior")} · ingreso ${escapeEquipmentHtml(equipmentEventReturnDateTime(from))} · mismo día ${escapeEquipmentHtml(formatEquipmentDate(dateKey))}</small>
+      </article>`)
+    .join("");
+
+  host.innerHTML = `${messageHtml}${routeHtml || ""}`;
+}
+
 function tableForEquipmentInventory(rows, editable = true) {
   if (!rows.length) {
     return `<p class="equipment-empty">El resumen aparecerá al seleccionar un servicio.</p>`;
@@ -13639,27 +13810,31 @@ function bindEquipmentInventoryInputs() {
 }
 
 function renderEquipmentWindowState() {
-  const activeWindow = equipmentState.activeWindow === "summary" ? "summary" : "review";
+  const activeWindow = ["summary", "transfer"].includes(equipmentState.activeWindow) ? equipmentState.activeWindow : "review";
   const mainPanel = equipmentQuery("#equipmentMainPanel");
   const extrasPanel = equipmentQuery("#equipmentExtrasPanel");
   const inventoryPanel = equipmentQuery("#equipmentInventoryPanel");
+  const transferPanel = equipmentQuery("#equipmentTransferPanel");
   const reviewButton = equipmentQuery("#equipmentReviewWindowButton");
   const summaryButton = equipmentQuery("#equipmentSummaryWindowButton");
+  const transferButton = equipmentQuery("#equipmentTransferWindowButton");
   const undoButton = equipmentQuery("#equipmentUndoDeleteButton");
   const removeButton = equipmentQuery("#equipmentRemoveWindowButton");
   const addEventButton = equipmentQuery("#equipmentAddEventButton");
   if (mainPanel) mainPanel.classList.toggle("is-hidden", activeWindow !== "review");
   if (extrasPanel) extrasPanel.classList.toggle("is-hidden", activeWindow !== "review");
   if (inventoryPanel) inventoryPanel.classList.toggle("is-hidden", activeWindow !== "summary");
+  if (transferPanel) transferPanel.classList.toggle("is-hidden", activeWindow !== "transfer");
   if (reviewButton) reviewButton.classList.toggle("is-active", activeWindow === "review");
   if (summaryButton) summaryButton.classList.toggle("is-active", activeWindow === "summary");
+  if (transferButton) transferButton.classList.toggle("is-active", activeWindow === "transfer");
   if (addEventButton) addEventButton.textContent = equipmentState.selectedEventId ? "Crear nueva ventana" : "Agregar ventana";
   if (undoButton) undoButton.disabled = !equipmentState.deletedStack.length;
   if (removeButton) removeButton.disabled = !equipmentState.selectedEventId;
 }
 
 function switchEquipmentWindow(windowName) {
-  equipmentState.activeWindow = windowName === "summary" ? "summary" : "review";
+  equipmentState.activeWindow = ["summary", "transfer"].includes(windowName) ? windowName : "review";
   renderEquipmentModule();
 }
 
@@ -13773,6 +13948,8 @@ function renderEquipmentPdfPreview() {
   if (equipmentQuery("#equipmentPdfEvent")) equipmentQuery("#equipmentPdfEvent").textContent = eventName;
   if (equipmentQuery("#equipmentPdfPhone")) equipmentQuery("#equipmentPdfPhone").textContent = phone;
   if (equipmentQuery("#equipmentPdfDate")) equipmentQuery("#equipmentPdfDate").textContent = date;
+  if (equipmentQuery("#equipmentPdfOutAt")) equipmentQuery("#equipmentPdfOutAt").textContent = eventSummaryDateTimeText(events, "equipmentOutAt");
+  if (equipmentQuery("#equipmentPdfInAt")) equipmentQuery("#equipmentPdfInAt").textContent = eventSummaryDateTimeText(events, "equipmentInAt");
 
   const notesEl = equipmentQuery("#equipmentPdfNotes");
   if (notesEl) {
@@ -13788,6 +13965,8 @@ function renderEquipmentPdfPreview() {
   if (equipmentQuery("#equipmentRentPdfEvents")) equipmentQuery("#equipmentRentPdfEvents").textContent = rentEventName;
   if (equipmentQuery("#equipmentRentPdfPhone")) equipmentQuery("#equipmentRentPdfPhone").textContent = rentPhone;
   if (equipmentQuery("#equipmentRentPdfDate")) equipmentQuery("#equipmentRentPdfDate").textContent = rentDate;
+  if (equipmentQuery("#equipmentRentPdfOutAt")) equipmentQuery("#equipmentRentPdfOutAt").textContent = eventSummaryDateTimeText(summaryEvents, "equipmentOutAt");
+  if (equipmentQuery("#equipmentRentPdfInAt")) equipmentQuery("#equipmentRentPdfInAt").textContent = eventSummaryDateTimeText(summaryEvents, "equipmentInAt");
   const rentNotesEl = equipmentQuery("#equipmentRentPdfNotes");
   if (rentNotesEl) {
     rentNotesEl.textContent = notes;
@@ -13802,7 +13981,7 @@ function renderEquipmentModule() {
   syncSelectedEquipmentService();
   const service = currentEquipmentService();
   const workspace = equipmentQuery("#equipmentWorkspace");
-  const shouldShowWorkspace = Boolean(service) || equipmentState.events.length > 0 || equipmentState.activeWindow === "summary";
+  const shouldShowWorkspace = Boolean(service) || equipmentState.events.length > 0 || ["summary", "transfer"].includes(equipmentState.activeWindow);
   if (workspace) workspace.classList.toggle("is-hidden", !shouldShowWorkspace);
   if (equipmentQuery("#equipmentServiceName")) equipmentQuery("#equipmentServiceName").textContent = service?.name || "";
   renderDjAudioOptions();
@@ -13922,6 +14101,8 @@ function cloneEquipmentEventForEditable(event, index = 0) {
     name: event?.name || "",
     phone: event?.phone || "",
     date: event?.date || "",
+    equipmentOutAt: event?.equipmentOutAt || "",
+    equipmentInAt: event?.equipmentInAt || "",
     responsible: event?.responsible || "",
     serviceIds: equipmentNormalizeServiceIds(event?.serviceIds?.length ? event.serviceIds : event?.serviceId),
     serviceId: equipmentNormalizeServiceIds(event?.serviceIds?.length ? event.serviceIds : event?.serviceId)[0] || "",
@@ -14135,6 +14316,8 @@ function importedEquipmentEvent(rawEvent, index = 0) {
     name: rawEvent?.name || "",
     phone: rawEvent?.phone || "",
     date: rawEvent?.date || "",
+    equipmentOutAt: rawEvent?.equipmentOutAt || "",
+    equipmentInAt: rawEvent?.equipmentInAt || "",
     responsible: rawEvent?.responsible || "",
     serviceIds,
     serviceId: serviceIds[0] || "",
@@ -14194,6 +14377,8 @@ function initEquipmentModule() {
     "#equipmentEventName",
     "#equipmentEventPhone",
     "#equipmentEventDate",
+    "#equipmentEventOutAt",
+    "#equipmentEventInAt",
     "#equipmentEventResponsible",
     "#equipmentNotes"
   ].forEach((selector) => {
@@ -14227,6 +14412,7 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentEditableFileInput")?.addEventListener("change", openEquipmentEditableFile);
   equipmentQuery("#equipmentReviewWindowButton")?.addEventListener("click", () => switchEquipmentWindow("review"));
   equipmentQuery("#equipmentSummaryWindowButton")?.addEventListener("click", () => switchEquipmentWindow("summary"));
+  equipmentQuery("#equipmentTransferWindowButton")?.addEventListener("click", () => switchEquipmentWindow("transfer"));
   equipmentQuery("#equipmentAddWindowButton")?.addEventListener("click", saveCurrentEquipmentWindow);
   equipmentQuery("#equipmentRemoveWindowButton")?.addEventListener("click", removeEquipmentActiveWindow);
   equipmentQuery("#equipmentClearAllButton")?.addEventListener("click", clearEquipmentWorkingArea);
