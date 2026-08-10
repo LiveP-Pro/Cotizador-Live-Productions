@@ -22,6 +22,7 @@ body {
   line-height: 1.45;
 }
 
+.access-portal,
 .login-view {
   min-height: 100vh;
   display: grid;
@@ -30,6 +31,133 @@ body {
   background:
     linear-gradient(135deg, rgba(17, 17, 17, 0.94), rgba(42, 42, 42, 0.88)),
     var(--page);
+}
+
+.access-card {
+  width: min(960px, 100%);
+  display: grid;
+  gap: 20px;
+  padding: 34px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+}
+
+.access-card h1 {
+  margin: 0;
+  font-size: clamp(32px, 5vw, 54px);
+  line-height: 1;
+  text-align: center;
+}
+
+.access-card .eyebrow,
+.access-intro {
+  text-align: center;
+}
+
+.access-intro {
+  max-width: 640px;
+  justify-self: center;
+  margin: -6px 0 4px;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.access-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.access-option {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 13px;
+  align-content: start;
+  min-height: 390px;
+  padding: 28px;
+  color: #ffffff;
+  background:
+    linear-gradient(145deg, rgba(10, 10, 10, 0.96), rgba(27, 27, 27, 0.92)),
+    #111111;
+  border: 1px solid rgba(183, 146, 75, 0.55);
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.access-option::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at top right, rgba(183, 146, 75, 0.22), transparent 38%);
+}
+
+.access-option > * {
+  position: relative;
+}
+
+.access-logo {
+  width: min(210px, 70%);
+  height: 150px;
+  justify-self: center;
+  object-fit: contain;
+  padding: 10px;
+  background: #ffffff;
+  border-radius: 10px;
+}
+
+.access-option-luxury .access-logo {
+  background: #080808;
+}
+
+.access-tag {
+  color: #d9b76a;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.access-option h2 {
+  margin: 0;
+  font-size: clamp(25px, 3vw, 34px);
+  line-height: 1;
+  text-align: center;
+}
+
+.access-option p {
+  margin: 0;
+  color: #e5e5e5;
+  font-size: 15px;
+  text-align: center;
+}
+
+.access-option button,
+.portal-link {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  padding: 12px 16px;
+  color: #111111;
+  background: linear-gradient(135deg, #f6d27a, #b7924b);
+  border: 1px solid #d7b35e;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.access-option button:hover,
+.portal-link:hover {
+  filter: brightness(1.05);
 }
 
 .login-card {
@@ -70,6 +198,12 @@ body {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+.login-card .login-secondary-button {
+  color: #111111;
+  background: #ffffff;
+  border-color: #b6bcc6;
 }
 
 .login-status {
@@ -3795,9 +3929,23 @@ td.price-column {
 }
 
 @media (max-width: 680px) {
+  .access-card,
   .login-card,
   .site-page-card {
     padding: 22px;
+  }
+
+  .access-options {
+    grid-template-columns: 1fr;
+  }
+
+  .access-option {
+    min-height: 330px;
+    padding: 22px;
+  }
+
+  .access-logo {
+    height: 128px;
   }
 
   .site-page-card {

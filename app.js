@@ -502,6 +502,10 @@ const extras = {
 };
 
 const elements = {
+  accessPortal: document.querySelector("#accessPortal"),
+  openLiveLoginButton: document.querySelector("#openLiveLoginButton"),
+  backToPortalButton: document.querySelector("#backToPortalButton"),
+  portalStatus: document.querySelector("#portalStatus"),
   siteApp: document.querySelector("#siteApp"),
   loginView: document.querySelector("#loginView"),
   loginForm: document.querySelector("#loginForm"),
@@ -3022,7 +3026,17 @@ function toggleMenu() {
   setMenuOpen(!isOpen);
 }
 
+function showAccessPortal(message = "") {
+  elements.siteApp.classList.add("is-hidden");
+  elements.loginView.classList.add("is-hidden");
+  elements.accessPortal?.classList.remove("is-hidden");
+  if (elements.portalStatus) elements.portalStatus.textContent = message;
+  if (elements.loginStatus) elements.loginStatus.textContent = "";
+  if (elements.loginPassword) elements.loginPassword.value = "";
+}
+
 function showLogin(message = "") {
+  elements.accessPortal?.classList.add("is-hidden");
   elements.siteApp.classList.add("is-hidden");
   elements.loginView.classList.remove("is-hidden");
   elements.loginStatus.textContent = message;
@@ -3031,6 +3045,7 @@ function showLogin(message = "") {
 }
 
 function showApp() {
+  elements.accessPortal?.classList.add("is-hidden");
   elements.loginView.classList.add("is-hidden");
   elements.siteApp.classList.remove("is-hidden");
   const requestedPage = window.location.hash.replace("#", "");
@@ -3063,7 +3078,7 @@ async function submitLogin(event) {
 
 async function logout() {
   await fetch("/api/logout", { method: "POST" }).catch(() => {});
-  showLogin("Sesión cerrada.");
+  showAccessPortal("Sesión cerrada.");
 }
 
 function selectedExtrasForQuote() {
@@ -5594,6 +5609,8 @@ function bindEvents() {
 }
 
 function bindSiteEvents() {
+  elements.openLiveLoginButton?.addEventListener("click", () => showLogin());
+  elements.backToPortalButton?.addEventListener("click", () => showAccessPortal());
   elements.loginForm.addEventListener("submit", submitLogin);
   elements.logoutButton.addEventListener("click", logout);
   elements.menuToggleButton?.addEventListener("click", toggleMenu);
@@ -5658,10 +5675,10 @@ async function initializeAccess() {
       showApp();
       startQuoteApp();
     } else {
-      showLogin();
+      showAccessPortal();
     }
   } catch {
-    showLogin("No se pudo validar la sesión. Revise el servidor.");
+    showAccessPortal("No se pudo validar la sesión. Revise el servidor.");
   }
 }
 
