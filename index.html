@@ -11,33 +11,6 @@
     <script src="equipment.js?v=20260810-05" defer></script>
   </head>
   <body>
-    <section id="accessPortal" class="access-portal no-print" aria-labelledby="accessPortalTitle">
-      <div class="access-card">
-        <p class="eyebrow">Acceso privado</p>
-        <h1 id="accessPortalTitle">Seleccione su sistema</h1>
-        <p class="access-intro">
-          Ingrese al cotizador que necesita utilizar hoy: producción de eventos o transporte ejecutivo.
-        </p>
-        <div class="access-options">
-          <article class="access-option">
-            <img class="access-logo" src="assets/logo-live-productions.jpeg" alt="Live Productions" />
-            <span class="access-tag">Eventos y producción</span>
-            <h2>Live Productions</h2>
-            <p>Cotizador, requerimientos, equipo y operaciones de eventos.</p>
-            <button id="openLiveLoginButton" type="button">Entrar a Live Productions</button>
-          </article>
-          <article class="access-option access-option-luxury">
-            <img class="access-logo" src="assets/logo-luxury-travel.png" alt="Luxury Travel" />
-            <span class="access-tag">Transporte ejecutivo</span>
-            <h2>Luxury Travel</h2>
-            <p>Cotizaciones, clientes, vehiculos, pilotos e itinerarios de transporte.</p>
-            <a class="portal-link" href="http://127.0.0.1:8790/">Entrar a Luxury Travel</a>
-          </article>
-        </div>
-        <p id="portalStatus" class="login-status" role="status"></p>
-      </div>
-    </section>
-
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
       <form id="loginForm" class="login-card">
         <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
@@ -52,7 +25,6 @@
           <input id="loginPassword" type="password" autocomplete="current-password" required />
         </label>
         <button type="submit">Entrar</button>
-        <button id="backToPortalButton" class="login-secondary-button" type="button">Volver a sistemas</button>
         <p id="loginStatus" class="login-status" role="status"></p>
       </form>
     </section>
