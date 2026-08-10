@@ -13584,9 +13584,959 @@ function addManualEquipmentExtra() {
   renderEquipmentModule();
 }
 
+const equipmentDefaultInventoryEntries = [
+  [
+    "consola x32 mesa digital con cable ac",
+    1
+  ],
+  [
+    "consola x32 rack con cable ac",
+    2
+  ],
+  [
+    "consola x18 digital con cable ac",
+    1
+  ],
+  [
+    "consola analoga con cable ac",
+    7
+  ],
+  [
+    "router con cargador y funda",
+    5
+  ],
+  [
+    "ipad con cargador",
+    6
+  ],
+  [
+    "bocinas qsc con 2 cables power spicon y 2 cables puente",
+    10
+  ],
+  [
+    "bocina ip 2000 con funda",
+    6
+  ],
+  [
+    "amplificador tp 18000 con procesador dbx con 2 cables power spicon y 1 cable ac",
+    3
+  ],
+  [
+    "bocina dass con power spicon",
+    2
+  ],
+  [
+    "bocinas milan m15",
+    2
+  ],
+  [
+    "bocina turbosound iq15 con 2 cables power spicon",
+    4
+  ],
+  [
+    "bocina t4 con power spicon",
+    6
+  ],
+  [
+    "sub qsc 18 pasivo",
+    4
+  ],
+  [
+    "bajo doble sub jbl 18 pasivo con cable power spicon",
+    2
+  ],
+  [
+    "bajo turbosound iq18 con cable power spicon",
+    4
+  ],
+  [
+    "in ears shure (belpack y transmisor)",
+    12
+  ],
+  [
+    "in ears acemic (belpack y transmisor)",
+    18
+  ],
+  [
+    "in ears phenyx con su cargador y case",
+    6
+  ],
+  [
+    "bateria cuadrada shure",
+    12
+  ],
+  [
+    "cargador para bateria cuadrada",
+    3
+  ],
+  [
+    "bateria bonai",
+    55
+  ],
+  [
+    "cargador para bateria bonai",
+    6
+  ],
+  [
+    "porta bateria cuadrada bonai",
+    2
+  ],
+  [
+    "intercomunicador hollyland",
+    10
+  ],
+  [
+    "antena pasivas shure",
+    2
+  ],
+  [
+    "antenas activas suhre",
+    2
+  ],
+  [
+    "antena in ears shure",
+    2
+  ],
+  [
+    "boomper de qsc",
+    4
+  ],
+  [
+    "grabadora de audio",
+    4
+  ],
+  [
+    "snake de 18 canales",
+    2
+  ],
+  [
+    "computadora para prueba macbookpro (mochila con, computador mac, cargador de mac, cable, cable para impresora, cables de c a b, cleaning kit, jet dryer blower air duster, quick charging portable, juego de llaves combinadas con matraca, una para mic sm57 alambrico y estuche)",
+    1
+  ],
+  [
+    "kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)",
+    11
+  ],
+  [
+    "pedestal de brazo",
+    6
+  ],
+  [
+    "pedestal recto",
+    7
+  ],
+  [
+    "pedestal hercules para bocina con funda",
+    12
+  ],
+  [
+    "mic. sm 58 inalambrico",
+    11
+  ],
+  [
+    "mic. sm 58 alambrico",
+    10
+  ],
+  [
+    "mic. sm57 alambrico",
+    12
+  ],
+  [
+    "mic. beta 52a",
+    3
+  ],
+  [
+    "mic. pg81",
+    6
+  ],
+  [
+    "mic qlx-d2-j50",
+    1
+  ],
+  [
+    "mic. blx2 m15 con funda (rosado)",
+    1
+  ],
+  [
+    "mic. inalambrico de saxo",
+    2
+  ],
+  [
+    "mic. inalambrico de violin",
+    2
+  ],
+  [
+    "mic. de diadema shure color piel",
+    1
+  ],
+  [
+    "mic solapa shure",
+    1
+  ],
+  [
+    "clamp para microfono de metal",
+    8
+  ],
+  [
+    "clamps para microfono plastico",
+    3
+  ],
+  [
+    "caja directa",
+    8
+  ],
+  [
+    "interfaz con cable de red con cargador y case (compu, mouse, adaptador, monitor, hdmi, cable de corriente)",
+    3
+  ],
+  [
+    "controlador dmx",
+    5
+  ],
+  [
+    "beam 260 con cable power spicon",
+    34
+  ],
+  [
+    "wash con cable power spicon",
+    4
+  ],
+  [
+    "par led rgb con cable ac",
+    25
+  ],
+  [
+    "luz circular con cable power spicon",
+    2
+  ],
+  [
+    "semaforros barras grnades de luces",
+    4
+  ],
+  [
+    "blinder cto",
+    4
+  ],
+  [
+    "blinder rgb con cable power spicon",
+    4
+  ],
+  [
+    "laser con cable power spicon",
+    11
+  ],
+  [
+    "barras laser pequenas",
+    7
+  ],
+  [
+    "barras laser grandes",
+    6
+  ],
+  [
+    "computadora para luces",
+    3
+  ],
+  [
+    "maquina de humo con control, cable ac y ventilador",
+    8
+  ],
+  [
+    "canon de confeti",
+    1
+  ],
+  [
+    "maquina de pirotecnia fria",
+    2
+  ],
+  [
+    "sobre para pirotecnia medium",
+    8
+  ],
+  [
+    "maquinas de fuego",
+    4
+  ],
+  [
+    "cilindro co2",
+    10
+  ],
+  [
+    "cangrejo",
+    1
+  ],
+  [
+    "trocket",
+    3
+  ],
+  [
+    "strap pequeno",
+    22
+  ],
+  [
+    "strap mediano",
+    10
+  ],
+  [
+    "dmx",
+    5
+  ],
+  [
+    "pistola de co2",
+    4
+  ],
+  [
+    "manguera de 10mts.",
+    3
+  ],
+  [
+    "modulo de pantalla led 1mts x 0.50cm",
+    100
+  ],
+  [
+    "computadora de pantalla con su cargador, mouse",
+    2
+  ],
+  [
+    "procesador de pantalla con su ac",
+    2
+  ],
+  [
+    "interfaz de audio volth 2",
+    1
+  ],
+  [
+    "clickers completo",
+    1
+  ],
+  [
+    "switcher atem mini con cargador",
+    3
+  ],
+  [
+    "capturadora de video",
+    1
+  ],
+  [
+    "interfaz akai con cargador",
+    1
+  ],
+  [
+    "tv lg y toshiva",
+    2
+  ],
+  [
+    "bombo dw con funda",
+    1
+  ],
+  [
+    "alfombra",
+    2
+  ],
+  [
+    "banquito dw",
+    2
+  ],
+  [
+    "par de baquetas con estuche",
+    4
+  ],
+  [
+    "caja dw con funda",
+    1
+  ],
+  [
+    "tom no 1 dw con funda",
+    1
+  ],
+  [
+    "tom no 2 con funda",
+    2
+  ],
+  [
+    "pedal de bombo",
+    2
+  ],
+  [
+    "floortom dw con funda",
+    1
+  ],
+  [
+    "hit hat zildjan con funda",
+    1
+  ],
+  [
+    "china zildjan con funda",
+    1
+  ],
+  [
+    "ride zildjan con funda",
+    1
+  ],
+  [
+    "bombo gretsch con funda",
+    1
+  ],
+  [
+    "caja gretsch con funda",
+    1
+  ],
+  [
+    "tom no 1 gretsch con funda",
+    1
+  ],
+  [
+    "floortom gretsch con funda",
+    1
+  ],
+  [
+    "drums 1 acustica blackline 1",
+    3
+  ],
+  [
+    "dj booth",
+    4
+  ],
+  [
+    "cajon de madera negro para musicos",
+    2
+  ],
+  [
+    "marco dj booth grande",
+    7
+  ],
+  [
+    "marco dj booth pequeno",
+    7
+  ],
+  [
+    "estructura blanca pequena con su funda",
+    6
+  ],
+  [
+    "platina pequena para estructura blanca",
+    12
+  ],
+  [
+    "platina grande para estructrura blanca",
+    12
+  ],
+  [
+    "tornillos especiales para estructura blanca",
+    96
+  ],
+  [
+    "truss 0.25 mt",
+    4
+  ],
+  [
+    "truss 0.50 mt",
+    30
+  ],
+  [
+    "triss 1 mt",
+    14
+  ],
+  [
+    "truss 2 mt",
+    40
+  ],
+  [
+    "truss 3 mt",
+    2
+  ],
+  [
+    "platina grande",
+    44
+  ],
+  [
+    "platina pequena",
+    40
+  ],
+  [
+    "chiche",
+    353
+  ],
+  [
+    "pin",
+    328
+  ],
+  [
+    "hamburguesa doble",
+    22
+  ],
+  [
+    "base de clamp",
+    65
+  ],
+  [
+    "clamp para luces",
+    65
+  ],
+  [
+    "tubo galvanizado",
+    19
+  ],
+  [
+    "bompers originales",
+    12
+  ],
+  [
+    "chaco",
+    12
+  ],
+  [
+    "contrapeso",
+    9
+  ],
+  [
+    "cubos de elevacion 0.40 cm",
+    4
+  ],
+  [
+    "cubos de elevacion pequenos 028 cm x 030 cm",
+    3
+  ],
+  [
+    "cubo de diseno",
+    2
+  ],
+  [
+    "eslingas",
+    12
+  ],
+  [
+    "estacas",
+    2
+  ],
+  [
+    "fulman protector de corriente",
+    2
+  ],
+  [
+    "patines",
+    4
+  ],
+  [
+    "polipastos",
+    8
+  ],
+  [
+    "tensores",
+    7
+  ],
+  [
+    "zapata",
+    6
+  ],
+  [
+    "distro de corriente",
+    6
+  ],
+  [
+    "cable ac",
+    24
+  ],
+  [
+    "cable power spicon",
+    81
+  ],
+  [
+    "cable de 1/4 a 1/4",
+    9
+  ],
+  [
+    "cable tcj",
+    3
+  ],
+  [
+    "regleta",
+    51
+  ],
+  [
+    "cable xlr",
+    291
+  ],
+  [
+    "extension",
+    356
+  ],
+  [
+    "extension multiple",
+    11
+  ],
+  [
+    "bolsa de agua pura",
+    25
+  ],
+  [
+    "mesa plegable",
+    7
+  ],
+  [
+    "toldo 3x3 blanco",
+    3
+  ],
+  [
+    "toldo 2x2 blanco",
+    2
+  ],
+  [
+    "toldo 7x5 blanco",
+    1
+  ],
+  [
+    "case de teclado # 1",
+    1
+  ],
+  [
+    "boton de panico proco",
+    5
+  ],
+  [
+    "sugetador de ipad",
+    3
+  ],
+  [
+    "porta vaso",
+    4
+  ],
+  [
+    "control para dmx 512",
+    1
+  ],
+  [
+    "tripod",
+    1
+  ],
+  [
+    "toalla",
+    1
+  ],
+  [
+    "una",
+    1
+  ],
+  [
+    "case de teclado # 2",
+    1
+  ],
+  [
+    "sugetador de celular",
+    1
+  ],
+  [
+    "caja de herramientas",
+    6
+  ],
+  [
+    "macho",
+    6
+  ],
+  [
+    "pata de gallo",
+    6
+  ],
+  [
+    "flipon doble de 50 amp",
+    6
+  ],
+  [
+    "desarmador de estrella",
+    6
+  ],
+  [
+    "desarmador de castigaderas",
+    6
+  ],
+  [
+    "cuchilla",
+    6
+  ],
+  [
+    "estuche llaves allen (25 unidades)",
+    150
+  ],
+  [
+    "alicate",
+    6
+  ],
+  [
+    "tenaza",
+    6
+  ],
+  [
+    "pinza",
+    6
+  ],
+  [
+    "espiga tipo tester",
+    6
+  ],
+  [
+    "multimetro fluke con estuche",
+    7
+  ],
+  [
+    "duc tape",
+    70
+  ],
+  [
+    "paquete de cinchos 0.35 cm",
+    228
+  ],
+  [
+    "cinta de aislar electrica pvc",
+    45
+  ],
+  [
+    "espuma limpiadora",
+    53
+  ],
+  [
+    "bolsa jardinera de tonel",
+    500
+  ],
+  [
+    "par de botas",
+    0
+  ],
+  [
+    "plancha de 1.22 x 1.22",
+    124
+  ],
+  [
+    "grada de 0.40 cm",
+    1
+  ],
+  [
+    "grada de 0.80 cm",
+    1
+  ],
+  [
+    "andamio 0.30 cm",
+    6
+  ],
+  [
+    "andamio 0.50 cm",
+    22
+  ],
+  [
+    "andamio 0.60 cm",
+    3
+  ],
+  [
+    "andamio 0.80 cm",
+    6
+  ],
+  [
+    "corona para pista",
+    93
+  ],
+  [
+    "corona para tarima",
+    114
+  ],
+  [
+    "trabesano",
+    36
+  ],
+  [
+    "esquinero",
+    20
+  ],
+  [
+    "rollo de vinil color negro",
+    1
+  ],
+  [
+    "rollo de vinil color blanco",
+    1
+  ],
+  [
+    "rollo de mounting tape",
+    13
+  ],
+  [
+    "funda para truss color blanco de 1 mts",
+    5
+  ],
+  [
+    "funda para truss color blanco de 2 mts",
+    9
+  ],
+  [
+    "funda para truss color blanco de 3 mts",
+    10
+  ],
+  [
+    "funda para truss color blanco de 4 mts",
+    14
+  ],
+  [
+    "funda para truss color negro de 1 mts",
+    5
+  ],
+  [
+    "funda para truss color negro de 2 mts",
+    14
+  ],
+  [
+    "funda para truss color negro de 3 mts",
+    26
+  ],
+  [
+    "tela pequena para forrar dj booth color negro (dj)",
+    6
+  ],
+  [
+    "tela grande para forrar dj booth color negro (controles)",
+    7
+  ],
+  [
+    "funda para cilindro co2",
+    9
+  ],
+  [
+    "faldon para tarima blanco 050 cm x 24 mt",
+    1
+  ],
+  [
+    "faldon para tarima blanco 050 cm x 30 mt",
+    1
+  ],
+  [
+    "faldon para tarima blanco 060 cm x 6 mt",
+    3
+  ],
+  [
+    "faldon para tarima negro 050 cm x 26 mt",
+    1
+  ],
+  [
+    "faldon pata tarima negro 050 cm x 29 mt",
+    1
+  ],
+  [
+    "faldon para tarima negro 050 cm x 30 mt",
+    1
+  ],
+  [
+    "faldon para tarima negro 055 cm x 29 mt",
+    1
+  ],
+  [
+    "faldon para tarima negro 060 cm x 23 mt",
+    2
+  ],
+  [
+    "faldon para tarima negro 080 cm x 6 mt",
+    1
+  ],
+  [
+    "faldon para tarima negro 085 cm x 7 mt",
+    1
+  ],
+  [
+    "faldon para tarima negro 1 mt x 8 mt",
+    1
+  ],
+  [
+    "faldon para tarima negro satin 075 cm x 6 mt",
+    1
+  ],
+  [
+    "faldon para tarima negro satin 080 cm x 6 mt",
+    1
+  ]
+];
+
+const equipmentDefaultInventory = new Map(equipmentDefaultInventoryEntries);
+const equipmentDefaultInventoryLookup = new Map();
+const equipmentInventoryAliases = {
+  "bajo doble jbl 18 pasivo con cable power spicon": "bajo doble sub jbl 18 pasivo con cable power spicon",
+  "bajos dobles jbl con su power spicon": "bajo doble sub jbl 18 pasivo con cable power spicon",
+  "bocinas t4 con su power spicon": "bocina t4 con power spicon",
+  "bomper t4": "bompers originales",
+  "bompers de t4": "bompers originales",
+  "bajos turbosound con su power spicon en su case": "bajo turbosound iq18 con cable power spicon",
+  "monitores turbosound con su power spicon en su case": "bocina turbosound iq15 con 2 cables power spicon",
+  "bocinas qsc con su power spicon": "bocinas qsc con 2 cables power spicon y 2 cables puente",
+  "sub qsc con su case": "sub qsc 18 pasivo",
+  "amplificador tp18000 con sus 2 cables spicon en case (1 dbx y 1 ac)": "amplificador tp 18000 con procesador dbx con 2 cables power spicon y 1 cable ac",
+  "pedestales de bocina hercules con su case": "pedestal hercules para bocina con funda",
+  "bateria electrica con cable de corriente": "bateria bonai",
+  "baterias recargables bonai": "bateria bonai",
+  "cables ac": "cable ac",
+  "cables de 1/4 a 1/4": "cable de 1/4 a 1/4",
+  "cables spicon power": "cable power spicon",
+  "extensiones": "extension",
+  "bases de clamps": "base de clamp",
+  "clamps": "clamp para luces",
+  "consola x18 rack con su ac y case": "consola x18 digital con cable ac",
+  "router con su funda (cable de red y cargador)": "router con cargador y funda",
+  "ipad viejo con su protector y cargador de ipad con su cable": "ipad con cargador",
+  "consola analoga con su ac y case": "consola analoga con cable ac",
+  "cajas directas whirlwhind": "caja directa",
+  "mic. sm 58 inalambrico con su funda (1 receptor y 1 cargador)": "mic. sm 58 inalambrico",
+  "mic. saxo con su funda (1 receptor y 1 cargador)": "mic. inalambrico de saxo",
+  "in ears phenyx con cargador y case": "in ears phenyx con su cargador y case",
+  "interfaz con su cable de red y su cargador (compu mouse, cargador, adaptador) (monitor, hdmi, cable de corriente) con su case": "interfaz con cable de red con cargador y case (compu, mouse, adaptador, monitor, hdmi, cable de corriente)",
+  "interfaz akain con cargador": "interfaz akai con cargador",
+  "atem mini con cargador": "switcher atem mini con cargador",
+  "truss de 2 mt": "truss 2 mt",
+  "truss 1 mt": "triss 1 mt",
+  "truss de 1 mt": "triss 1 mt",
+  "truss 0.50 cm": "truss 0.50 mt",
+  "platinas pequenas": "platina pequena",
+  "platinas grandes": "platina grande",
+  "slingas": "eslingas",
+  "pines": "pin",
+  "chiches": "chiche",
+  "par led con cable ac": "par led rgb con cable ac",
+  "pares led con su ac y case": "par led rgb con cable ac",
+  "beam 260 con su power spicon y case": "beam 260 con cable power spicon",
+  "blinders con sus power spicon y case": "blinder rgb con cable power spicon",
+  "maquinas de humo con su ac, su control y 1 caja plastica": "maquina de humo con control, cable ac y ventilador",
+  "lasers pequenos con sus power spicon y case": "barras laser pequenas",
+  "ip 2000 con fundas": "bocina ip 2000 con funda"
+};
+
+equipmentDefaultInventoryEntries.forEach(([key, value]) => {
+  const cleanKey = equipmentInventoryLookupKey(key);
+  if (key && !equipmentDefaultInventoryLookup.has(key)) equipmentDefaultInventoryLookup.set(key, value);
+  if (cleanKey && !equipmentDefaultInventoryLookup.has(cleanKey)) equipmentDefaultInventoryLookup.set(cleanKey, value);
+});
+
+function equipmentInventoryLookupKey(value) {
+  return normalizeEquipmentKey(value)
+    .replace(/[.,;:]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function defaultInventoryValueFor(row) {
+  const lookupKeys = [
+    row?.key,
+    equipmentInventoryLookupKey(row?.key),
+    equipmentInventoryLookupKey(row?.description)
+  ].filter(Boolean);
+  for (const key of lookupKeys) {
+    if (equipmentDefaultInventoryLookup.has(key)) return Number(equipmentDefaultInventoryLookup.get(key)) || 0;
+  }
+  for (const key of lookupKeys) {
+    const aliasKey = equipmentInventoryAliases[key];
+    if (!aliasKey) continue;
+    const cleanAliasKey = equipmentInventoryLookupKey(aliasKey);
+    if (equipmentDefaultInventoryLookup.has(aliasKey)) return Number(equipmentDefaultInventoryLookup.get(aliasKey)) || 0;
+    if (equipmentDefaultInventoryLookup.has(cleanAliasKey)) return Number(equipmentDefaultInventoryLookup.get(cleanAliasKey)) || 0;
+  }
+  return 0;
+}
+
 function inventoryValueFor(row) {
   if (equipmentState.inventory.has(row.key)) return Number(equipmentState.inventory.get(row.key)) || 0;
-  return 0;
+  return defaultInventoryValueFor(row);
 }
 
 function equipmentTransferPlanData() {
