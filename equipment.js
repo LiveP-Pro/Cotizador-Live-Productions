@@ -14748,7 +14748,12 @@ function bindEquipmentInventoryInputs() {
     ?.querySelectorAll("tr[data-equipment-key]")
     .forEach((row) => {
       const key = row.dataset.equipmentKey;
-      row.querySelector(".equipment-inventory-input")?.addEventListener("change", (event) => {
+      const inventoryInput = row.querySelector(".equipment-inventory-input");
+      inventoryInput?.addEventListener("input", (event) => {
+        equipmentState.inventory.set(key, event.target.value);
+        renderEquipmentPdfPreview();
+      });
+      inventoryInput?.addEventListener("change", (event) => {
         equipmentState.inventory.set(key, event.target.value);
         renderEquipmentModule();
       });
@@ -14893,6 +14898,7 @@ function renderEquipmentPdfPreview() {
   const rentalRows = equipmentRentalRows();
 
   const title = service?.name || "Cuadro de equipo";
+  const rentTitle = "Reporte de Renta";
   if (equipmentQuery("#equipmentPdfTitle")) equipmentQuery("#equipmentPdfTitle").textContent = title;
   if (equipmentQuery("#equipmentPdfPlace")) equipmentQuery("#equipmentPdfPlace").textContent = place;
   if (equipmentQuery("#equipmentPdfEvent")) equipmentQuery("#equipmentPdfEvent").textContent = eventName;
@@ -14910,7 +14916,7 @@ function renderEquipmentPdfPreview() {
   if (equipmentQuery("#equipmentPdfMainTable")) {
     equipmentQuery("#equipmentPdfMainTable").innerHTML = tableForEquipmentSections(sections, true);
   }
-  if (equipmentQuery("#equipmentRentPdfTitle")) equipmentQuery("#equipmentRentPdfTitle").textContent = `Renta - ${title}`;
+  if (equipmentQuery("#equipmentRentPdfTitle")) equipmentQuery("#equipmentRentPdfTitle").textContent = rentTitle;
   if (equipmentQuery("#equipmentRentPdfPlace")) equipmentQuery("#equipmentRentPdfPlace").textContent = rentPlace;
   if (equipmentQuery("#equipmentRentPdfEvents")) equipmentQuery("#equipmentRentPdfEvents").textContent = rentEventName;
   if (equipmentQuery("#equipmentRentPdfPhone")) equipmentQuery("#equipmentRentPdfPhone").textContent = rentPhone;
@@ -15029,7 +15035,7 @@ function equipmentPdfFileName(mode = "full") {
   const eventName = cleanEquipmentFilePart(events.map(equipmentEventNameForFile).join(" - ") || "Evento por definir", "Evento por definir");
   const plannerName = cleanEquipmentFilePart(events.map((event) => event.phone).join(" - ") || "Planner por definir", "Planner por definir");
   const serviceName = cleanEquipmentFilePart(service?.name || "Extras", "Extras");
-  const documentType = mode === "rent" ? `Renta ${serviceName}` : serviceName;
+  const documentType = mode === "rent" ? "Reporte de Renta" : serviceName;
   const eventDates = cleanEquipmentFilePart(events.map((event) => formatEquipmentDateForFile(event.date)).join(" - "), "Fecha por definir");
   return `${eventName} - ${plannerName} - ${documentType} - ${eventDates}.pdf`;
 }
@@ -15387,6 +15393,7 @@ function initEquipmentModule() {
   });
   equipmentQuery("#equipmentSavePdfButton")?.addEventListener("click", () => saveEquipmentPdf("full"));
   equipmentQuery("#equipmentSaveRentPdfButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
+  equipmentQuery("#equipmentGenerateRentReportButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
   equipmentQuery("#equipmentOpenEditableButton")?.addEventListener("click", () => equipmentQuery("#equipmentEditableFileInput")?.click());
   equipmentQuery("#equipmentEditableFileInput")?.addEventListener("change", openEquipmentEditableFile);
   equipmentQuery("#equipmentReviewWindowButton")?.addEventListener("click", () => switchEquipmentWindow("review"));

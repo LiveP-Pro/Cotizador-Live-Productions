@@ -914,6 +914,34 @@ body {
   text-transform: uppercase;
 }
 
+.equipment-summary-title {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.equipment-summary-title > div {
+  display: grid;
+  gap: 4px;
+}
+
+.equipment-summary-report-button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #111111;
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.equipment-summary-report-button:hover {
+  background: #2b2b2b;
+}
+
 .equipment-table-wrap table {
   width: 100%;
   min-width: 820px;
