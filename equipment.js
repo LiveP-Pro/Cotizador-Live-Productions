@@ -15111,17 +15111,36 @@ function equipmentPdfDownloadUrl(pdfUrl) {
   }
 }
 
+function clickEquipmentDownloadLink(link) {
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function downloadEquipmentUrlFallback(fileName, url) {
+  const link = document.createElement("a");
+  link.href = equipmentPdfDownloadUrl(url);
+  link.download = fileName;
+  link.target = "_blank";
+  link.rel = "noopener";
+  clickEquipmentDownloadLink(link);
+}
+
 function downloadEquipmentBlobFallback(fileName, blob) {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+  link.target = "_blank";
+  link.rel = "noopener";
+  clickEquipmentDownloadLink(link);
   window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 
-function downloadEquipmentPdfFallback(fileName, pdfBlob) {
+function downloadEquipmentPdfFallback(fileName, pdfBlob, pdfUrl = "") {
+  if (pdfUrl) {
+    downloadEquipmentUrlFallback(fileName, pdfUrl);
+    return;
+  }
   downloadEquipmentBlobFallback(fileName, pdfBlob);
 }
 
@@ -15188,9 +15207,9 @@ async function saveEquipmentPdfCopyToComputer(data, savedLabel, editablePayload,
   const pdfBlob = await pdfResponse.blob();
 
   if (!directoryHandle) {
-    downloadEquipmentPdfFallback(fileName, pdfBlob);
+    downloadEquipmentPdfFallback(fileName, pdfBlob, pdfUrl);
     downloadEquipmentJsonFallback(jsonFileName, finalEditablePayload);
-    return `${savedLabel}: ${fileName}. También se descargó el editable ${jsonFileName}.`;
+    return `${savedLabel}: ${fileName}. Si no aparece selector de carpeta, revise Descargas o use Guardar en Archivos. También se descargó el editable ${jsonFileName}.`;
   }
 
   await writeEquipmentFileToFolder(directoryHandle, fileName, pdfBlob);
@@ -15221,8 +15240,8 @@ async function saveEquipmentPdf(mode = "full") {
     const canChooseFolder = typeof window.showDirectoryPicker === "function";
     if (status) {
       status.textContent = canChooseFolder
-        ? "Seleccione la carpeta donde desea guardar el PDF y el JSON editable."
-        : "Este navegador no permite elegir carpeta; se descargará el PDF y el JSON.";
+        ? "Seleccione cualquier carpeta donde desea guardar el PDF y el JSON editable."
+        : "El navegador descargará el PDF y el JSON; en Safari, Firefox o celular elija Guardar desde su sistema de descargas.";
     }
     const directoryHandle = canChooseFolder ? await chooseEquipmentSaveFolder() : null;
     if (status) status.textContent = mode === "rent" ? "Generando PDF de renta..." : "Generando PDF para bodega...";
@@ -15248,10 +15267,11 @@ async function saveEquipmentPdf(mode = "full") {
     try {
       statusMessage = await saveEquipmentPdfCopyToComputer(data, savedLabel, equipmentEditablePayload(mode, data), directoryHandle);
     } catch (saveError) {
-      statusMessage = `${savedLabel}: ${data.fileName} + ${data.jsonFileName}. No se copió a la carpeta seleccionada: ${saveError.message}`;
+      const destinationLabel = directoryHandle ? "la carpeta seleccionada" : "las descargas del navegador";
+      statusMessage = `${savedLabel}: ${data.fileName} + ${data.jsonFileName}. No se copió a ${destinationLabel}: ${saveError.message}`;
     }
     if (status) status.textContent = statusMessage;
-    window.open(data.pdfUrl, "_blank", "noopener");
+    if (directoryHandle) window.open(data.pdfUrl, "_blank", "noopener");
   } catch (error) {
     if (status) {
       status.textContent = error?.name === "AbortError"
