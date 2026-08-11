@@ -14614,9 +14614,9 @@ function tableForEquipmentInventory(rows, editable = true) {
   }
   const events = activeEquipmentEvents();
   const eventHeaders = events
-    .map((event, index) => `<th>${escapeEquipmentHtml(equipmentSummaryColumnName(event, index))}</th>`)
+    .map((event, index) => `<th class="equipment-event-column">${escapeEquipmentHtml(equipmentSummaryColumnName(event, index))}</th>`)
     .join("");
-  const eventQuantityHeaders = events.map(() => `<th>CANTIDAD</th>`).join("");
+  const eventQuantityHeaders = events.map(() => `<th class="equipment-event-column">CANTIDAD</th>`).join("");
   const body = rows
     .map((row) => {
       if (row.type === "category") {
@@ -14633,7 +14633,7 @@ function tableForEquipmentInventory(rows, editable = true) {
       const actionClass = needsRent ? "equipment-action-rent" : "equipment-action-empty";
       const observation = equipmentState.observations.get(row.key) || "";
       const eventCells = events
-        .map((event) => `<td class="equipment-qty">${escapeEquipmentHtml(row.eventQuantities.get(event.id) || 0)}</td>`)
+        .map((event) => `<td class="equipment-qty equipment-event-column">${escapeEquipmentHtml(row.eventQuantities.get(event.id) || 0)}</td>`)
         .join("");
       return `
         <tr data-equipment-key="${escapeEquipmentHtml(row.key)}">
@@ -14664,21 +14664,21 @@ function tableForEquipmentInventory(rows, editable = true) {
     <table class="equipment-base-table equipment-inventory-table${editable ? "" : " equipment-table-compact"}">
       <thead>
         <tr>
-          <th rowspan="2">DESCRIPCION DE EQUIPO</th>
+          <th class="equipment-description-column" rowspan="2">DESCRIPCION DE EQUIPO</th>
           ${eventHeaders}
-          <th>EQUIPO REQUERIDO</th>
-          <th>INVENTARIO FISICO BODEGA PP</th>
-          <th>FALTANTE DE EQUIPO PARA RENTA</th>
-          <th>ACCION</th>
-          <th>OBSERVACIONES</th>
+          <th class="equipment-total-column">EQUIPO REQUERIDO</th>
+          <th class="equipment-inventory-column">INVENTARIO FISICO BODEGA PP</th>
+          <th class="equipment-shortage-column">FALTANTE DE EQUIPO PARA RENTA</th>
+          <th class="equipment-action-column">ACCION</th>
+          <th class="equipment-observation-column">OBSERVACIONES</th>
         </tr>
         <tr class="equipment-inventory-subhead">
           ${eventQuantityHeaders}
-          <th>TOTAL</th>
-          <th>TOTAL</th>
-          <th>TOTAL</th>
-          <th></th>
-          <th></th>
+          <th class="equipment-total-column">TOTAL</th>
+          <th class="equipment-inventory-column">TOTAL</th>
+          <th class="equipment-shortage-column">TOTAL</th>
+          <th class="equipment-action-column"></th>
+          <th class="equipment-observation-column"></th>
         </tr>
       </thead>
       <tbody>${body}</tbody>

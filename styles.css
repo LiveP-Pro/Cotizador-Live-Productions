@@ -1041,6 +1041,105 @@ body {
   background: #ffffff;
 }
 
+
+
+#requerimientoEquipoPage .equipment-module-card {
+  width: min(1760px, calc(100% - 32px));
+}
+
+#equipmentInventoryPanel {
+  padding: 28px;
+}
+
+#equipmentInventoryTable.equipment-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+.equipment-inventory-table {
+  width: max-content;
+  min-width: 1480px;
+  table-layout: fixed;
+}
+
+.equipment-inventory-table th,
+.equipment-inventory-table td {
+  padding: 18px 20px;
+  font-size: 17px;
+  line-height: 1.22;
+  vertical-align: middle;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.equipment-inventory-table th {
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+
+.equipment-inventory-table .equipment-description-column,
+.equipment-inventory-table td:first-child {
+  width: 280px;
+  min-width: 280px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.equipment-inventory-table .equipment-event-column {
+  width: 150px;
+  min-width: 150px;
+  text-align: center;
+}
+
+.equipment-inventory-table .equipment-total-column,
+.equipment-inventory-table .equipment-inventory-column,
+.equipment-inventory-table .equipment-shortage-column {
+  width: 150px;
+  min-width: 150px;
+  text-align: center;
+}
+
+.equipment-inventory-table .equipment-action-column {
+  width: 140px;
+  min-width: 140px;
+  text-align: center;
+}
+
+.equipment-inventory-table .equipment-observation-column {
+  width: 180px;
+  min-width: 180px;
+}
+
+.equipment-inventory-table .equipment-qty,
+.equipment-inventory-table .equipment-required-total,
+.equipment-inventory-table .equipment-shortage-cell,
+.equipment-inventory-table .equipment-rest-ok,
+.equipment-inventory-table .equipment-action-rent,
+.equipment-inventory-table .equipment-action-empty {
+  font-size: 18px;
+  font-weight: 950;
+  text-align: center;
+  white-space: nowrap;
+}
+
+#equipmentInventoryPanel .equipment-inventory-input {
+  min-width: 96px;
+  min-height: 58px;
+  padding: 10px 12px;
+  font-size: 18px;
+  font-weight: 900;
+  text-align: center;
+}
+
+#equipmentInventoryPanel .equipment-observation-input {
+  min-width: 128px;
+  min-height: 58px;
+  padding: 10px 12px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
 .equipment-summary-notice,
 .equipment-transfer-note {
   margin: 0 0 12px;
