@@ -12462,7 +12462,8 @@ const equipmentState = {
   activeWindow: "review",
   servicePickerOpen: false,
   summarySearchTerm: "",
-  summaryTransferEnabled: false
+  summaryTransferEnabled: false,
+  summaryTransferEventIds: new Set()
 };
 
 let equipmentEventCounter = 1;
@@ -12630,6 +12631,29 @@ function equipmentMaxConcurrentQuantity(row, events = activeEquipmentEvents()) {
     ...[...eventsByDate.values()].map((dateEvents) => equipmentMaxConcurrentQuantityForEvents(row, dateEvents))
   );
   return undatedTotal + datedMaximum || Number(row.quantity) || 0;
+}
+
+function cleanupEquipmentSummaryTransferSelections(events = activeEquipmentEvents()) {
+  const availableIds = new Set(events.map((event) => event.id));
+  [...equipmentState.summaryTransferEventIds].forEach((eventId) => {
+    if (!availableIds.has(eventId)) equipmentState.summaryTransferEventIds.delete(eventId);
+  });
+}
+
+function equipmentSummaryTransferSelectedEvents(events = activeEquipmentEvents()) {
+  cleanupEquipmentSummaryTransferSelections(events);
+  return events.filter((event) => equipmentState.summaryTransferEventIds.has(event.id));
+}
+
+function equipmentTransferAdjustedQuantity(row, events, selectedTransferEvents) {
+  const rowTransferEvents = selectedTransferEvents.filter((event) => (Number(row.eventQuantities.get(event.id)) || 0) > 0);
+  if (rowTransferEvents.length < 2) return Number(row.quantity) || 0;
+  const transferIds = new Set(rowTransferEvents.map((event) => event.id));
+  const unselectedTotal = events.reduce((total, event) => {
+    if (transferIds.has(event.id)) return total;
+    return total + (Number(row.eventQuantities.get(event.id)) || 0);
+  }, 0);
+  return unselectedTotal + equipmentMaxConcurrentQuantity(row, rowTransferEvents);
 }
 
 function equipmentEventReturnDateTime(event) {
@@ -13172,7 +13196,7 @@ function equipmentSummaryDateNotice() {
   if (groups.size > 1) {
     return {
       type: "warning",
-      text: "El resumen combinado solo aplica para eventos del mismo día. Hay ventanas en fechas distintas; use el resumen por día y el trasego no aplica entre esas fechas."
+      text: "Hay ventanas en fechas distintas. Si el mismo equipo se moverá entre lugares, active Trasegar Equipo y marque solo esos eventos; los no marcados se suman normal."
     };
   }
   if (missingDateCount) {
@@ -13249,20 +13273,19 @@ function equipmentRowsSummary() {
       });
     });
   });
-  if (equipmentState.summaryTransferEnabled) {
-    rowsByEquipmentKey.forEach((row) => {
-      const originalQuantity = Number(row.quantity) || 0;
-      const adjustedQuantity = equipmentMaxConcurrentQuantity(row, events);
-      row.originalQuantity = originalQuantity;
-      row.quantity = Math.min(originalQuantity, adjustedQuantity);
-      row.transferApplied = row.quantity < originalQuantity;
-    });
-  } else {
-    rowsByEquipmentKey.forEach((row) => {
-      row.originalQuantity = Number(row.quantity) || 0;
-      row.transferApplied = false;
-    });
-  }
+  const selectedTransferEvents = equipmentState.summaryTransferEnabled
+    ? equipmentSummaryTransferSelectedEvents(events)
+    : [];
+  const canApplyTransfer = selectedTransferEvents.length >= 2;
+  rowsByEquipmentKey.forEach((row) => {
+    const originalQuantity = Number(row.quantity) || 0;
+    const adjustedQuantity = canApplyTransfer
+      ? equipmentTransferAdjustedQuantity(row, events, selectedTransferEvents)
+      : originalQuantity;
+    row.originalQuantity = originalQuantity;
+    row.quantity = Math.min(originalQuantity, adjustedQuantity);
+    row.transferApplied = row.quantity < originalQuantity;
+  });
   return groups.flatMap((group) => group.rows.length ? [{
     type: "category",
     key: group.key,
@@ -13295,18 +13318,109 @@ function equipmentFilterSummaryRows(rows, searchTerm = equipmentState.summarySea
   return filtered;
 }
 
-function equipmentSummaryTransferNoticeText() {
-  if (!equipmentState.summaryTransferEnabled) return "";
-  return "Trasiego de equipo aplicado: el total requerido usa el máximo necesario por fecha y no suma equipo que puede moverse al siguiente evento.";
+function equipmentSummaryTransferNotice() {
+  if (!equipmentState.summaryTransferEnabled) return { text: "", type: "" };
+  const events = activeEquipmentEvents();
+  if (events.length < 2) {
+    return {
+      type: "warning",
+      text: "Agregue al menos dos ventanas para seleccionar lugares de trasiego."
+    };
+  }
+  const selectedEvents = equipmentSummaryTransferSelectedEvents(events);
+  if (selectedEvents.length < 2) {
+    return {
+      type: "warning",
+      text: "Seleccione dos o más lugares para que el trasiego afecte el total requerido."
+    };
+  }
+  const labels = selectedEvents.map((event, index) => equipmentSummaryColumnName(event, index)).join(" -> ");
+  return {
+    type: "ok",
+    text: `Trasiego aplicado solo entre: ${labels}. Los demás eventos se suman normal para renta.`
+  };
 }
 
 function renderEquipmentSummaryTransferNotice() {
   const notice = equipmentQuery("#equipmentSummaryTransferNotice");
   if (!notice) return;
-  const text = equipmentSummaryTransferNoticeText();
+  const { text, type } = equipmentSummaryTransferNotice();
   notice.textContent = text;
   notice.classList.toggle("is-hidden", !text);
-  notice.classList.toggle("is-ok", Boolean(text));
+  notice.classList.toggle("is-warning", type === "warning");
+  notice.classList.toggle("is-ok", type === "ok");
+}
+
+function renderEquipmentSummaryTransferSelector() {
+  const host = equipmentQuery("#equipmentSummaryTransferSelector");
+  if (!host) return;
+  const events = activeEquipmentEvents();
+  cleanupEquipmentSummaryTransferSelections(events);
+  host.classList.toggle("is-hidden", !equipmentState.summaryTransferEnabled);
+  if (!equipmentState.summaryTransferEnabled) {
+    host.innerHTML = "";
+    return;
+  }
+  if (events.length < 2) {
+    host.innerHTML = `<p class="equipment-empty">Cree dos o más ventanas para elegir los lugares del trasiego.</p>`;
+    return;
+  }
+  const selectedCount = equipmentSummaryTransferSelectedEvents(events).length;
+  const options = events
+    .map((event, index) => {
+      const checked = equipmentState.summaryTransferEventIds.has(event.id);
+      const title = equipmentEventCardTitle(event, index);
+      const eventName = event?.name ? `Evento: ${event.name}` : "Evento por definir";
+      const date = equipmentEventDateLabel(event);
+      const outAt = equipmentEventTransferDateTime(event);
+      const inAt = equipmentEventReturnDateTime(event);
+      return `
+        <label class="equipment-transfer-option${checked ? " is-selected" : ""}">
+          <input type="checkbox" data-equipment-transfer-event-id="${escapeEquipmentHtml(event.id)}" ${checked ? "checked" : ""} />
+          <span>
+            <strong>${escapeEquipmentHtml(`${index + 1}. ${title}`)}</strong>
+            <small>${escapeEquipmentHtml(eventName)}</small>
+            <small>Fecha: ${escapeEquipmentHtml(date)}</small>
+            <small>Salida: ${escapeEquipmentHtml(outAt)}</small>
+            <small>Ingreso: ${escapeEquipmentHtml(inAt)}</small>
+          </span>
+        </label>`;
+    })
+    .join("");
+  host.innerHTML = `
+    <div class="equipment-transfer-selector-head">
+      <div>
+        <strong>Elegir lugares para trasegar</strong>
+        <span>${escapeEquipmentHtml(selectedCount)} seleccionados</span>
+      </div>
+      <div class="equipment-transfer-selector-actions">
+        <button type="button" data-equipment-transfer-select-all>Marcar todos</button>
+        <button type="button" data-equipment-transfer-clear>Limpiar</button>
+      </div>
+    </div>
+    <div class="equipment-transfer-selector-grid">${options}</div>`;
+}
+
+function bindEquipmentSummaryTransferSelector() {
+  const host = equipmentQuery("#equipmentSummaryTransferSelector");
+  if (!host) return;
+  host.querySelectorAll("[data-equipment-transfer-event-id]").forEach((input) => {
+    input.addEventListener("change", (event) => {
+      const eventId = event.target.dataset.equipmentTransferEventId;
+      if (!eventId) return;
+      if (event.target.checked) equipmentState.summaryTransferEventIds.add(eventId);
+      else equipmentState.summaryTransferEventIds.delete(eventId);
+      renderEquipmentModule();
+    });
+  });
+  host.querySelector("[data-equipment-transfer-select-all]")?.addEventListener("click", () => {
+    activeEquipmentEvents().forEach((event) => equipmentState.summaryTransferEventIds.add(event.id));
+    renderEquipmentModule();
+  });
+  host.querySelector("[data-equipment-transfer-clear]")?.addEventListener("click", () => {
+    equipmentState.summaryTransferEventIds.clear();
+    renderEquipmentModule();
+  });
 }
 
 function tableForEquipmentSections(sections, compact = false) {
@@ -13466,9 +13580,11 @@ function refreshEquipmentSummaryAndPreview() {
     equipmentQuery("#equipmentInventoryTable").innerHTML = tableForEquipmentInventory(equipmentFilterSummaryRows(equipmentRowsSummary()), true);
   }
   renderEquipmentSummaryDateNotice();
+  renderEquipmentSummaryTransferSelector();
   renderEquipmentSummaryTransferNotice();
   renderEquipmentTransferPanel();
   bindEquipmentInventoryInputs();
+  bindEquipmentSummaryTransferSelector();
   renderEquipmentPdfPreview();
   renderEquipmentWindowState();
 }
@@ -14716,13 +14832,13 @@ function renderEquipmentTransferPanel() {
 
   const messages = [];
   if (plan.hasDifferentDates) {
-    messages.push("No aplica trasego entre eventos de fechas distintas. Los movimientos solo se calculan para ventanas del mismo día.");
+    messages.push("Para eventos en fechas distintas, use el selector Trasegar Equipo dentro de Resumen de Equipo y marque los lugares que compartirán equipo.");
   }
   if (plan.missingDateEvents.length) {
     messages.push("Hay ventanas sin fecha operativa; complete fecha, salida o ingreso de equipo para evaluar el trasego.");
   }
   if (!plan.routes.length) {
-    messages.push("No hay ventanas compartiendo el mismo día, por lo que el trasego no aplica.");
+    messages.push("No hay ventanas compartiendo el mismo día en esta vista; para fechas consecutivas use el selector del resumen.");
   }
 
   const messageHtml = messages
@@ -14938,8 +15054,12 @@ function renderEquipmentWindowState() {
   const summaryTransferButton = equipmentQuery("#equipmentSummaryTransferButton");
   const summarySearch = equipmentQuery("#equipmentSummarySearch");
   if (summaryTransferButton) {
+    const transferCount = equipmentSummaryTransferSelectedEvents(activeEquipmentEvents()).length;
     summaryTransferButton.classList.toggle("is-active", equipmentState.summaryTransferEnabled);
     summaryTransferButton.setAttribute("aria-pressed", String(equipmentState.summaryTransferEnabled));
+    summaryTransferButton.textContent = equipmentState.summaryTransferEnabled && transferCount
+      ? `Trasegar Equipo (${transferCount})`
+      : "Trasegar Equipo";
   }
   if (summarySearch && summarySearch.value !== equipmentState.summarySearchTerm) summarySearch.value = equipmentState.summarySearchTerm;
   if (mainPanel) mainPanel.classList.toggle("is-hidden", activeWindow !== "review");
@@ -15015,6 +15135,7 @@ function removeEquipmentEventById(eventId) {
   const removed = equipmentState.events[index];
   const wasSelected = equipmentState.selectedEventId === eventId;
   equipmentState.events.splice(index, 1);
+  equipmentState.summaryTransferEventIds.delete(eventId);
   if (wasSelected) {
     const nextEvent = equipmentState.events[index] || equipmentState.events[index - 1] || null;
     equipmentState.selectedEventId = "";
@@ -15042,6 +15163,8 @@ function clearEquipmentWorkingArea() {
   if (!window.confirm("¿Está seguro que desea limpiar todo a 0?")) return;
   equipmentState.events = [];
   resetEquipmentWindowDraft();
+  equipmentState.summaryTransferEventIds.clear();
+  equipmentState.summaryTransferEnabled = false;
   equipmentState.inventory.clear();
   equipmentState.observations.clear();
   renderEquipmentModule();
@@ -15115,10 +15238,12 @@ function renderEquipmentModule() {
   bindEquipmentSectionInputs();
   renderEquipmentPredefinedExtras();
   renderManualEquipmentExtras();
+  renderEquipmentSummaryTransferSelector();
   if (equipmentQuery("#equipmentInventoryTable")) {
     equipmentQuery("#equipmentInventoryTable").innerHTML = tableForEquipmentInventory(equipmentFilterSummaryRows(equipmentRowsSummary()), true);
   }
   bindEquipmentInventoryInputs();
+  bindEquipmentSummaryTransferSelector();
   renderEquipmentSummaryTransferNotice();
   renderEquipmentPdfPreview();
   renderEquipmentWindowState();
@@ -15272,6 +15397,8 @@ function equipmentEditablePayload(mode = "full", savedData = {}) {
     events,
     inventory: [...equipmentState.inventory.entries()],
     observations: [...equipmentState.observations.entries()],
+    summaryTransferEnabled: equipmentState.summaryTransferEnabled,
+    summaryTransferEventIds: [...equipmentState.summaryTransferEventIds],
     notes: equipmentQuery("#equipmentNotes")?.value || ""
   };
 }
@@ -15486,16 +15613,35 @@ function importEquipmentEditablePayload(payload) {
     : payload.event
       ? [payload.event]
       : [];
-  const events = rawEvents.map(importedEquipmentEvent).filter((event) => event.serviceIds.length || event.sections.length);
+  const idMap = new Map();
+  const events = rawEvents
+    .map((rawEvent, index) => {
+      const importedEvent = importedEquipmentEvent(rawEvent, index);
+      if (rawEvent?.id) idMap.set(String(rawEvent.id), importedEvent.id);
+      return importedEvent;
+    })
+    .filter((event) => event.serviceIds.length || event.sections.length);
   if (!events.length) throw new Error("El JSON no contiene una ventana editable válida.");
+  const availableIds = new Set(events.map((event) => event.id));
+  const restoredTransferIds = Array.isArray(payload.summaryTransferEventIds)
+    ? payload.summaryTransferEventIds
+        .map((eventId) => idMap.get(String(eventId)) || String(eventId || ""))
+        .filter((eventId) => availableIds.has(eventId))
+    : [];
   equipmentState.events = events;
   equipmentState.inventory = equipmentSimpleEntriesToMap(payload.inventory);
   equipmentState.observations = equipmentSimpleEntriesToMap(payload.observations);
+  equipmentState.summaryTransferEnabled = Boolean(payload.summaryTransferEnabled && restoredTransferIds.length >= 2);
+  equipmentState.summaryTransferEventIds = new Set(restoredTransferIds);
   equipmentState.deletedStack = [];
-  equipmentState.activeWindow = "review";
+  equipmentState.activeWindow = equipmentState.summaryTransferEnabled ? "summary" : "review";
   const notesInput = equipmentQuery("#equipmentNotes");
   if (notesInput) notesInput.value = payload.notes || "";
   loadEquipmentEvent(events[0].id);
+  if (equipmentState.summaryTransferEnabled) {
+    equipmentState.activeWindow = "summary";
+    renderEquipmentModule();
+  }
 }
 
 async function openEquipmentEditableFile(event) {
@@ -15563,6 +15709,7 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentGenerateRentReportButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
   equipmentQuery("#equipmentSummaryTransferButton")?.addEventListener("click", () => {
     equipmentState.summaryTransferEnabled = !equipmentState.summaryTransferEnabled;
+    if (equipmentState.summaryTransferEnabled) equipmentState.activeWindow = "summary";
     renderEquipmentModule();
   });
   equipmentQuery("#equipmentSummarySearch")?.addEventListener("input", (event) => {
