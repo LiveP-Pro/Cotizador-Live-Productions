@@ -12460,7 +12460,9 @@ const equipmentState = {
   deletedStack: [],
   selectedEventId: "",
   activeWindow: "review",
-  servicePickerOpen: false
+  servicePickerOpen: false,
+  summarySearchTerm: "",
+  summaryTransferEnabled: false
 };
 
 let equipmentEventCounter = 1;
@@ -12542,6 +12544,92 @@ function equipmentEventTransferDateTime(event) {
   if (event?.equipmentOutAt) return formatEquipmentDateTime(event.equipmentOutAt);
   const dateKey = equipmentEventOperationalDateKey(event);
   return dateKey ? `${formatEquipmentDate(dateKey)} · Hora por definir` : "Fecha y hora por definir";
+}
+
+function equipmentDateOnlyFromDateTime(value) {
+  const dateKey = equipmentDateKeyFromDateTime(value);
+  return dateKey ? formatEquipmentDate(dateKey) : "Por definir";
+}
+
+function equipmentEventDateLabel(event) {
+  return event?.date ? formatEquipmentDate(event.date) : "Por definir";
+}
+
+function equipmentEventOutDateLabel(event) {
+  return event?.equipmentOutAt
+    ? equipmentDateOnlyFromDateTime(event.equipmentOutAt)
+    : event?.date
+      ? formatEquipmentDate(event.date)
+      : "Por definir";
+}
+
+function equipmentEventInterval(event) {
+  const start = event?.equipmentOutAt || (event?.date ? `${event.date}T00:00` : "");
+  const end = event?.equipmentInAt || (event?.date ? `${event.date}T23:59` : "");
+  if (!start || !end) return null;
+  return { start, end: end < start ? start : end };
+}
+
+function equipmentTransferDateKey(event) {
+  return event?.date
+    || equipmentDateKeyFromDateTime(event?.equipmentOutAt)
+    || equipmentDateKeyFromDateTime(event?.equipmentInAt)
+    || "";
+}
+
+function equipmentMaxConcurrentQuantityForEvents(row, events = []) {
+  const points = [];
+  let hasTimedEvent = false;
+  let simpleTotal = 0;
+  events.forEach((event) => {
+    const quantity = Number(row.eventQuantities.get(event.id)) || 0;
+    if (quantity <= 0) return;
+    simpleTotal += quantity;
+    const interval = equipmentEventInterval(event);
+    if (!interval) return;
+    hasTimedEvent = true;
+    points.push({ at: interval.start, type: "start", quantity });
+    points.push({ at: interval.end, type: "end", quantity });
+  });
+  if (!hasTimedEvent || !points.length) return simpleTotal;
+  points.sort((first, second) => {
+    const dateOrder = first.at.localeCompare(second.at);
+    if (dateOrder) return dateOrder;
+    if (first.type === second.type) return 0;
+    return first.type === "end" ? -1 : 1;
+  });
+  let current = 0;
+  let maximum = 0;
+  points.forEach((point) => {
+    if (point.type === "end") {
+      current = Math.max(0, current - point.quantity);
+      return;
+    }
+    current += point.quantity;
+    maximum = Math.max(maximum, current);
+  });
+  return maximum || simpleTotal;
+}
+
+function equipmentMaxConcurrentQuantity(row, events = activeEquipmentEvents()) {
+  const eventsByDate = new Map();
+  let undatedTotal = 0;
+  events.forEach((event) => {
+    const quantity = Number(row.eventQuantities.get(event.id)) || 0;
+    if (quantity <= 0) return;
+    const dateKey = equipmentTransferDateKey(event);
+    if (!dateKey) {
+      undatedTotal += quantity;
+      return;
+    }
+    if (!eventsByDate.has(dateKey)) eventsByDate.set(dateKey, []);
+    eventsByDate.get(dateKey).push(event);
+  });
+  const datedMaximum = Math.max(
+    0,
+    ...[...eventsByDate.values()].map((dateEvents) => equipmentMaxConcurrentQuantityForEvents(row, dateEvents))
+  );
+  return undatedTotal + datedMaximum || Number(row.quantity) || 0;
 }
 
 function equipmentEventReturnDateTime(event) {
@@ -13161,11 +13249,64 @@ function equipmentRowsSummary() {
       });
     });
   });
+  if (equipmentState.summaryTransferEnabled) {
+    rowsByEquipmentKey.forEach((row) => {
+      const originalQuantity = Number(row.quantity) || 0;
+      const adjustedQuantity = equipmentMaxConcurrentQuantity(row, events);
+      row.originalQuantity = originalQuantity;
+      row.quantity = Math.min(originalQuantity, adjustedQuantity);
+      row.transferApplied = row.quantity < originalQuantity;
+    });
+  } else {
+    rowsByEquipmentKey.forEach((row) => {
+      row.originalQuantity = Number(row.quantity) || 0;
+      row.transferApplied = false;
+    });
+  }
   return groups.flatMap((group) => group.rows.length ? [{
     type: "category",
     key: group.key,
     title: group.title
   }, ...group.rows] : []);
+}
+
+function equipmentFilterSummaryRows(rows, searchTerm = equipmentState.summarySearchTerm) {
+  const query = normalizeEquipmentKey(searchTerm);
+  if (!query) return rows;
+  const filtered = [];
+  let currentCategory = null;
+  let currentMatches = [];
+  const flushCategory = () => {
+    if (currentCategory && currentMatches.length) {
+      filtered.push(currentCategory, ...currentMatches);
+    }
+  };
+  rows.forEach((row) => {
+    if (row.type === "category") {
+      flushCategory();
+      currentCategory = row;
+      currentMatches = [];
+      return;
+    }
+    const haystack = normalizeEquipmentKey(`${row.description || ""} ${row.categoryTitle || ""}`);
+    if (haystack.includes(query)) currentMatches.push(row);
+  });
+  flushCategory();
+  return filtered;
+}
+
+function equipmentSummaryTransferNoticeText() {
+  if (!equipmentState.summaryTransferEnabled) return "";
+  return "Trasiego de equipo aplicado: el total requerido usa el máximo necesario por fecha y no suma equipo que puede moverse al siguiente evento.";
+}
+
+function renderEquipmentSummaryTransferNotice() {
+  const notice = equipmentQuery("#equipmentSummaryTransferNotice");
+  if (!notice) return;
+  const text = equipmentSummaryTransferNoticeText();
+  notice.textContent = text;
+  notice.classList.toggle("is-hidden", !text);
+  notice.classList.toggle("is-ok", Boolean(text));
 }
 
 function tableForEquipmentSections(sections, compact = false) {
@@ -13322,9 +13463,10 @@ function addEquipmentEvent() {
 
 function refreshEquipmentSummaryAndPreview() {
   if (equipmentQuery("#equipmentInventoryTable")) {
-    equipmentQuery("#equipmentInventoryTable").innerHTML = tableForEquipmentInventory(equipmentRowsSummary(), true);
+    equipmentQuery("#equipmentInventoryTable").innerHTML = tableForEquipmentInventory(equipmentFilterSummaryRows(equipmentRowsSummary()), true);
   }
   renderEquipmentSummaryDateNotice();
+  renderEquipmentSummaryTransferNotice();
   renderEquipmentTransferPanel();
   bindEquipmentInventoryInputs();
   renderEquipmentPdfPreview();
@@ -14613,8 +14755,14 @@ function tableForEquipmentInventory(rows, editable = true) {
     return `<p class="equipment-empty">El resumen aparecerá al seleccionar un servicio.</p>`;
   }
   const events = activeEquipmentEvents();
+  const eventDateHeaders = events
+    .map((event) => `<th class="equipment-event-column equipment-date-column"><span>Fecha del evento</span><strong>${escapeEquipmentHtml(equipmentEventDateLabel(event))}</strong></th>`)
+    .join("");
+  const eventOutHeaders = events
+    .map((event) => `<th class="equipment-event-column equipment-date-column"><span>Fecha salida equipo</span><strong>${escapeEquipmentHtml(equipmentEventOutDateLabel(event))}</strong></th>`)
+    .join("");
   const eventHeaders = events
-    .map((event, index) => `<th class="equipment-event-column">${escapeEquipmentHtml(equipmentSummaryColumnName(event, index))}</th>`)
+    .map((event, index) => `<th class="equipment-event-column equipment-location-column">${escapeEquipmentHtml(equipmentSummaryColumnName(event, index))}</th>`)
     .join("");
   const eventQuantityHeaders = events.map(() => `<th class="equipment-event-column">CANTIDAD</th>`).join("");
   const body = rows
@@ -14630,7 +14778,9 @@ function tableForEquipmentInventory(rows, editable = true) {
       const shortage = inventory - required;
       const needsRent = shortage < 0;
       const shortageClass = needsRent ? "equipment-shortage-cell" : "equipment-rest-ok";
-      const actionClass = needsRent ? "equipment-action-rent" : "equipment-action-empty";
+      const transferApplied = Boolean(row.transferApplied);
+      const actionLabel = needsRent ? (transferApplied ? "RENTA + TRASIEGO" : "RENTA") : transferApplied ? "TRASIEGO" : "";
+      const actionClass = needsRent ? "equipment-action-rent" : transferApplied ? "equipment-action-transfer" : "equipment-action-empty";
       const observation = equipmentState.observations.get(row.key) || "";
       const eventCells = events
         .map((event) => `<td class="equipment-qty equipment-event-column">${escapeEquipmentHtml(row.eventQuantities.get(event.id) || 0)}</td>`)
@@ -14639,7 +14789,10 @@ function tableForEquipmentInventory(rows, editable = true) {
         <tr data-equipment-key="${escapeEquipmentHtml(row.key)}">
           <td>${escapeEquipmentHtml(row.description)}</td>
           ${eventCells}
-          <td class="equipment-qty equipment-required-total">${escapeEquipmentHtml(required)}</td>
+          <td class="equipment-qty equipment-required-total">
+            <strong>${escapeEquipmentHtml(required)}</strong>
+            ${transferApplied ? `<small>Trasiego de equipo</small>` : ""}
+          </td>
           <td>
             ${
               editable
@@ -14648,7 +14801,7 @@ function tableForEquipmentInventory(rows, editable = true) {
             }
           </td>
           <td class="equipment-qty ${shortageClass}">${escapeEquipmentHtml(shortage)}</td>
-          <td class="${actionClass}">${needsRent ? "RENTA" : ""}</td>
+          <td class="${actionClass}">${escapeEquipmentHtml(actionLabel)}</td>
           <td>
             ${
               editable
@@ -14663,14 +14816,20 @@ function tableForEquipmentInventory(rows, editable = true) {
   return `
     <table class="equipment-base-table equipment-inventory-table${editable ? "" : " equipment-table-compact"}">
       <thead>
+        <tr class="equipment-summary-date-row">
+          <th class="equipment-description-column" rowspan="4">DESCRIPCION DE EQUIPO</th>
+          ${eventDateHeaders}
+          <th class="equipment-total-column" rowspan="3">EQUIPO REQUERIDO</th>
+          <th class="equipment-inventory-column" rowspan="3">INVENTARIO FISICO BODEGA PP</th>
+          <th class="equipment-shortage-column" rowspan="3">FALTANTE DE EQUIPO PARA RENTA</th>
+          <th class="equipment-action-column" rowspan="3">ACCION</th>
+          <th class="equipment-observation-column" rowspan="3">OBSERVACIONES</th>
+        </tr>
+        <tr class="equipment-summary-date-row">
+          ${eventOutHeaders}
+        </tr>
         <tr>
-          <th class="equipment-description-column" rowspan="2">DESCRIPCION DE EQUIPO</th>
           ${eventHeaders}
-          <th class="equipment-total-column">EQUIPO REQUERIDO</th>
-          <th class="equipment-inventory-column">INVENTARIO FISICO BODEGA PP</th>
-          <th class="equipment-shortage-column">FALTANTE DE EQUIPO PARA RENTA</th>
-          <th class="equipment-action-column">ACCION</th>
-          <th class="equipment-observation-column">OBSERVACIONES</th>
         </tr>
         <tr class="equipment-inventory-subhead">
           ${eventQuantityHeaders}
@@ -14776,6 +14935,13 @@ function renderEquipmentWindowState() {
   const undoButton = equipmentQuery("#equipmentUndoDeleteButton");
   const removeButton = equipmentQuery("#equipmentRemoveWindowButton");
   const addEventButton = equipmentQuery("#equipmentAddEventButton");
+  const summaryTransferButton = equipmentQuery("#equipmentSummaryTransferButton");
+  const summarySearch = equipmentQuery("#equipmentSummarySearch");
+  if (summaryTransferButton) {
+    summaryTransferButton.classList.toggle("is-active", equipmentState.summaryTransferEnabled);
+    summaryTransferButton.setAttribute("aria-pressed", String(equipmentState.summaryTransferEnabled));
+  }
+  if (summarySearch && summarySearch.value !== equipmentState.summarySearchTerm) summarySearch.value = equipmentState.summarySearchTerm;
   if (mainPanel) mainPanel.classList.toggle("is-hidden", activeWindow !== "review");
   if (extrasPanel) extrasPanel.classList.toggle("is-hidden", activeWindow !== "review");
   if (inventoryPanel) inventoryPanel.classList.toggle("is-hidden", activeWindow !== "summary");
@@ -14950,9 +15116,10 @@ function renderEquipmentModule() {
   renderEquipmentPredefinedExtras();
   renderManualEquipmentExtras();
   if (equipmentQuery("#equipmentInventoryTable")) {
-    equipmentQuery("#equipmentInventoryTable").innerHTML = tableForEquipmentInventory(equipmentRowsSummary(), true);
+    equipmentQuery("#equipmentInventoryTable").innerHTML = tableForEquipmentInventory(equipmentFilterSummaryRows(equipmentRowsSummary()), true);
   }
   bindEquipmentInventoryInputs();
+  renderEquipmentSummaryTransferNotice();
   renderEquipmentPdfPreview();
   renderEquipmentWindowState();
 }
@@ -15394,6 +15561,14 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentSavePdfButton")?.addEventListener("click", () => saveEquipmentPdf("full"));
   equipmentQuery("#equipmentSaveRentPdfButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
   equipmentQuery("#equipmentGenerateRentReportButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
+  equipmentQuery("#equipmentSummaryTransferButton")?.addEventListener("click", () => {
+    equipmentState.summaryTransferEnabled = !equipmentState.summaryTransferEnabled;
+    renderEquipmentModule();
+  });
+  equipmentQuery("#equipmentSummarySearch")?.addEventListener("input", (event) => {
+    equipmentState.summarySearchTerm = event.target.value || "";
+    renderEquipmentModule();
+  });
   equipmentQuery("#equipmentOpenEditableButton")?.addEventListener("click", () => equipmentQuery("#equipmentEditableFileInput")?.click());
   equipmentQuery("#equipmentEditableFileInput")?.addEventListener("change", openEquipmentEditableFile);
   equipmentQuery("#equipmentReviewWindowButton")?.addEventListener("click", () => switchEquipmentWindow("review"));

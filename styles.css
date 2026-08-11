@@ -804,6 +804,135 @@ body {
   cursor: pointer;
 }
 
+
+
+.equipment-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.equipment-summary-transfer-button,
+.equipment-summary-report-button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #111111;
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.equipment-summary-transfer-button {
+  color: #111111;
+  background: #ffffff;
+  border: 2px solid #111111;
+}
+
+.equipment-summary-transfer-button.is-active {
+  color: #ffffff;
+  background: #b88a2a;
+  border-color: #b88a2a;
+}
+
+.equipment-summary-search-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(240px, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin: 12px 0 14px;
+}
+
+.equipment-summary-search-row label {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.equipment-summary-search-row input {
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.equipment-summary-date-row th {
+  color: var(--ink);
+  background: #ffffff;
+  border-bottom: 1px solid var(--line);
+}
+
+.equipment-summary-date-row .equipment-date-column {
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.equipment-summary-date-row .equipment-date-column span,
+.equipment-summary-date-row .equipment-date-column strong {
+  display: block;
+}
+
+.equipment-summary-date-row .equipment-date-column span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.equipment-summary-date-row .equipment-date-column strong {
+  margin-top: 5px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.equipment-inventory-table .equipment-location-column {
+  color: #ffffff;
+  background: #111111;
+}
+
+.equipment-required-total {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+
+.equipment-required-total strong {
+  font: inherit;
+}
+
+.equipment-required-total small {
+  color: #b88a2a;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: normal;
+}
+
+.equipment-action-transfer {
+  color: #8a5b00;
+  background: #fff4d7;
+  font-weight: 950;
+  text-align: center;
+}
+
+.equipment-transfer-summary-notice {
+  border-color: #d6a541;
+}
+
 .equipment-summary-report-button:hover {
   background: #2b2b2b;
 }
@@ -1048,7 +1177,7 @@ body {
 }
 
 #equipmentInventoryPanel {
-  padding: 28px;
+  padding: 30px;
 }
 
 #equipmentInventoryTable.equipment-table-wrap {
@@ -1059,14 +1188,14 @@ body {
 
 .equipment-inventory-table {
   width: max-content;
-  min-width: 1480px;
+  min-width: 1820px;
   table-layout: fixed;
 }
 
 .equipment-inventory-table th,
 .equipment-inventory-table td {
-  padding: 18px 20px;
-  font-size: 17px;
+  padding: 18px 22px;
+  font-size: 18px;
   line-height: 1.22;
   vertical-align: middle;
   word-break: normal;
@@ -1087,28 +1216,28 @@ body {
 }
 
 .equipment-inventory-table .equipment-event-column {
-  width: 150px;
-  min-width: 150px;
+  width: 185px;
+  min-width: 185px;
   text-align: center;
 }
 
 .equipment-inventory-table .equipment-total-column,
 .equipment-inventory-table .equipment-inventory-column,
 .equipment-inventory-table .equipment-shortage-column {
-  width: 150px;
-  min-width: 150px;
+  width: 170px;
+  min-width: 170px;
   text-align: center;
 }
 
 .equipment-inventory-table .equipment-action-column {
-  width: 140px;
-  min-width: 140px;
+  width: 155px;
+  min-width: 155px;
   text-align: center;
 }
 
 .equipment-inventory-table .equipment-observation-column {
-  width: 180px;
-  min-width: 180px;
+  width: 200px;
+  min-width: 200px;
 }
 
 .equipment-inventory-table .equipment-qty,
@@ -1124,20 +1253,39 @@ body {
 }
 
 #equipmentInventoryPanel .equipment-inventory-input {
-  min-width: 96px;
-  min-height: 58px;
-  padding: 10px 12px;
-  font-size: 18px;
+  min-width: 110px;
+  min-height: 60px;
+  padding: 10px 14px;
+  font-size: 20px;
   font-weight: 900;
   text-align: center;
 }
 
 #equipmentInventoryPanel .equipment-observation-input {
-  min-width: 128px;
-  min-height: 58px;
+  min-width: 150px;
+  min-height: 60px;
   padding: 10px 12px;
   font-size: 16px;
   font-weight: 800;
+}
+
+
+.equipment-inventory-table .equipment-required-total,
+.equipment-inventory-table .equipment-shortage-cell,
+.equipment-inventory-table .equipment-rest-ok {
+  min-width: 170px;
+}
+
+.equipment-inventory-table .equipment-summary-date-row th {
+  min-height: 72px;
+}
+
+.equipment-inventory-table .equipment-summary-date-row .equipment-date-column {
+  background: #ffffff;
+}
+
+.equipment-inventory-table .equipment-location-column {
+  min-height: 86px;
 }
 
 .equipment-summary-notice,
