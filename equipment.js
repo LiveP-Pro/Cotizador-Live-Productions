@@ -12518,6 +12518,14 @@ function formatEquipmentDateForFile(value) {
   return `${day}-${month}-${year}`;
 }
 
+function currentEquipmentDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function formatEquipmentDateTime(value, fallback = "Por definir") {
   const clean = String(value || "").trim();
   if (!clean) return fallback;
@@ -15187,7 +15195,7 @@ function renderEquipmentPdfPreview() {
   const rentalRows = equipmentRentalRows();
 
   const title = service?.name || "Cuadro de equipo";
-  const rentTitle = "Reporte de Renta";
+  const rentTitle = "Resumen de renta";
   if (equipmentQuery("#equipmentPdfTitle")) equipmentQuery("#equipmentPdfTitle").textContent = title;
   if (equipmentQuery("#equipmentPdfPlace")) equipmentQuery("#equipmentPdfPlace").textContent = place;
   if (equipmentQuery("#equipmentPdfEvent")) equipmentQuery("#equipmentPdfEvent").textContent = eventName;
@@ -15271,8 +15279,12 @@ function renderDjAudioOptions() {
 }
 
 async function equipmentPdfHtml(documentSelector = "#equipmentPdfDocument", title = "Cuadro de equipo") {
-  const stylesheet = await fetch("styles.css", { credentials: "same-origin" }).then((response) => response.text());
-  const documentHtml = equipmentQuery(documentSelector)?.outerHTML || "";
+  const [stylesheet, logoSource] = await Promise.all([
+    fetch("styles.css", { credentials: "same-origin" }).then((response) => response.text()),
+    equipmentPdfLogoSource()
+  ]);
+  const sourceHtml = equipmentQuery(documentSelector)?.outerHTML || "";
+  const documentHtml = equipmentHtmlWithPdfAssets(sourceHtml, logoSource);
   return `<!doctype html>
 <html lang="es">
   <head>
@@ -15322,14 +15334,16 @@ async function equipmentUsagePdfHtml() {
 const equipmentDirectoryPickerId = "requerimiento-equipo-cuadros";
 
 function equipmentPdfFileName(mode = "full") {
+  if (mode === "rent") {
+    return `Resumen de renta - ${formatEquipmentDateForFile(currentEquipmentDateKey())}.pdf`;
+  }
   const service = currentEquipmentService();
-  const events = mode === "rent" ? activeEquipmentEvents() : equipmentPdfEvents();
+  const events = equipmentPdfEvents();
   const eventName = cleanEquipmentFilePart(events.map(equipmentEventNameForFile).join(" - ") || "Evento por definir", "Evento por definir");
   const plannerName = cleanEquipmentFilePart(events.map((event) => event.phone).join(" - ") || "Planner por definir", "Planner por definir");
   const serviceName = cleanEquipmentFilePart(service?.name || "Extras", "Extras");
-  const documentType = mode === "rent" ? "Reporte de Renta" : serviceName;
   const eventDates = cleanEquipmentFilePart(events.map((event) => formatEquipmentDateForFile(event.date)).join(" - "), "Fecha por definir");
-  return `${eventName} - ${plannerName} - ${documentType} - ${eventDates}.pdf`;
+  return `${eventName} - ${plannerName} - ${serviceName} - ${eventDates}.pdf`;
 }
 
 function equipmentEditableJsonFileName(fileName) {
@@ -15451,6 +15465,46 @@ function downloadEquipmentJsonFallback(fileName, editablePayload) {
   );
 }
 
+const equipmentPdfLogoPath = "assets/logo-live-productions.jpeg";
+let equipmentPdfLogoDataUrlPromise = null;
+
+function equipmentBinaryToBase64(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function equipmentAssetDataUrl(assetPath) {
+  const response = await fetch(assetPath, { credentials: "same-origin" });
+  if (!response.ok) throw new Error(`No se pudo cargar ${assetPath}`);
+  const contentType = response.headers?.get("Content-Type") || "image/jpeg";
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  return `data:${contentType};base64,${equipmentBinaryToBase64(bytes)}`;
+}
+
+async function equipmentPdfLogoSource() {
+  if (!equipmentPdfLogoDataUrlPromise) {
+    equipmentPdfLogoDataUrlPromise = equipmentAssetDataUrl(equipmentPdfLogoPath).catch(() => {
+      try {
+        return new URL(equipmentPdfLogoPath, window.location.origin).href;
+      } catch {
+        return equipmentPdfLogoPath;
+      }
+    });
+  }
+  return equipmentPdfLogoDataUrlPromise;
+}
+
+function equipmentHtmlWithPdfAssets(documentHtml, logoSource) {
+  return String(documentHtml || "").replace(
+    /src=["']assets\/logo-live-productions\.jpeg["']/g,
+    `src="${escapeEquipmentHtml(logoSource)}"`
+  );
+}
+
 async function writableEquipmentFolderHandle(directoryHandle) {
   if (!directoryHandle) return null;
   if (typeof directoryHandle.queryPermission === "function") {
@@ -15546,7 +15600,7 @@ async function saveEquipmentPdf(mode = "full") {
     const directoryHandle = canChooseFolder ? await chooseEquipmentSaveFolder() : null;
     if (status) status.textContent = mode === "rent" ? "Generando PDF de renta..." : "Generando PDF para bodega...";
     const documentSelector = mode === "rent" ? "#equipmentRentPdfDocument" : "#equipmentPdfDocument";
-    const title = mode === "rent" ? "Resumen de equipo para renta" : "Equipo y extras para bodega";
+    const title = mode === "rent" ? "Resumen de renta" : "Equipo y extras para bodega";
     const html = await equipmentPdfHtml(documentSelector, title);
     const requestedFileName = equipmentPdfFileName(mode);
     const editablePayload = equipmentEditablePayload(mode, { fileName: requestedFileName });

@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
     <link rel="stylesheet" href="styles.css?v=20260811-03" />
     <script src="app.js?v=20260810-01" defer></script>
-    <script src="equipment.js?v=20260811-03" defer></script>
+    <script src="equipment.js?v=20260812-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -323,7 +323,7 @@
 
           <div class="equipment-actions">
             <button id="equipmentSavePdfButton" type="button">Guardar PDF + JSON bodega</button>
-            <button id="equipmentSaveRentPdfButton" type="button">Generar Reporte de Renta</button>
+            <button id="equipmentSaveRentPdfButton" type="button">Generar Resumen de Renta</button>
             <button id="equipmentOpenEditableButton" type="button">Abrir JSON editable</button>
             <input id="equipmentEditableFileInput" class="is-hidden" type="file" accept=".json,application/json" />
             <span id="equipmentSaveStatus" role="status"></span>
@@ -409,7 +409,7 @@
                 </div>
                 <div class="equipment-summary-actions">
                   <button id="equipmentSummaryTransferButton" class="equipment-summary-transfer-button" type="button" aria-pressed="false">Trasegar Equipo</button>
-                  <button id="equipmentGenerateRentReportButton" class="equipment-summary-report-button" type="button">Generar Reporte de Renta</button>
+                  <button id="equipmentGenerateRentReportButton" class="equipment-summary-report-button" type="button">Generar Resumen de Renta</button>
                 </div>
               </div>
               <div class="equipment-summary-search-row">
@@ -473,7 +473,7 @@
               <header class="equipment-pdf-header">
                 <div>
                   <p>Live Productions</p>
-                  <h2 id="equipmentRentPdfTitle">Reporte de renta</h2>
+                  <h2 id="equipmentRentPdfTitle">Resumen de renta</h2>
                   <span>Equipo faltante para renta</span>
                 </div>
                 <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
