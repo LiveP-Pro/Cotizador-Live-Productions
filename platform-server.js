@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
+const { DatabaseSync, backup: backupDatabase } = require("node:sqlite");
 
 const rootDir = __dirname;
 const externalPort = Number.parseInt(process.env.PORT || "8787", 10);
@@ -108,16 +109,55 @@ function verifySignedRequest(request, pathname) {
   return crypto.verify(null, message, bootstrapPublicKey, signature);
 }
 
-function downloadLiveBackup(request, response) {
+async function createLiveBackupSnapshot() {
+  const sourcePath = path.join(dataDir, "cotizaciones.sqlite");
+  if (!fs.existsSync(sourcePath)) return null;
+
+  const backupDir = path.join(dataDir, "respaldo-cotizaciones");
+  const temporaryPath = path.join(
+    backupDir,
+    `.platform-live-${process.pid}-${Date.now()}.sqlite`,
+  );
+  fs.mkdirSync(backupDir, { recursive: true });
+
+  const source = new DatabaseSync(sourcePath, { readOnly: true });
+  try {
+    await backupDatabase(source, temporaryPath);
+    return temporaryPath;
+  } catch (error) {
+    fs.rmSync(temporaryPath, { force: true });
+    throw error;
+  } finally {
+    source.close();
+  }
+}
+
+async function downloadLiveBackup(request, response) {
   if (!verifySignedRequest(request, liveBackupPath)) {
     sendJson(response, 403, { error: "La firma de respaldo no es válida." });
     return;
   }
-  const backupFile = path.join(dataDir, "respaldo-cotizaciones", "cotizaciones-ultima.sqlite");
+
+  let backupFile;
+  let temporary = false;
+  try {
+    backupFile = await createLiveBackupSnapshot();
+    temporary = Boolean(backupFile);
+  } catch (error) {
+    console.error(`No se pudo crear el respaldo firmado de Live Productions: ${error.message}`);
+  }
+
+  if (!backupFile) {
+    backupFile = path.join(dataDir, "respaldo-cotizaciones", "cotizaciones-ultima.sqlite");
+  }
   if (!fs.existsSync(backupFile)) {
     sendJson(response, 503, { error: "El respaldo de Live Productions todavía no está disponible." });
     return;
   }
+
+  const cleanup = () => {
+    if (temporary) fs.rmSync(backupFile, { force: true });
+  };
   const stat = fs.statSync(backupFile);
   response.writeHead(200, {
     "Content-Type": "application/vnd.sqlite3",
@@ -128,7 +168,14 @@ function downloadLiveBackup(request, response) {
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
   });
-  fs.createReadStream(backupFile).pipe(response);
+  const stream = fs.createReadStream(backupFile);
+  stream.on("close", cleanup);
+  stream.on("error", (error) => {
+    cleanup();
+    if (!response.headersSent) sendJson(response, 500, { error: "No se pudo leer el respaldo." });
+    else response.destroy(error);
+  });
+  stream.pipe(response);
 }
 
 function readRequestBody(request) {
@@ -294,7 +341,7 @@ async function handleRequest(request, response) {
   }
 
   if (url.pathname === liveBackupPath && request.method === "GET") {
-    downloadLiveBackup(request, response);
+    await downloadLiveBackup(request, response);
     return;
   }
 
