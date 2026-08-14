@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
     <link rel="stylesheet" href="styles.css?v=20260811-03" />
     <script src="app.js?v=20260810-01" defer></script>
-    <script src="equipment.js?v=20260812-01" defer></script>
+    <script src="equipment.js?v=20260814-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -226,82 +226,7 @@
             <label class="equipment-field-wide equipment-service-label">
               Tipo de Servicio
               <select id="equipmentServiceSelect" class="equipment-native-service-select" aria-label="Tipo de Servicio" multiple>
-                <option value="" disabled>Seleccione servicios</option>
-                <optgroup label="SUNDAY FUNDAY">
-                  <option value="sunday-funday-bateria-acustica-opcion-a">SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A</option>
-                  <option value="sunday-funday-bateria-acustica-opcion-b">SUNDAY FUNDAY - BATERIA ACUSTICA OPCION B</option>
-                  <option value="sunday-funday-bateria-electrica-opcion-a">SUNDAY FUNDAY - BATERIA ELECTRICA OPCION A</option>
-                  <option value="sunday-funday-bateria-electrica-opcion-b">SUNDAY FUNDAY - BATERIA ELECTRICA OPCION B</option>
-                  <option value="sunday-funday-bateria-acustica-opcion-a-pantalla-led-6x3mts-sobre-tarima">SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A PANTALLA LED 6x3MTS SOBRE TARIMA</option>
-                  <option value="sunday-funday-bateria-acustica-opcion-a-pantalla-led-6x3mts-al-ras-de-piso">SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A PANTALLA LED 6x3MTS AL RAS DE PISO</option>
-                  <option value="sunday-funday-bateria-acustica-opcion-a-solo-show">SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A SOLO SHOW</option>
-                  <option value="sunday-funday-opcion-a-pantalla-en-modulos">SUNDAY FUNDAY - OPCION A PANTALLA EN MODULOS</option>
-                </optgroup>
-                <optgroup label="NOVALOOPS">
-                  <option value="novaloops-completo">NOVALOOPS - COMPLETO</option>
-                </optgroup>
-                <optgroup label="ESTUARDO REYNA">
-                  <option value="estuardo-reyna-sunday-funday-completo-opcion-a">Sunday Funday Completo OPCION A Audio para ceremonia y Tarima 6x4 "Con vinil impreso", luces extras en truss</option>
-                  <option value="estuardo-reyna-dj-completo-villa-bokeh">DJ Completo - Villa Bokeh Audio para ceremonia, audio para coctel, luces extras colgadas</option>
-                  <option value="estuardo-reyna-violin-completo-san-jose-el-viejo">Violin Completo - San José El Viejo Audio para ceremonia, audio para coctel, luces extras en truss</option>
-                </optgroup>
-                <optgroup label="DJ">
-                  <option value="dj-completo-audio-jbl">DJ COMPLETO - AUDIO JBL</option>
-                  <option value="dj-privado">DJ PRIVADO</option>
-                </optgroup>
-                <optgroup label="SAXOFONIC">
-                  <option value="saxofonic-audio-turbosound">SAXOFONIC - AUDIO TURBOSOUND</option>
-                  <option value="saxofonic-solo-show-con-audio">SAXOFONIC SOLO SHOW CON AUDIO</option>
-                  <option value="saxofonic-privado">SAXOFONIC PRIVADO</option>
-                </optgroup>
-                <optgroup label="PANTALLA LED">
-                  <option value="pantalla-led-en-modulos-3mts-al-ras-de-piso">PANTALLA LED EN MODULOS 3MTS AL RAS DE PISO</option>
-                  <option value="pantalla-led-en-modulos-3mts-sobre-tarima">PANTALLA LED EN MODULOS 3MTS - SOBRE TARIMA</option>
-                  <option value="pantalla-led-en-modulos-2mts-sobre-tarima">PANTALLA LED EN MODULOS 2MTS - SOBRE TARIMA</option>
-                  <option value="pantalla-led-en-modulos-2mts-al-ras-de-piso">PANTALLA LED EN MODULOS 2MTS - AL RAS DE PISO</option>
-                  <option value="pantalla-led-3-x-2mts-al-ras-de-piso">PANTALLA LED 3 X 2MTS AL RAS DE PISO</option>
-                  <option value="pantalla-led-3-x-2mts-sobre-tarima">PANTALLA LED 3 X 2MTS - SOBRE TARIMA</option>
-                  <option value="pantalla-led-6-x-2mts-al-ras-de-piso">PANTALLA LED 6 X 2MTS - AL RAS DE PISO</option>
-                  <option value="pantalla-led-6-x-2mts-sobre-tarima">PANTALLA LED 6 X 2MTS - SOBRE TARIMA</option>
-                  <option value="pantalla-led-6-x-3mts-al-ras-de-piso">PANTALLA LED 6 X 3MTS - AL RAS DE PISO</option>
-                  <option value="pantalla-led-6-x-3mts-sobre-tarima">PANTALLA LED 6 X 3MTS - SOBRE TARIMA</option>
-                  <option value="pantalla-led-6-x-4mts-al-ras-de-piso">PANTALLA LED 6 X 4MTS - AL RAS DE PISO</option>
-                  <option value="pantalla-led-6-x-4mts-sobre-tarima">PANTALLA LED 6 X 4MTS - SOBRE TARIMA</option>
-                  <option value="pantalla-led-dj-booth">PANTALLA LED - DJ BOOTH</option>
-                </optgroup>
-                <optgroup label="ESTRUCTURA EN L">
-                  <option value="estructura-en-l">Estructuras en L</option>
-                </optgroup>
-                <optgroup label="CEREMONIA">
-                  <option value="ceremonia-cuadro-de-montaje">CEREMONIA</option>
-                </optgroup>
-                <optgroup label="COCTEL">
-                  <option value="coctel-saxofonic">COCTEL - SAXOFONIC</option>
-                  <option value="coctel-violin">COCTEL - VIOLIN</option>
-                  <option value="coctel-playlist">COCTEL - PLAYLIST</option>
-                </optgroup>
-                <optgroup label="TARIMA">
-                  <option value="tarima-6-x-4mts-negro">TARIMA 6 X 4MTS - NEGRO</option>
-                  <option value="tarima-6-x-4mts-con-diseno">TARIMA 6 X 4MTS - CON DISEÑO</option>
-                  <option value="tarima-6-x-5-mts-negro">TARIMA 6 X 5 MTS - NEGRO</option>
-                  <option value="tarima-5-x-4mts-negro">TARIMA 5 X 4MTS - NEGRO</option>
-                  <option value="tarima-3-x-4mts-negro">TARIMA 3 X 4MTS - NEGRO</option>
-                </optgroup>
-                <optgroup label="CUADRILATERO">
-                  <option value="cuadrilatero-de-5-x-7-x-4mts-de-alto">CUADRILATERO DE 5 X 7 X 4MTS DE ALTO</option>
-                  <option value="cuadrilatero-de-7-x-7-x-4mts-de-alto">CUADRILATERO DE 7 X 7 X 4MTS DE ALTO</option>
-                  <option value="cuadrilatero-de-8-x-8-x-4mts-de-alto">CUADRILATERO DE 8 X 8 X 4MTS DE ALTO</option>
-                </optgroup>
-                <optgroup label="PISTA DE BAILE">
-                  <option value="pista-de-baile-7-x-7mts-blanca">PISTA DE BAILE 7 x 7MTS - BLANCA</option>
-                  <option value="pista-de-baile-7-x-7mts-con-diseno">PISTA DE BAILE 7 x 7MTS - CON DISEÑO</option>
-                  <option value="pista-de-baile-6-x-6mts-blanca">PISTA DE BAILE 6 x 6MTS - BLANCA</option>
-                  <option value="pista-de-baile-6-x-6mts-con-diseno">PISTA DE BAILE 6 x 6MTS - CON DISEÑO</option>
-                  <option value="pista-de-baile-6-x-4mts-blanca">PISTA DE BAILE 6 x 4MTS - BLANCA</option>
-                  <option value="pista-de-baile-6-x-4mts-diseno">PISTA DE BAILE 6 x 4MTS - DISEÑO</option>
-                  <option value="pista-de-baile-4-x-4mts-blanca">PISTA DE BAILE 4 x 4MTS - BLANCA</option>
-                  <option value="pista-de-baile-4-x-4mts-diseno">PISTA DE BAILE 4 x 4MTS - DISEÑO</option>
-                </optgroup>
+                <option value="" disabled selected>Seleccione servicios</option>
               </select>
               <div id="equipmentServicePicker" class="equipment-service-picker"></div>
             </label>
