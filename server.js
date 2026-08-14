@@ -2743,13 +2743,6 @@ async function handleRequest(request, response) {
       return;
     }
 
-    if (request.method === "GET" && url.pathname === "/api/cuadros-equipo/estado-limpieza-20260814") {
-      const storedFiles = fs.readdirSync(equipmentPdfDir, { withFileTypes: true })
-        .filter((entry) => entry.isFile() && /\.(?:pdf|json)$/i.test(entry.name));
-      jsonResponse(response, 200, { storedFiles: storedFiles.length });
-      return;
-    }
-
     if (request.method === "POST" && url.pathname === "/api/cuadros-equipo") {
       if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
