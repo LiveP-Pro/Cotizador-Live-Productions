@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10181b" />
+    <meta name="description" content="Sistema de operaciones de Luxury Travel Guatemala." />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/mark.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/logo-luxury-travel.png" />
+    <link rel="stylesheet" href="styles.css?v=44" />
+    <title>Luxury Travel Manager</title>
+  </head>
+  <body>
+    <div id="offline-banner" class="offline-banner" hidden>
+      Sin conexión. Puede consultar la interfaz; los cambios requieren internet.
+    </div>
+
+    <main id="login-view" class="login-view">
+      <section class="login-brand">
+        <img
+          class="brand-logo brand-logo-large"
+          src="assets/logo-luxury-travel.png"
+          alt="Luxury Travel"
+        />
+        <p class="eyebrow">Luxury Travel Guatemala</p>
+        <h1>Servicio impecable,<br />operación bajo control.</h1>
+        <p class="login-intro">
+          Cotizaciones, rutas, clientes, pilotos e itinerarios en una sola plataforma.
+        </p>
+        <div class="login-feature-list">
+          <span>Rutas y tarifas automáticas</span>
+          <span>Documentos profesionales</span>
+          <span>Acceso seguro por roles</span>
+        </div>
+      </section>
+
+      <section class="login-panel">
+        <form id="login-form" class="login-card">
+          <div class="mobile-brand">
+            <img class="brand-logo" src="assets/logo-luxury-travel.png" alt="" />
+            <strong>Luxury Travel</strong>
+          </div>
+          <p class="eyebrow">Bienvenido</p>
+          <h2>Iniciar sesión</h2>
+          <p class="muted">Ingrese sus credenciales para continuar.</p>
+          <label>
+            Correo electrónico
+            <input
+              name="email"
+              type="email"
+              autocomplete="username"
+              value="admin@luxurytravel.gt"
+              required
+            />
+          </label>
+          <label>
+            Contraseña
+            <div class="password-wrap">
+              <input
+                id="login-password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+              <button type="button" class="text-button" data-toggle-password>Ver</button>
+            </div>
+          </label>
+          <p id="login-error" class="form-error" role="alert"></p>
+          <button class="button button-primary button-block" type="submit">
+            Entrar al sistema
+          </button>
+          <a id="live-home-link" class="button button-secondary button-block login-live-home" href="/#inicio">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m10 17-5-5 5-5M5 12h14" />
+            </svg>
+            Volver al inicio de Live Productions
+          </a>
+          <p class="login-help">
+            Acceso inicial: <strong>admin@luxurytravel.gt</strong>
+          </p>
+        </form>
+      </section>
+    </main>
+
+    <div id="app-shell" class="app-shell" hidden>
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-brand">
+          <img class="brand-logo" src="assets/logo-luxury-travel.png" alt="" />
+          <div>
+            <strong>Luxury Travel</strong>
+            <span>Operations</span>
+          </div>
+        </div>
+
+        <nav id="main-nav" class="main-nav" aria-label="Menú principal"></nav>
+
+        <div class="sidebar-footer">
+          <div class="user-avatar" id="sidebar-avatar">A</div>
+          <div class="sidebar-user">
+            <strong id="sidebar-user-name">Usuario</strong>
+            <span id="sidebar-user-role">Rol</span>
+          </div>
+          <button id="logout-button" class="icon-button" title="Cerrar sesión" aria-label="Cerrar sesión">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10 17l5-5-5-5M15 12H3M21 3v18h-8" />
+            </svg>
+          </button>
+        </div>
+      </aside>
+
+      <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+      <section class="workspace">
+        <header class="topbar">
+          <button id="menu-button" class="icon-button menu-toggle-control" aria-label="Abrir menú">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          <div>
+            <p class="eyebrow" id="page-eyebrow">Operaciones</p>
+            <h1 id="page-title">Resumen</h1>
+          </div>
+          <div class="topbar-actions">
+            <button id="install-button" class="button button-secondary button-small" hidden>
+              Instalar aplicación
+            </button>
+            <div class="date-chip" id="today-label"></div>
+          </div>
+        </header>
+
+        <div id="app-content" class="app-content" tabindex="-1"></div>
+      </section>
+    </div>
+
+    <div id="modal-root"></div>
+    <div id="toast-root" class="toast-root" aria-live="polite"></div>
+
+    <script type="module" src="app.js?v=44"></script>
+  </body>
+</html>

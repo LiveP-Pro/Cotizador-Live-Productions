@@ -1,0 +1,3055 @@
+const state = {
+  user: null,
+  permissions: [],
+  clients: [],
+  drivers: [],
+  vehicles: [],
+  quotes: [],
+  itineraries: [],
+  history: [],
+  rates: null,
+  settings: null,
+  users: [],
+  module: "dashboard",
+  deferredInstall: null,
+};
+
+const APP_BASE_PATH = window.location.pathname.startsWith("/luxury") ? "/luxury" : "";
+
+function appPath(pathname = "/") {
+  const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return `${APP_BASE_PATH}${normalized}`;
+}
+
+function assetUrl(fileName) {
+  return `${window.location.origin}${appPath(`/assets/${fileName}`)}`;
+}
+
+const visibleModuleIds = new Set(["dashboard", "quotes"]);
+
+const allModules = [
+  { id: "dashboard", label: "Resumen", permission: "dashboard", icon: "dashboard" },
+  { id: "quotes", label: "Cotizador", permission: "quotes", icon: "file" },
+  {
+    id: "clientItineraries",
+    label: "Itinerarios cliente",
+    permission: "clientItineraries",
+    icon: "map",
+  },
+  {
+    id: "driverItineraries",
+    label: "Itinerarios piloto",
+    permission: "driverItineraries",
+    icon: "route",
+  },
+  { id: "clients", label: "Clientes", permission: "clients", icon: "users" },
+  { id: "vehicles", label: "Vehículos", permission: "vehicles", icon: "car" },
+  { id: "drivers", label: "Pilotos", permission: "drivers", icon: "steering" },
+  { id: "rates", label: "Tarifas", permission: "rates", icon: "tag" },
+  { id: "history", label: "Historial", permission: "history", icon: "history" },
+  { id: "settings", label: "Configuración", permission: "settings", icon: "settings" },
+];
+
+const modules = allModules.filter((item) => visibleModuleIds.has(item.id));
+
+const pageInfo = {
+  dashboard: ["Operaciones", "Resumen"],
+  quotes: ["Comercial", "Cotizador"],
+  clientItineraries: ["Documentos", "Itinerarios para cliente"],
+  driverItineraries: ["Operación", "Itinerarios para piloto"],
+  clients: ["Directorio", "Base de datos de clientes"],
+  vehicles: ["Flota", "Vehículos"],
+  drivers: ["Equipo", "Pilotos"],
+  rates: ["Finanzas", "Tarifas"],
+  history: ["Auditoría", "Historial de servicios"],
+  settings: ["Administración", "Configuración"],
+};
+
+const icons = {
+  dashboard: '<svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9zm0 7h6v-4H4v4zm10 0h6v-9h-6v9zm0-16v4h6V4h-6z"/></svg>',
+  file: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5"/></svg>',
+  map: '<svg viewBox="0 0 24 24"><path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3zM9 3v15M15 6v15"/></svg>',
+  route: '<svg viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h3a3 3 0 003-3V8a3 3 0 013-3"/></svg>',
+  users: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>',
+  car: '<svg viewBox="0 0 24 24"><path d="M5 17h14l1-5-2-5H6l-2 5zM7 17v2M17 17v2M4 12h16M7 14h.01M17 14h.01"/></svg>',
+  steering: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M3.5 10h17M12 14v7M6 10l4 4M18 10l-4 4"/></svg>',
+  tag: '<svg viewBox="0 0 24 24"><path d="M20 13l-7 7-9-9V4h7z"/><circle cx="8.5" cy="8.5" r="1"/></svg>',
+  history: '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9 9 0 00-8.5 6M3 4v5h5M12 7v5l3 2"/></svg>',
+  settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0015 19.4a1.7 1.7 0 00-1 .6 1.7 1.7 0 00-.4 1.1V21H9.6v-.09A1.7 1.7 0 008.5 19.4a1.7 1.7 0 00-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-.6-1 1.7 1.7 0 00-1.1-.4H3V9.6h.09A1.7 1.7 0 004.6 8.5a1.7 1.7 0 00-.34-1.88L4.2 6.56l2.83-2.83.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-.6 1.7 1.7 0 00.4-1.1V3h4v.09A1.7 1.7 0 0015.5 4.6a1.7 1.7 0 001.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0019.4 9a1.7 1.7 0 00.6 1 1.7 1.7 0 001.1.4H21v4h-.09A1.7 1.7 0 0019.4 15z"/></svg>',
+  plus: '<svg class="inline-icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  edit: '<svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4z"/></svg>',
+  trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg>',
+  download: '<svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
+  print: '<svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4V9h16v9h-2M6 14h12v7H6z"/></svg>',
+  itinerary: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg>',
+};
+
+const serviceStatuses = new Set(["aceptada", "confirmada", "completada"]);
+const allowedVehicleModels = ["Mercedes Benz Sprinter 311", "Mercedes Benz Sprinter 316"];
+const largeGroupVehicleModel = "__grupo_grande__";
+const serviceRateTypes = {
+  oneWay: { label: "Servicio de Ida", field: "oneWay" },
+  roundTrip: { label: "Servicio de Ida y Vuelta", field: "roundTrip" },
+  internal: { label: "Servicio Traslados Internos", field: "internal" },
+};
+const serviceRateColumns = [
+  ["oneWay", "Precio ida"],
+  ["roundTrip", "Precio por ida y vuelta"],
+  ["internal", "Traslados precio por día completo"],
+];
+const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
+const destinationRates = [
+  { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
+  { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
+  { id: "el-paredon", destination: "EL PAREDON", oneWay: 4000, roundTrip: 8000, internal: 3600 },
+  { id: "panajachel", destination: "PANAJACHEL", oneWay: 3800, roundTrip: 7600, internal: 3700 },
+  { id: "coban", destination: "COBAN", oneWay: 4900, roundTrip: 9800, internal: 3100 },
+  { id: "semuc-chamey", destination: "SEMUC CHAMEY", oneWay: 5500, roundTrip: 11000, internal: 4500 },
+  { id: "peten", destination: "PETEN", oneWay: 7300, roundTrip: 14600, internal: 3400 },
+  { id: "retaulehu", destination: "RETAULEHU", oneWay: 4900, roundTrip: 9800, internal: 3700 },
+  { id: "puerto-san-jose", destination: "PUERTO SAN JOSE", oneWay: 4000, roundTrip: 8000, internal: 3600 },
+];
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function money(value) {
+  return new Intl.NumberFormat("es-GT", {
+    style: "currency",
+    currency: "GTQ",
+    minimumFractionDigits: 2,
+  }).format(Number(value || 0));
+}
+
+function posterMoney(value) {
+  const amount = Number(value || 0);
+  const hasDecimals = Math.round(amount) !== amount;
+  return new Intl.NumberFormat("es-GT", {
+    style: "currency",
+    currency: "GTQ",
+    minimumFractionDigits: hasDecimals ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function vehicleDisplayName(vehicle) {
+  if (!vehicle) return "Por asignar";
+  return (
+    vehicle.fleetName ||
+    `${vehicle.brand} ${vehicle.model}${vehicle.unitNumber ? `, ${vehicle.unitNumber}` : ""}`
+  );
+}
+
+function vehicleUnitLabel(vehicle) {
+  return `${vehicle?.brand || ""} ${vehicle?.model || ""}`.trim();
+}
+
+function vehicleModelName(vehicle) {
+  return `${vehicle?.brand || ""} ${vehicle?.model || ""}`.trim();
+}
+
+function vehicleSupportsSuperLuxurySeats(vehicle) {
+  const model = vehicleModelName(vehicle).toLowerCase();
+  return vehicle?.supportsSuperLuxurySeats === true || (model.includes("sprinter 316") && Number(vehicle?.unitNumber) === 3);
+}
+
+function vehicleBaseCapacity(vehicle) {
+  const fallback = vehicleSupportsSuperLuxurySeats(vehicle) ? 14 : 15;
+  const configured = Math.max(1, Number(vehicle?.capacity || fallback));
+  return vehicleSupportsSuperLuxurySeats(vehicle) ? Math.min(14, configured) : Math.min(15, configured);
+}
+
+function vehicleCapacityWithOptions(vehicle, form) {
+  let capacity = vehicleBaseCapacity(vehicle);
+  if (form.elements.hasBed?.checked) {
+    capacity = Math.min(capacity, Math.max(1, Number(vehicle?.capacityWithBed || 8)));
+  }
+  if (form.elements.hasSuperLuxurySeats?.checked && vehicleSupportsSuperLuxurySeats(vehicle)) {
+    capacity = Math.min(capacity, Math.max(1, Number(vehicle?.superLuxuryCapacity || 9)));
+  }
+  return capacity;
+}
+
+function luxuryVehicles() {
+  return state.vehicles.filter((vehicle) => allowedVehicleModels.includes(vehicleModelName(vehicle)));
+}
+
+function quoteVehicleIds(quote = {}) {
+  return Array.isArray(quote.vehicleIds) && quote.vehicleIds.length
+    ? quote.vehicleIds
+    : quote.vehicleId
+      ? [quote.vehicleId]
+      : [];
+}
+
+function quoteVehicleModel(quote = {}) {
+  const ids = quoteVehicleIds(quote);
+  if (ids.length > 1) return largeGroupVehicleModel;
+  const vehicle = state.vehicles.find((item) => item.id === ids[0]);
+  return vehicle ? vehicleModelName(vehicle) : allowedVehicleModels[0];
+}
+
+function selectedVehiclesFromForm(form) {
+  const selected = $$('input[name="vehicleIds"]:checked', form)
+    .map((input) => state.vehicles.find((vehicle) => vehicle.id === input.value))
+    .filter(Boolean);
+  if (selected.length) return selected;
+  const fallback = state.vehicles.find((vehicle) => vehicle.id === form.elements.vehicleId?.value);
+  return fallback ? [fallback] : [];
+}
+
+function quoteAmenityLabels(item = {}) {
+  return [
+    item.hasPlayStation5 ? "PlayStation 5" : "",
+    item.hasTv ? "TV" : "",
+    item.hasSuperLuxurySeats ? "Butacas Super Lujo" : "",
+    item.hasBed ? "Cama" : "",
+  ].filter(Boolean);
+}
+
+function passengerOptions(selected = 1, maximum = 15, upperLimit = 15) {
+  return Array.from({ length: Math.max(15, maximum, upperLimit) }, (_, index) => index + 1)
+    .map(
+      (value) =>
+        `<option value="${value}" ${Number(selected) === value ? "selected" : ""} ${value > maximum ? "disabled" : ""}>${value} pasajero${value === 1 ? "" : "s"}</option>`,
+    )
+    .join("");
+}
+
+function formatDate(value, options = {}) {
+  if (!value) return "Por definir";
+  const safeValue = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value;
+  const date = new Date(safeValue);
+  if (Number.isNaN(date.valueOf())) return value;
+  return new Intl.DateTimeFormat("es-GT", {
+    dateStyle: options.short ? "medium" : "long",
+    ...(options.time ? { timeStyle: "short" } : {}),
+  }).format(date);
+}
+
+function statusBadge(status) {
+  const value = status || "activo";
+  const style = ["confirmada", "aceptada", "completada", "disponible", "activo"].includes(value)
+    ? "success"
+    : ["pendiente", "borrador", "mantenimiento"].includes(value)
+      ? "warning"
+      : ["cancelada", "inactivo"].includes(value)
+        ? "danger"
+        : "info";
+  return `<span class="badge badge-${style}">${escapeHtml(value)}</span>`;
+}
+
+function isServiceQuote(quote) {
+  return serviceStatuses.has(quote.status) && Boolean(quote.paymentProof);
+}
+
+function loadQuoteDraft() {
+  try {
+    const raw = localStorage.getItem(QUOTE_DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveQuoteDraft(form) {
+  try {
+    localStorage.setItem(QUOTE_DRAFT_KEY, JSON.stringify(quoteFormData(form)));
+  } catch {
+    // If storage is unavailable, the form still works normally.
+  }
+}
+
+function clearQuoteDraft() {
+  try {
+    localStorage.removeItem(QUOTE_DRAFT_KEY);
+  } catch {
+    // Ignore storage cleanup errors.
+  }
+}
+
+async function api(path, options = {}) {
+  const response = await fetch(appPath(path), {
+    ...options,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...options.headers,
+    },
+  });
+  const contentType = response.headers.get("content-type") || "";
+  const payload = contentType.includes("application/json") ? await response.json() : await response.text();
+  if (!response.ok) {
+    if (response.status === 401 && path !== "/api/login") showLogin();
+    throw new Error(payload.error || "No fue posible completar la solicitud.");
+  }
+  return payload;
+}
+
+function toast(message, type = "success") {
+  const element = document.createElement("div");
+  element.className = `toast ${type === "error" ? "error" : ""}`;
+  element.textContent = message;
+  $("#toast-root").append(element);
+  setTimeout(() => element.remove(), 4200);
+}
+
+function showLogin() {
+  state.user = null;
+  $("#app-shell").hidden = true;
+  $("#login-view").hidden = false;
+  closeModal();
+  showLuxuryLogin();
+}
+
+function showApp() {
+  $("#login-view").hidden = true;
+  $("#app-shell").hidden = false;
+  $("#app-shell").classList.add("sidebar-collapsed");
+  $("#sidebar-user-name").textContent = state.user.name;
+  $("#sidebar-user-role").textContent = state.user.role;
+  $("#sidebar-avatar").textContent = state.user.name.slice(0, 1).toUpperCase();
+  renderNav();
+  const requestedModule = new URLSearchParams(window.location.search).get("module");
+  navigate(canOpenModule(requestedModule) ? requestedModule : defaultModuleId());
+}
+
+function showLuxuryLogin() {
+  $(".login-brand").hidden = false;
+  $(".login-panel").hidden = false;
+  $("#login-form input[name='email']")?.focus();
+}
+
+function renderNav() {
+  $("#main-nav").innerHTML = modules
+    .filter((item) => state.permissions.includes(item.permission))
+    .map(
+      (item) => `
+        <button class="nav-button ${state.module === item.id ? "active" : ""}" data-module="${item.id}">
+          ${icons[item.icon]}
+          <span>${item.label}</span>
+        </button>
+      `,
+    )
+    .join("");
+}
+
+function canOpenModule(moduleId) {
+  return modules.some((item) => item.id === moduleId && state.permissions.includes(item.permission));
+}
+
+function defaultModuleId() {
+  if (canOpenModule("dashboard")) return "dashboard";
+  return modules.find((item) => state.permissions.includes(item.permission))?.id || "";
+}
+
+async function loadData() {
+  const payload = await api("/api/bootstrap");
+  Object.assign(state, payload);
+}
+
+async function navigate(moduleId) {
+  if (!moduleId) return;
+  if (!canOpenModule(moduleId)) {
+    moduleId = defaultModuleId();
+    if (!moduleId) return;
+  }
+  state.module = moduleId;
+  const [eyebrow, title] = pageInfo[moduleId];
+  $("#page-eyebrow").textContent = eyebrow;
+  $("#page-title").textContent = title;
+  renderNav();
+  closeSidebar();
+  const content = $("#app-content");
+  content.innerHTML = '<div class="empty-state"><span>Cargando información...</span></div>';
+
+  try {
+    await loadData();
+    const renderers = {
+      dashboard: renderDashboard,
+      quotes: renderQuotes,
+      clientItineraries: () => renderItineraries("cliente"),
+      driverItineraries: () => renderItineraries("piloto"),
+      clients: () => renderDirectory("clients"),
+      vehicles: () => renderDirectory("vehicles"),
+      drivers: () => renderDirectory("drivers"),
+      rates: renderRates,
+      history: renderHistory,
+      settings: renderSettings,
+    };
+    renderers[moduleId]?.();
+    content.focus({ preventScroll: true });
+  } catch (error) {
+    content.innerHTML = `<div class="empty-state"><div><strong>No fue posible cargar el módulo</strong><span>${escapeHtml(error.message)}</span></div></div>`;
+  }
+}
+
+function renderDashboard() {
+  const accepted = state.quotes.filter(isServiceQuote);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthSales = accepted
+    .filter((quote) => String(quote.acceptedAt || "").startsWith(currentMonth))
+    .reduce((sum, quote) => sum + Number(quote.amountPaid || quote.totals?.total || 0), 0);
+  const monthSalesQuotes = accepted
+    .filter((quote) => String(quote.acceptedAt || "").startsWith(currentMonth))
+    .sort((a, b) => String(b.acceptedAt).localeCompare(String(a.acceptedAt)));
+  const upcoming = [...state.quotes]
+    .filter((quote) => quote.serviceDate >= new Date().toISOString().slice(0, 10) && isServiceQuote(quote))
+    .sort((a, b) => a.serviceDate.localeCompare(b.serviceDate))
+    .slice(0, 6);
+
+  $("#app-content").innerHTML = `
+    <div class="page-actions">
+      <p>Una vista clara de la actividad comercial y los próximos servicios de Luxury Travel.</p>
+      ${state.permissions.includes("quotes") ? `<button class="button button-primary" data-action="new-quote">${icons.plus} Nueva cotización</button>` : ""}
+    </div>
+    <section class="stats-grid">
+      ${statCard("Cotizador", state.quotes.length, "file", "quotes")}
+      ${statCard("Clientes", state.clients.length, "users")}
+      ${statCard("Próximos servicios", upcoming.length, "route")}
+      ${statCard("Ventas del mes", money(monthSales), "tag", "quotes")}
+    </section>
+    <section class="dashboard-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Próximos servicios</h2>
+          ${state.permissions.includes("quotes") ? '<button class="button button-secondary button-small" data-module-link="quotes">Ver todos</button>' : ""}
+        </div>
+        ${upcoming.length ? quoteTable(upcoming, { compact: true }) : emptyState("Sin servicios próximos", "Los servicios confirmados aparecerán aquí.")}
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h2>Acciones rápidas</h2></div>
+        <div class="panel-body quick-actions">
+          ${state.permissions.includes("quotes") ? quickAction("new-quote", "file", "Crear cotización", "Calcular ruta y precio") : ""}
+        </div>
+      </div>
+    </section>
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Ventas del mes</h2>
+        ${state.permissions.includes("quotes") ? '<button class="button button-secondary button-small" data-module-link="quotes">Ver cotizaciones</button>' : ""}
+      </div>
+      ${monthSalesQuotes.length ? salesTable(monthSalesQuotes) : emptyState("Sin ventas aceptadas este mes", "Al aceptar una cotización con comprobante aparecerá aquí con el monto pagado.")}
+    </div>
+  `;
+  bindCommonActions();
+}
+
+function statCard(label, value, iconName, moduleId = "") {
+  return `
+    <button class="stat-card ${moduleId ? "stat-card-clickable" : ""}" ${moduleId ? `data-module-link="${moduleId}"` : ""}>
+      <div class="stat-icon">${icons[iconName]}</div>
+      <strong class="stat-value">${escapeHtml(value)}</strong>
+      <span class="stat-label">${label}</span>
+    </button>
+  `;
+}
+
+function quickAction(action, iconName, title, description) {
+  return `
+    <button class="quick-action" data-action="${action}">
+      <div class="stat-icon">${icons[iconName]}</div>
+      <div><strong>${title}</strong><span>${description}</span></div>
+    </button>
+  `;
+}
+
+function renderQuotes() {
+  $("#app-content").innerHTML = `
+    <div class="page-actions">
+      <p>Cree propuestas con ruta, tarifa, recargos, IVA y una presentación lista para enviar.</p>
+      <button class="button button-primary" data-action="new-quote">${icons.plus} Nueva cotización</button>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <h2>${state.quotes.length} cotizaciones</h2>
+        <input class="search-input" type="search" placeholder="Buscar cliente o número" data-search-table />
+      </div>
+      ${state.quotes.length ? quoteTable(state.quotes) : emptyState("Aún no hay cotizaciones", "Cree la primera para iniciar el historial comercial.")}
+    </div>
+  `;
+  bindCommonActions();
+}
+
+function quoteTable(quotes, options = {}) {
+  return `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cotización</th>
+            <th>Cliente</th>
+            <th>Servicio</th>
+            <th>Ruta</th>
+            <th>Total</th>
+            <th>Estado</th>
+            ${options.compact ? "" : "<th></th>"}
+          </tr>
+        </thead>
+        <tbody>
+          ${quotes
+            .map(
+              (quote) => `
+                <tr class="interactive-row" data-row-action="edit-quote" data-id="${quote.id}" data-search-row="${escapeHtml(`${quote.number} ${quote.clientName} ${quote.clientPhone} ${quote.origin} ${quote.destination}`.toLowerCase())}">
+                  <td><span class="cell-primary">${escapeHtml(quote.number)}</span><span class="cell-secondary">${formatDate(quote.createdAt, { short: true })}</span></td>
+                  <td><span class="cell-primary">${escapeHtml(quote.clientName)}</span><span class="cell-secondary">${escapeHtml([quote.clientNit ? `NIT ${quote.clientNit}` : "", quote.clientPhone].filter(Boolean).join(" · "))}</span></td>
+                  <td><span class="cell-primary">${formatDate(quote.serviceDate, { short: true })}</span><span class="cell-secondary">${escapeHtml(quote.departureTime)} · ${escapeHtml(quote.serviceType)}</span></td>
+                  <td><span class="cell-primary">${escapeHtml(quote.origin)}</span><span class="cell-secondary">a ${escapeHtml(quote.destination)} · ${quote.kilometers || 0} km</span></td>
+                  <td><span class="cell-primary">${money(quote.amountPaid || quote.totals?.total)}</span><span class="cell-secondary">${quote.amountPaid ? "Monto pagado" : `IVA ${quote.totals?.taxPercent || 0}%`}</span></td>
+                  <td>${statusBadge(quote.status)}</td>
+                  ${
+                    options.compact
+                      ? ""
+                      : `
+                    <td>
+                      <div class="table-actions">
+                        ${
+                          isServiceQuote(quote)
+                            ? `<button class="icon-button" title="Ver comprobante" data-action="view-payment-proof" data-id="${quote.id}">${icons.tag}</button>`
+                            : `<button class="icon-button" title="Aceptar servicio y subir comprobante" data-action="accept-quote" data-id="${quote.id}">${icons.tag}</button>`
+                        }
+                        <button class="icon-button" title="Ver cotización premium / descargar PNG" data-action="quote-pdf" data-id="${quote.id}">${icons.download}</button>
+                        <button class="icon-button" title="Crear itinerarios" data-action="quote-itinerary" data-id="${quote.id}">${icons.itinerary}</button>
+                        <button class="icon-button" title="Editar" data-action="edit-quote" data-id="${quote.id}">${icons.edit}</button>
+                        <button class="icon-button" title="Eliminar" data-action="delete-record" data-collection="quotes" data-id="${quote.id}">${icons.trash}</button>
+                      </div>
+                    </td>`
+                  }
+                </tr>
+              `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function salesTable(quotes) {
+  return `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Cotización</th><th>Cliente</th><th>Pago</th><th>Servicio</th><th>Comprobante</th></tr></thead>
+        <tbody>
+          ${quotes
+            .map(
+              (quote) => `
+                <tr class="interactive-row" data-row-action="edit-quote" data-id="${quote.id}">
+                  <td><span class="cell-primary">${escapeHtml(quote.number)}</span><span class="cell-secondary">${formatDate(quote.acceptedAt, { short: true, time: true })}</span></td>
+                  <td><span class="cell-primary">${escapeHtml(quote.clientName)}</span><span class="cell-secondary">${escapeHtml(quote.clientPhone || "")}</span></td>
+                  <td><span class="cell-primary">${money(quote.amountPaid || quote.totals?.total)}</span><span class="cell-secondary">${escapeHtml(quote.paymentReference || "Sin referencia")}</span></td>
+                  <td><span class="cell-primary">${formatDate(quote.serviceDate, { short: true })}</span><span class="cell-secondary">${escapeHtml(quote.serviceType)}</span></td>
+                  <td><button class="button button-secondary button-small" data-action="view-payment-proof" data-id="${quote.id}">Ver comprobante</button></td>
+                </tr>
+              `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderDirectory(collection) {
+  const config = directoryConfig(collection);
+  const records = state[collection];
+  $("#app-content").innerHTML = `
+    <div class="page-actions">
+      <p>${config.description}</p>
+      <button class="button button-primary" data-action="new-record" data-collection="${collection}">${icons.plus} ${config.button}</button>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <h2>${records.length} ${config.plural}</h2>
+        <input class="search-input" type="search" placeholder="Buscar..." data-search-table />
+      </div>
+      ${records.length ? directoryTable(collection, records) : emptyState(config.emptyTitle, config.emptyText)}
+    </div>
+  `;
+  bindCommonActions();
+}
+
+function directoryConfig(collection) {
+  return {
+    clients: {
+      plural: "clientes",
+      button: "Nuevo cliente",
+      description: "Centralice datos de contacto, empresa y notas importantes de cada cliente.",
+      emptyTitle: "Aún no hay clientes",
+      emptyText: "Los clientes creados desde una cotización también aparecerán aquí.",
+    },
+    vehicles: {
+      plural: "vehículos",
+      button: "Nuevo vehículo",
+      description: "Controle la capacidad y disponibilidad de la flota.",
+      emptyTitle: "Aún no hay vehículos",
+      emptyText: "Registre la flota disponible para asignarla a los servicios.",
+    },
+    drivers: {
+      plural: "pilotos",
+      button: "Nuevo piloto",
+      description: "Administre información operativa, licencia y disponibilidad de pilotos.",
+      emptyTitle: "Aún no hay pilotos",
+      emptyText: "Registre pilotos para asignarlos a cotizaciones e itinerarios.",
+    },
+  }[collection];
+}
+
+function directoryTable(collection, records) {
+  const header = {
+    clients: ["Cliente", "NIT", "Contacto", "Creado", ""],
+    vehicles: ["Vehículo", "Placa", "Capacidad", "Estado", ""],
+    drivers: ["Piloto", "Contacto", "Licencia", "Estado", ""],
+  }[collection];
+
+  return `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>${header.map((label) => `<th>${label}</th>`).join("")}</tr></thead>
+        <tbody>
+          ${records
+            .map((record) => {
+              let cells;
+              if (collection === "clients") {
+                cells = [
+                  `<span class="cell-primary">${escapeHtml(record.name)}</span><span class="cell-secondary">${escapeHtml(record.email)}</span>`,
+                  escapeHtml(record.nit || "CF"),
+                  `${escapeHtml(record.phone || "Sin teléfono")}`,
+                  formatDate(record.createdAt, { short: true }),
+                ];
+              } else if (collection === "vehicles") {
+                cells = [
+                  `<span class="cell-primary">${escapeHtml(vehicleDisplayName(record))}</span><span class="cell-secondary">${escapeHtml(`${record.year} · ${record.color || "Sin color"}`)}</span>`,
+                  escapeHtml(record.plate),
+                  `${record.capacity} pasajeros · ${record.capacityWithBed || 8} con cama`,
+                  statusBadge(record.status),
+                ];
+              } else {
+                cells = [
+                  `<span class="cell-primary">${escapeHtml(record.name)}</span><span class="cell-secondary">${escapeHtml(record.email || "")}</span>`,
+                  escapeHtml(record.phone || "Sin teléfono"),
+                  `<span class="cell-primary">${escapeHtml(record.license || "Sin registrar")}</span><span class="cell-secondary">${escapeHtml(record.licenseExpires || "")}</span>`,
+                  statusBadge(record.status),
+                ];
+              }
+              return `
+                <tr class="interactive-row" data-row-action="edit-record" data-collection="${collection}" data-id="${record.id}" data-search-row="${escapeHtml(Object.values(record).join(" ").toLowerCase())}">
+                  ${cells.map((cell) => `<td>${cell}</td>`).join("")}
+                  <td>
+                    <div class="table-actions">
+                      <button class="icon-button" title="Editar" data-action="edit-record" data-collection="${collection}" data-id="${record.id}">${icons.edit}</button>
+                      <button class="icon-button" title="Eliminar" data-action="delete-record" data-collection="${collection}" data-id="${record.id}">${icons.trash}</button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderItineraries(type) {
+  const records = state.itineraries
+    .filter((item) => item.type === type)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const title = type === "cliente" ? "itinerarios para cliente" : "itinerarios para piloto";
+  $("#app-content").innerHTML = `
+    <div class="page-actions">
+      <p>${type === "cliente" ? "Documentos claros y elegantes para compartir la información esencial del viaje." : "Instrucciones operativas con horarios, contactos, vehículo y ruta asignada."}</p>
+      ${state.permissions.includes("quotes") ? '<button class="button button-secondary" data-module-link="quotes">Crear desde cotización</button>' : ""}
+    </div>
+    ${
+      records.length
+        ? `<div class="itinerary-grid">${records.map(itineraryCard).join("")}</div>`
+        : emptyState(`Aún no hay ${title}`, "Genérelos desde el menú de acciones de una cotización.")
+    }
+  `;
+  bindCommonActions();
+}
+
+function itineraryCard(item) {
+  return `
+    <article class="itinerary-card">
+      <div class="itinerary-card-header">
+        <div>
+          <span class="eyebrow">${escapeHtml(item.number)}</span>
+          <h3>${escapeHtml(item.clientName)}</h3>
+        </div>
+        ${statusBadge(item.status)}
+      </div>
+      <div class="route-line">
+        <div class="route-stop"><span>Salida · ${escapeHtml(item.departureTime)}</span><strong>${escapeHtml(item.origin)}</strong></div>
+        <div class="route-stop"><span>Destino</span><strong>${escapeHtml(item.destination)}</strong></div>
+      </div>
+      <div class="itinerary-meta">
+        <div class="meta-box"><span>Fecha</span><strong>${formatDate(item.serviceDate, { short: true })}</strong></div>
+        <div class="meta-box"><span>Pasajeros</span><strong>${item.passengers || 0}</strong></div>
+        <div class="meta-box"><span>Vehículo</span><strong>${escapeHtml(item.vehicleName || "Por asignar")}</strong></div>
+        <div class="meta-box"><span>Piloto</span><strong>${escapeHtml(item.driverName || "Por asignar")}</strong></div>
+        <div class="meta-box"><span>Servicio</span><strong>${escapeHtml(item.serviceType)}</strong></div>
+        <div class="meta-box"><span>Comodidades</span><strong>${escapeHtml(quoteAmenityLabels(item).join(" · ") || "Estándar")}</strong></div>
+        <div class="meta-box"><span>Creado</span><strong>${formatDate(item.createdAt, { short: true })}</strong></div>
+      </div>
+      <div class="form-footer">
+        <button class="button button-secondary button-small" data-action="print-itinerary" data-id="${item.id}">${icons.print} Imprimir / PDF</button>
+        ${state.user.role === "administrador" ? `<button class="button button-danger button-small" data-action="delete-record" data-collection="itineraries" data-id="${item.id}">Eliminar</button>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function renderRates() {
+  const rates = state.rates;
+  $("#app-content").innerHTML = `
+    <div class="page-actions">
+      <p>Las cotizaciones nuevas utilizan estos valores. Los documentos existentes conservan su cálculo histórico.</p>
+    </div>
+    <form id="rates-form" class="panel">
+      <div class="panel-header"><h2>Configuración de tarifas</h2></div>
+      <div class="panel-body">
+        <div class="form-grid">
+          ${numberField("pricePerKm", "Precio por kilómetro", rates.pricePerKm, "Q", "Fórmula base: kilómetros × precio por km.")}
+          ${numberField("pricePerMinute", "Precio por minuto", rates.pricePerMinute, "Q", "Fórmula base: minutos × precio por minuto.")}
+          ${numberField("minimumFare", "Tarifa mínima", rates.minimumFare, "Q")}
+          ${numberField("waitingPerHour", "Recargo por espera / hora", rates.waitingPerHour, "Q")}
+          ${numberField("nightSurcharge", "Recargo nocturno", rates.nightSurcharge, "Q")}
+          ${numberField("airportSurcharge", "Recargo por aeropuerto", rates.airportSurcharge, "Q")}
+          ${numberField("discountPercent", "Descuento predeterminado", rates.discountPercent, "%")}
+          ${numberField("taxPercent", "IVA", rates.taxPercent, "%")}
+          <label>Inicio de horario nocturno<input type="time" name="nightStart" value="${escapeHtml(rates.nightStart)}" /></label>
+          <label>Fin de horario nocturno<input type="time" name="nightEnd" value="${escapeHtml(rates.nightEnd)}" /></label>
+        </div>
+        <div class="form-footer"><button class="button button-primary" type="submit">Guardar tarifas</button></div>
+      </div>
+    </form>
+  `;
+  $("#rates-form").addEventListener("submit", saveRates);
+}
+
+function numberField(name, label, value, suffix, note = "") {
+  return `
+    <label>${label}
+      <input type="number" name="${name}" value="${value}" min="0" step="0.01" required />
+      <span class="form-note">${suffix}${note ? ` · ${note}` : ""}</span>
+    </label>
+  `;
+}
+
+function renderHistory() {
+  const today = new Date().toISOString().slice(0, 10);
+  const services = state.permissions.includes("quotes")
+    ? [...state.quotes]
+        .filter(
+          (quote) =>
+            quote.serviceDate <= today ||
+            ["confirmada", "completada", "cancelada"].includes(quote.status),
+        )
+        .sort((a, b) => String(b.serviceDate).localeCompare(String(a.serviceDate)))
+    : [...state.itineraries]
+        .filter((item) => item.type === "piloto" && item.serviceDate <= today)
+        .sort((a, b) => String(b.serviceDate).localeCompare(String(a.serviceDate)));
+  $("#app-content").innerHTML = `
+    <div class="page-actions"><p>Consulte servicios realizados o confirmados y, debajo, la trazabilidad de cambios del sistema.</p></div>
+    <div class="panel">
+      <div class="panel-header"><h2>Historial de servicios</h2></div>
+      ${
+        services.length
+          ? `<div class="table-wrap"><table>
+              <thead><tr><th>Servicio</th><th>Fecha</th><th>Cliente</th><th>Ruta</th><th>Asignación</th><th>Estado</th></tr></thead>
+              <tbody>${services
+                .map(
+                  (item) => `<tr>
+                    <td><span class="cell-primary">${escapeHtml(item.number || item.quoteNumber)}</span><span class="cell-secondary">${escapeHtml(item.serviceType)}</span></td>
+                    <td>${formatDate(item.serviceDate, { short: true })}</td>
+                    <td>${escapeHtml(item.clientName)}</td>
+                    <td><span class="cell-primary">${escapeHtml(item.origin)}</span><span class="cell-secondary">a ${escapeHtml(item.destination)}</span></td>
+                    <td><span class="cell-primary">${escapeHtml(item.driverName || "Por asignar")}</span><span class="cell-secondary">${escapeHtml(item.vehicleName || "")}</span></td>
+                    <td>${statusBadge(item.status)}</td>
+                  </tr>`,
+                )
+                .join("")}</tbody>
+            </table></div>`
+          : emptyState("Aún no hay servicios en el historial", "Los servicios confirmados, completados o con fecha pasada aparecerán aquí.")
+      }
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h2>Registro de actividad</h2><input class="search-input" type="search" placeholder="Buscar actividad" data-search-table /></div>
+      ${
+        state.history.length
+          ? `<div class="table-wrap"><table>
+              <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>Detalle</th></tr></thead>
+              <tbody>${state.history
+                .map(
+                  (item) => `<tr data-search-row="${escapeHtml(Object.values(item).join(" ").toLowerCase())}">
+                    <td>${formatDate(item.createdAt, { short: true, time: true })}</td>
+                    <td>${escapeHtml(item.userName)}</td>
+                    <td>${statusBadge(item.action)}</td>
+                    <td>${escapeHtml(item.entityType)}</td>
+                    <td>${escapeHtml(item.detail)}</td>
+                  </tr>`,
+                )
+                .join("")}</tbody>
+            </table></div>`
+          : emptyState("Sin actividad registrada", "Las acciones del sistema aparecerán aquí.")
+      }
+    </div>
+  `;
+  bindSearch();
+}
+
+function renderSettings() {
+  const settings = state.settings;
+  $("#app-content").innerHTML = `
+    <div class="page-actions"><p>Información corporativa, numeración de documentos, plantillas y acceso de usuarios.</p></div>
+    <div class="settings-grid">
+      <form id="settings-form" class="panel">
+        <div class="panel-header"><h2>Empresa y documentos</h2></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <label>Nombre comercial<input name="companyName" value="${escapeHtml(settings.companyName)}" required /></label>
+            <label>Razón social<input name="legalName" value="${escapeHtml(settings.legalName)}" /></label>
+            <label>Teléfono<input name="phone" value="${escapeHtml(settings.phone)}" /></label>
+            <label>Correo<input type="email" name="email" value="${escapeHtml(settings.email)}" /></label>
+            <label class="full">Dirección<input name="address" value="${escapeHtml(settings.address)}" /></label>
+            <label>Prefijo de cotización<input name="quotePrefix" value="Coti-Luxury" readonly required /><span class="form-note">Fijo para guardar cotizaciones como Coti-Luxury-0001-cliente-teléfono.</span></label>
+            <label>Prefijo itinerario cliente<input name="clientItineraryPrefix" value="${escapeHtml(settings.clientItineraryPrefix)}" required /></label>
+            <label>Prefijo itinerario piloto<input name="driverItineraryPrefix" value="${escapeHtml(settings.driverItineraryPrefix)}" required /></label>
+            <label>Plantilla PDF predeterminada
+              <select name="defaultPdfTemplate">
+                ${templateOptions(settings.defaultPdfTemplate)}
+              </select>
+            </label>
+          </div>
+          <div class="form-footer"><button class="button button-primary" type="submit">Guardar configuración</button></div>
+        </div>
+      </form>
+      <div class="panel">
+        <div class="panel-header"><h2>Usuarios y roles</h2><button class="button button-secondary button-small" data-action="new-user">${icons.plus} Nuevo</button></div>
+        ${
+          state.users.length
+            ? `<div class="table-wrap"><table>
+                <thead><tr><th>Usuario</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
+                <tbody>${state.users
+                  .map(
+                    (user) => `<tr>
+                      <td><span class="cell-primary">${escapeHtml(user.name)}</span><span class="cell-secondary">${escapeHtml(user.email)}</span></td>
+                      <td>${escapeHtml(user.role)}</td>
+                      <td>${statusBadge(user.active ? "activo" : "inactivo")}</td>
+                      <td><div class="table-actions"><button class="icon-button" data-action="edit-user" data-id="${user.id}">${icons.edit}</button></div></td>
+                    </tr>`,
+                  )
+                  .join("")}</tbody>
+              </table></div>`
+            : emptyState("Sin usuarios", "Cree cuentas para vendedores y pilotos.")
+        }
+      </div>
+    </div>
+  `;
+  $("#settings-form").addEventListener("submit", saveSettings);
+  bindCommonActions();
+}
+
+function templateOptions(selected) {
+  return [
+    ["noir", "Luxury Premium · negro, marfil y dorado"],
+    ["ivory", "Luxury Marfil · presentación clásica"],
+    ["executive", "Luxury Ejecutiva · presentación corporativa"],
+  ]
+    .map(([value, label]) => `<option value="${value}" ${selected === value ? "selected" : ""}>${label}</option>`)
+    .join("");
+}
+
+function emptyState(title, text) {
+  return `<div class="empty-state"><div><strong>${title}</strong><span>${text}</span></div></div>`;
+}
+
+function bindCommonActions() {
+  $$("[data-action]").forEach((button) => {
+    button.addEventListener("click", handleAction);
+  });
+  $$("[data-row-action]").forEach((row) => {
+    row.addEventListener("click", handleRowAction);
+  });
+  $$("[data-module-link]").forEach((button) => {
+    button.addEventListener("click", () => navigate(button.dataset.moduleLink));
+  });
+  bindSearch();
+}
+
+function handleRowAction(event) {
+  if (event.target.closest("button, a, input, select, textarea, [data-action]")) return;
+  const row = event.currentTarget;
+  const { rowAction, id, collection } = row.dataset;
+  if (rowAction === "edit-quote") openQuoteModal(state.quotes.find((item) => item.id === id));
+  if (rowAction === "edit-record") openRecordModal(collection, state[collection].find((item) => item.id === id));
+}
+
+function bindSearch() {
+  const input = $("[data-search-table]");
+  if (!input) return;
+  input.addEventListener("input", () => {
+    const query = input.value.trim().toLowerCase();
+    $$("[data-search-row]").forEach((row) => {
+      row.hidden = query && !row.dataset.searchRow.includes(query);
+    });
+  });
+}
+
+async function handleAction(event) {
+  const button = event.currentTarget;
+  const { action, id, collection } = button.dataset;
+  if (action === "new-quote") openQuoteModal();
+  if (action === "edit-quote") openQuoteModal(state.quotes.find((item) => item.id === id));
+  if (action === "quote-pdf") downloadQuotePdf(id);
+  if (action === "quote-itinerary") openItineraryModal(id);
+  if (action === "accept-quote") openAcceptQuoteModal(id);
+  if (action === "view-payment-proof") openPaymentProofModal(id);
+  if (action === "print-itinerary") printItinerary(id);
+  if (action === "new-record") openRecordModal(collection);
+  if (action === "edit-record") openRecordModal(collection, state[collection].find((item) => item.id === id));
+  if (action === "new-client") openRecordModal("clients");
+  if (action === "new-vehicle") openRecordModal("vehicles");
+  if (action === "new-user") openUserModal();
+  if (action === "edit-user") openUserModal(state.users.find((item) => item.id === id));
+  if (action === "delete-record") await deleteRecord(collection, id);
+}
+
+function openModal(title, body, options = {}) {
+  $("#modal-root").innerHTML = `
+    <div class="modal-overlay" data-modal-overlay>
+      <section class="modal ${options.wide ? "modal-wide" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+        <header class="modal-header">
+          <div><p class="eyebrow">${options.eyebrow || "Luxury Travel"}</p><h2>${escapeHtml(title)}</h2></div>
+          <button class="icon-button" data-close-modal aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </header>
+        <div class="modal-body">${body}</div>
+      </section>
+    </div>
+  `;
+  $("[data-close-modal]").addEventListener("click", closeModal);
+  $("[data-modal-overlay]").addEventListener("click", (event) => {
+    if (event.target === event.currentTarget) closeModal();
+  });
+}
+
+function closeModal() {
+  $("#modal-root").innerHTML = "";
+}
+
+function openRecordModal(collection, record = {}) {
+  const isEdit = Boolean(record.id);
+  const fields = {
+    clients: `
+      <div class="form-grid">
+        <label>Nombre completo<input name="name" value="${escapeHtml(record.name)}" required /></label>
+        <label>NIT<input name="nit" value="${escapeHtml(record.nit)}" placeholder="CF o número de NIT" /></label>
+        <label>Teléfono<input name="phone" value="${escapeHtml(record.phone)}" /></label>
+        <label>Correo electrónico<input type="email" name="email" value="${escapeHtml(record.email)}" /></label>
+        <label>Empresa<input name="company" value="${escapeHtml(record.company)}" /></label>
+        <label class="full">Notas<textarea name="notes">${escapeHtml(record.notes)}</textarea></label>
+      </div>`,
+    vehicles: `
+      <div class="form-grid">
+        <label>Marca<input name="brand" value="${escapeHtml(record.brand)}" required /></label>
+        <label>Modelo<input name="model" value="${escapeHtml(record.model)}" required /></label>
+        <label>Número de unidad<input type="number" name="unitNumber" value="${record.unitNumber || ""}" min="1" /></label>
+        <label>Nombre en flota<input name="fleetName" value="${escapeHtml(record.fleetName)}" placeholder="Mercedes Benz Sprinter 311, 1" /></label>
+        <label>Año<input type="number" name="year" value="${record.year || new Date().getFullYear()}" min="1990" max="2100" /></label>
+        <label>Placa<input name="plate" value="${escapeHtml(record.plate)}" required /></label>
+        <label>Capacidad de pasajeros<input type="number" name="capacity" value="${record.capacity || 15}" min="1" max="15" /></label>
+        <label>Capacidad con cama<input type="number" name="capacityWithBed" value="${record.capacityWithBed || 8}" min="1" max="8" /></label>
+        <label>Capacidad Butacas Super Lujo<input type="number" name="superLuxuryCapacity" value="${record.superLuxuryCapacity || 0}" min="0" max="14" /></label>
+        <label>Capacidad de maletas<input type="number" name="luggageCapacity" value="${record.luggageCapacity || 4}" min="0" /></label>
+        <label>Color<input name="color" value="${escapeHtml(record.color)}" /></label>
+        <label>Estado<select name="status">${statusOptions(record.status)}</select></label>
+        <label><span><input type="checkbox" name="supportsBed" ${record.supportsBed !== false ? "checked" : ""} /> Permite cama</span></label>
+        <label><span><input type="checkbox" name="supportsPlayStation5" ${record.supportsPlayStation5 !== false ? "checked" : ""} /> Incluye PlayStation 5</span></label>
+        <label><span><input type="checkbox" name="supportsSuperLuxurySeats" ${record.supportsSuperLuxurySeats ? "checked" : ""} /> Permite Butacas Super Lujo</span></label>
+        <label class="full">Notas<textarea name="notes">${escapeHtml(record.notes)}</textarea></label>
+      </div>`,
+    drivers: `
+      <div class="form-grid">
+        <label>Nombre completo<input name="name" value="${escapeHtml(record.name)}" required /></label>
+        <label>Teléfono<input name="phone" value="${escapeHtml(record.phone)}" /></label>
+        <label>Correo electrónico<input type="email" name="email" value="${escapeHtml(record.email)}" /></label>
+        <label>Número de licencia<input name="license" value="${escapeHtml(record.license)}" /></label>
+        <label>Vencimiento de licencia<input type="date" name="licenseExpires" value="${escapeHtml(record.licenseExpires)}" /></label>
+        <label>Estado<select name="status">${statusOptions(record.status)}</select></label>
+        <label>Usuario piloto vinculado<select name="userId"><option value="">Sin vincular</option>${state.users
+          .filter((user) => user.role === "piloto")
+          .map((user) => `<option value="${user.id}" ${record.userId === user.id ? "selected" : ""}>${escapeHtml(user.name)}</option>`)
+          .join("")}</select></label>
+        <label class="full">Notas<textarea name="notes">${escapeHtml(record.notes)}</textarea></label>
+      </div>`,
+  }[collection];
+  const labels = { clients: "cliente", vehicles: "vehículo", drivers: "piloto" };
+  openModal(`${isEdit ? "Editar" : "Nuevo"} ${labels[collection]}`, `
+    <form id="record-form" class="modal-form">
+      ${fields}
+      <p class="form-error" data-form-error></p>
+      <div class="form-footer">
+        <button type="button" class="button button-secondary" data-close-form>Cancelar</button>
+        <button type="submit" class="button button-primary">${isEdit ? "Guardar cambios" : "Crear registro"}</button>
+      </div>
+    </form>
+  `);
+  $("[data-close-form]").addEventListener("click", closeModal);
+  $("#record-form").addEventListener("submit", (event) => saveRecord(event, collection, record.id));
+}
+
+function statusOptions(selected = "disponible") {
+  return ["disponible", "asignado", "mantenimiento", "inactivo"]
+    .map((value) => `<option value="${value}" ${selected === value ? "selected" : ""}>${value}</option>`)
+    .join("");
+}
+
+function serviceTypeOptions(selected = "") {
+  const values = [
+    ...Object.values(serviceRateTypes).map((item) => item.label),
+    "Traslado privado",
+    "Aeropuerto",
+    "Tour",
+    "Disposición por horas",
+    "Viaje corporativo",
+    "Otro",
+  ];
+  return values
+    .map((value) => `<option value="${value}" ${selected === value ? "selected" : ""}>${value}</option>`)
+    .join("");
+}
+
+function serviceSelectionKey(selection) {
+  return `${selection.destinationId}|${selection.type}`;
+}
+
+function manualServiceKey(selection) {
+  return serviceSelectionKey(selection).replace(/[^a-zA-Z0-9|_-]+/g, "-");
+}
+
+function serviceInstanceId(prefix = "svc") {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function serviceDetailInputName(selection, field) {
+  return `serviceDetail_${selection.instanceId}_${field}`;
+}
+
+function serviceDetailValue(selection, field, fallback = "") {
+  const value = selection?.[field];
+  return value === undefined || value === null || value === "" ? fallback : value;
+}
+
+function serviceSelectionFromRate(destinationId, type) {
+  const rate = destinationRates.find((item) => item.id === destinationId);
+  const rateType = serviceRateTypes[type];
+  if (!rate || !rateType) return null;
+  return {
+    destinationId: rate.id,
+    destination: rate.destination,
+    type,
+    label: rateType.label,
+    amount: Number(rate[rateType.field] || 0),
+  };
+}
+
+function normalizeServiceSelection(selection = {}) {
+  const type = String(selection.type || selection.serviceRateType || "").trim();
+  const rateType = serviceRateTypes[type];
+  const destinationId = String(selection.destinationId || selection.destinationRateId || "").trim();
+  const rate = destinationRates.find((item) => item.id === destinationId);
+  const destination = String(selection.destination || selection.destinationRateName || rate?.destination || "").trim();
+  const label = String(selection.label || rateType?.label || selection.serviceType || "Servicio seleccionado").trim();
+  const amount = Number(selection.amount ?? (rate && rateType ? rate[rateType.field] : selection.fixedFare || 0));
+  const passengers = Number(selection.passengers);
+  if (!destination || !type || !Number.isFinite(amount) || amount <= 0) return null;
+  return {
+    instanceId: String(selection.instanceId || "").trim() || serviceInstanceId(String(destinationId).startsWith("manual-") ? "manual" : "svc"),
+    destinationId: destinationId || destination.toLowerCase().replace(/\s+/g, "-"),
+    destination,
+    type,
+    label,
+    amount,
+    serviceDate: String(selection.serviceDate || "").trim(),
+    returnDate: String(selection.returnDate || selection.serviceEndDate || "").trim(),
+    origin: String(selection.origin || "").trim(),
+    destinationAddress: String(selection.destinationAddress || "").trim(),
+    departureTime: String(selection.departureTime || "").trim(),
+    returnTime: String(selection.returnTime || "").trim(),
+    passengers: Number.isFinite(passengers) && passengers > 0 ? Math.round(passengers) : "",
+    hasLuggage:
+      selection.hasLuggage === undefined || selection.hasLuggage === ""
+        ? ""
+        : selection.hasLuggage === true || selection.hasLuggage === "true",
+    luggageDescription: String(selection.luggageDescription || "").trim(),
+  };
+}
+
+function parseServiceSelections(value) {
+  let list = Array.isArray(value) ? value : [];
+  if (!list.length && typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) list = parsed;
+    } catch {
+      list = [];
+    }
+  }
+  return list.map(normalizeServiceSelection).filter(Boolean);
+}
+
+function quoteServiceSelections(quote = {}) {
+  const selections = parseServiceSelections(quote.serviceSelections || quote.serviceSelectionsJson);
+  if (selections.length) return selections;
+  const fallback = serviceSelectionFromRate(quote.destinationRateId, quote.serviceRateType || "oneWay");
+  if (fallback) return [fallback];
+  const manual = normalizeServiceSelection({
+    destinationId: quote.destinationRateId,
+    destination: quote.destinationRateName,
+    type: quote.serviceRateType,
+    label: quote.serviceType,
+    amount: quote.fixedFare,
+  });
+  return manual ? [manual] : [];
+}
+
+function selectedServiceEntriesFromForm(form) {
+  const storedRaw = form.elements.serviceSelectionsJson?.value;
+  const storedSelections = parseServiceSelections(storedRaw);
+  const checkboxes = $$('input[name="serviceSelectionKeys"]', form);
+  if (checkboxes.length) {
+    const manualSelections = storedSelections
+      .filter((selection) => String(selection.destinationId || "").startsWith("manual-"));
+    const tableSelections = checkboxes
+      .filter((input) => input.checked)
+      .map((input) => {
+        const [destinationId, type] = input.value.split("|");
+        return serviceSelectionFromRate(destinationId, type);
+      })
+      .filter(Boolean);
+    return [...tableSelections, ...manualSelections];
+  }
+  if (String(storedRaw || "").trim()) return storedSelections;
+  const selections = quoteServiceSelections({
+    serviceSelections: form.elements.serviceSelectionsJson?.value,
+    destinationRateId: form.elements.destinationRateId?.value,
+    destinationRateName: form.elements.destinationRateName?.value,
+    serviceRateType: form.elements.serviceRateType?.value,
+    serviceType: form.elements.serviceType?.value,
+    fixedFare: form.elements.fixedFare?.value,
+  });
+  return selections;
+}
+
+function serviceSelectionsTotal(selections) {
+  return selections.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+}
+
+function serviceSelectionsDestinationLabel(selections) {
+  return [...new Set(selections.map((item) => item.destination).filter(Boolean))].join(" + ");
+}
+
+function serviceSelectionsServiceLabel(selections) {
+  if (!selections.length) return "Servicio personalizado";
+  if (selections.length === 1) return selections[0].label;
+  return `${selections.length} servicios seleccionados`;
+}
+
+function serviceSelectionToggleText(selections) {
+  return selections.length
+    ? `${selections.length} servicio${selections.length === 1 ? "" : "s"} elegido${selections.length === 1 ? "" : "s"}`
+    : "Click para elegir servicios";
+}
+
+function serviceSelectionSummaryHtml(selections) {
+  if (!selections.length) {
+    return `<p class="service-selection-empty">Sin servicios seleccionados. Abra el menú y haga clic en un precio para agregarlo.</p>`;
+  }
+  return `
+    <div class="selected-services-total">
+      <span>${selections.length} servicio${selections.length === 1 ? "" : "s"} seleccionado${selections.length === 1 ? "" : "s"}</span>
+      <strong>${money(serviceSelectionsTotal(selections))}</strong>
+    </div>
+    <ul>
+      ${selections
+        .map(
+          (item, index) => `
+            <li>
+              <span>${escapeHtml(item.label)} · ${escapeHtml(item.destination)}</span>
+              <strong>${money(item.amount)}</strong>
+              <button type="button" class="text-inline-button" data-remove-service-selection="${escapeHtml(item.instanceId)}" data-remove-service-index="${index}">Quitar</button>
+            </li>
+          `,
+        )
+        .join("")}
+    </ul>
+  `;
+}
+
+function setServiceSelections(form, selections, options = {}) {
+  form.elements.serviceSelectionsJson.value = JSON.stringify(selections);
+  renderDestinationRatePreview(form);
+  syncServiceSelections(form);
+  if (options.keepMenuOpen) {
+    const panel = $("[data-service-menu-panel]", form);
+    const toggle = $("[data-service-menu-toggle]", form);
+    if (panel && toggle) {
+      panel.hidden = false;
+      toggle.setAttribute("aria-expanded", "true");
+    }
+  }
+}
+
+function addRateServiceSelection(form, key) {
+  const [destinationId, type] = String(key || "").split("|");
+  const selection = serviceSelectionFromRate(destinationId, type);
+  if (!selection) return;
+  const nextSelections = [
+    ...serviceSelectionsWithDetailsFromForm(form),
+    { ...selection, instanceId: serviceInstanceId("svc") },
+  ];
+  setServiceSelections(form, nextSelections, { keepMenuOpen: true });
+  toast(`${selection.label} · ${selection.destination} agregado.`);
+}
+
+function removeServiceSelection(form, instanceId, indexValue) {
+  const selections = serviceSelectionsWithDetailsFromForm(form);
+  const index = Number(indexValue);
+  const nextSelections = instanceId
+    ? selections.filter((selection) => selection.instanceId !== instanceId)
+    : selections.filter((_, itemIndex) => itemIndex !== index);
+  setServiceSelections(form, nextSelections);
+}
+
+function addManualServiceSelection(form) {
+  const destination = form.elements.manualDestination.value.trim();
+  const type = form.elements.manualServiceRateType.value;
+  const amount = Number(form.elements.manualPrice.value);
+  const rateType = serviceRateTypes[type];
+  if (!destination || !rateType || !Number.isFinite(amount) || amount <= 0) {
+    toast("Ingrese destino manual, tipo de servicio y precio manual válido.", "error");
+    return;
+  }
+  const base = destination
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+  const manualSelection = {
+    instanceId: serviceInstanceId("manual"),
+    destinationId: `manual-${base || Date.now()}-${type}`,
+    destination,
+    type,
+    label: rateType.label,
+    amount,
+  };
+  const selections = serviceSelectionsWithDetailsFromForm(form);
+  const nextSelections = [...selections, manualSelection];
+  form.elements.manualDestination.value = "";
+  form.elements.manualPrice.value = "";
+  setServiceSelections(form, nextSelections);
+  toast("Destino manual agregado.");
+}
+
+function renderDestinationRatePreview(form) {
+  const selections = selectedServiceEntriesFromForm(form);
+  const selectedCounts = selections.reduce((counts, selection) => {
+    const key = serviceSelectionKey(selection);
+    counts.set(key, (counts.get(key) || 0) + 1);
+    return counts;
+  }, new Map());
+  const target = $("[data-destination-rate-preview]", form);
+  target.innerHTML = `
+    <button type="button" class="service-dropdown-toggle" data-service-menu-toggle aria-expanded="false">
+      <span>Tipo de Servicio</span>
+      <strong>${serviceSelectionToggleText(selections)}</strong>
+    </button>
+    <div class="service-dropdown-panel" data-service-menu-panel hidden>
+      <div class="service-price-table" role="table" aria-label="Precios por destino y tipo de servicio">
+        <div class="service-price-title">Precios</div>
+        <div class="service-price-head">Destino</div>
+        <div class="service-price-head">Precio ida</div>
+        <div class="service-price-head">Precio por ida<br>y vuelta</div>
+        <div class="service-price-head">Traslados precio<br>por día completo</div>
+        ${destinationRates
+          .map(
+            (rate) => `
+              <div class="service-price-destination">${escapeHtml(rate.destination)}</div>
+              ${serviceRateColumns
+                .map(([type]) => {
+                  const selection = serviceSelectionFromRate(rate.id, type);
+                  const key = serviceSelectionKey(selection);
+                  const count = selectedCounts.get(key) || 0;
+                  return `
+                    <button type="button" class="service-price-option ${count ? "active" : ""}" data-add-service-selection="${escapeHtml(key)}">
+                      <span>${money(selection.amount)}</span>
+                      <small>${count ? `${count} agregado${count === 1 ? "" : "s"}` : "Agregar"}</small>
+                    </button>
+                  `;
+                })
+                .join("")}
+            `,
+          )
+          .join("")}
+      </div>
+    </div>
+    <div class="selected-services-summary" data-selected-services-summary>
+      ${serviceSelectionSummaryHtml(selections)}
+    </div>
+  `;
+}
+
+function passengerSelectOptions(value, form) {
+  const maximum = [...(form.elements.passengers?.options || [])].reduce(
+    (highest, option) => Math.max(highest, Number(option.value || 0)),
+    Number(value || 15),
+  );
+  return passengerOptions(value || 1, Math.max(1, maximum || 15));
+}
+
+function renderServiceDetailBlocks(form) {
+  const target = $("[data-service-detail-list]", form);
+  if (!target) return;
+  const selections = selectedServiceEntriesFromForm(form);
+  const extraSelections = selections.slice(1);
+  if (!extraSelections.length) {
+    target.innerHTML = "";
+    return;
+  }
+  const rootLuggage = form.elements.hasLuggage?.value || "true";
+  target.innerHTML = `
+    <div class="service-detail-intro">
+      <strong>Datos por servicio adicional</strong>
+      <span>Complete un cuadro por cada servicio agregado al cotizador.</span>
+    </div>
+    ${extraSelections
+      .map((selection, index) => {
+        const serviceNumber = index + 2;
+        const hasLuggageValue =
+          selection.hasLuggage === true ? "true" : selection.hasLuggage === false ? "false" : rootLuggage;
+        return `
+          <article class="service-detail-card" data-service-detail-card>
+            <div class="service-detail-card-head">
+              <span>Servicio ${serviceNumber}</span>
+              <strong>${escapeHtml(selection.label)} · ${escapeHtml(selection.destination)}</strong>
+              <em>${money(selection.amount)}</em>
+            </div>
+            <div class="form-grid">
+              <label>Fecha de inicio del servicio
+                <input type="date" name="${serviceDetailInputName(selection, "serviceDate")}" value="${escapeHtml(serviceDetailValue(selection, "serviceDate", form.elements.serviceDate.value))}" />
+              </label>
+              <label>Fecha de finalización del servicio
+                <input type="date" name="${serviceDetailInputName(selection, "returnDate")}" value="${escapeHtml(serviceDetailValue(selection, "returnDate", form.elements.returnDate.value))}" />
+              </label>
+              <label class="full">Origen (dirección exacta)
+                <input name="${serviceDetailInputName(selection, "origin")}" value="${escapeHtml(serviceDetailValue(selection, "origin", form.elements.origin.value))}" placeholder="Origen para este servicio" />
+              </label>
+              <label class="full">Destino (dirección exacta)
+                <input name="${serviceDetailInputName(selection, "destinationAddress")}" value="${escapeHtml(serviceDetailValue(selection, "destinationAddress", selection.destination))}" placeholder="Destino para este servicio" />
+              </label>
+              <label>Horario de salida
+                <input type="time" name="${serviceDetailInputName(selection, "departureTime")}" value="${escapeHtml(serviceDetailValue(selection, "departureTime", form.elements.departureTime.value))}" />
+              </label>
+              <label>Horario de regreso
+                <input type="time" name="${serviceDetailInputName(selection, "returnTime")}" value="${escapeHtml(serviceDetailValue(selection, "returnTime", form.elements.returnTime.value))}" />
+              </label>
+              <label>Número de pasajeros
+                <select name="${serviceDetailInputName(selection, "passengers")}">
+                  ${passengerSelectOptions(serviceDetailValue(selection, "passengers", form.elements.passengers.value), form)}
+                </select>
+              </label>
+              <label>Equipaje
+                <select name="${serviceDetailInputName(selection, "hasLuggage")}" data-service-detail-luggage>
+                  <option value="true" ${hasLuggageValue === "false" ? "" : "selected"}>Sí</option>
+                  <option value="false" ${hasLuggageValue === "false" ? "selected" : ""}>No</option>
+                </select>
+              </label>
+              <label class="full">¿Qué tipo de equipaje?
+                <textarea name="${serviceDetailInputName(selection, "luggageDescription")}" data-service-detail-luggage-description placeholder="Ej. 3 carry on, 1 pañalera, 1 carruaje plegable">${escapeHtml(serviceDetailValue(selection, "luggageDescription", form.elements.luggageDescription.value))}</textarea>
+              </label>
+            </div>
+          </article>
+        `;
+      })
+      .join("")}
+  `;
+}
+
+function serviceSelectionsWithDetailsFromForm(form) {
+  return selectedServiceEntriesFromForm(form).map((selection, index) => {
+    if (index === 0) {
+      return {
+        ...selection,
+        serviceDate: form.elements.serviceDate.value,
+        returnDate: form.elements.returnDate.value,
+        origin: form.elements.origin.value.trim(),
+        destinationAddress: form.elements.destination.value.trim(),
+        departureTime: form.elements.departureTime.value,
+        returnTime: form.elements.returnTime.value,
+        passengers: Number(form.elements.passengers.value || 1),
+        hasLuggage: form.elements.hasLuggage.value === "true",
+        luggageDescription: form.elements.hasLuggage.value === "true" ? form.elements.luggageDescription.value.trim() : "",
+      };
+    }
+
+    const get = (field) => form.elements[serviceDetailInputName(selection, field)];
+    const hasLuggageInput = get("hasLuggage");
+    const hasLuggage = hasLuggageInput
+      ? hasLuggageInput.value === "true"
+      : selection.hasLuggage === "" || selection.hasLuggage === undefined
+        ? form.elements.hasLuggage.value === "true"
+        : Boolean(selection.hasLuggage);
+    return {
+      ...selection,
+      serviceDate: get("serviceDate")?.value || selection.serviceDate || form.elements.serviceDate.value,
+      returnDate: get("returnDate")?.value || selection.returnDate || form.elements.returnDate.value,
+      origin: get("origin")?.value?.trim() || selection.origin || form.elements.origin.value.trim(),
+      destinationAddress:
+        get("destinationAddress")?.value?.trim() || selection.destinationAddress || selection.destination,
+      departureTime: get("departureTime")?.value || selection.departureTime || form.elements.departureTime.value,
+      returnTime: get("returnTime")?.value || selection.returnTime || form.elements.returnTime.value,
+      passengers: Number(get("passengers")?.value || selection.passengers || form.elements.passengers.value || 1),
+      hasLuggage,
+      luggageDescription: hasLuggage
+        ? get("luggageDescription")?.value?.trim() || selection.luggageDescription || ""
+        : "",
+    };
+  });
+}
+
+function syncServiceSelections(form) {
+  const selections = selectedServiceEntriesFromForm(form);
+  const first = selections[0];
+  form.elements.serviceSelectionsJson.value = JSON.stringify(selections);
+  form.elements.fixedFare.value = String(serviceSelectionsTotal(selections));
+  form.elements.fixedFareIncludesTax.value = "false";
+  form.elements.destinationRateId.value = first?.destinationId || "";
+  form.elements.serviceRateType.value = first?.type || "oneWay";
+  form.elements.destinationRateName.value = serviceSelectionsDestinationLabel(selections);
+  form.elements.serviceType.value = serviceSelectionsServiceLabel(selections);
+  if (first && !form.elements.destination.value) form.elements.destination.value = first.destination;
+  $$("[data-service-selection-option]", form).forEach((label) => {
+    const input = $("input", label);
+    label.classList.toggle("active", Boolean(input?.checked));
+  });
+  const summary = $("[data-selected-services-summary]", form);
+  if (summary) summary.innerHTML = serviceSelectionSummaryHtml(selections);
+  const toggleText = $("[data-service-menu-toggle] strong", form);
+  if (toggleText) toggleText.textContent = serviceSelectionToggleText(selections);
+  renderServiceDetailBlocks(form);
+  updateQuoteSummary(form);
+}
+
+function vehiclesForCurrentModel(form) {
+  const model = form.elements.vehicleModel.value;
+  const vehicles = luxuryVehicles();
+  if (model === largeGroupVehicleModel) return vehicles;
+  return vehicles.filter((vehicle) => vehicleModelName(vehicle) === model);
+}
+
+function renderVehicleUnitPanel(form, selectedIds = []) {
+  const vehicles = vehiclesForCurrentModel(form);
+  const selectedSet = new Set(selectedIds);
+  const shouldSelectAll = form.elements.vehicleModel.value === largeGroupVehicleModel && !selectedIds.length;
+  const shouldSelectFirst = form.elements.vehicleModel.value !== largeGroupVehicleModel && !selectedIds.length;
+  $("[data-vehicle-unit-panel]", form).innerHTML = vehicles.length
+    ? `
+      <span class="unit-panel-title">Unidad(es) disponibles</span>
+      <div class="vehicle-unit-options">
+        ${vehicles
+          .map((vehicle, index) => {
+            const checked = selectedSet.has(vehicle.id) || shouldSelectAll || (shouldSelectFirst && index === 0);
+            const capacityDetails = [
+              `Unidad ${vehicle.unitNumber || index + 1}`,
+              `${vehicleBaseCapacity(vehicle)} pasajeros`,
+              `${vehicle.capacityWithBed || 8} con cama`,
+              vehicleSupportsSuperLuxurySeats(vehicle) ? `${vehicle.superLuxuryCapacity || 9} Butacas Super Lujo` : "",
+            ].filter(Boolean).join(" · ");
+            return `
+              <label class="vehicle-unit-option">
+                <input type="checkbox" name="vehicleIds" value="${vehicle.id}" ${checked ? "checked" : ""} />
+                <span><strong>${escapeHtml(vehicleUnitLabel(vehicle))}</strong><small>${escapeHtml(capacityDetails)}</small></span>
+              </label>
+            `;
+          })
+          .join("")}
+      </div>
+    `
+    : `<div class="rate-empty">No hay Sprinter disponibles para este modelo.</div>`;
+  syncSelectedVehicleField(form);
+}
+
+function syncSelectedVehicleField(form) {
+  const selectedIds = $$('input[name="vehicleIds"]:checked', form).map((input) => input.value);
+  form.elements.vehicleId.value = selectedIds[0] || "";
+}
+
+async function saveRecord(event, collection, id) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const body = Object.fromEntries(new FormData(form));
+  if (collection === "vehicles") {
+    body.supportsBed = form.elements.supportsBed.checked;
+    body.supportsPlayStation5 = form.elements.supportsPlayStation5.checked;
+    body.supportsSuperLuxurySeats = form.elements.supportsSuperLuxurySeats.checked;
+  }
+  const button = $('button[type="submit"]', form);
+  button.disabled = true;
+  try {
+    await api(`/api/${collection}${id ? `/${id}` : ""}`, {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(body),
+    });
+    toast(id ? "Registro actualizado." : "Registro creado.");
+    closeModal();
+    await navigate(state.module);
+  } catch (error) {
+    $("[data-form-error]", form).textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function openQuoteModal(quote = {}) {
+  const isEdit = Boolean(quote.id);
+  const draft = !isEdit ? loadQuoteDraft() : null;
+  if (draft) quote = { ...quote, ...draft };
+  const today = new Date().toISOString().slice(0, 10);
+  const quoteDate = quote.quoteDate || String(quote.createdAt || "").slice(0, 10) || today;
+  const serviceStartDate = quote.serviceStartDate || quote.serviceDate || today;
+  const serviceEndDate = quote.serviceEndDate || quote.returnDate || quote.serviceDate || today;
+  const defaultVehicleName = quote.vehicleManualName || quote.vehicleName || "Mercedes Benz Sprinter";
+  const initialServiceSelections = quoteServiceSelections(quote);
+  openModal(
+    isEdit ? `Editar ${quote.number}` : "Nueva cotización",
+    `
+      <form id="quote-form" class="modal-form">
+        <div class="quote-layout">
+          <div class="quote-form-sections">
+            <section class="form-section">
+              <h3>Datos principales</h3>
+              <div class="form-grid">
+                <label>Nombre del cliente<input name="clientName" value="${escapeHtml(quote.clientName)}" required /></label>
+                <label>Número de teléfono<input type="tel" name="clientPhone" value="${escapeHtml(quote.clientPhone)}" placeholder="Ej. 5555-5555" autocomplete="tel" /></label>
+                <label>Fecha de cotización<input type="date" name="quoteDate" value="${escapeHtml(quoteDate)}" required /></label>
+              </div>
+            </section>
+            <section class="form-section">
+              <h3>Tipo de servicio</h3>
+              <div class="manual-service-box">
+                <h4>Destino Manual</h4>
+                <div class="form-grid">
+                  <label>Destino manual<input name="manualDestination" placeholder="Ej. Río Dulce, ruta especial, evento privado" /></label>
+                  <label>Tipo de servicio
+                    <select name="manualServiceRateType">
+                      <option value="oneWay">Ida</option>
+                      <option value="roundTrip">Ida y Vuelta</option>
+                      <option value="internal">Traslados internos</option>
+                    </select>
+                  </label>
+                  <label>Precio manual<input type="number" name="manualPrice" min="0" step="0.01" placeholder="0.00" /></label>
+                  <div class="manual-service-action">
+                    <button type="button" class="button button-secondary" data-add-manual-service>Agregar destino manual</button>
+                  </div>
+                </div>
+              </div>
+              <div class="form-grid">
+                <label class="visually-hidden">Destino tarifado
+                  <select name="destinationRateId" data-destination-rate-select>
+                    <option value="">Personalizado / calcular por ruta</option>
+                    ${destinationRates.map((rate) => `<option value="${rate.id}" ${quote.destinationRateId === rate.id ? "selected" : ""}>${escapeHtml(rate.destination)}</option>`).join("")}
+                  </select>
+                </label>
+                <label class="visually-hidden">Tipo de tarifa
+                  <select name="serviceRateType" data-service-rate-type>
+                    ${Object.entries(serviceRateTypes).map(([value, item]) => `<option value="${value}" ${quote.serviceRateType === value ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
+                  </select>
+                </label>
+                <div class="destination-rate-preview full" data-destination-rate-preview></div>
+              </div>
+            </section>
+            <section class="form-section">
+              <h3>Datos del servicio</h3>
+              <div class="form-grid">
+                <label>Fecha de inicio del servicio<input type="date" name="serviceDate" value="${escapeHtml(serviceStartDate)}" required /></label>
+                <label>Fecha de finalización del servicio<input type="date" name="returnDate" value="${escapeHtml(serviceEndDate)}" required /></label>
+                <label class="full">Origen (dirección exacta)<input name="origin" value="${escapeHtml(quote.origin)}" placeholder="Ej. Dirección exacta, zona, municipio" required /></label>
+                <label class="full">Destino (dirección exacta)<input name="destination" value="${escapeHtml(quote.destination)}" placeholder="Ej. Dirección exacta o destino turístico" required /></label>
+                <label>Horario de salida<input type="time" name="departureTime" value="${escapeHtml(quote.departureTime || "08:00")}" required /></label>
+                <label>Horario de regreso<input type="time" name="returnTime" value="${escapeHtml(quote.returnTime)}" /></label>
+                <label>Número de pasajeros
+                  <select name="passengers" data-passenger-select required>
+                    ${passengerOptions(quote.passengers || 1, quote.maxPassengers || 15)}
+                  </select>
+                </label>
+                <label>Equipaje
+                  <select name="hasLuggage" data-luggage-select>
+                    <option value="true" ${quote.hasLuggage === false ? "" : "selected"}>Sí</option>
+                    <option value="false" ${quote.hasLuggage === false ? "selected" : ""}>No</option>
+                  </select>
+                </label>
+                <label class="full">¿Qué tipo de equipaje?
+                  <textarea name="luggageDescription" placeholder="Ej. 3 carry on, 1 pañalera, 1 carruaje plegable">${escapeHtml(quote.luggageDescription || (quote.luggage ? `${quote.luggage} maletas` : ""))}</textarea>
+                </label>
+                <div class="service-detail-list full" data-service-detail-list></div>
+                <label class="full">Notas para cotización
+                  <textarea name="notes" placeholder="Ej. Servicio sujeto a disponibilidad, punto exacto de ingreso, cortesías especiales...">${escapeHtml(quote.notes)}</textarea>
+                </label>
+              </div>
+            </section>
+            <section class="form-section">
+              <h3>Vehículos y ajustes</h3>
+              <div class="form-grid">
+                <label class="full">Tipo de Mercedes
+                  <select name="vehicleModel" data-vehicle-model-select>
+                    ${allowedVehicleModels.map((model) => `<option value="${model}" ${quoteVehicleModel(quote) === model ? "selected" : ""}>${escapeHtml(model)}</option>`).join("")}
+                    <option value="${largeGroupVehicleModel}" ${quoteVehicleModel(quote) === largeGroupVehicleModel ? "selected" : ""}>Usar las 3 Mercedes Benz Sprinter</option>
+                  </select>
+                </label>
+                <div class="vehicle-unit-panel full" data-vehicle-unit-panel></div>
+                <div class="capacity-note full" data-capacity-note>Capacidad disponible.</div>
+                <div class="premium-options full">
+                  <label class="premium-option">
+                    <input type="checkbox" name="hasPlayStation5" ${quote.hasPlayStation5 ? "checked" : ""} />
+                    <span class="premium-option-icon">PS</span>
+                    <span><strong>PlayStation 5</strong><small>Mostrar esta comodidad en la cotización final.</small></span>
+                  </label>
+                  <label class="premium-option">
+                    <input type="checkbox" name="hasTv" ${quote.hasTv ? "checked" : ""} />
+                    <span class="premium-option-icon">TV</span>
+                    <span><strong>TV</strong><small>Mostrar TV en la imagen final.</small></span>
+                  </label>
+                  <label class="premium-option premium-option-full">
+                    <input type="checkbox" name="hasSuperLuxurySeats" ${quote.hasSuperLuxurySeats ? "checked" : ""} data-super-luxury-seats />
+                    <span class="premium-option-icon">SL</span>
+                    <span><strong>Butacas Super Lujo</strong><small>Solo Mercedes Benz Sprinter 316, unidad 3. Capacidad máxima: 9 pasajeros.</small></span>
+                  </label>
+                  <label class="premium-option premium-option-full">
+                    <input type="checkbox" name="hasBed" ${quote.hasBed ? "checked" : ""} />
+                    <span class="premium-option-icon">CM</span>
+                    <span><strong>Cama</strong><small>Al seleccionar cama, la capacidad baja a 7 pasajeros atrás y 2 adelante.</small></span>
+                  </label>
+                </div>
+                <label><span><input type="checkbox" name="includeTax" ${quote.includeTax === true ? "checked" : ""} /> Agregar IVA 12%</span></label>
+                <label>Descuento editable<input type="number" name="discountAmount" value="${quote.discountAmount || 0}" min="0" step="0.01" /></label>
+              </div>
+            </section>
+          </div>
+          <aside class="quote-summary" data-quote-summary></aside>
+        </div>
+        <input type="hidden" name="clientId" value="${escapeHtml(quote.clientId)}" />
+        <input type="hidden" name="clientNit" value="${escapeHtml(quote.clientNit)}" />
+        <input type="hidden" name="clientEmail" value="${escapeHtml(quote.clientEmail)}" />
+        <input type="hidden" name="vehicleId" value="${escapeHtml(quote.vehicleId)}" />
+        <input type="hidden" name="vehicleManualName" value="${escapeHtml(defaultVehicleName)}" />
+        <input type="hidden" name="driverId" value="${escapeHtml(quote.driverId)}" />
+        <input type="hidden" name="driverManualName" value="${escapeHtml(quote.driverManualName)}" />
+        <input type="hidden" name="destinationRateName" value="${escapeHtml(quote.destinationRateName)}" />
+        <input type="hidden" name="fixedFare" value="${escapeHtml(quote.fixedFare || 0)}" />
+        <input type="hidden" name="fixedFareIncludesTax" value="${quote.fixedFareIncludesTax === false ? "false" : "true"}" />
+        <input type="hidden" name="serviceSelectionsJson" value="${escapeHtml(JSON.stringify(initialServiceSelections))}" />
+        <input type="hidden" name="serviceType" value="${escapeHtml(quote.serviceType || "Servicio personalizado")}" />
+        <input type="hidden" name="serviceStartDate" value="${escapeHtml(serviceStartDate)}" />
+        <input type="hidden" name="serviceEndDate" value="${escapeHtml(serviceEndDate)}" />
+        <input type="hidden" name="arrivalTime" value="${escapeHtml(quote.arrivalTime)}" />
+        <input type="hidden" name="endLocation" value="${escapeHtml(quote.endLocation)}" />
+        <input type="hidden" name="luggage" value="${quote.luggage || 0}" />
+        <input type="hidden" name="kilometers" value="${quote.kilometers || 0}" />
+        <input type="hidden" name="minutes" value="${quote.minutes || 0}" />
+        <input type="hidden" name="waitingMinutes" value="${quote.waitingMinutes || 0}" />
+        <input type="hidden" name="extraCharges" value="${quote.extraCharges || 0}" />
+        <input type="hidden" name="discountPercent" value="0" />
+        <input type="hidden" name="pdfTemplate" value="${escapeHtml(quote.pdfTemplate || state.settings.defaultPdfTemplate)}" />
+        <input type="hidden" name="status" value="${escapeHtml(quote.status || "borrador")}" />
+        <input type="hidden" name="routeProvider" value="${escapeHtml(quote.routeProvider)}" />
+        <input type="hidden" name="driverUserId" value="${escapeHtml(quote.driverUserId)}" />
+        <input class="visually-hidden" type="checkbox" name="applyNightSurcharge" ${quote.applyNightSurcharge ? "checked" : ""} />
+        <input class="visually-hidden" type="checkbox" name="applyAirportSurcharge" ${quote.applyAirportSurcharge ? "checked" : ""} />
+        ${!isEdit ? `<div class="draft-note">Borrador automático activo. Si cierra esta ventana, sus datos se recuperarán al abrir Nueva cotización. <button type="button" class="text-inline-button" data-clear-quote-draft>Limpiar borrador</button></div>` : ""}
+        <p class="form-error" data-form-error></p>
+        <div class="form-footer">
+          <button type="button" class="button button-secondary" data-close-form>Cancelar</button>
+          <button type="submit" class="button button-primary">${isEdit ? "Guardar cambios" : "Crear cotización"}</button>
+        </div>
+      </form>
+    `,
+    { wide: true, eyebrow: "Cotizador" },
+  );
+
+  const form = $("#quote-form");
+  $("[data-close-form]").addEventListener("click", closeModal);
+  $("[data-clear-quote-draft]")?.addEventListener("click", () => {
+    clearQuoteDraft();
+    toast("Borrador de nueva cotización limpiado.");
+  });
+  $("[data-destination-rate-preview]").addEventListener("click", (event) => {
+    const toggle = event.target.closest("[data-service-menu-toggle]");
+    if (toggle) {
+      const panel = $("[data-service-menu-panel]", form);
+      const willOpen = panel.hidden;
+      panel.hidden = !willOpen;
+      toggle.setAttribute("aria-expanded", String(willOpen));
+      return;
+    }
+    const addService = event.target.closest("[data-add-service-selection]");
+    if (addService) {
+      addRateServiceSelection(form, addService.dataset.addServiceSelection);
+      if (!isEdit) saveQuoteDraft(form);
+      return;
+    }
+    const removeService = event.target.closest("[data-remove-service-selection]");
+    if (removeService) {
+      removeServiceSelection(form, removeService.dataset.removeServiceSelection, removeService.dataset.removeServiceIndex);
+      if (!isEdit) saveQuoteDraft(form);
+    }
+  });
+  $("[data-destination-rate-preview]").addEventListener("change", (event) => {
+    if (!event.target.matches('input[name="serviceSelectionKeys"]')) return;
+    syncServiceSelections(form);
+    if (!isEdit) saveQuoteDraft(form);
+  });
+  $("[data-add-manual-service]").addEventListener("click", () => {
+    addManualServiceSelection(form);
+    if (!isEdit) saveQuoteDraft(form);
+  });
+  renderVehicleUnitPanel(form, quoteVehicleIds(quote));
+  syncQuoteCapacity(form);
+  $("[data-vehicle-model-select]").addEventListener("change", () => {
+    renderVehicleUnitPanel(form);
+    syncQuoteCapacity(form);
+  });
+  $("[data-vehicle-unit-panel]").addEventListener("change", () => syncQuoteCapacity(form));
+  form.elements.hasPlayStation5.addEventListener("change", () => syncQuoteCapacity(form));
+  form.elements.hasTv.addEventListener("change", () => syncQuoteCapacity(form));
+  form.elements.hasBed.addEventListener("change", () => syncQuoteCapacity(form, true));
+  form.elements.hasSuperLuxurySeats.addEventListener("change", () => syncQuoteCapacity(form, true));
+  form.elements.serviceDate.addEventListener("change", () => {
+    form.elements.serviceStartDate.value = form.elements.serviceDate.value;
+    if (!form.elements.returnDate.value) form.elements.returnDate.value = form.elements.serviceDate.value;
+  });
+  form.elements.returnDate.addEventListener("change", () => {
+    form.elements.serviceEndDate.value = form.elements.returnDate.value;
+  });
+  form.elements.hasLuggage.addEventListener("change", () => {
+    if (form.elements.hasLuggage.value === "false") form.elements.luggageDescription.value = "";
+  });
+  const trackFormChange = () => {
+    updateQuoteSummary(form);
+    if (!isEdit) saveQuoteDraft(form);
+  };
+  form.addEventListener("input", trackFormChange);
+  form.addEventListener("change", trackFormChange);
+  form.addEventListener("submit", (event) => saveQuote(event, quote.id));
+  renderDestinationRatePreview(form);
+  syncServiceSelections(form);
+  updateQuoteSummary(form);
+  if (draft) toast("Borrador recuperado.");
+}
+
+function syncQuoteCapacity(form, announce = false) {
+  syncSelectedVehicleField(form);
+  const vehicles = selectedVehiclesFromForm(form);
+  const superLuxuryAvailable = vehicles.some(vehicleSupportsSuperLuxurySeats);
+  if (form.elements.hasSuperLuxurySeats.checked && !superLuxuryAvailable) {
+    form.elements.hasSuperLuxurySeats.checked = false;
+    if (announce) toast("Butacas Super Lujo solo aplica para Mercedes Benz Sprinter 316, unidad 3.", "error");
+  }
+  form.elements.hasSuperLuxurySeats.disabled = !superLuxuryAvailable;
+  const maximum = vehicles.length
+    ? vehicles.reduce((sum, vehicle) => sum + vehicleCapacityWithOptions(vehicle, form), 0)
+    : form.elements.hasSuperLuxurySeats.checked
+      ? 9
+      : form.elements.hasBed.checked
+        ? 8
+        : 15;
+  const select = form.elements.passengers;
+  if (select.options.length < maximum) {
+    select.innerHTML = passengerOptions(select.value, maximum, maximum);
+  }
+  [...select.options].forEach((option) => {
+    option.disabled = Number(option.value) > maximum;
+  });
+  if (Number(select.value) > maximum) {
+    select.value = String(maximum);
+    if (announce) {
+      const reason = form.elements.hasSuperLuxurySeats.checked ? "Butacas Super Lujo" : form.elements.hasBed.checked ? "cama" : "la unidad seleccionada";
+      toast(`La capacidad se ajustó a ${maximum} pasajeros por ${reason}.`);
+    }
+  }
+  const vehicleText = vehicles.length
+    ? vehicles.map(vehicleDisplayName).join(" + ")
+    : "la Sprinter seleccionada";
+  const amenities = [
+    form.elements.hasPlayStation5.checked ? "PlayStation 5" : "",
+    form.elements.hasTv.checked ? "TV" : "",
+  ].filter(Boolean).join(" · ");
+  $("[data-capacity-note]", form).textContent = form.elements.hasSuperLuxurySeats.checked
+    ? `${vehicleText}: máximo ${maximum} pasajeros con Butacas Super Lujo.`
+    : form.elements.hasBed.checked
+      ? `${vehicleText}: máximo ${maximum} pasajeros con cama instalada (${vehicles.length || 1} unidad(es), 7 atrás y 2 adelante por unidad).`
+      : `${vehicleText}: capacidad disponible de 1 a ${maximum} pasajeros${amenities ? ` · ${amenities}` : ""}.`;
+  updateQuoteSummary(form);
+}
+
+function quoteFormData(form) {
+  const body = Object.fromEntries(new FormData(form));
+  const serviceSelections = serviceSelectionsWithDetailsFromForm(form);
+  const firstService = serviceSelections[0];
+  body.serviceSelections = serviceSelections;
+  body.serviceSelectionsJson = JSON.stringify(serviceSelections);
+  form.elements.serviceSelectionsJson.value = body.serviceSelectionsJson;
+  body.fixedFare = String(serviceSelectionsTotal(serviceSelections));
+  body.destinationRateId = firstService?.destinationId || "";
+  body.destinationRateName = serviceSelectionsDestinationLabel(serviceSelections);
+  body.serviceRateType = firstService?.type || "oneWay";
+  body.serviceType = serviceSelectionsServiceLabel(serviceSelections);
+  body.serviceStartDate = body.serviceDate;
+  body.serviceEndDate = body.returnDate || body.serviceDate;
+  body.hasLuggage = form.elements.hasLuggage.value === "true";
+  if (!body.hasLuggage) body.luggageDescription = "";
+  body.luggage = body.hasLuggage && body.luggageDescription ? 1 : 0;
+  body.vehicleIds = $$('input[name="vehicleIds"]:checked', form).map((input) => input.value);
+  body.vehicleId = body.vehicleIds[0] || form.elements.vehicleId.value;
+  body.vehicleCount = Math.max(1, body.vehicleIds.length || 1);
+  body.hasBed = form.elements.hasBed.checked;
+  body.hasPlayStation5 = form.elements.hasPlayStation5.checked;
+  body.hasTv = form.elements.hasTv.checked;
+  body.hasSuperLuxurySeats = form.elements.hasSuperLuxurySeats.checked;
+  body.applyNightSurcharge = form.elements.applyNightSurcharge.checked;
+  body.applyAirportSurcharge = form.elements.applyAirportSurcharge.checked;
+  body.includeTax = form.elements.includeTax.checked;
+  body.fixedFareIncludesTax = form.elements.fixedFareIncludesTax.value !== "false";
+  return body;
+}
+
+function calculateTotalsLocal(body) {
+  const rates = state.rates;
+  const vehicleCount = Math.max(1, Number(body.vehicleCount || body.vehicleIds?.length || 1));
+  const kilometers = Number(body.kilometers || 0);
+  const minutes = Number(body.minutes || 0);
+  const fixedFare = Number(body.fixedFare || 0);
+  const fixedFareIncludesTax = false;
+  const distanceCharge = fixedFare ? 0 : kilometers * rates.pricePerKm;
+  const timeCharge = fixedFare ? 0 : minutes * rates.pricePerMinute;
+  const baseCalculated = fixedFare ? fixedFare * vehicleCount : distanceCharge + timeCharge;
+  const baseFare = Math.max(baseCalculated, rates.minimumFare);
+  const night = body.applyNightSurcharge ? rates.nightSurcharge : 0;
+  const airport = body.applyAirportSurcharge ? rates.airportSurcharge : 0;
+  const waiting = (Number(body.waitingMinutes || 0) / 60) * rates.waitingPerHour;
+  const extra = Number(body.extraCharges || 0);
+  const beforeDiscount = baseFare + night + airport + waiting + extra;
+  const discountPercent = Number(body.discountPercent || 0);
+  const percentDiscount = beforeDiscount * (discountPercent / 100);
+  const discountAmount = Number(body.discountAmount || 0);
+  const discount = Math.min(beforeDiscount, percentDiscount + discountAmount);
+  const subtotal = beforeDiscount - discount;
+  const taxPercent = body.includeTax ? rates.taxPercent : 0;
+  const includedTax = fixedFareIncludesTax && taxPercent > 0;
+  const taxableSubtotal = includedTax ? subtotal / (1 + taxPercent / 100) : subtotal;
+  const tax = includedTax ? subtotal - taxableSubtotal : subtotal * (taxPercent / 100);
+  return {
+    fixedFare,
+    vehicleCount,
+    fixedFareIncludesTax,
+    distanceCharge,
+    timeCharge,
+    baseFare,
+    nightSurcharge: night,
+    airportSurcharge: airport,
+    waitingCharge: waiting,
+    discount,
+    discountAmount,
+    discountPercent,
+    subtotal: taxableSubtotal,
+    tax,
+    total: includedTax ? subtotal : subtotal + tax,
+  };
+}
+
+function updateQuoteSummary(form) {
+  const body = quoteFormData(form);
+  const totals = calculateTotalsLocal(body);
+  const serviceLines = body.serviceSelections.length
+    ? body.serviceSelections
+        .map(
+          (item) => `
+            <div class="summary-service-row">
+              <span>${escapeHtml(item.label)} · ${escapeHtml(item.destination)}</span>
+              <strong>${money(item.amount)}</strong>
+            </div>
+          `,
+        )
+        .join("")
+    : `<div class="summary-service-row"><span>Seleccione servicios en el menú</span><strong>${money(0)}</strong></div>`;
+  $("[data-quote-summary]", form).innerHTML = `
+    <div class="quote-summary-header"><span>${totals.fixedFare ? "Total del servicio" : "Total estimado"}</span><strong>${money(totals.total)}</strong></div>
+    <div class="summary-lines">
+      <div class="summary-service-list"><span>Tipo de Servicio</span>${serviceLines}</div>
+      <div class="summary-line"><span>Total servicios por Mercedes</span><strong>${money(totals.fixedFare)}</strong></div>
+      <div class="summary-line"><span>Mercedes seleccionadas</span><strong>${escapeHtml(totals.vehicleCount)}</strong></div>
+      <div class="summary-line"><span>Subtotal vehículos</span><strong>${money(totals.baseFare)}</strong></div>
+      <div class="summary-line"><span>Descuento</span><strong>-${money(totals.discount)}</strong></div>
+      <div class="summary-line"><span>IVA ${body.includeTax ? state.rates.taxPercent : 0}%</span><strong>${money(totals.tax)}</strong></div>
+      <div class="summary-line"><span>Fecha inicio</span><strong>${escapeHtml(formatDate(body.serviceDate, { short: true }))}</strong></div>
+      <div class="summary-line"><span>Fecha final</span><strong>${escapeHtml(formatDate(body.returnDate, { short: true }))}</strong></div>
+      <div class="summary-line"><span>Pasajeros</span><strong>${escapeHtml(body.passengers || 1)}</strong></div>
+      <div class="summary-line"><span>Equipaje</span><strong>${escapeHtml(body.hasLuggage ? body.luggageDescription || "Sí" : "No")}</strong></div>
+      <div class="summary-line"><span>Comodidades</span><strong>${escapeHtml(quoteAmenityLabels(body).join(" · ") || "Estándar")}</strong></div>
+      <div class="summary-line summary-total"><span>Total</span><strong>${money(totals.total)}</strong></div>
+    </div>
+  `;
+}
+
+async function calculateRouteForForm(form) {
+  const status = $("[data-route-status]", form);
+  const button = $("[data-calculate-route]", form);
+  if (!form.elements.origin.value || !form.elements.destination.value) {
+    status.textContent = "Ingrese el punto de salida y el destino.";
+    return;
+  }
+  button.disabled = true;
+  status.textContent = "Calculando la mejor ruta disponible...";
+  try {
+    const result = await api("/api/routes/calculate", {
+      method: "POST",
+      body: JSON.stringify({
+        origin: form.elements.origin.value,
+        destination: form.elements.destination.value,
+      }),
+    });
+    form.elements.kilometers.value = result.kilometers;
+    form.elements.minutes.value = result.minutes;
+    form.elements.routeProvider.value = result.provider;
+    status.textContent = `${result.kilometers} km · ${result.minutes} minutos · ${result.provider}`;
+    updateQuoteSummary(form);
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function saveQuote(event, id) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = $('button[type="submit"]', form);
+  const body = quoteFormData(form);
+  if (!body.serviceSelections.length || !Number(body.fixedFare || 0)) {
+    $("[data-form-error]", form).textContent = "Seleccione al menos un servicio en Tipo de Servicio.";
+    return;
+  }
+  if (!body.vehicleIds.length && !String(body.vehicleManualName || "").trim()) {
+    $("[data-form-error]", form).textContent = "Seleccione una Sprinter o escriba un vehículo manual.";
+    return;
+  }
+  button.disabled = true;
+  try {
+    await api(`/api/quotes${id ? `/${id}` : ""}`, {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(body),
+    });
+    if (!id) clearQuoteDraft();
+    toast(id ? "Cotización actualizada." : "Cotización creada correctamente.");
+    closeModal();
+    await navigate("quotes");
+  } catch (error) {
+    $("[data-form-error]", form).textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(new Error("No fue posible leer el comprobante.")));
+    reader.readAsDataURL(file);
+  });
+}
+
+function openAcceptQuoteModal(id) {
+  const quote = state.quotes.find((item) => item.id === id);
+  if (!quote) return;
+  openModal("Aceptar servicio", `
+    <form id="accept-quote-form">
+      <p class="muted">Para convertir <strong>${escapeHtml(quote.number)}</strong> en servicio, suba la boleta de pago o depósito del cliente.</p>
+      <div class="form-grid">
+        <label>Monto pagado<input type="number" name="amountPaid" value="${quote.amountPaid || quote.totals?.total || 0}" min="0" step="0.01" required /></label>
+        <label>Referencia / depósito<input name="paymentReference" value="${escapeHtml(quote.paymentReference)}" placeholder="No. boleta, banco o transferencia" /></label>
+        <label class="full">Boleta de pago o depósito<input type="file" name="paymentFile" accept="application/pdf,image/png,image/jpeg,image/webp" required /></label>
+        <label class="full">Notas de pago<textarea name="paymentNotes" placeholder="Observaciones del depósito o saldo pendiente">${escapeHtml(quote.paymentNotes)}</textarea></label>
+      </div>
+      <p class="form-error" data-form-error></p>
+      <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit">Aceptar y pasar a servicio</button></div>
+    </form>
+  `);
+  $("[data-close-form]").addEventListener("click", closeModal);
+  $("#accept-quote-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const file = form.elements.paymentFile.files[0];
+    if (!file) {
+      $("[data-form-error]", form).textContent = "Suba la boleta de pago o depósito.";
+      return;
+    }
+    const button = $('button[type="submit"]', form);
+    button.disabled = true;
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      await api(`/api/quotes/${id}/accept`, {
+        method: "POST",
+        body: JSON.stringify({
+          amountPaid: form.elements.amountPaid.value,
+          paymentReference: form.elements.paymentReference.value,
+          paymentNotes: form.elements.paymentNotes.value,
+          paymentProof: {
+            fileName: file.name,
+            mimeType: file.type,
+            size: file.size,
+            dataUrl,
+          },
+        }),
+      });
+      toast("Servicio aceptado y venta registrada.");
+      closeModal();
+      await navigate("dashboard");
+    } catch (error) {
+      $("[data-form-error]", form).textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+function openPaymentProofModal(id) {
+  const quote = state.quotes.find((item) => item.id === id);
+  const proof = quote?.paymentProof;
+  if (!proof) {
+    toast("Esta cotización aún no tiene comprobante.", "error");
+    return;
+  }
+  const preview = proof.mimeType?.startsWith("image/")
+    ? `<img class="payment-proof-preview" src="${proof.dataUrl}" alt="Comprobante de pago" />`
+    : `<iframe class="payment-proof-frame" src="${proof.dataUrl}" title="Comprobante PDF"></iframe>`;
+  openModal(`Comprobante ${quote.number}`, `
+    <div class="payment-proof-modal">
+      <div class="payment-proof-meta">
+        <span>Monto pagado</span><strong>${money(quote.amountPaid || quote.totals?.total)}</strong>
+        <span>Referencia</span><strong>${escapeHtml(quote.paymentReference || "Sin referencia")}</strong>
+        <span>Archivo</span><strong>${escapeHtml(proof.fileName)}</strong>
+      </div>
+      ${preview}
+      <div class="form-footer">
+        <a class="button button-secondary" href="${proof.dataUrl}" download="${escapeHtml(proof.fileName)}">Descargar comprobante</a>
+        <button class="button button-primary" data-close-form>Cerrar</button>
+      </div>
+    </div>
+  `, { wide: true, eyebrow: "Ventas" });
+  $("[data-close-form]").addEventListener("click", closeModal);
+}
+
+function pending(value) {
+  return value ? value : "Pendiente";
+}
+
+function formatDocumentDate(value) {
+  if (!value) return "Pendiente";
+  const safeValue = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value;
+  const date = new Date(safeValue);
+  if (Number.isNaN(date.valueOf())) return value;
+  const formatted = new Intl.DateTimeFormat("es-GT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
+function formatPosterDate(value) {
+  if (!value) return "Pendiente";
+  const safeValue = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value;
+  const date = new Date(safeValue);
+  if (Number.isNaN(date.valueOf())) return value;
+  const formatted = new Intl.DateTimeFormat("es-GT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(date);
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
+function cleanVehicleLabel(label) {
+  return String(label || "Mercedes Benz Sprinter").replace(/\s*,\s*\d+$/, "");
+}
+
+function quoteVehicleNumber(quote, vehicle) {
+  const fleetCount = Array.isArray(quote.vehicleIds) ? quote.vehicleIds.length : quote.vehicleId ? 1 : 0;
+  const manualCount = quote.vehicleManualName ? 1 : 0;
+  if (Number(quote.vehicleCount || 0) > 1) return Number(quote.vehicleCount);
+  if (fleetCount + manualCount > 1) return fleetCount + manualCount;
+  return vehicle?.unitNumber || 1;
+}
+
+function quoteRegularPrice(quote) {
+  const total = Number(quote.totals?.total || 0);
+  const discount = Number(quote.totals?.discount || 0);
+  return total + discount;
+}
+
+function quoteTaxLabel(quote) {
+  return Number(quote.totals?.taxPercent || 0) > 0 ? "PRECIO INCLUYE IVA" : "PRECIO NO INCLUYE IVA";
+}
+
+function quoteServiceText(quote) {
+  const selections = quoteServiceSelections(quote);
+  if (selections.length > 1) {
+    return selections.map((item) => `${item.label} en ${item.destination}`).join(" / ");
+  }
+  if (quote.serviceType && quote.destinationRateName) {
+    return `${quote.serviceType} en ${quote.destinationRateName}.`;
+  }
+  return quote.serviceType || quote.notes || "Servicio personalizado.";
+}
+
+function quoteLuggageText(quote) {
+  if (quote.hasLuggage === false) return "No";
+  if (quote.luggageDescription) return quote.luggageDescription;
+  if (Number(quote.luggage || 0) > 0) return `${quote.luggage} maletas`;
+  return "Pendiente";
+}
+
+function quoteEndDate(quote) {
+  return quote.serviceEndDate || quote.returnDate || quote.serviceDate;
+}
+
+function quoteSelectedFare(quote) {
+  return Number(quote.fixedFare || quote.totals?.fixedFare || quote.totals?.total || 0);
+}
+
+function quoteVehicleCountForPrice(quote) {
+  return Math.max(1, Number(quote.vehicleCount || quote.vehicleIds?.length || 1));
+}
+
+function quoteTaxBreakdown(quote) {
+  const totals = quote.totals || {};
+  const subtotal = Number(totals.subtotalBeforeDiscount ?? totals.baseFare ?? quoteSelectedFare(quote));
+  const discount = Number(totals.discount || 0);
+  const tax = Number(totals.tax || 0);
+  const total = Number(totals.total || Math.max(0, subtotal - discount) + tax);
+  return { subtotal, discount, tax, total };
+}
+
+function quotePriceCard(quote) {
+  const fare = quoteSelectedFare(quote);
+  const vehicleCount = quoteVehicleCountForPrice(quote);
+  const totalFare = fare * vehicleCount;
+  const selections = quoteServiceSelections(quote);
+  const oneWayAmount = quote.serviceRateType === "roundTrip" ? totalFare / 2 : totalFare;
+  const breakdown = quoteTaxBreakdown(quote);
+  const taxLine = `
+    <section class="quote-tax-note" style="width:92mm;margin:3mm auto 0;border:1px solid #d7aa56;border-radius:2mm;background:#fff;padding:2mm 4mm;color:#111;text-align:center;font-size:3.4mm;font-weight:900;text-transform:uppercase;line-height:1.45">
+      ${selections.length > 1 ? `<div>${selections.map((item) => `${escapeHtml(item.label)} ${money(item.amount)}`).join(" · ")}</div>` : ""}
+      ${vehicleCount > 1 ? `<div>${vehicleCount} Mercedes seleccionadas · ${money(fare)} c/u</div>` : ""}
+      ${breakdown.discount ? `<div>Descuento -${money(breakdown.discount)}</div>` : ""}
+      <div>${money(Math.max(0, breakdown.subtotal - breakdown.discount))}</div>
+      <div>+ IVA ${money(breakdown.tax)}</div>
+      <div>Total ${money(breakdown.total)}</div>
+    </section>
+  `;
+  if (selections.length > 1) {
+    return `
+      <section class="quote-price-card quote-price-card-single" style="grid-template-columns:1fr">
+        <div><span>Servicios seleccionados</span><strong>${money(totalFare)}</strong></div>
+      </section>
+      ${taxLine}
+    `;
+  }
+  if (quote.serviceRateType === "internal") {
+    return `
+      <section class="quote-price-card quote-price-card-two" style="grid-template-columns:1fr 1fr">
+        <div><span>Traslados internos</span><strong>${money(totalFare)}</strong></div>
+        <div><span>Día completo</span><strong>${money(totalFare)}</strong></div>
+      </section>
+      ${taxLine}
+    `;
+  }
+  if (quote.serviceRateType === "oneWay") {
+    return `
+      <section class="quote-price-card quote-price-card-single" style="grid-template-columns:1fr">
+        <div><span>Viaje ida</span><strong>${money(totalFare)}</strong></div>
+      </section>
+      ${taxLine}
+    `;
+  }
+  return `
+    <section class="quote-price-card quote-price-card-two" style="grid-template-columns:1fr 1fr">
+      <div><span>Viaje ida</span><strong>${money(oneWayAmount)}</strong></div>
+      <div><span>Viaje vuelta</span><strong>${money(oneWayAmount)}</strong></div>
+    </section>
+    ${taxLine}
+  `;
+}
+
+function quoteInfoItem(icon, label, primary, secondary = "") {
+  return `
+    <div class="quote-info-item">
+      <b>${escapeHtml(icon)}</b>
+      <div><span>${escapeHtml(label)}</span><strong>${escapeHtml(primary || "Pendiente")}</strong>${secondary ? `<small>${escapeHtml(secondary)}</small>` : ""}</div>
+    </div>
+  `;
+}
+
+function quoteFeature(icon, label, detail = "") {
+  return `
+    <div class="quote-feature">
+      <b>${escapeHtml(icon)}</b>
+      <span>${escapeHtml(label)}</span>
+      ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+    </div>
+  `;
+}
+
+function quotePosterPrice(quote) {
+  const fare = quoteSelectedFare(quote);
+  const vehicleCount = quoteVehicleCountForPrice(quote);
+  const totalFare = fare * vehicleCount;
+  const selections = quoteServiceSelections(quote);
+  const breakdown = quoteTaxBreakdown(quote);
+  const oneWayAmount = quote.serviceRateType === "roundTrip" ? totalFare / 2 : totalFare;
+  const detail = [
+    selections.length > 1 ? selections.map((item) => `${item.label} ${money(item.amount)}`).join(" · ") : "",
+    vehicleCount > 1 ? `${vehicleCount} vehículos · ${money(fare)} c/u` : "",
+    breakdown.discount ? `Descuento -${money(breakdown.discount)}` : "",
+  ].filter(Boolean);
+  const taxDetail = Number(quote.totals?.taxPercent || 0) > 0
+    ? `+ IVA ${money(breakdown.tax)} · Total ${money(breakdown.total)}`
+    : quoteTaxLabel(quote);
+
+  if (selections.length > 1) {
+    return {
+      leftLabel: "Servicios seleccionados",
+      leftAmount: money(totalFare),
+      rightLabel: "Total cotizado",
+      rightAmount: money(breakdown.total),
+      detail,
+      taxDetail,
+    };
+  }
+  if (quote.serviceRateType === "internal") {
+    return {
+      leftLabel: "Traslados internos",
+      leftAmount: money(totalFare),
+      rightLabel: "Día completo",
+      rightAmount: money(totalFare),
+      detail,
+      taxDetail,
+    };
+  }
+  if (quote.serviceRateType === "oneWay") {
+    return {
+      leftLabel: "Viaje ida",
+      leftAmount: money(totalFare),
+      rightLabel: "Total",
+      rightAmount: money(breakdown.total),
+      detail,
+      taxDetail,
+    };
+  }
+  return {
+    leftLabel: "Viaje ida",
+    leftAmount: money(oneWayAmount),
+    rightLabel: "Viaje vuelta",
+    rightAmount: money(oneWayAmount),
+    detail,
+    taxDetail,
+  };
+}
+
+function posterShortText(value, fallback = "Pendiente") {
+  return String(value || fallback).trim();
+}
+
+function quotePosterPrimaryService(quote) {
+  const selections = quoteServiceSelections(quote);
+  const first = selections[0] || {};
+  return {
+    serviceDate: first.serviceDate || quote.serviceStartDate || quote.serviceDate,
+    returnDate: first.returnDate || quoteEndDate(quote),
+    origin: first.origin || quote.origin,
+    destination: first.destinationAddress || quote.destination || first.destination,
+    departureTime: first.departureTime || quote.departureTime,
+    returnTime: first.returnTime || quote.returnTime,
+    passengers: first.passengers || quote.passengers || 1,
+    luggageDescription: first.hasLuggage === false ? "No" : first.luggageDescription || quoteLuggageText(quote),
+  };
+}
+
+function quotePosterServiceLines(quote) {
+  const selections = quoteServiceSelections(quote);
+  if (!selections.length) return [{ label: quoteServiceText(quote), amount: quoteSelectedFare(quote) }];
+  return selections.map((item, index) => ({
+    label: `${index + 1}. ${item.label || "Servicio"}${item.destination ? ` · ${item.destination}` : ""}`,
+    amount: Number(item.amount || 0) * quoteVehicleCountForPrice(quote),
+  }));
+}
+
+function quotePosterServicesHtml(quote) {
+  const lines = quotePosterServiceLines(quote);
+  return `
+    <div class="poster-service-value ${lines.length > 4 ? "poster-service-value-many" : lines.length > 3 ? "poster-service-value-compact" : ""}">
+      ${lines
+        .map(
+          (item) => `
+            <div class="poster-service-row">
+              <span>${escapeHtml(item.label)}</span>
+              <strong>${escapeHtml(posterMoney(item.amount))}</strong>
+            </div>
+          `,
+        )
+        .join("")}
+      ${quote.notes ? `<small class="poster-service-notes">${escapeHtml(quote.notes)}</small>` : ""}
+    </div>
+  `;
+}
+
+function quotePosterPriceBandHtml(quote) {
+  const breakdown = quoteTaxBreakdown(quote);
+  const regular = quoteRegularPrice(quote);
+  const special = breakdown.total;
+  const taxPercent = Number(quote.totals?.taxPercent || 0);
+  return `
+    <div class="poster-regular-price">${escapeHtml(posterMoney(regular))}</div>
+    <div class="poster-special-price-value">${escapeHtml(posterMoney(special))}</div>
+    ${taxPercent > 0 ? '<div class="poster-tax-status poster-tax-status-included">Precio incluye IVA</div>' : ""}
+  `;
+}
+
+function quotePosterVehicleHtml(quote) {
+  const vehicles = quoteDisplayVehicles(quote);
+  return `
+    <div class="poster-vehicle-value">
+      <b>${escapeHtml(vehicles.count)}</b>
+      <div class="poster-vehicle-copy">
+        <strong>${escapeHtml(vehicles.primary)}</strong>
+        <span>Área ejecutiva</span>
+      </div>
+    </div>
+  `;
+}
+
+function quotePosterFeatureIcon(type) {
+  const icons = {
+    seats: '<circle cx="17" cy="8" r="3"/><path d="M14 14v11h15v-5H19v-6zM10 29h23M17 25v4M29 25v4"/>',
+    air: '<path d="M24 4v40M9 12l30 24M39 12 9 36M18 8l6 6 6-6M18 40l6-6 6 6M7 19l8 2-2-8M41 29l-8-2 2 8M7 29l8-2-2 8M41 19l-8 2 2-8"/>',
+    wifi: '<path d="M7 20c10-9 24-9 34 0M13 27c7-6 15-6 22 0M19 34c3-3 7-3 10 0"/><circle cx="24" cy="40" r="2"/>',
+    usb: '<path d="M17 31 31 17M28 14l6-6M32 18l6-6M14 28l6 6-5 5-6-6zM31 17l4 4"/>',
+    playstation: '<path d="M14 19h20c5 0 8 5 7 10l-2 8c-1 4-6 5-8 2l-4-5h-6l-4 5c-2 3-7 2-8-2l-2-8c-1-5 2-10 7-10zM15 26v8M11 30h8M31 27h.1M36 32h.1"/>',
+    tv: '<rect x="7" y="10" width="34" height="25" rx="1"/><path d="M18 41h12M24 35v6"/>',
+    bed: '<path d="M7 34V15M7 29h34v8M12 22h8c3 0 5 2 5 5v2H12zM25 20h9c4 0 7 3 7 7v2H25zM11 37v4M38 37v4"/>',
+    luxury: '<path d="M14 18v17h20V18c0-5-4-9-10-9s-10 4-10 9zM10 25h4M34 25h4M10 25v12h28V25M14 35v6M34 35v6M39 8v8M35 12h8"/>',
+    driver: '<circle cx="24" cy="17" r="6"/><path d="M13 42v-7c0-6 5-11 11-11s11 5 11 11v7M14 11h20l-4-5H18zM19 28l5 6 5-6"/>',
+    fuel: '<rect x="10" y="7" width="21" height="34" rx="2"/><path d="M14 12h13v9H14zM31 15h5l4 5v15c0 4-6 4-6 0v-8M14 34h13"/>',
+    luggage: '<rect x="10" y="15" width="28" height="27" rx="3"/><path d="M18 15v-5h12v5M17 21v15M31 21v15M8 24h2M38 24h2"/>',
+    beverage: '<path d="M14 17h21l-3 25H17zM19 17l4-8h11M27 9l5 8M18 25h14"/>',
+  };
+  return `<svg class="poster-feature-icon" viewBox="0 0 48 48" aria-hidden="true">${icons[type] || ""}</svg>`;
+}
+
+function quotePosterFeatureItem([type, label]) {
+  return `<div class="poster-feature-item">${quotePosterFeatureIcon(type)}<span>${escapeHtml(label)}</span></div>`;
+}
+
+function quotePosterAmenitiesHtml(quote) {
+  const vehicleItems = [
+    ["seats", "Asientos de lujo"],
+    ["air", "Aire acondicionado"],
+    ["wifi", "Wifi"],
+    ["usb", "Puestos USB"],
+  ];
+  if (quote.hasPlayStation5) vehicleItems.push(["playstation", "PlayStation 5"]);
+  if (quote.hasTv) vehicleItems.push(["tv", "TV"]);
+  if (quote.hasBed) vehicleItems.push(["bed", "Cama"]);
+  if (quote.hasSuperLuxurySeats) vehicleItems.push(["luxury", "Butacas de Super Lujo"]);
+
+  const includedItems = [
+    ["driver", "Piloto profesional"],
+    ["fuel", "Combustible"],
+    ["luggage", "Viáticos del piloto"],
+    ["beverage", "Bebidas de cortesía"],
+  ];
+
+  return `
+    <div class="poster-feature-grid poster-vehicle-features poster-feature-count-${vehicleItems.length}" style="--feature-count:${vehicleItems.length}">
+      ${vehicleItems.map(quotePosterFeatureItem).join("")}
+    </div>
+    <div class="poster-feature-grid poster-included-features" style="--feature-count:${includedItems.length}">
+      ${includedItems.map(quotePosterFeatureItem).join("")}
+    </div>
+  `;
+}
+
+function quotePosterServicePriceHtml(quote) {
+  const price = quotePosterPrice(quote);
+  const selections = quoteServiceSelections(quote);
+  if (selections.length > 1) {
+    return `
+      <section class="poster-price-band poster-price-list">
+        <div class="poster-price-list-items">
+          ${selections
+            .map(
+              (item) => `
+                <article>
+                  <span>${escapeHtml(item.label)}</span>
+                  <small>${escapeHtml(item.destination)}</small>
+                  <strong>${escapeHtml(money(Number(item.amount || 0) * quoteVehicleCountForPrice(quote)))}</strong>
+                </article>
+              `,
+            )
+            .join("")}
+        </div>
+        <aside>
+          <span>Total</span>
+          <strong>${escapeHtml(price.rightAmount)}</strong>
+        </aside>
+      </section>
+    `;
+  }
+  return `
+    <section class="poster-price-band">
+      <article>
+        <b>&#8594;</b>
+        <div>
+          <span>${escapeHtml(price.leftLabel)}</span>
+          <strong>${escapeHtml(price.leftAmount)}</strong>
+        </div>
+      </article>
+      <i></i>
+      <article>
+        <b>&#8635;</b>
+        <div>
+          <span>${escapeHtml(price.rightLabel)}</span>
+          <strong>${escapeHtml(price.rightAmount)}</strong>
+        </div>
+      </article>
+    </section>
+  `;
+}
+
+function quoteDisplayVehicles(quote) {
+  const vehicles = quoteVehicleIds(quote)
+    .map((vehicleId) => state.vehicles.find((item) => item.id === vehicleId))
+    .filter(Boolean);
+  const names = vehicles.map(vehicleDisplayName);
+  if (quote.vehicleManualName) names.push(quote.vehicleManualName);
+  if (quote.vehicleName && !names.length) names.push(quote.vehicleName);
+  if (!names.length) names.push("Mercedes Benz Sprinter");
+  const uniqueNames = [...new Set(names)];
+  return {
+    count: Math.max(1, Number(quote.vehicleCount || uniqueNames.length || 1)),
+    primary: cleanVehicleLabel(uniqueNames[0]),
+    all: uniqueNames,
+  };
+}
+
+function quoteDocumentFact(code, label, value, detail = "") {
+  return `
+    <article class="lt-fact">
+      <div class="lt-fact-icon">${escapeHtml(code)}</div>
+      <div>
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(value || "Pendiente")}</strong>
+        ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function quoteDocumentAmenity(code, label, detail = "") {
+  return `
+    <article class="lt-amenity">
+      <div>${escapeHtml(code)}</div>
+      <strong>${escapeHtml(label)}</strong>
+      ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+    </article>
+  `;
+}
+
+function posterIcon(type) {
+  const icons = {
+    calendar: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4 8h16M5 5h14v16H5z"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>',
+    pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.4 7-11a7 7 0 10-14 0c0 5.6 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+    flag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4h11l-2 4 2 4H6"/></svg>',
+    users: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="3"/><circle cx="16" cy="10" r="2.5"/><path d="M3 20a6 6 0 0112 0M13 20a5 5 0 018 0"/></svg>',
+    bag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5a4 4 0 018 0v2M6 7h12l1 14H5z"/></svg>',
+  };
+  return icons[type] || icons.flag;
+}
+
+function quotePosterFact(icon, label, value) {
+  return `
+    <article class="poster-fact">
+      <b>${posterIcon(icon)}</b>
+      <div>
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(value || "Pendiente")}</strong>
+      </div>
+    </article>
+  `;
+}
+
+function downloadQuotePdf(id) {
+  const quote = state.quotes.find((item) => item.id === id);
+  if (!quote) return;
+  const service = quotePosterPrimaryService(quote);
+
+  openPremiumDocument(
+    quote.number,
+    "quote",
+    `
+      <div class="quote-poster-content quote-poster-v2">
+        <img class="quote-template-bg" src="${assetUrl("quote-template-master-2x.png")}?v=5" alt="">
+        <strong class="poster-client-name">${escapeHtml(quote.clientName || "Cliente")}</strong>
+        <div class="poster-dynamic-value poster-start-date">${escapeHtml(formatPosterDate(service.serviceDate))}</div>
+        <div class="poster-dynamic-value poster-start-time">${escapeHtml(pending(service.departureTime))}</div>
+        <div class="poster-dynamic-value poster-origin">${escapeHtml(service.origin || "Pendiente")}</div>
+        <div class="poster-dynamic-value poster-destination">${escapeHtml(service.destination || "Pendiente")}</div>
+        <div class="poster-dynamic-value poster-end-date"><span>${escapeHtml(formatPosterDate(service.returnDate))}</span></div>
+        <div class="poster-dynamic-value poster-return-time"><span>${escapeHtml(pending(service.returnTime))}</span></div>
+        <div class="poster-dynamic-value poster-passengers">${escapeHtml(`${service.passengers || 1} pasajeros`)}</div>
+        ${quotePosterServicesHtml(quote)}
+        ${quotePosterPriceBandHtml(quote)}
+        ${quotePosterVehicleHtml(quote)}
+        ${quotePosterAmenitiesHtml(quote)}
+      </div>
+    `,
+  );
+}
+
+function openItineraryModal(quoteId) {
+  const quote = state.quotes.find((item) => item.id === quoteId);
+  openModal("Generar itinerarios", `
+    <form id="itinerary-form">
+      <p class="muted">Se crearán documentos vinculados a <strong>${escapeHtml(quote.number)}</strong> para ${escapeHtml(quote.clientName)}.</p>
+      <div class="form-grid">
+        <label>Tipo de itinerario
+          <select name="type">
+            <option value="cliente">Para cliente</option>
+            <option value="piloto">Para piloto</option>
+          </select>
+        </label>
+        <label class="full">Recorrido o instrucciones<textarea name="instructions" placeholder="Escriba una actividad por línea para crear el recorrido del piloto.">${escapeHtml(quote.notes)}</textarea></label>
+        <label class="full">Notas de contacto<textarea name="contactNotes" placeholder="Contacto alterno, indicaciones de acceso, letrero de bienvenida..."></textarea></label>
+      </div>
+      <p class="form-error" data-form-error></p>
+      <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit">Generar itinerario</button></div>
+    </form>
+  `);
+  $("[data-close-form]").addEventListener("click", closeModal);
+  $("#itinerary-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+      const body = Object.fromEntries(new FormData(form));
+      const item = await api(`/api/quotes/${quoteId}/itineraries`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      toast(`${item.number} generado.`);
+      closeModal();
+      await navigate(item.type === "piloto" ? "driverItineraries" : "clientItineraries");
+    } catch (error) {
+      $("[data-form-error]", form).textContent = error.message;
+    }
+  });
+}
+
+function documentFact(label, primary, secondary = "") {
+  return `<div class="document-fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(primary || "Por definir")}</strong>${secondary ? `<small>${escapeHtml(secondary)}</small>` : ""}</div>`;
+}
+
+function itinerarySteps(item) {
+  const custom = String(item.instructions || "")
+    .split(/\n|;/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (custom.length) return custom;
+  return [
+    `Salida de ${item.origin} · ${item.departureTime || "hora por definir"}`,
+    `Llegada a ${item.destination} · ${item.arrivalTime || "hora estimada"}`,
+    item.returnTime ? `Hora de regreso · ${item.returnTime}` : "",
+    `Finalización en ${item.endLocation || item.destination}`,
+  ].filter(Boolean);
+}
+
+function printItinerary(id) {
+  const item = state.itineraries.find((record) => record.id === id);
+  if (!item) return;
+  const steps = itinerarySteps(item);
+  const isDriver = item.type === "piloto";
+  const amenities = [
+    "Piloto privado",
+    "Aire acondicionado",
+    "WiFi",
+    "Combustible",
+    item.hasSuperLuxurySeats ? "Butacas Super Lujo" : "Butacas cómodas",
+    item.hasBed ? "Cama instalada" : "",
+    item.hasPlayStation5 ? "PlayStation 5" : "",
+    item.hasTv ? "TV" : "",
+  ].filter(Boolean);
+
+  const clientContent = `
+    <section class="itinerary-title"><h1>Itinerario</h1><span>${escapeHtml(item.number)} · Cliente VIP</span></section>
+    <section class="itinerary-columns">
+      <div class="detail-list">
+        ${itineraryDetail("Cliente", item.clientName)}
+        ${item.clientNit ? itineraryDetail("NIT", item.clientNit) : ""}
+        ${itineraryDetail("Fecha del viaje", formatDate(item.serviceDate))}
+        ${itineraryDetail("Hora de llegada", item.arrivalTime || item.departureTime)}
+        ${itineraryDetail("Lugar de salida", item.origin)}
+        ${itineraryDetail("Lugar de destino", item.destination)}
+        ${itineraryDetail("Lugar de finalización", item.endLocation || item.destination)}
+        ${itineraryDetail("Cantidad de pasajeros", `${item.passengers} pasajeros`)}
+        ${itineraryDetail("Vehículo asignado", item.vehicleName || "Por confirmar")}
+        ${itineraryDetail("Piloto asignado", item.driverName || "Por confirmar")}
+      </div>
+      ${vehicleDocumentCard(item, amenities)}
+    </section>
+  `;
+
+  const driverContent = `
+    <section class="itinerary-title"><h1>Itinerario piloto</h1><span>${escapeHtml(item.number)} · Uso interno</span></section>
+    <section class="itinerary-columns">
+      <div class="driver-timeline">
+        ${steps.map((step, index) => `<div><b>${index + 1}</b><span>${escapeHtml(step)}</span></div>`).join("")}
+        ${itineraryDetail("Piloto asignado", item.driverName || "Por asignar")}
+        ${itineraryDetail("Vehículo asignado", item.vehicleName || "Por asignar")}
+        ${itineraryDetail("Cliente / contacto", `${item.clientName}${item.clientNit ? ` · NIT ${item.clientNit}` : ""} · ${item.clientPhone || "Sin teléfono"}`)}
+      </div>
+      ${vehicleDocumentCard(item, ["Recorrido del día", ...steps])}
+    </section>
+  `;
+
+  openPremiumDocument(
+    item.number,
+    isDriver ? "driver" : "client",
+    isDriver ? driverContent : clientContent,
+  );
+}
+
+function itineraryDetail(label, value) {
+  return `<div class="itinerary-detail"><i></i><div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Por definir")}</strong></div></div>`;
+}
+
+function vehicleDocumentCard(item, features) {
+  return `
+    <aside class="vehicle-card">
+      <span class="vehicle-card-label">Vehículo asignado</span>
+      <h2>${escapeHtml(item.vehicleName || "Mercedes Benz Sprinter")}</h2>
+      <div class="vehicle-silhouette">MERCEDES<br>BENZ</div>
+      <div class="vehicle-features">
+        ${features.map((feature, index) => `<div><b>${String(index + 1).padStart(2, "0")}</b><span>${escapeHtml(feature)}</span></div>`).join("")}
+      </div>
+    </aside>
+  `;
+}
+
+function quoteDocumentStyles() {
+  return `
+    .sheet-quote{position:relative;width:1023px;height:1537px;min-height:1537px;background:#fff;color:#080d17;font-family:Arial,sans-serif;box-shadow:0 0 30px #777;overflow:hidden}
+    .quote-poster-content{position:absolute;inset:0;background:#fff;font-family:Arial,sans-serif}
+    .quote-template-bg{position:absolute;inset:0;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
+    .quote-poster-content>*:not(.quote-template-bg){z-index:2}
+    .poster-client-name{position:absolute;left:45px;top:662px;width:545px;overflow:hidden;color:#bd8123;font-size:48px;font-weight:900;letter-spacing:.025em;line-height:1.08;text-transform:uppercase;white-space:nowrap;text-overflow:ellipsis}
+    .poster-dynamic-value{position:absolute;display:flex;align-items:flex-start;justify-content:center;color:#111;font-size:20px;font-weight:500;line-height:1.2;text-align:center;text-wrap:balance}
+    .poster-start-date{left:104px;top:817px;width:156px;height:94px}.poster-start-time{left:104px;top:956px;width:156px;height:45px;align-items:center}
+    .poster-origin{left:282px;top:852px;width:188px;height:97px}.poster-destination{left:493px;top:852px;width:155px;height:94px}
+    .poster-end-date{left:696px;top:846px;width:138px;height:78px}.poster-end-date>span,.poster-return-time>span{display:inline-block;width:max-content;max-width:100%;border-bottom:2px solid #d9ad57;padding:0 5px 7px}.poster-return-time{left:696px;top:949px;width:138px;height:68px}
+    .poster-passengers{left:902px;top:842px;width:106px;height:82px}
+    .poster-service-value{position:absolute;left:116px;top:1047px;width:866px;max-height:100px;overflow:hidden;color:#111;font-size:17px;font-weight:500;line-height:1.18}
+    .poster-service-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start;margin-bottom:4px}.poster-service-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.poster-service-row strong{font-size:16px;white-space:nowrap}.poster-service-value small{display:block;margin-top:4px;color:#555;font-size:14px;line-height:1.15}.poster-service-value-compact{font-size:14px;line-height:1.08}.poster-service-value-compact .poster-service-row{margin-bottom:2px}.poster-service-value-compact .poster-service-row strong{font-size:13px}
+    .poster-service-value-many{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22px;row-gap:3px;font-size:12px;line-height:1.05}.poster-service-value-many .poster-service-row{gap:8px;margin:0}.poster-service-value-many .poster-service-row strong{font-size:11px}.poster-service-value-many .poster-service-notes{grid-column:1/-1;font-size:11px}
+    .poster-regular-price,.poster-special-price-value{position:absolute;top:1200px;display:flex;align-items:center;color:#dfa938;font-size:46px;font-weight:900;line-height:1;white-space:nowrap}
+    .poster-regular-price{left:58px;width:255px}.poster-special-price-value{left:393px;width:315px;justify-content:center;font-size:58px}
+    .poster-tax-status{position:absolute;left:731px;top:1165px;width:270px;height:94px;display:flex;align-items:center;justify-content:center;background:#02050d;color:#fff;font-size:30px;font-weight:900;line-height:1.12;text-align:center;text-transform:uppercase}
+    .poster-vehicle-value{position:absolute;left:197px;top:1301px;height:119px;display:inline-grid;grid-template-columns:58px minmax(0,max-content);gap:10px;align-items:center;color:#111;text-transform:uppercase}
+    .poster-vehicle-value>b{color:#bd8123;font-size:65px;line-height:1;text-align:center}.poster-vehicle-copy{max-width:132px;border-right:2px solid #d9ad57;padding-right:12px}.poster-vehicle-value strong,.poster-vehicle-value span{display:block}.poster-vehicle-value strong{font-size:16px;font-weight:900;line-height:1.04}.poster-vehicle-value span{margin-top:5px;font-size:13px;font-weight:800}
+    .poster-feature-grid{position:absolute;z-index:3;display:grid;grid-template-columns:repeat(var(--feature-count),minmax(0,1fr));color:#bc7b19;text-transform:uppercase}
+    .poster-vehicle-features{left:412px;top:1323px;width:594px;height:94px}
+    .poster-included-features{left:25px;top:1455px;width:973px;height:64px}
+    .poster-feature-item{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #e1bc79;padding:1px 5px;text-align:center}
+    .poster-feature-item:first-child{border-left:0}.poster-feature-icon{display:block;width:42px;height:42px;overflow:visible;fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+    .poster-feature-item span{display:block;margin-top:3px;color:#171717;font-size:10px;font-weight:900;line-height:1.05;text-wrap:balance}
+    .poster-vehicle-features.poster-feature-count-5 .poster-feature-icon,.poster-vehicle-features.poster-feature-count-6 .poster-feature-icon{width:36px;height:36px}.poster-vehicle-features.poster-feature-count-5 .poster-feature-item span,.poster-vehicle-features.poster-feature-count-6 .poster-feature-item span{font-size:8.5px}
+    .poster-vehicle-features.poster-feature-count-7 .poster-feature-icon,.poster-vehicle-features.poster-feature-count-8 .poster-feature-icon{width:30px;height:30px;stroke-width:3}.poster-vehicle-features.poster-feature-count-7 .poster-feature-item span,.poster-vehicle-features.poster-feature-count-8 .poster-feature-item span{font-size:7.5px;line-height:1}
+    .poster-included-features .poster-feature-icon{width:36px;height:36px}.poster-included-features .poster-feature-item span{font-size:10px}
+  `;
+}
+
+function openPremiumDocument(title, type, content) {
+  const hero = {
+    client: "client-itinerary-hero.png",
+    driver: "driver-itinerary-hero.png",
+  }[type];
+  const origin = `${window.location.origin}${APP_BASE_PATH}`;
+  const sheetHtml =
+    type === "quote"
+      ? `<main class="sheet sheet-quote">${content}</main>`
+      : `<main class="sheet sheet-${type}"><header class="hero"><img src="${origin}/assets/${hero}" alt=""></header><div class="document-content">${content}</div><footer class="document-footer">Viaja con <b>comodidad, exclusividad y seguridad.</b></footer></main>`;
+  const documentHtml = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
+    @page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;background:#d8d2c8;color:#0a101b;font-family:Arial,sans-serif}.sheet{width:210mm;min-height:297mm;margin:0 auto;background:#f8f3ea;overflow:hidden;box-shadow:0 0 30px #777}.hero{height:76mm;overflow:hidden;border-bottom:2mm solid #d3a63d}.hero img{display:block;width:100%;height:100%;object-fit:cover;object-position:center top}.document-content{padding:8mm 8mm 0}.document-title p{margin:0;color:#060b17;font-size:11mm;font-weight:800;letter-spacing:.02em;text-transform:uppercase}.document-title h1{margin:0;color:#a9761d;font-size:6.2mm;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.document-title>span,.itinerary-title>span{display:block;margin-top:2mm;color:#75664d;font-size:2.5mm;letter-spacing:.08em;text-transform:uppercase}.quote-facts{display:grid;grid-template-columns:1.1fr 1.2fr 1.2fr 1.2fr 1fr;gap:0;margin-top:6mm;border:1px solid #d3a63d;border-radius:5mm;background:#fff;overflow:hidden}.document-fact{min-height:31mm;padding:5mm 3.5mm;border-right:1px solid #dec58e}.document-fact:last-child{border:0}.document-fact span,.document-fact strong,.document-fact small{display:block}.document-fact span{color:#8b6827;font-size:2.4mm;font-weight:800;text-transform:uppercase}.document-fact strong{margin-top:2.2mm;font-size:3.3mm;line-height:1.35}.document-fact small{margin-top:1.5mm;color:#5f6466;font-size:2.7mm}.price-band{display:flex;align-items:center;justify-content:space-between;margin-top:5mm;border-radius:5mm;background:#030a19;color:white;padding:5mm 8mm}.price-band span{display:block;color:#d6aa4e;font-size:2.5mm;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.price-band strong{display:block;margin-top:1mm;color:#e0b454;font-family:Georgia,serif;font-size:8mm}.price-meta{display:flex;gap:6mm}.price-meta span{color:#fff;font-size:2.5mm;letter-spacing:0}.include-section{margin-top:5mm;border:1px solid #d3a63d;border-radius:5mm;background:#fff;padding:5mm}.include-section h2{width:42mm;margin:-8mm auto 4mm;border-radius:0 0 4mm 4mm;background:linear-gradient(90deg,#b67d1d,#efc96f,#b67d1d);padding:2mm;color:#111;text-align:center;font-size:4mm;letter-spacing:.12em;text-transform:uppercase}.amenity-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3mm}.amenity{min-height:17mm;border-right:1px dotted #d3a63d;text-align:center}.amenity:nth-child(5n){border:0}.amenity b{display:grid;place-items:center;width:8mm;height:8mm;margin:0 auto 2mm;border-radius:50%;background:#050c1a;color:#e0b454;font-size:2.4mm}.amenity span{font-size:2.4mm;font-weight:700;line-height:1.25;text-transform:uppercase}.document-notes{margin-top:4mm;border-left:1.5mm solid #d3a63d;background:#efe6d7;padding:3mm 4mm}.document-notes strong{color:#8b6827;font-size:2.5mm;text-transform:uppercase}.document-notes p{margin:1mm 0 0;font-size:2.5mm;line-height:1.4}.itinerary-title{margin-top:-1mm;text-align:center}.itinerary-title h1{margin:0;color:#8c641e;font-family:Georgia,serif;font-size:9mm;font-weight:500;letter-spacing:.07em;text-transform:uppercase}.itinerary-columns{display:grid;grid-template-columns:1.5fr .9fr;gap:7mm;margin-top:5mm}.detail-list{display:grid}.itinerary-detail{display:grid;grid-template-columns:8mm 1fr;gap:3mm;align-items:center;min-height:17mm;border-bottom:1px solid #caa45e;padding:2mm 0}.itinerary-detail i{display:block;width:7mm;height:7mm;border:1px solid #d3a63d;border-radius:50%;background:#050c1a;box-shadow:inset 0 0 0 2mm #050c1a}.itinerary-detail span,.itinerary-detail strong{display:block}.itinerary-detail span{color:#90691f;font-size:2.7mm;font-weight:800;text-transform:uppercase}.itinerary-detail strong{margin-top:1mm;font-size:3.4mm;font-weight:500;line-height:1.25}.vehicle-card{min-height:152mm;border:1px solid #d3a63d;border-radius:5mm;background:linear-gradient(145deg,#020814,#070d16);color:white;padding:6mm}.vehicle-card-label{display:block;color:#dcae45;font-size:2.7mm;text-align:center;text-transform:uppercase}.vehicle-card h2{margin:2mm 0;color:#dcae45;font-family:Georgia,serif;font-size:4.2mm;text-align:center;text-transform:uppercase}.vehicle-silhouette{display:grid;place-items:center;height:39mm;margin:3mm 0;border-bottom:1px solid #b98b32;color:#2b3036;font-size:8mm;font-weight:900;letter-spacing:.1em;text-align:center}.vehicle-features{display:grid}.vehicle-features div,.driver-timeline>div{display:grid;grid-template-columns:8mm 1fr;gap:2mm;align-items:start;border-bottom:1px solid #815f22;padding:2.6mm 0}.vehicle-features b,.driver-timeline b{color:#dcae45;font-size:2.7mm}.vehicle-features span{font-size:2.7mm;line-height:1.3}.driver-timeline{display:grid;align-content:start}.driver-timeline>div{min-height:14mm;border-bottom:1px solid #caa45e}.driver-timeline>div span{font-size:3.2mm;font-weight:700;line-height:1.35}.driver-timeline>.itinerary-detail{grid-template-columns:8mm 1fr}.document-footer{display:flex;align-items:center;justify-content:center;min-height:14mm;margin-top:5mm;background:#020814;color:white;font-size:3mm;letter-spacing:.19em;text-transform:uppercase}.document-footer b{color:#dcae45;margin:0 1.5mm}.sheet-quote{position:relative;width:1024px;min-height:1536px;background:#fff;box-shadow:0 0 30px #777}.quote-template-bg{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;object-fit:cover}.quote-poster-content{position:absolute;inset:0;z-index:1;font-family:Arial,sans-serif}.poster-client{position:absolute;left:50px;top:612px;display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:end;width:462px;border-radius:12px;background:rgba(255,255,255,.9);padding:5px 10px;color:#060b17;text-transform:uppercase}.poster-client span{font-size:18px;font-weight:900}.poster-client strong{overflow:hidden;color:#b27c23;font-size:28px;font-weight:950;line-height:1;letter-spacing:.04em;text-overflow:ellipsis;white-space:nowrap}.poster-client small{grid-column:1/-1;margin-top:2px;color:#111;font-size:12px;font-weight:900;letter-spacing:.02em}.poster-value{position:absolute;display:grid;align-content:center;min-height:34px;border-radius:8px;background:rgba(255,255,255,.96);padding:3px 7px;color:#111;font-size:20px;font-weight:500;line-height:1.15;text-align:left}.poster-start-date{left:118px;top:724px;width:128px}.poster-start-time{left:118px;top:840px;width:126px}.poster-origin{left:342px;top:739px;width:120px;text-align:center}.poster-destination{left:516px;top:739px;width:120px;text-align:center}.poster-end-date{left:722px;top:724px;width:112px}.poster-return-time{left:724px;top:840px;width:114px}.poster-passengers{left:892px;top:724px;width:88px;font-size:18px;text-align:center}.poster-luggage{left:890px;top:831px;width:96px;font-size:17px;line-height:1.2}.poster-service-note{position:absolute;left:48px;top:914px;max-width:928px;border-radius:999px;background:rgba(255,255,255,.92);padding:7px 18px;color:#111;font-size:16px;font-weight:850;text-align:center;text-transform:uppercase}.poster-price-band{position:absolute;left:28px;top:965px;width:968px;height:144px;display:grid;grid-template-columns:1fr 2px 1fr;align-items:center;border-radius:22px;background:#030917;color:#fff;overflow:hidden}.poster-price-band div{display:grid;align-content:center;height:100%;padding:0 66px}.poster-price-band div:last-child{text-align:center}.poster-price-band i{display:block;width:2px;height:98px;background:#c49a42}.poster-price-band span{color:#fff;font-size:25px;font-weight:900;letter-spacing:.04em;line-height:1.1;text-transform:uppercase}.poster-price-band strong{display:block;margin-top:10px;color:#dcae45;font-size:49px;font-weight:950;line-height:1}.poster-tax-badge{position:absolute;left:306px;top:1124px;width:396px;min-height:46px;display:grid;place-items:center;border:1px solid #d7aa56;border-radius:7px;background:rgba(255,255,255,.96);padding:6px 12px;color:#111;text-align:center;text-transform:uppercase}.poster-tax-badge span{font-size:20px;font-weight:900;line-height:1.1}.poster-tax-badge small{display:block;margin-top:4px;color:#343434;font-size:10px;font-weight:850;line-height:1.2}.poster-vehicle-number{position:absolute;left:214px;top:1271px;min-width:44px;border-radius:8px;background:rgba(255,255,255,.92);color:#b17c22;font-size:58px;font-weight:950;line-height:.95;text-align:center}.poster-vehicle-name{position:absolute;left:215px;top:1334px;width:150px;border-radius:8px;background:rgba(255,255,255,.95);padding:2px 4px;color:#111;font-size:16px;font-weight:950;line-height:1.05;text-transform:uppercase}.poster-vehicle-tags{position:absolute;left:415px;top:1342px;display:flex;flex-wrap:wrap;gap:7px;max-width:520px}.poster-vehicle-tags span{border:1px solid #d7aa56;border-radius:999px;background:rgba(255,255,255,.96);padding:5px 8px;color:#111;font-size:12px;font-weight:900;text-transform:uppercase}.screen-actions{position:fixed;right:20px;bottom:20px;display:flex;gap:8px}.screen-actions button{border:0;border-radius:10px;background:#050c1a;color:white;padding:12px 16px;font-weight:700;cursor:pointer}.screen-actions button:first-child{background:#c79538;color:#111}@media print{html,body{background:white}.sheet{box-shadow:none}.screen-actions{display:none}}
+    ${type === "quote" ? quoteDocumentStyles() : ""}
+  </style></head><body>${sheetHtml}</body></html>`;
+
+  const parsedDocument = new DOMParser().parseFromString(documentHtml, "text/html");
+  const documentStyles = parsedDocument.querySelector("style").textContent;
+  const sheetMarkup = parsedDocument.querySelector(".sheet").outerHTML;
+
+  $("#modal-root").innerHTML = `
+    <style data-premium-document-styles>${documentStyles}</style>
+    <div class="modal-overlay" data-document-overlay>
+      <section class="document-preview-modal document-preview-${type}" role="dialog" aria-modal="true" aria-label="Vista previa ${escapeHtml(title)}">
+        <header class="document-preview-toolbar">
+          <strong>${escapeHtml(title)}</strong>
+          ${type === "quote" ? `<button class="button button-gold" data-download-document-image="png">Descargar PNG</button>` : ""}
+          <button class="button button-secondary" data-print-document>Imprimir / Guardar PDF</button>
+          <button class="button button-secondary" data-close-document>Cerrar</button>
+        </header>
+        <div class="document-preview-scroll">${sheetMarkup}</div>
+      </section>
+    </div>
+  `;
+  $("[data-print-document]").addEventListener("click", () => {
+    document.body.classList.add("printing-document");
+    window.print();
+    setTimeout(() => document.body.classList.remove("printing-document"), 200);
+  });
+  $$("[data-download-document-image]").forEach((button) => {
+    button.addEventListener("click", () => downloadDocumentImage(title, button.dataset.downloadDocumentImage));
+  });
+  $("[data-close-document]").addEventListener("click", () => {
+    document.body.classList.remove("printing-document");
+    closeModal();
+  });
+  $("[data-document-overlay]").addEventListener("click", (event) => {
+    if (event.target === event.currentTarget) closeModal();
+  });
+}
+
+function safeFileName(value, extension) {
+  const base = String(value || "Luxury-Travel")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 90);
+  return `${base || "Luxury-Travel"}.${extension}`;
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(new Error("No fue posible preparar la imagen.")));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function inlineImages(root) {
+  const images = [...root.querySelectorAll("img")];
+  await Promise.all(
+    images.map(async (image) => {
+      const response = await fetch(image.src);
+      const blob = await response.blob();
+      image.src = await blobToDataUrl(blob);
+    }),
+  );
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", () => reject(new Error("No fue posible renderizar la cotización.")));
+    image.src = src;
+  });
+}
+
+async function downloadDocumentImage(title, format = "png") {
+  const sheet = $(".document-preview-scroll .sheet");
+  const style = $("[data-premium-document-styles]")?.textContent || "";
+  if (!sheet) return;
+  try {
+    const clone = sheet.cloneNode(true);
+    await inlineImages(clone);
+    const rect = sheet.getBoundingClientRect();
+    const width = Math.ceil(rect.width);
+    const height = Math.ceil(rect.height);
+    const scale = 2;
+    const serialized = new XMLSerializer().serializeToString(clone);
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <foreignObject width="100%" height="100%">
+          <div xmlns="http://www.w3.org/1999/xhtml">
+            <style>${style}.sheet{margin:0!important;box-shadow:none!important}</style>
+            ${serialized}
+          </div>
+        </foreignObject>
+      </svg>
+    `;
+    const image = await loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
+    const canvas = document.createElement("canvas");
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const extension = format === "jpeg" ? "jpg" : "png";
+    const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
+    const fileName = safeFileName(title, extension);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, mimeType, 0.94));
+    if (window.showSaveFilePicker && blob) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: "Imagen PNG", accept: { [mimeType]: [`.${extension}`] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    } else {
+      const link = document.createElement("a");
+      link.download = fileName;
+      link.href = blob ? URL.createObjectURL(blob) : canvas.toDataURL(mimeType, 0.94);
+      link.click();
+      if (blob) setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
+    toast(`Cotización descargada en ${format.toUpperCase()}.`);
+  } catch (error) {
+    toast(error.message, "error");
+  }
+}
+
+function openUserModal(user = {}) {
+  const isEdit = Boolean(user.id);
+  openModal(isEdit ? "Editar usuario" : "Nuevo usuario", `
+    <form id="user-form">
+      <div class="form-grid">
+        <label>Nombre completo<input name="name" value="${escapeHtml(user.name)}" required /></label>
+        <label>Correo electrónico<input type="email" name="email" value="${escapeHtml(user.email)}" required /></label>
+        <label>Teléfono<input name="phone" value="${escapeHtml(user.phone)}" /></label>
+        <label>Rol<select name="role">${["administrador", "vendedor", "piloto"].map((role) => `<option ${user.role === role ? "selected" : ""}>${role}</option>`).join("")}</select></label>
+        <label class="full">${isEdit ? "Nueva contraseña (opcional)" : "Contraseña"}<input type="password" name="password" ${isEdit ? "" : "required"} minlength="8" /></label>
+        ${isEdit ? `<label><span><input type="checkbox" name="active" ${user.active ? "checked" : ""} /> Usuario activo</span></label>` : ""}
+      </div>
+      <p class="form-error" data-form-error></p>
+      <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit">Guardar usuario</button></div>
+    </form>
+  `);
+  $("[data-close-form]").addEventListener("click", closeModal);
+  $("#user-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const body = Object.fromEntries(new FormData(form));
+    if (isEdit) body.active = form.elements.active.checked;
+    try {
+      await api(`/api/users${isEdit ? `/${user.id}` : ""}`, {
+        method: isEdit ? "PUT" : "POST",
+        body: JSON.stringify(body),
+      });
+      toast("Usuario guardado.");
+      closeModal();
+      await navigate("settings");
+    } catch (error) {
+      $("[data-form-error]", form).textContent = error.message;
+    }
+  });
+}
+
+async function deleteRecord(collection, id) {
+  const labels = {
+    clients: "este cliente",
+    vehicles: "este vehículo",
+    drivers: "este piloto",
+    quotes: "esta cotización",
+    itineraries: "este itinerario",
+  };
+  if (!window.confirm(`¿Desea eliminar ${labels[collection] || "este registro"}? Esta acción no se puede deshacer.`)) return;
+  try {
+    await api(`/api/${collection}/${id}`, { method: "DELETE" });
+    toast("Registro eliminado.");
+    await navigate(state.module);
+  } catch (error) {
+    toast(error.message, "error");
+  }
+}
+
+async function saveRates(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  try {
+    await api("/api/rates", {
+      method: "PUT",
+      body: JSON.stringify(Object.fromEntries(new FormData(form))),
+    });
+    toast("Tarifas actualizadas.");
+    await navigate("rates");
+  } catch (error) {
+    toast(error.message, "error");
+  }
+}
+
+async function saveSettings(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  try {
+    await api("/api/settings", {
+      method: "PUT",
+      body: JSON.stringify(Object.fromEntries(new FormData(form))),
+    });
+    toast("Configuración guardada.");
+    await navigate("settings");
+  } catch (error) {
+    toast(error.message, "error");
+  }
+}
+
+function openSidebar() {
+  $("#app-shell").classList.toggle("sidebar-collapsed");
+  const isCollapsed = $("#app-shell").classList.contains("sidebar-collapsed");
+  $("#menu-button").setAttribute("aria-expanded", String(!isCollapsed));
+  if (window.matchMedia("(max-width: 920px)").matches) {
+    if (isCollapsed) {
+      $("#sidebar").classList.remove("open");
+      $("#sidebar-backdrop").classList.remove("open");
+    } else {
+      $("#sidebar").classList.add("open");
+      $("#sidebar-backdrop").classList.add("open");
+    }
+  }
+}
+
+function closeSidebar() {
+  if (window.matchMedia("(max-width: 920px)").matches) {
+    $("#app-shell").classList.add("sidebar-collapsed");
+    $("#menu-button").setAttribute("aria-expanded", "false");
+  }
+  $("#sidebar").classList.remove("open");
+  $("#sidebar-backdrop").classList.remove("open");
+}
+
+async function login(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const errorNode = $("#login-error");
+  errorNode.textContent = "";
+  const button = $('button[type="submit"]', form);
+  button.disabled = true;
+  try {
+    const payload = await api("/api/login", {
+      method: "POST",
+      body: JSON.stringify(Object.fromEntries(new FormData(form))),
+    });
+    state.user = payload.user;
+    state.permissions = payload.permissions;
+    await loadData();
+    showApp();
+  } catch (error) {
+    errorNode.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function logout() {
+  try {
+    await api("/api/logout", { method: "POST" });
+  } finally {
+    showLogin();
+  }
+}
+
+function setupPwa() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register(appPath("/sw.js?v=44"), { scope: appPath("/") })
+      .catch(() => {});
+  }
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    state.deferredInstall = event;
+    $("#install-button").hidden = false;
+  });
+  $("#install-button").addEventListener("click", async () => {
+    if (!state.deferredInstall) return;
+    state.deferredInstall.prompt();
+    await state.deferredInstall.userChoice;
+    state.deferredInstall = null;
+    $("#install-button").hidden = true;
+  });
+  const updateOnlineState = () => {
+    $("#offline-banner").hidden = navigator.onLine;
+  };
+  window.addEventListener("online", updateOnlineState);
+  window.addEventListener("offline", updateOnlineState);
+  updateOnlineState();
+}
+
+async function init() {
+  const liveHomeLink = $("#live-home-link");
+  if (liveHomeLink && APP_BASE_PATH) {
+    liveHomeLink.href = "/#inicio";
+  } else if (liveHomeLink && ["127.0.0.1", "localhost"].includes(window.location.hostname)) {
+    liveHomeLink.href = "/demo-live.html?v=44";
+  }
+  $("#today-label").textContent = new Intl.DateTimeFormat("es-GT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
+  $("#login-form").addEventListener("submit", login);
+  $("[data-toggle-password]").addEventListener("click", (event) => {
+    const input = $("#login-password");
+    input.type = input.type === "password" ? "text" : "password";
+    event.currentTarget.textContent = input.type === "password" ? "Ver" : "Ocultar";
+  });
+  $("#logout-button").addEventListener("click", logout);
+  $("#menu-button").addEventListener("click", openSidebar);
+  $("#sidebar-backdrop").addEventListener("click", closeSidebar);
+  $("#main-nav").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-module]");
+    if (button) navigate(button.dataset.module);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeModal();
+      closeSidebar();
+    }
+  });
+  setupPwa();
+
+  try {
+    const session = await api("/api/session");
+    state.user = session.user;
+    state.permissions = session.permissions;
+    await loadData();
+    showApp();
+  } catch {
+    showLogin();
+  }
+}
+
+init();

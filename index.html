@@ -6,8 +6,8 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260811-03" />
-    <script src="app.js?v=20260810-01" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260814-01" />
+    <script src="app.js?v=20260814-01" defer></script>
     <script src="equipment.js?v=20260812-01" defer></script>
   </head>
   <body>
@@ -66,6 +66,38 @@
           <button type="button" data-page-link="requerimiento-equipo">Requerimiento de equipo</button>
           <button type="button" data-page-link="contabilidad-equipo">Contabilidad de equipo</button>
         </nav>
+
+        <div class="division-heading"><span>Divisiones</span></div>
+        <section class="division-card" aria-label="Luxury Travel">
+          <button
+            id="luxuryDivisionToggle"
+            class="division-toggle"
+            type="button"
+            aria-expanded="true"
+            aria-controls="luxuryDivisionLinks"
+          >
+            <img src="assets/logo-luxury-travel.png" alt="" />
+            <span>
+              <strong>Luxury Travel</strong>
+              <small>Transporte ejecutivo de lujo</small>
+            </span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>
+          </button>
+          <div id="luxuryDivisionLinks" class="division-links">
+            <a href="/luxury/?module=dashboard">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z" />
+              </svg>
+              <span>Resumen</span>
+            </a>
+            <a href="/luxury/?module=quotes">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 3h9l4 4v14H6V3Zm8 0v5h5M9 13h7M9 17h5" />
+              </svg>
+              <span>Cotizador</span>
+            </a>
+          </div>
+        </section>
       </aside>
 
       <section id="inicioPage" class="site-page no-print" data-page="inicio">

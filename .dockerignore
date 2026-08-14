@@ -8,3 +8,7 @@ node_modules
 *.zip
 bin
 packaging
+luxury/data
+luxury/backups
+luxury/public/demo-live.*
+luxury/public/assets/logo-live-productions.jpeg

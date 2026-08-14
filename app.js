@@ -513,6 +513,8 @@ const elements = {
   menuBackdrop: document.querySelector("#menuBackdrop"),
   siteSideMenu: document.querySelector("#siteSideMenu"),
   siteMenuButtons: [...document.querySelectorAll("[data-page-link]")],
+  luxuryDivisionToggle: document.querySelector("#luxuryDivisionToggle"),
+  luxuryDivisionLinks: document.querySelector("#luxuryDivisionLinks"),
   sitePages: [...document.querySelectorAll("[data-page]")],
   requirementCollaboratorName: document.querySelector("#requirementCollaboratorName"),
   requirementCollaboratorPhone: document.querySelector("#requirementCollaboratorPhone"),
@@ -3020,6 +3022,17 @@ function setMenuOpen(isOpen) {
 function toggleMenu() {
   const isOpen = elements.siteSideMenu?.classList.contains("is-open");
   setMenuOpen(!isOpen);
+}
+
+function setLuxuryDivisionOpen(isOpen) {
+  if (!elements.luxuryDivisionToggle || !elements.luxuryDivisionLinks) return;
+  elements.luxuryDivisionToggle.setAttribute("aria-expanded", String(isOpen));
+  elements.luxuryDivisionLinks.hidden = !isOpen;
+}
+
+function toggleLuxuryDivision() {
+  const isOpen = elements.luxuryDivisionToggle?.getAttribute("aria-expanded") === "true";
+  setLuxuryDivisionOpen(!isOpen);
 }
 
 function showLogin(message = "") {
@@ -5598,6 +5611,7 @@ function bindSiteEvents() {
   elements.logoutButton.addEventListener("click", logout);
   elements.menuToggleButton?.addEventListener("click", toggleMenu);
   elements.menuBackdrop?.addEventListener("click", () => setMenuOpen(false));
+  elements.luxuryDivisionToggle?.addEventListener("click", toggleLuxuryDivision);
   elements.siteMenuButtons.forEach((button) => {
     button.addEventListener("click", (event) => {
       event.preventDefault();

@@ -13,12 +13,15 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY package.json ./
-COPY index.html app.js styles.css equipment.js server.js README.md ./
+COPY index.html app.js styles.css equipment.js server.js platform-server.js README.md ./
 COPY assets ./assets
+COPY luxury/package.json luxury/server.js ./luxury/
+COPY luxury/lib ./luxury/lib
+COPY luxury/public ./luxury/public
 
-RUN mkdir -p /data/cotizaciones-generadas "/data/Cuadros de Equipo"
+RUN mkdir -p /data/cotizaciones-generadas "/data/Cuadros de Equipo" /data/luxury-travel
 
 EXPOSE 8787
 VOLUME ["/data"]
 
-CMD ["node", "--no-warnings", "server.js"]
+CMD ["node", "--no-warnings", "platform-server.js"]

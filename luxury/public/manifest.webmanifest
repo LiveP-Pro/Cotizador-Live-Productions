@@ -1,0 +1,19 @@
+{
+  "name": "Luxury Travel Manager",
+  "short_name": "Luxury Travel",
+  "description": "Cotizaciones, itinerarios y operación de Luxury Travel Guatemala.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f2ed",
+  "theme_color": "#10181b",
+  "lang": "es-GT",
+  "icons": [
+    {
+      "src": "assets/logo-luxury-travel.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
