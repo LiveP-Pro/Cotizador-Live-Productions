@@ -12324,40 +12324,7 @@ const pistaDeBaileServices = {
 
 const sundayFundayOperationalExtras = [];
 
-const equipmentServices = {
-  "dj-completo": {
-    name: "DJ COMPLETO",
-    source: "DJ COMPLETO",
-    audioOptions: djCompletoAudioOptions,
-    mainSections: djCompletoMainSections,
-    extras: djCompletoExtras
-  },
-  "saxofonic-completo": {
-    name: "SAXOFONIC COMPLETO",
-    source: "SAXOFONIC.pdf",
-    audioOptions: djCompletoAudioOptions,
-    mainSections: saxofonicCompletoMainSections,
-    extras: []
-  },
-  "saxofonic-con-audio": {
-    name: "SAXOFONIC CON AUDIO",
-    source: "SAXOFONIC CON AUDIO",
-    mainSections: saxofonicConAudioMainSections,
-    extras: []
-  },
-  ...sundayFundayServices,
-  ...novaloopsServices,
-  ...estuardoReynaServices,
-  ...djSheetServices,
-  ...saxofonicSheetServices,
-  ...pantallaLedServices,
-  ...estructuraEnLServices,
-  ...ceremoniaServices,
-  ...coctelServices,
-  ...tarimaServices,
-  ...cuadrilateroServices,
-  ...pistaDeBaileServices
-};
+const equipmentServices = {};
 
 const operationalFixedExtraIds = new Set([
   "extras-operativos",
@@ -12393,56 +12360,7 @@ function equipmentExtrasByIds(ids) {
   if (service) service.extras = equipmentExtrasByIds(operationalFixedExtraIds);
 });
 
-const equipmentServiceGroups = [
-  {
-    label: "SUNDAY FUNDAY",
-    serviceIds: sundayFundayServiceIds
-  },
-  {
-    label: "NOVALOOPS",
-    serviceIds: novaloopsServiceIds
-  },
-  {
-    label: "ESTUARDO REYNA",
-    serviceIds: estuardoReynaServiceIds
-  },
-  {
-    label: "DJ",
-    serviceIds: djSheetServiceIds
-  },
-  {
-    label: "SAXOFONIC",
-    serviceIds: saxofonicSheetServiceIds
-  },
-  {
-    label: "PANTALLA LED",
-    serviceIds: pantallaLedServiceIds
-  },
-  {
-    label: "ESTRUCTURA EN L",
-    serviceIds: estructuraEnLServiceIds
-  },
-  {
-    label: "CEREMONIA",
-    serviceIds: ceremoniaServiceIds
-  },
-  {
-    label: "COCTEL",
-    serviceIds: coctelServiceIds
-  },
-  {
-    label: "TARIMA",
-    serviceIds: tarimaServiceIds
-  },
-  {
-    label: "CUADRILATERO",
-    serviceIds: cuadrilateroServiceIds
-  },
-  {
-    label: "PISTA DE BAILE",
-    serviceIds: pistaDeBaileServiceIds
-  }
-];
+const equipmentServiceGroups = [];
 
 const equipmentState = {
   selectedServiceId: "",
@@ -14717,7 +14635,7 @@ const equipmentDefaultInventoryEntries = [
   ]
 ];
 
-const equipmentDefaultInventory = new Map(equipmentDefaultInventoryEntries);
+const equipmentDefaultInventory = new Map();
 const equipmentDefaultInventoryLookup = new Map();
 const equipmentInventoryAliases = {
   "bajo doble jbl 18 pasivo con cable power spicon": "bajo doble sub jbl 18 pasivo con cable power spicon",
@@ -14767,12 +14685,6 @@ const equipmentInventoryAliases = {
   "lasers pequenos con sus power spicon y case": "barras laser pequenas",
   "ip 2000 con fundas": "bocina ip 2000 con funda"
 };
-
-equipmentDefaultInventoryEntries.forEach(([key, value]) => {
-  const cleanKey = equipmentInventoryLookupKey(key);
-  if (key && !equipmentDefaultInventoryLookup.has(key)) equipmentDefaultInventoryLookup.set(key, value);
-  if (cleanKey && !equipmentDefaultInventoryLookup.has(cleanKey)) equipmentDefaultInventoryLookup.set(cleanKey, value);
-});
 
 function equipmentInventoryLookupKey(value) {
   return normalizeEquipmentKey(value)
@@ -15717,6 +15629,9 @@ async function openEquipmentEditableFile(event) {
 function initEquipmentModule() {
   const serviceSelect = equipmentQuery("#equipmentServiceSelect");
   if (!serviceSelect) return;
+  serviceSelect.replaceChildren();
+  serviceSelect.add(new Option("Seleccione servicios", "", true, false));
+  serviceSelect.options[0].disabled = true;
   serviceSelect.addEventListener("change", () => selectEquipmentService());
   document.querySelectorAll("[data-dj-audio-type]").forEach((button) => {
     button.addEventListener("click", () => {
