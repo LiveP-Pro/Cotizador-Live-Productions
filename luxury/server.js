@@ -607,7 +607,9 @@ async function serveStatic(req, res, pathname) {
 export async function createApp(options = {}) {
   await loadDotEnv();
   const dataFile = options.dataFile || process.env.DATA_FILE || join(ROOT, "data/luxury-travel.json");
-  const db = await new JsonDatabase(dataFile).init();
+  const mirrorFile = options.mirrorFile || process.env.DATA_MIRROR_FILE || "";
+  const backupDirectory = options.backupDirectory || process.env.DATA_BACKUP_DIR || "";
+  const db = await new JsonDatabase(dataFile, { mirrorFile, backupDirectory }).init();
   const production = String(process.env.NODE_ENV || "").toLowerCase() === "production";
   const administratorEmail = cleanString(
     process.env.LUXURY_ADMIN_EMAIL || "admin@luxurytravel.gt",

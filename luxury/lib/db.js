@@ -164,9 +164,12 @@ function seedDatabase() {
 }
 
 export class JsonDatabase {
-  constructor(filePath) {
+  constructor(filePath, options = {}) {
     this.filePath = resolve(filePath);
-    this.backupDirectory = join(dirname(this.filePath), "backups");
+    this.mirrorFilePath = options.mirrorFile ? resolve(options.mirrorFile) : "";
+    this.backupDirectory = options.backupDirectory
+      ? resolve(options.backupDirectory)
+      : join(dirname(this.filePath), "backups");
     this.data = null;
     this.writeQueue = Promise.resolve();
   }
@@ -174,10 +177,17 @@ export class JsonDatabase {
   async init() {
     await mkdir(dirname(this.filePath), { recursive: true });
     try {
-      this.data = JSON.parse(await readFile(this.filePath, "utf8"));
+      this.data = validateSnapshot(JSON.parse(await readFile(this.filePath, "utf8")));
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
-      this.data = seedDatabase();
+      if (this.mirrorFilePath) {
+        try {
+          this.data = validateSnapshot(JSON.parse(await readFile(this.mirrorFilePath, "utf8")));
+        } catch (mirrorError) {
+          if (mirrorError.code !== "ENOENT") throw mirrorError;
+        }
+      }
+      if (!this.data) this.data = seedDatabase();
       await this.persist();
     }
     await this.migrate();
@@ -342,10 +352,10 @@ export class JsonDatabase {
         if (error.code !== "ENOENT") throw error;
       }
     }
-    const temporary = `${backupPath}.tmp`;
+    const temporary = `${backupPath}.tmp-${process.pid}-${randomUUID()}`;
     const payload = JSON.stringify(this.data, null, 2);
     this.writeQueue = this.writeQueue.then(async () => {
-      await writeFile(temporary, payload, "utf8");
+      await writeFile(temporary, payload, { encoding: "utf8", mode: 0o600 });
       await rename(temporary, backupPath);
     });
     await this.writeQueue;
@@ -461,10 +471,16 @@ export class JsonDatabase {
 
   async persist() {
     const payload = JSON.stringify(this.data, null, 2);
-    const temporary = `${this.filePath}.tmp`;
     this.writeQueue = this.writeQueue.then(async () => {
-      await writeFile(temporary, payload, "utf8");
-      await rename(temporary, this.filePath);
+      const targets = [this.mirrorFilePath, this.filePath].filter(
+        (target, index, values) => target && values.indexOf(target) === index,
+      );
+      for (const target of targets) {
+        await mkdir(dirname(target), { recursive: true });
+        const temporary = `${target}.tmp-${process.pid}-${randomUUID()}`;
+        await writeFile(temporary, payload, { encoding: "utf8", mode: 0o600 });
+        await rename(temporary, target);
+      }
     });
     await this.writeQueue;
   }

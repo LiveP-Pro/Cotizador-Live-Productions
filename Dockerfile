@@ -19,9 +19,8 @@ COPY luxury/package.json luxury/server.js ./luxury/
 COPY luxury/lib ./luxury/lib
 COPY luxury/public ./luxury/public
 
-RUN mkdir -p /data/cotizaciones-generadas "/data/Cuadros de Equipo" /data/luxury-travel
+RUN mkdir -p /data/cotizaciones-generadas "/data/Cuadros de Equipo" /data/luxury-travel-backups
 
 EXPOSE 8787
-VOLUME ["/data"]
 
 CMD ["node", "--no-warnings", "platform-server.js"]

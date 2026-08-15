@@ -11,9 +11,12 @@ const externalHost = process.env.HOST || "0.0.0.0";
 const livePort = Number.parseInt(process.env.LIVE_INTERNAL_PORT || "8791", 10);
 const luxuryPort = Number.parseInt(process.env.LUXURY_INTERNAL_PORT || "8792", 10);
 const dataDir = path.resolve(process.env.COTIZADOR_DATA_DIR || path.join(rootDir, "data"));
-const luxuryDataDir = path.join(dataDir, "luxury-travel");
-const luxuryDataFile = path.join(luxuryDataDir, "luxury-travel.json");
-const luxuryBootstrapMarker = path.join(luxuryDataDir, ".bootstrap-complete.json");
+const luxuryDataFile = path.join(dataDir, "luxury-travel.json");
+const luxuryMirrorFile = path.join(dataDir, "luxury-travel-recovery.json");
+const luxuryBackupDir = path.join(dataDir, "luxury-travel-backups");
+const legacyLuxuryDataDir = path.join(dataDir, "luxury-travel");
+const legacyLuxuryDataFile = path.join(legacyLuxuryDataDir, "luxury-travel.json");
+const luxuryBootstrapMarker = path.join(dataDir, ".luxury-bootstrap-complete.json");
 const luxuryPrefix = "/luxury";
 const liveBackupPath = "/__live/backup";
 const bootstrapPath = "/__luxury/bootstrap";
@@ -28,9 +31,67 @@ let luxuryChild = null;
 let server = null;
 let shuttingDown = false;
 let bootstrapInProgress = false;
+let luxuryStorageState = null;
 
 fs.mkdirSync(dataDir, { recursive: true });
-fs.mkdirSync(luxuryDataDir, { recursive: true });
+fs.mkdirSync(luxuryBackupDir, { recursive: true });
+fs.mkdirSync(legacyLuxuryDataDir, { recursive: true });
+
+function atomicWrite(filePath, body) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const temporaryPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(temporaryPath, body, { mode: 0o600 });
+  fs.renameSync(temporaryPath, filePath);
+}
+
+function luxuryRecoveryCandidates() {
+  const candidates = [luxuryDataFile, luxuryMirrorFile, legacyLuxuryDataFile];
+  for (const backupDir of [luxuryBackupDir, path.join(legacyLuxuryDataDir, "backups")]) {
+    try {
+      for (const entry of fs.readdirSync(backupDir, { withFileTypes: true })) {
+        if (entry.isFile() && entry.name.endsWith(".json")) {
+          candidates.push(path.join(backupDir, entry.name));
+        }
+      }
+    } catch (error) {
+      if (error.code !== "ENOENT") console.warn(`No se pudo revisar ${backupDir}: ${error.message}`);
+    }
+  }
+  return [...new Set(candidates)]
+    .filter((candidate) => fs.existsSync(candidate))
+    .sort((first, second) => fs.statSync(second).mtimeMs - fs.statSync(first).mtimeMs);
+}
+
+function prepareLuxuryStorage() {
+  if (luxuryStorageState?.initialized && fs.existsSync(luxuryDataFile)) {
+    return luxuryStorageState;
+  }
+
+  for (const candidate of luxuryRecoveryCandidates()) {
+    try {
+      const snapshot = JSON.parse(fs.readFileSync(candidate, "utf8"));
+      const counts = validateLuxurySnapshot(snapshot);
+      const payload = JSON.stringify(snapshot, null, 2);
+      if (candidate !== luxuryDataFile) atomicWrite(luxuryDataFile, payload);
+      if (candidate !== luxuryMirrorFile) atomicWrite(luxuryMirrorFile, payload);
+      atomicWrite(
+        luxuryBootstrapMarker,
+        JSON.stringify({ recoveredAt: new Date().toISOString(), source: path.basename(candidate), counts }, null, 2),
+      );
+      luxuryStorageState = { initialized: true, source: candidate, counts };
+      return luxuryStorageState;
+    } catch (error) {
+      console.warn(`Se descartó un respaldo inválido de Luxury Travel (${candidate}): ${error.message}`);
+    }
+  }
+
+  luxuryStorageState = { initialized: false, source: "", counts: null };
+  return luxuryStorageState;
+}
+
+function isLuxuryInitialized() {
+  return prepareLuxuryStorage().initialized;
+}
 
 function childEnvironment(extra = {}) {
   return {
@@ -62,13 +123,15 @@ function startLive() {
 }
 
 function startLuxury() {
-  if (luxuryChild || !fs.existsSync(luxuryBootstrapMarker)) return;
+  if (luxuryChild || !isLuxuryInitialized()) return;
   luxuryChild = spawn(process.execPath, ["--no-warnings", "server.js"], {
     cwd: path.join(rootDir, "luxury"),
     env: childEnvironment({
       PORT: String(luxuryPort),
       NODE_ENV: "production",
       DATA_FILE: luxuryDataFile,
+      DATA_MIRROR_FILE: luxuryMirrorFile,
+      DATA_BACKUP_DIR: luxuryBackupDir,
       COOKIE_SECURE: String(process.env.COOKIE_SECURE || "true"),
       LUXURY_SESSION_COOKIE: "lt_luxury_session",
       LUXURY_ALLOW_HASHED_ADMIN: "true",
@@ -227,7 +290,7 @@ function validateLuxurySnapshot(snapshot) {
 }
 
 async function bootstrapLuxury(request, response) {
-  if (fs.existsSync(luxuryBootstrapMarker)) {
+  if (isLuxuryInitialized()) {
     sendJson(response, 409, { error: "Luxury Travel ya fue inicializado; el acceso de migración está cerrado." });
     return;
   }
@@ -250,14 +313,14 @@ async function bootstrapLuxury(request, response) {
 
     const snapshot = JSON.parse(body.toString("utf8"));
     const counts = validateLuxurySnapshot(snapshot);
-    const temporaryDataFile = `${luxuryDataFile}.tmp-${process.pid}`;
-    fs.writeFileSync(temporaryDataFile, JSON.stringify(snapshot, null, 2), { mode: 0o600 });
-    fs.renameSync(temporaryDataFile, luxuryDataFile);
-    fs.writeFileSync(
+    const payload = JSON.stringify(snapshot, null, 2);
+    atomicWrite(luxuryDataFile, payload);
+    atomicWrite(luxuryMirrorFile, payload);
+    atomicWrite(
       luxuryBootstrapMarker,
       JSON.stringify({ completedAt: new Date().toISOString(), counts }, null, 2),
-      { mode: 0o600 },
     );
+    luxuryStorageState = { initialized: true, source: luxuryDataFile, counts };
     startLuxury();
     sendJson(response, 201, {
       ok: true,
@@ -332,10 +395,13 @@ async function handleRequest(request, response) {
   const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
 
   if (url.pathname === bootstrapStatusPath && request.method === "GET") {
+    const storage = prepareLuxuryStorage();
     sendJson(response, 200, {
       live: Boolean(liveChild),
-      luxuryInitialized: fs.existsSync(luxuryBootstrapMarker),
+      luxuryInitialized: storage.initialized,
       luxuryRunning: Boolean(luxuryChild),
+      luxuryPrimary: fs.existsSync(luxuryDataFile),
+      luxuryRecovery: fs.existsSync(luxuryMirrorFile),
     });
     return;
   }
@@ -357,10 +423,11 @@ async function handleRequest(request, response) {
   }
 
   if (url.pathname.startsWith(`${luxuryPrefix}/`)) {
-    if (!fs.existsSync(luxuryBootstrapMarker)) {
+    if (!isLuxuryInitialized()) {
       sendJson(response, 503, { error: "Luxury Travel está pendiente de inicialización segura." });
       return;
     }
+    if (!luxuryChild) startLuxury();
     proxyRequest(request, response, luxuryPort, { stripPrefix: luxuryPrefix });
     return;
   }
@@ -381,7 +448,7 @@ server = http.createServer((request, response) => {
 server.listen(externalPort, externalHost, () => {
   console.log(`Plataforma Live Productions lista en http://${externalHost}:${externalPort}`);
   console.log(`Live Productions interno: 127.0.0.1:${livePort}`);
-  console.log(`Luxury Travel: ${fs.existsSync(luxuryBootstrapMarker) ? "inicializado" : "pendiente de migración"}`);
+  console.log(`Luxury Travel: ${isLuxuryInitialized() ? "inicializado" : "pendiente de migración"}`);
 });
 
 function shutdown(signal) {
