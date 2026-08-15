@@ -13,7 +13,7 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY package.json ./
-COPY index.html app.js styles.css equipment-catalog.js equipment.js server.js platform-server.js README.md ./
+COPY index.html app.js styles.css equipment-catalog.js equipment-inventory.js equipment.js server.js platform-server.js README.md ./
 COPY assets ./assets
 COPY luxury/package.json luxury/server.js ./luxury/
 COPY luxury/lib ./luxury/lib
