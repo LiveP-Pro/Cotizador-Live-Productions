@@ -4,6 +4,7 @@ const http = require("node:http");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { DatabaseSync, backup: backupDatabase } = require("node:sqlite");
+const { resolveLuxuryDataDir } = require("./luxury/lib/platform-storage.cjs");
 
 const rootDir = __dirname;
 const externalPort = Number.parseInt(process.env.PORT || "8787", 10);
@@ -11,12 +12,13 @@ const externalHost = process.env.HOST || "0.0.0.0";
 const livePort = Number.parseInt(process.env.LIVE_INTERNAL_PORT || "8791", 10);
 const luxuryPort = Number.parseInt(process.env.LUXURY_INTERNAL_PORT || "8792", 10);
 const dataDir = path.resolve(process.env.COTIZADOR_DATA_DIR || path.join(rootDir, "data"));
-const luxuryDataFile = path.join(dataDir, "luxury-travel.json");
-const luxuryMirrorFile = path.join(dataDir, "luxury-travel-recovery.json");
-const luxuryBackupDir = path.join(dataDir, "luxury-travel-backups");
-const legacyLuxuryDataDir = path.join(dataDir, "luxury-travel");
+const luxuryDataDir = resolveLuxuryDataDir(dataDir);
+const luxuryDataFile = path.join(luxuryDataDir, "luxury-travel.json");
+const luxuryMirrorFile = path.join(luxuryDataDir, "luxury-travel-recovery.json");
+const luxuryBackupDir = path.join(luxuryDataDir, "luxury-travel-backups");
+const legacyLuxuryDataDir = path.join(luxuryDataDir, "luxury-travel");
 const legacyLuxuryDataFile = path.join(legacyLuxuryDataDir, "luxury-travel.json");
-const luxuryBootstrapMarker = path.join(dataDir, ".luxury-bootstrap-complete.json");
+const luxuryBootstrapMarker = path.join(luxuryDataDir, ".luxury-bootstrap-complete.json");
 const luxuryPrefix = "/luxury";
 const liveBackupPath = "/__live/backup";
 const liveRestorePath = "/__live/restore";
@@ -36,6 +38,7 @@ let liveRestoreInProgress = false;
 let luxuryStorageState = null;
 
 fs.mkdirSync(dataDir, { recursive: true });
+fs.mkdirSync(luxuryDataDir, { recursive: true });
 fs.mkdirSync(luxuryBackupDir, { recursive: true });
 fs.mkdirSync(legacyLuxuryDataDir, { recursive: true });
 
