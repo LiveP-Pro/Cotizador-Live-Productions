@@ -1,5 +1,6 @@
-const equipmentServices = {};
-const equipmentServiceGroups = [];
+const equipmentCatalog = window.requerimientoEquipoCatalog || { services: {}, groups: [] };
+const equipmentServices = equipmentCatalog.services;
+const equipmentServiceGroups = equipmentCatalog.groups;
 
 const equipmentState = {
   selectedServiceId: "",
@@ -257,6 +258,24 @@ function updateNativeEquipmentServiceSelect() {
   const selectedIds = new Set(selectedEquipmentServiceIds());
   [...serviceSelect.options].forEach((option) => {
     option.selected = selectedIds.has(option.value);
+  });
+}
+
+function populateNativeEquipmentServiceSelect() {
+  const serviceSelect = equipmentQuery("#equipmentServiceSelect");
+  if (!serviceSelect) return;
+  serviceSelect.replaceChildren();
+  const placeholder = new Option("Seleccione servicios", "", true, false);
+  placeholder.disabled = true;
+  serviceSelect.add(placeholder);
+  equipmentServiceGroups.forEach((group) => {
+    const optionGroup = document.createElement("optgroup");
+    optionGroup.label = group.label;
+    group.serviceIds.forEach((serviceId) => {
+      const service = equipmentServices[serviceId];
+      if (service) optionGroup.append(new Option(service.name, serviceId, false, false));
+    });
+    if (optionGroup.children.length) serviceSelect.append(optionGroup);
   });
 }
 
@@ -2352,9 +2371,7 @@ async function openEquipmentEditableFile(event) {
 function initEquipmentModule() {
   const serviceSelect = equipmentQuery("#equipmentServiceSelect");
   if (!serviceSelect) return;
-  serviceSelect.replaceChildren();
-  serviceSelect.add(new Option("Seleccione servicios", "", true, false));
-  serviceSelect.options[0].disabled = true;
+  populateNativeEquipmentServiceSelect();
   serviceSelect.addEventListener("change", () => selectEquipmentService());
   document.querySelectorAll("[data-dj-audio-type]").forEach((button) => {
     button.addEventListener("click", () => {
