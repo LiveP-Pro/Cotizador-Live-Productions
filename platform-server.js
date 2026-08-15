@@ -19,6 +19,7 @@ const legacyLuxuryDataFile = path.join(legacyLuxuryDataDir, "luxury-travel.json"
 const luxuryBootstrapMarker = path.join(dataDir, ".luxury-bootstrap-complete.json");
 const luxuryPrefix = "/luxury";
 const liveBackupPath = "/__live/backup";
+const liveRestorePath = "/__live/restore";
 const bootstrapPath = "/__luxury/bootstrap";
 const bootstrapStatusPath = "/__luxury/status";
 const maxBootstrapBytes = 25 * 1024 * 1024;
@@ -31,6 +32,7 @@ let luxuryChild = null;
 let server = null;
 let shuttingDown = false;
 let bootstrapInProgress = false;
+let liveRestoreInProgress = false;
 let luxuryStorageState = null;
 
 fs.mkdirSync(dataDir, { recursive: true });
@@ -241,6 +243,170 @@ async function downloadLiveBackup(request, response) {
   stream.pipe(response);
 }
 
+const liveDatabaseTables = [
+  "app_state",
+  "quotes",
+  "requirement_collaborators",
+  "requirement_tasks",
+  "requirement_history",
+];
+const liveRestoreTables = ["app_state", "quotes"];
+const protectedRequirementTables = [
+  "requirement_collaborators",
+  "requirement_tasks",
+  "requirement_history",
+];
+
+function sqlIdentifier(value) {
+  return `"${String(value).replace(/"/g, '""')}"`;
+}
+
+function inspectLiveDatabase(database) {
+  const integrity = database.prepare("PRAGMA integrity_check").all();
+  if (integrity.length !== 1 || Object.values(integrity[0])[0] !== "ok") {
+    throw new Error("El respaldo SQLite no superó la comprobación de integridad.");
+  }
+
+  const availableTables = new Set(
+    database
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map((row) => row.name),
+  );
+  const counts = {};
+  const columns = {};
+  for (const table of liveDatabaseTables) {
+    if (!availableTables.has(table)) {
+      throw new Error(`El respaldo SQLite no contiene la tabla ${table}.`);
+    }
+    const identifier = sqlIdentifier(table);
+    counts[table] = Number(database.prepare(`SELECT COUNT(*) AS total FROM ${identifier}`).get().total);
+    columns[table] = database
+      .prepare(`PRAGMA table_info(${identifier})`)
+      .all()
+      .map((column) => column.name);
+  }
+  return { counts, columns };
+}
+
+function totalLiveRows(counts) {
+  return Object.values(counts).reduce((total, count) => total + Number(count || 0), 0);
+}
+
+async function restoreLiveBackup(request, response) {
+  if (!verifySignedRequest(request, liveRestorePath)) {
+    sendJson(response, 403, { error: "La firma de restauración no es válida." });
+    return;
+  }
+  if (liveRestoreInProgress) {
+    sendJson(response, 409, { error: "Ya hay una restauración de Live Productions en curso." });
+    return;
+  }
+
+  liveRestoreInProgress = true;
+  let source;
+  let target;
+  let temporaryPath = "";
+  try {
+    const body = await readRequestBody(request);
+    fs.mkdirSync(path.join(dataDir, "respaldo-cotizaciones"), { recursive: true });
+    temporaryPath = path.join(
+      dataDir,
+      "respaldo-cotizaciones",
+      `.live-restore-${process.pid}-${Date.now()}.sqlite`,
+    );
+    fs.writeFileSync(temporaryPath, body, { mode: 0o600 });
+
+    source = new DatabaseSync(temporaryPath, { readOnly: true });
+    const sourceInfo = inspectLiveDatabase(source);
+    if (protectedRequirementTables.some((table) => sourceInfo.counts[table] > 0)) {
+      const error = new Error(
+        "El respaldo contiene datos históricos de Requerimiento de Equipo y no puede importarse.",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+    if (!totalLiveRows(sourceInfo.counts)) {
+      const error = new Error("El respaldo de Live Productions está vacío.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const targetPath = path.join(dataDir, "cotizaciones.sqlite");
+    if (!fs.existsSync(targetPath)) {
+      const error = new Error("La base activa de Live Productions todavía no está disponible.");
+      error.statusCode = 503;
+      throw error;
+    }
+    target = new DatabaseSync(targetPath);
+    target.exec("PRAGMA busy_timeout = 10000");
+    const targetInfo = inspectLiveDatabase(target);
+    if (totalLiveRows(targetInfo.counts)) {
+      const error = new Error(
+        "La base activa de Live Productions ya contiene información; la restauración está cerrada.",
+      );
+      error.statusCode = 409;
+      throw error;
+    }
+    for (const table of liveDatabaseTables) {
+      if (JSON.stringify(sourceInfo.columns[table]) !== JSON.stringify(targetInfo.columns[table])) {
+        const error = new Error(`La estructura de la tabla ${table} no es compatible.`);
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupDirectory = path.join(dataDir, "respaldo-cotizaciones");
+    await backupDatabase(target, path.join(backupDirectory, `antes-restaurar-live-${stamp}.sqlite`));
+
+    target.exec("BEGIN IMMEDIATE");
+    try {
+      for (const table of liveRestoreTables) {
+        const columns = sourceInfo.columns[table];
+        if (!columns.length || !sourceInfo.counts[table]) continue;
+        const tableIdentifier = sqlIdentifier(table);
+        const columnList = columns.map(sqlIdentifier).join(", ");
+        const placeholders = columns.map(() => "?").join(", ");
+        const insert = target.prepare(
+          `INSERT INTO ${tableIdentifier} (${columnList}) VALUES (${placeholders})`,
+        );
+        for (const row of source.prepare(`SELECT ${columnList} FROM ${tableIdentifier}`).all()) {
+          insert.run(...columns.map((column) => row[column]));
+        }
+      }
+      target.exec("COMMIT");
+    } catch (error) {
+      target.exec("ROLLBACK");
+      throw error;
+    }
+
+    const restoredInfo = inspectLiveDatabase(target);
+    if (JSON.stringify(restoredInfo.counts) !== JSON.stringify(sourceInfo.counts)) {
+      throw new Error("La verificación posterior no coincide con el respaldo recibido.");
+    }
+    await backupDatabase(target, path.join(backupDirectory, `live-restaurado-${stamp}.sqlite`));
+    sendJson(response, 201, {
+      ok: true,
+      counts: restoredInfo.counts,
+      message: "Live Productions fue restaurado y el acceso de restauración quedó cerrado.",
+    });
+  } catch (error) {
+    sendJson(response, error.statusCode || 400, {
+      error: error.message || "No se pudo restaurar Live Productions.",
+    });
+  } finally {
+    try {
+      source?.close();
+    } catch {}
+    try {
+      target?.close();
+    } catch {}
+    if (temporaryPath) fs.rmSync(temporaryPath, { force: true });
+    liveRestoreInProgress = false;
+  }
+}
+
 function readRequestBody(request) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -251,7 +417,7 @@ function readRequestBody(request) {
       size += chunk.length;
       if (size > maxBootstrapBytes) {
         rejected = true;
-        const error = new Error("El respaldo de Luxury Travel supera el límite permitido.");
+        const error = new Error("El respaldo supera el límite permitido.");
         error.statusCode = 413;
         reject(error);
         return;
@@ -408,6 +574,11 @@ async function handleRequest(request, response) {
 
   if (url.pathname === liveBackupPath && request.method === "GET") {
     await downloadLiveBackup(request, response);
+    return;
+  }
+
+  if (url.pathname === liveRestorePath && request.method === "POST") {
+    await restoreLiveBackup(request, response);
     return;
   }
 
