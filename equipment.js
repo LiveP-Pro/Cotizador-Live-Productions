@@ -1,6 +1,10 @@
 const equipmentCatalog = window.requerimientoEquipoCatalog || { services: {}, groups: [] };
 const equipmentServices = equipmentCatalog.services;
 const equipmentServiceGroups = equipmentCatalog.groups;
+const equipmentInventoryCatalog = window.requerimientoEquipoInventory || { categories: [] };
+const equipmentInventorySourceCategories = Array.isArray(equipmentInventoryCatalog.categories)
+  ? equipmentInventoryCatalog.categories
+  : [];
 
 const equipmentState = {
   selectedServiceId: "",
@@ -811,27 +815,86 @@ function equipmentRowsSummary() {
   const groups = [];
   const groupsByKey = new Map();
   const rowsByEquipmentKey = new Map();
+  const inventoryRowsByEquipmentKey = new Map();
+  const itemRows = [];
   const events = activeEquipmentEvents();
+  const ensureGroup = (title, alwaysVisible = false) => {
+    const categoryTitle = String(title || "Equipo sin categoria").trim() || "Equipo sin categoria";
+    const categoryKey = normalizeEquipmentKey(categoryTitle) || `categoria-${groups.length + 1}`;
+    let group = groupsByKey.get(categoryKey);
+    if (!group) {
+      group = {
+        type: "category",
+        key: `category-${categoryKey}`,
+        title: categoryTitle,
+        rows: [],
+        alwaysVisible
+      };
+      groupsByKey.set(categoryKey, group);
+      groups.push(group);
+    } else if (alwaysVisible) {
+      group.alwaysVisible = true;
+    }
+    return group;
+  };
+
+  equipmentInventorySourceCategories.forEach((category) => {
+    const group = ensureGroup(category?.title, true);
+    (Array.isArray(category?.items) ? category.items : []).forEach((item) => {
+      const description = String(item?.description || "").trim();
+      const matchKey = normalizeEquipmentKey(description);
+      if (!matchKey) return;
+      const row = {
+        type: "item",
+        key: equipmentInventoryRowKey(item),
+        matchKey,
+        quantity: 0,
+        description,
+        eventQuantities: new Map(),
+        categoryKey: group.key,
+        categoryTitle: group.title,
+        inventorySourceItem: item
+      };
+      if (!inventoryRowsByEquipmentKey.has(matchKey)) inventoryRowsByEquipmentKey.set(matchKey, []);
+      inventoryRowsByEquipmentKey.get(matchKey).push(row);
+      itemRows.push(row);
+      group.rows.push(row);
+    });
+  });
   events.forEach((event) => {
     const sections = equipmentState.events.length ? sectionsForEquipmentEvent(event) : selectedEquipmentSections();
     sections.forEach((section) => {
       const categoryTitle = String(section.title || "Equipo sin categoria").trim() || "Equipo sin categoria";
-      const categoryKey = normalizeEquipmentKey(categoryTitle) || `categoria-${groups.length + 1}`;
-      let group = groupsByKey.get(categoryKey);
-      if (!group) {
-        group = {
-          type: "category",
-          key: `category-${categoryKey}`,
-          title: categoryTitle,
-          rows: []
-        };
-        groupsByKey.set(categoryKey, group);
-        groups.push(group);
-      }
+      const group = ensureGroup(categoryTitle);
       section.items.forEach((rawItem) => {
         const { quantity, description } = normalizeEquipmentItem(rawItem);
         const key = normalizeEquipmentKey(description);
         if (!key) return;
+        const perEventQuantity = Number(quantity) || 0;
+        const inventoryRows = inventoryRowsByEquipmentKey.get(key) || [];
+        if (inventoryRows.length) {
+          let remainingQuantity = perEventQuantity;
+          inventoryRows.forEach((inventoryRow) => {
+            if (remainingQuantity <= 0) return;
+            const currentEventQuantity = Number(inventoryRow.eventQuantities.get(event.id)) || 0;
+            const sourceCapacity = Math.max(0, equipmentInventoryNumber(inventoryValueFor(inventoryRow)));
+            const availableCapacity = Math.max(0, sourceCapacity - currentEventQuantity);
+            const allocatedQuantity = Math.min(remainingQuantity, availableCapacity);
+            if (allocatedQuantity <= 0) return;
+            inventoryRow.eventQuantities.set(event.id, currentEventQuantity + allocatedQuantity);
+            inventoryRow.quantity += allocatedQuantity;
+            remainingQuantity -= allocatedQuantity;
+          });
+          if (remainingQuantity > 0) {
+            const shortageRow = inventoryRows[inventoryRows.length - 1];
+            shortageRow.eventQuantities.set(
+              event.id,
+              (Number(shortageRow.eventQuantities.get(event.id)) || 0) + remainingQuantity
+            );
+            shortageRow.quantity += remainingQuantity;
+          }
+          return;
+        }
         let row = rowsByEquipmentKey.get(key);
         if (!row) {
           row = {
@@ -844,9 +907,9 @@ function equipmentRowsSummary() {
             categoryTitle: group.title
           };
           rowsByEquipmentKey.set(key, row);
+          itemRows.push(row);
           group.rows.push(row);
         }
-        const perEventQuantity = Number(quantity) || 0;
         row.eventQuantities.set(
           event.id,
           (Number(row.eventQuantities.get(event.id)) || 0) + perEventQuantity
@@ -859,7 +922,7 @@ function equipmentRowsSummary() {
     ? equipmentSummaryTransferSelectedEvents(events)
     : [];
   const canApplyTransfer = selectedTransferEvents.length >= 2;
-  rowsByEquipmentKey.forEach((row) => {
+  itemRows.forEach((row) => {
     const originalQuantity = Number(row.quantity) || 0;
     const adjustedQuantity = canApplyTransfer
       ? equipmentTransferAdjustedQuantity(row, events, selectedTransferEvents)
@@ -868,7 +931,7 @@ function equipmentRowsSummary() {
     row.quantity = Math.min(originalQuantity, adjustedQuantity);
     row.transferApplied = row.quantity < originalQuantity;
   });
-  return groups.flatMap((group) => group.rows.length ? [{
+  return groups.flatMap((group) => group.rows.length || group.alwaysVisible ? [{
     type: "category",
     key: group.key,
     title: group.title
@@ -1435,27 +1498,67 @@ function equipmentInventoryLookupKey(value) {
     .trim();
 }
 
+function equipmentInventorySourceValue(item) {
+  if (item && Object.prototype.hasOwnProperty.call(item, "value")) return item.value;
+  return item?.sourceQuantity ?? "";
+}
+
+function equipmentInventoryNumber(value) {
+  const clean = String(value ?? "").trim().replace(",", ".");
+  if (!/^-?\d+(?:\.\d+)?$/.test(clean)) return 0;
+  const number = Number(clean);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function equipmentInventoryIsExplicitZero(value) {
+  const clean = String(value ?? "").trim().replace(",", ".");
+  return Boolean(clean) && /^-?\d+(?:\.\d+)?$/.test(clean) && Number(clean) === 0;
+}
+
+function equipmentInventoryRowKey(item) {
+  const sourceRow = Number(item?.sourceRow) || "sin-fila";
+  const descriptionKey = equipmentInventoryLookupKey(item?.description) || "equipo";
+  return `inventario-${sourceRow}-${descriptionKey}`;
+}
+
+const equipmentInventoryItemsByLookupKey = new Map();
+equipmentInventorySourceCategories.forEach((category) => {
+  (Array.isArray(category?.items) ? category.items : []).forEach((item) => {
+    const rowKey = equipmentInventoryRowKey(item);
+    const lookupKey = equipmentInventoryLookupKey(item?.description);
+    const sourceValue = equipmentInventorySourceValue(item);
+    equipmentDefaultInventory.set(rowKey, sourceValue);
+    if (!lookupKey) return;
+    if (!equipmentInventoryItemsByLookupKey.has(lookupKey)) equipmentInventoryItemsByLookupKey.set(lookupKey, []);
+    equipmentInventoryItemsByLookupKey.get(lookupKey).push(item);
+  });
+});
+equipmentInventoryItemsByLookupKey.forEach((items, lookupKey) => {
+  if (items.length === 1) equipmentDefaultInventoryLookup.set(lookupKey, equipmentInventorySourceValue(items[0]));
+});
+
 function defaultInventoryValueFor(row) {
+  if (equipmentDefaultInventory.has(row?.key)) return equipmentDefaultInventory.get(row.key);
   const lookupKeys = [
     row?.key,
     equipmentInventoryLookupKey(row?.key),
     equipmentInventoryLookupKey(row?.description)
   ].filter(Boolean);
   for (const key of lookupKeys) {
-    if (equipmentDefaultInventoryLookup.has(key)) return Number(equipmentDefaultInventoryLookup.get(key)) || 0;
+    if (equipmentDefaultInventoryLookup.has(key)) return equipmentDefaultInventoryLookup.get(key);
   }
   for (const key of lookupKeys) {
     const aliasKey = equipmentInventoryAliases[key];
     if (!aliasKey) continue;
     const cleanAliasKey = equipmentInventoryLookupKey(aliasKey);
-    if (equipmentDefaultInventoryLookup.has(aliasKey)) return Number(equipmentDefaultInventoryLookup.get(aliasKey)) || 0;
-    if (equipmentDefaultInventoryLookup.has(cleanAliasKey)) return Number(equipmentDefaultInventoryLookup.get(cleanAliasKey)) || 0;
+    if (equipmentDefaultInventoryLookup.has(aliasKey)) return equipmentDefaultInventoryLookup.get(aliasKey);
+    if (equipmentDefaultInventoryLookup.has(cleanAliasKey)) return equipmentDefaultInventoryLookup.get(cleanAliasKey);
   }
   return 0;
 }
 
 function inventoryValueFor(row) {
-  if (equipmentState.inventory.has(row.key)) return Number(equipmentState.inventory.get(row.key)) || 0;
+  if (equipmentState.inventory.has(row.key)) return equipmentState.inventory.get(row.key);
   return defaultInventoryValueFor(row);
 }
 
@@ -1552,9 +1655,11 @@ function tableForEquipmentInventory(rows, editable = true) {
           </tr>`;
       }
       const inventory = inventoryValueFor(row);
+      const inventoryNumber = equipmentInventoryNumber(inventory);
       const required = Number(row.quantity) || 0;
-      const shortage = inventory - required;
+      const shortage = inventoryNumber - required;
       const needsRent = shortage < 0;
+      const zeroInventory = equipmentInventoryIsExplicitZero(inventory);
       const shortageClass = needsRent ? "equipment-shortage-cell" : "equipment-rest-ok";
       const transferApplied = Boolean(row.transferApplied);
       const actionLabel = needsRent ? (transferApplied ? "RENTA + TRASIEGO" : "RENTA") : transferApplied ? "TRASIEGO" : "";
@@ -1564,7 +1669,7 @@ function tableForEquipmentInventory(rows, editable = true) {
         .map((event) => `<td class="equipment-qty equipment-event-column">${escapeEquipmentHtml(row.eventQuantities.get(event.id) || 0)}</td>`)
         .join("");
       return `
-        <tr data-equipment-key="${escapeEquipmentHtml(row.key)}">
+        <tr class="${zeroInventory ? "equipment-inventory-zero-row" : ""}" data-equipment-key="${escapeEquipmentHtml(row.key)}">
           <td>${escapeEquipmentHtml(row.description)}</td>
           ${eventCells}
           <td class="equipment-qty equipment-required-total">
@@ -1574,7 +1679,7 @@ function tableForEquipmentInventory(rows, editable = true) {
           <td>
             ${
               editable
-                ? `<input class="equipment-inventory-input" type="number" min="0" step="1" value="${escapeEquipmentHtml(inventory)}" />`
+                ? `<input class="equipment-inventory-input" type="text" inputmode="decimal" value="${escapeEquipmentHtml(inventory)}" aria-label="Inventario físico de ${escapeEquipmentHtml(row.description)}" />`
                 : escapeEquipmentHtml(inventory)
             }
           </td>
@@ -1628,7 +1733,8 @@ function equipmentRentalRows() {
     .filter((row) => row.type !== "category")
     .map((row) => {
       const inventory = inventoryValueFor(row);
-      const missing = Math.max(0, row.quantity - inventory);
+      const inventoryNumber = equipmentInventoryNumber(inventory);
+      const missing = Math.max(0, row.quantity - inventoryNumber);
       const eventDetails = events
         .map((event) => {
           const quantity = Number(row.eventQuantities.get(event.id)) || 0;
@@ -1688,6 +1794,7 @@ function bindEquipmentInventoryInputs() {
       const inventoryInput = row.querySelector(".equipment-inventory-input");
       inventoryInput?.addEventListener("input", (event) => {
         equipmentState.inventory.set(key, event.target.value);
+        row.classList.toggle("equipment-inventory-zero-row", equipmentInventoryIsExplicitZero(event.target.value));
         renderEquipmentPdfPreview();
       });
       inventoryInput?.addEventListener("change", (event) => {
