@@ -9057,42 +9057,6 @@ window.requerimientoEquipoCatalog = {
               "value": "Grabadora de audio"
             }
           ]
-        },
-        "ip2000": {
-          "label": "AUDIO IP 2000",
-          "items": [
-            [
-              2,
-              "Bocina IP 2000 con funda"
-            ],
-            [
-              1,
-              "Grabadora de audio"
-            ]
-          ],
-          "source": "EQUIPO-DE-AUDIO.xlsx / DJ / DJ PRIVADO / Audio",
-          "sourceCells": [
-            {
-              "address": "E10",
-              "value": "Audio"
-            },
-            {
-              "address": "D11",
-              "value": 2
-            },
-            {
-              "address": "E11",
-              "value": "Bocina IP 2000 con funda"
-            },
-            {
-              "address": "D12",
-              "value": 1
-            },
-            {
-              "address": "E12",
-              "value": "Grabadora de audio"
-            }
-          ]
         }
       },
       "extras": []
@@ -9767,8 +9731,21 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "audio-dinamico",
           "title": "Audio",
+          "items": [
+            [
+              2,
+              "Bocina IP 2000 con funda"
+            ],
+            [
+              1,
+              "Grabadora de audio"
+            ]
+          ]
+        },
+        {
+          "id": "audio-dinamico",
+          "title": "Tipo de audio seleccionado",
           "audioVariant": true,
           "items": []
         },
@@ -10331,42 +10308,6 @@ window.requerimientoEquipoCatalog = {
             },
             {
               "address": "H7",
-              "value": "Grabadora de audio"
-            }
-          ]
-        },
-        "ip2000": {
-          "label": "AUDIO IP 2000",
-          "items": [
-            [
-              2,
-              "Bocina IP 2000 con funda"
-            ],
-            [
-              1,
-              "Grabadora de audio"
-            ]
-          ],
-          "source": "EQUIPO-DE-AUDIO.xlsx / DJ / DJ PRIVADO / Audio",
-          "sourceCells": [
-            {
-              "address": "E10",
-              "value": "Audio"
-            },
-            {
-              "address": "D11",
-              "value": 2
-            },
-            {
-              "address": "E11",
-              "value": "Bocina IP 2000 con funda"
-            },
-            {
-              "address": "D12",
-              "value": 1
-            },
-            {
-              "address": "E12",
               "value": "Grabadora de audio"
             }
           ]
