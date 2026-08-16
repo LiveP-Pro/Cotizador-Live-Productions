@@ -26,6 +26,7 @@ function assetUrl(fileName) {
 }
 
 const visibleModuleIds = new Set(["dashboard", "quotes"]);
+const accessibleModuleIds = new Set([...visibleModuleIds, "clients"]);
 
 const allModules = [
   { id: "dashboard", label: "Resumen", permission: "dashboard", icon: "dashboard" },
@@ -57,7 +58,7 @@ const pageInfo = {
   quotes: ["Comercial", "Cotizador"],
   clientItineraries: ["Documentos", "Itinerarios para cliente"],
   driverItineraries: ["Operación", "Itinerarios para piloto"],
-  clients: ["Directorio", "Base de datos de clientes"],
+  clients: ["Directorio", "Historial de clientes"],
   vehicles: ["Flota", "Vehículos"],
   drivers: ["Equipo", "Pilotos"],
   rates: ["Finanzas", "Tarifas"],
@@ -343,7 +344,12 @@ function renderNav() {
 }
 
 function canOpenModule(moduleId) {
-  return modules.some((item) => item.id === moduleId && state.permissions.includes(item.permission));
+  return allModules.some(
+    (item) =>
+      accessibleModuleIds.has(item.id) &&
+      item.id === moduleId &&
+      state.permissions.includes(item.permission),
+  );
 }
 
 function defaultModuleId() {
@@ -413,7 +419,12 @@ function renderDashboard() {
     </div>
     <section class="stats-grid">
       ${statCard("Cotizador", state.quotes.length, "file", "quotes")}
-      ${statCard("Clientes", state.clients.length, "users")}
+      ${statCard(
+        "Clientes",
+        state.clients.length,
+        "users",
+        state.permissions.includes("clients") ? "clients" : "",
+      )}
       ${statCard("Próximos servicios", upcoming.length, "route")}
       ${statCard("Ventas del mes", money(monthSales), "tag", "quotes")}
     </section>
@@ -560,7 +571,10 @@ function salesTable(quotes) {
 
 function renderDirectory(collection) {
   const config = directoryConfig(collection);
-  const records = state[collection];
+  const records =
+    collection === "clients"
+      ? [...state.clients].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+      : state[collection];
   $("#app-content").innerHTML = `
     <div class="page-actions">
       <p>${config.description}</p>
@@ -2985,7 +2999,7 @@ async function logout() {
 function setupPwa() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register(appPath("/sw.js?v=44"), { scope: appPath("/") })
+      .register(appPath("/sw.js?v=46"), { scope: appPath("/") })
       .catch(() => {});
   }
   window.addEventListener("beforeinstallprompt", (event) => {
