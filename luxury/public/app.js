@@ -1411,7 +1411,7 @@ function syncDestinationMode(form, { ensureCount = false } = {}) {
   });
 
   if (mode !== "multiple" || !ensureCount) return;
-  const requested = Math.max(2, Math.min(12, Number(form.elements.destinationCount?.value || 2)));
+  const requested = Math.max(2, Math.min(20, Math.round(Number(form.elements.destinationCount?.value || 2))));
   const current = serviceSelectionsWithDetailsFromForm(form);
   const next = current.slice(0, requested);
   while (next.length < requested) {
@@ -1563,12 +1563,16 @@ function serviceSelectionsWithDetailsFromForm(form) {
 function syncPrimaryServiceFields(form, selections) {
   const first = selections[0] || {};
   if (!selections.length) return;
+  const last = orderedQuoteServices({ serviceSelections: selections }).at(-1) || first;
+  const finalDate = latestQuoteServiceDate(selections) || first.returnDate || first.serviceDate;
   form.elements.serviceDate.value = first.serviceDate || form.elements.serviceDate.value || guatemalaDateValue();
-  form.elements.returnDate.value = first.returnDate || first.serviceDate || form.elements.returnDate.value || guatemalaDateValue();
+  form.elements.returnDate.value = selections.length > 1
+    ? finalDate || form.elements.returnDate.value || guatemalaDateValue()
+    : first.returnDate || first.serviceDate || form.elements.returnDate.value || guatemalaDateValue();
   form.elements.origin.value = first.origin || "";
   form.elements.destination.value = first.destinationAddress || first.destination || "";
   form.elements.departureTime.value = first.departureTime || form.elements.departureTime.value || "08:00";
-  form.elements.returnTime.value = first.returnTime || "";
+  form.elements.returnTime.value = selections.length > 1 ? last.returnTime || "" : first.returnTime || "";
   form.elements.hasLuggage.value = first.hasLuggage === false ? "false" : "true";
   form.elements.luggageDescription.value = first.hasLuggage === false ? "" : first.luggageDescription || "";
   form.elements.serviceStartDate.value = form.elements.serviceDate.value;
@@ -1681,7 +1685,7 @@ function openQuoteModal(quote = {}) {
   const initialDestinationMode = quote.destinationMode === "multiple" || (!quote.destinationMode && initialServiceSelections.length > 1)
     ? "multiple"
     : "single";
-  const initialDestinationCount = Math.max(2, Math.min(12, Number(quote.destinationCount || initialServiceSelections.length || 2)));
+  const initialDestinationCount = Math.max(2, Math.min(20, Math.round(Number(quote.destinationCount || initialServiceSelections.length || 2))));
   const initialPriceDisplayMode = quote.priceDisplayMode === "final" ? "final" : "detailed";
   openModal(
     isEdit ? `Editar ${quote.number}` : "Nueva cotización",
@@ -1704,9 +1708,8 @@ function openQuoteModal(quote = {}) {
                 </label>
               </div>
               <label class="destination-count-field" data-destination-count-wrap ${initialDestinationMode === "multiple" ? "" : "hidden"}>¿Cuántos destinos tendrá la ruta?
-                <select name="destinationCount">
-                  ${Array.from({ length: 11 }, (_, index) => index + 2).map((count) => `<option value="${count}" ${count === initialDestinationCount ? "selected" : ""}>${count} destinos</option>`).join("")}
-                </select>
+                <input type="number" name="destinationCount" value="${initialDestinationCount}" min="2" max="20" step="1" inputmode="numeric" required />
+                <small>Escriba la cantidad de destinos que necesita, de 2 a 20.</small>
               </label>
             </section>
             <section class="form-section" data-quote-step="vehicles">
@@ -1911,10 +1914,14 @@ function openQuoteModal(quote = {}) {
       if (!isEdit) saveQuoteDraft(form);
     });
   });
-  form.elements.destinationCount.addEventListener("change", () => {
+  const applyDestinationCount = () => {
+    const requested = Number(form.elements.destinationCount.value);
+    if (!Number.isInteger(requested) || requested < 2 || requested > 20) return;
     syncDestinationMode(form, { ensureCount: true });
     if (!isEdit) saveQuoteDraft(form);
-  });
+  };
+  form.elements.destinationCount.addEventListener("input", applyDestinationCount);
+  form.elements.destinationCount.addEventListener("change", applyDestinationCount);
   $$('input[name="priceDisplayMode"]', form).forEach((input) => {
     input.addEventListener("change", () => {
       syncPriceDisplayMode(form);
@@ -2037,7 +2044,7 @@ function quoteFormData(form) {
   form.elements.serviceSelectionsJson.value = body.serviceSelectionsJson;
   body.destinationMode = destinationModeValue(form);
   body.destinationCount = body.destinationMode === "multiple"
-    ? Math.max(2, Number(form.elements.destinationCount.value || serviceSelections.length || 2))
+    ? Math.max(2, Math.min(20, Math.round(Number(form.elements.destinationCount.value || serviceSelections.length || 2))))
     : Math.max(1, serviceSelections.length || 1);
   body.priceDisplayMode = form.elements.priceDisplayMode.value === "final" ? "final" : "detailed";
   body.finalManualPrice = Math.max(0, Number(form.elements.finalManualPrice.value || 0));
@@ -2541,69 +2548,101 @@ function posterShortText(value, fallback = "Pendiente") {
   return String(value || fallback).trim();
 }
 
+function orderedQuoteServices(quote) {
+  return [...quoteServiceSelections(quote)].sort((a, b) => {
+    const dateOrder = String(a.serviceDate || "9999-12-31").localeCompare(String(b.serviceDate || "9999-12-31"));
+    return dateOrder || Number(a.legNumber || 0) - Number(b.legNumber || 0);
+  });
+}
+
+function latestQuoteServiceDate(selections) {
+  return selections
+    .flatMap((item) => [item.serviceDate, item.returnDate])
+    .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")))
+    .sort()
+    .at(-1) || "";
+}
+
 function quotePosterPrimaryService(quote) {
-  const selections = quoteServiceSelections(quote);
+  const selections = orderedQuoteServices(quote);
   const first = selections[0] || {};
+  const last = selections.at(-1) || first;
+  const finalDate = selections.length > 1
+    ? latestQuoteServiceDate(selections)
+    : first.returnDate || first.serviceDate;
   return {
     serviceDate: first.serviceDate || quote.serviceStartDate || quote.serviceDate,
-    returnDate: first.returnDate || quoteEndDate(quote),
+    returnDate: finalDate || quoteEndDate(quote),
     origin: first.origin || quote.origin,
     destination: first.destinationAddress || quote.destination || first.destination,
     departureTime: first.departureTime || quote.departureTime,
-    returnTime: first.returnTime || quote.returnTime,
-    passengers: first.passengers || quote.passengers || 1,
+    returnTime: selections.length > 1 ? last.returnTime || quote.returnTime : first.returnTime || quote.returnTime,
+    passengers: quote.passengers || first.passengers || 1,
     luggageDescription: first.hasLuggage === false ? "No" : first.luggageDescription || quoteLuggageText(quote),
   };
 }
 
+function posterCompactDate(value) {
+  if (!value) return "Pendiente";
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+  return formatDate(value, { short: true });
+}
+
+function posterServiceDateRange(item) {
+  const start = item.serviceDate;
+  const end = item.returnDate && (!start || item.returnDate >= start) ? item.returnDate : start;
+  if (!start) return posterCompactDate(end);
+  if (!end || end === start) return posterCompactDate(start);
+  return `${posterCompactDate(start)} al ${posterCompactDate(end)}`;
+}
+
 function quotePosterServiceLines(quote) {
-  const selections = quoteServiceSelections(quote);
-  if (!selections.length) return [{ label: quoteServiceText(quote), amount: quoteSelectedFare(quote) }];
-  return [...selections].sort((a, b) => {
-    const dateOrder = String(a.serviceDate || "9999-12-31").localeCompare(String(b.serviceDate || "9999-12-31"));
-    return dateOrder || Number(a.legNumber || 0) - Number(b.legNumber || 0);
-  }).map((item, index) => ({
-    label: `${index + 1}. ${item.label || "Servicio"}${item.destination ? ` · ${item.destination}` : ""}`,
-    amount: quote.priceDisplayMode === "final" ? null : Number(item.amount || 0) * quoteVehicleCountForPrice(quote),
-  }));
+  const selections = orderedQuoteServices(quote);
+  if (!selections.length) return [{ label: `1. Destino 1 · ${quoteServiceText(quote)}`, amount: quoteSelectedFare(quote) }];
+  return selections.map((item, index) => {
+    const genericDestination = /^Destino \d+$/i.test(String(item.destination || "").trim());
+    const destination = genericDestination
+      ? item.destinationAddress || item.destination
+      : item.destination || item.destinationAddress;
+    return {
+      label: `${index + 1}. Destino ${index + 1} · ${item.label || "Servicio privado"}${destination ? ` · ${destination}` : ""} · ${posterServiceDateRange(item)}`,
+      amount: quote.priceDisplayMode === "final" ? null : Number(item.amount || 0) * quoteVehicleCountForPrice(quote),
+    };
+  });
 }
 
 function quotePosterServicesHtml(quote) {
   const lines = quotePosterServiceLines(quote);
-  return `
-    <div class="poster-service-value ${lines.length > 4 ? "poster-service-value-many" : lines.length > 3 ? "poster-service-value-compact" : ""}">
-      ${lines
-        .map(
-          (item) => `
-            <div class="poster-service-row">
-              <span>${escapeHtml(item.label)}</span>
-              ${item.amount === null ? "" : `<strong>${escapeHtml(posterMoney(item.amount))}</strong>`}
-            </div>
-          `,
-        )
-        .join("")}
-      ${quote.notes ? `<small class="poster-service-notes">${escapeHtml(quote.notes)}</small>` : ""}
+  const totals = quoteTaxBreakdown(quote);
+  const useColumns = lines.length > 5;
+  const midpoint = Math.ceil(lines.length / 2);
+  const columns = useColumns ? [lines.slice(0, midpoint), lines.slice(midpoint)] : [lines];
+  const row = (item) => `
+    <div class="poster-service-price-row">
+      <span>${escapeHtml(item.label)}</span>
+      ${item.amount === null ? "" : `<strong>${escapeHtml(posterMoney(item.amount))}</strong>`}
     </div>
   `;
-}
-
-function quotePosterPriceBandHtml(quote) {
-  const breakdown = quoteTaxBreakdown(quote);
-  const regular = quoteRegularPrice(quote);
-  const special = breakdown.total;
-  const taxPercent = Number(quote.totals?.taxPercent || 0);
   return `
-    <div class="poster-regular-price">${quote.priceDisplayMode === "final" ? "" : escapeHtml(posterMoney(regular))}</div>
-    <div class="poster-special-price-value">${escapeHtml(posterMoney(special))}</div>
-    ${taxPercent > 0 ? '<div class="poster-tax-status poster-tax-status-included">Precio incluye IVA</div>' : ""}
+    <section class="poster-service-price-box ${useColumns ? "poster-service-price-box-columns" : ""} ${lines.length > 12 ? "poster-service-price-box-dense" : ""}">
+      <header>
+        <span>Detalle del servicio</span>
+        <small>${lines.length} destino${lines.length === 1 ? "" : "s"}</small>
+      </header>
+      <div class="poster-service-price-columns">
+        ${columns.map((column) => `<div class="poster-service-price-list">${column.map(row).join("")}</div>`).join("")}
+      </div>
+      <footer>
+        <span>${escapeHtml(quoteTaxLabel(quote))}</span>
+        <strong>TOTAL: ${escapeHtml(posterMoney(totals.total))}</strong>
+      </footer>
+    </section>
   `;
 }
 
 function quotePosterContinuationHtml(quote) {
-  const selections = [...quoteServiceSelections(quote)].sort((a, b) => {
-    const dateOrder = String(a.serviceDate || "9999-12-31").localeCompare(String(b.serviceDate || "9999-12-31"));
-    return dateOrder || Number(a.legNumber || 0) - Number(b.legNumber || 0);
-  });
+  const selections = orderedQuoteServices(quote);
   const hasServiceNotes = selections.some((item) => item.notes);
   if (selections.length < 2 && !hasServiceNotes && !quote.notes) return "";
 
@@ -2851,7 +2890,6 @@ function downloadQuotePdf(id) {
         <div class="poster-dynamic-value poster-return-time"><span>${escapeHtml(pending(service.returnTime))}</span></div>
         <div class="poster-dynamic-value poster-passengers">${escapeHtml(`${service.passengers || 1} pasajeros`)}</div>
         ${quotePosterServicesHtml(quote)}
-        ${quotePosterPriceBandHtml(quote)}
         ${quotePosterVehicleHtml(quote)}
         ${quotePosterAmenitiesHtml(quote)}
       </div>
@@ -2999,13 +3037,12 @@ function quoteDocumentStyles() {
     .poster-start-date{left:104px;top:817px;width:156px;height:94px}.poster-start-time{left:104px;top:956px;width:156px;height:45px;align-items:center}
     .poster-origin{left:282px;top:852px;width:188px;height:97px}.poster-destination{left:493px;top:852px;width:155px;height:94px}
     .poster-end-date{left:696px;top:846px;width:138px;height:78px}.poster-end-date>span,.poster-return-time>span{display:inline-block;width:max-content;max-width:100%;border-bottom:2px solid #d9ad57;padding:0 5px 7px}.poster-return-time{left:696px;top:949px;width:138px;height:68px}
-    .poster-passengers{left:902px;top:842px;width:106px;height:82px}
-    .poster-service-value{position:absolute;left:116px;top:1047px;width:866px;max-height:100px;overflow:hidden;color:#111;font-size:17px;font-weight:500;line-height:1.18}
-    .poster-service-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start;margin-bottom:4px}.poster-service-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.poster-service-row strong{font-size:16px;white-space:nowrap}.poster-service-value small{display:block;margin-top:4px;color:#555;font-size:14px;line-height:1.15}.poster-service-value-compact{font-size:14px;line-height:1.08}.poster-service-value-compact .poster-service-row{margin-bottom:2px}.poster-service-value-compact .poster-service-row strong{font-size:13px}
-    .poster-service-value-many{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22px;row-gap:3px;font-size:12px;line-height:1.05}.poster-service-value-many .poster-service-row{gap:8px;margin:0}.poster-service-value-many .poster-service-row strong{font-size:11px}.poster-service-value-many .poster-service-notes{grid-column:1/-1;font-size:11px}
-    .poster-regular-price,.poster-special-price-value{position:absolute;top:1200px;display:flex;align-items:center;color:#dfa938;font-size:46px;font-weight:900;line-height:1;white-space:nowrap}
-    .poster-regular-price{left:58px;width:255px}.poster-special-price-value{left:393px;width:315px;justify-content:center;font-size:58px}
-    .poster-tax-status{position:absolute;left:731px;top:1165px;width:270px;height:94px;display:flex;align-items:center;justify-content:center;background:#02050d;color:#fff;font-size:30px;font-weight:900;line-height:1.12;text-align:center;text-transform:uppercase}
+    .poster-passengers{left:858px;top:842px;width:147px;height:82px;align-items:flex-start;justify-content:center;text-align:center}
+    .poster-service-price-box{position:absolute;left:16px;top:1020px;width:991px;height:254px;display:flex;flex-direction:column;border:2px solid #d1a044;border-radius:24px;background:linear-gradient(145deg,#02050c,#080d17);box-shadow:0 10px 25px rgba(0,0,0,.12);padding:14px 28px 12px;color:#fff;overflow:hidden}
+    .poster-service-price-box>header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid rgba(213,166,72,.62);padding-bottom:7px;color:#dfb24e;text-transform:uppercase}.poster-service-price-box>header span{font-size:16px;font-weight:900;letter-spacing:.12em}.poster-service-price-box>header small{font-size:11px;font-weight:850;letter-spacing:.08em}
+    .poster-service-price-columns{display:grid;grid-template-columns:1fr;gap:26px;min-height:0;flex:1;padding:8px 0 6px}.poster-service-price-box-columns .poster-service-price-columns{grid-template-columns:repeat(2,minmax(0,1fr))}.poster-service-price-list{display:grid;align-content:center;gap:4px;min-width:0}.poster-service-price-box-columns .poster-service-price-list+ .poster-service-price-list{border-left:1px solid rgba(213,166,72,.38);padding-left:22px}
+    .poster-service-price-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;min-width:0;color:#f8f8f6;font-size:14px;line-height:1.15}.poster-service-price-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.poster-service-price-row strong{color:#e2b348;font-size:14px;font-weight:900;white-space:nowrap}.poster-service-price-box-columns .poster-service-price-row{gap:8px;font-size:11px}.poster-service-price-box-columns .poster-service-price-row strong{font-size:11px}.poster-service-price-box-dense .poster-service-price-list{gap:2px}.poster-service-price-box-dense .poster-service-price-row,.poster-service-price-box-dense .poster-service-price-row strong{font-size:9px;line-height:1.05}
+    .poster-service-price-box>footer{display:flex;align-items:center;justify-content:space-between;gap:24px;border-top:1px solid rgba(213,166,72,.62);padding-top:8px;text-transform:uppercase}.poster-service-price-box>footer span{color:#fff;font-size:13px;font-weight:850;letter-spacing:.08em}.poster-service-price-box>footer strong{color:#e5b64c;font-family:Georgia,serif;font-size:28px;line-height:1;white-space:nowrap}
     .poster-vehicle-value{position:absolute;left:197px;top:1301px;height:119px;display:inline-grid;grid-template-columns:58px minmax(0,max-content);gap:10px;align-items:center;color:#111;text-transform:uppercase}
     .poster-vehicle-value>b{color:#bd8123;font-size:65px;line-height:1;text-align:center}.poster-vehicle-copy{max-width:132px;border-right:2px solid #d9ad57;padding-right:12px}.poster-vehicle-value strong,.poster-vehicle-value span{display:block}.poster-vehicle-value strong{font-size:16px;font-weight:900;line-height:1.04}.poster-vehicle-value span{margin-top:5px;font-size:13px;font-weight:800}
     .poster-feature-grid{position:absolute;z-index:3;display:grid;grid-template-columns:repeat(var(--feature-count),minmax(0,1fr));color:#bc7b19;text-transform:uppercase}
@@ -3311,7 +3348,7 @@ async function logout() {
 function setupPwa() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register(appPath("/sw.js?v=47"), { scope: appPath("/") })
+      .register(appPath("/sw.js?v=49"), { scope: appPath("/") })
       .catch(() => {});
   }
   window.addEventListener("beforeinstallprompt", (event) => {
