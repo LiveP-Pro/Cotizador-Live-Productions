@@ -1401,6 +1401,99 @@ tr:last-child td {
   gap: 12px;
 }
 
+.destination-mode-grid,
+.price-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.destination-mode-option,
+.price-mode-option {
+  position: relative;
+  display: grid !important;
+  gap: 6px !important;
+  min-height: 94px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: white;
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.destination-mode-option input,
+.price-mode-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.destination-mode-option b,
+.price-mode-option b {
+  color: var(--ink);
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.destination-mode-option span,
+.price-mode-option span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.destination-mode-option.active,
+.price-mode-option.active {
+  border-color: var(--gold);
+  background: #fffaf0;
+  box-shadow: 0 0 0 3px rgba(189, 150, 80, 0.1);
+}
+
+.destination-count-field {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--gold-light);
+  border-radius: 14px;
+  background: #fffaf0;
+  padding: 14px;
+}
+
+[data-destination-count-wrap][hidden],
+[data-single-destination-builder][hidden],
+[data-final-price-wrap][hidden] {
+  display: none !important;
+}
+
+.service-rate-picker {
+  margin-top: 14px;
+}
+
+.service-detail-empty {
+  display: grid;
+  gap: 5px;
+  border: 1px dashed var(--gold-light);
+  border-radius: 16px;
+  background: var(--surface-soft);
+  padding: 22px;
+  text-align: center;
+}
+
+.service-detail-empty strong {
+  color: var(--ink);
+  font-family: Georgia, serif;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.service-detail-empty span {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
 .service-detail-intro {
   display: grid;
   gap: 3px;
@@ -1433,6 +1526,7 @@ tr:last-child td {
 
 .service-detail-card-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -1461,6 +1555,17 @@ tr:last-child td {
   font-style: normal;
   font-weight: 900;
   white-space: nowrap;
+}
+
+.service-card-remove {
+  border: 0;
+  background: transparent;
+  color: #9b3f35;
+  padding: 4px 0;
+  font-size: 9px;
+  font-weight: 900;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .rate-options {
@@ -2088,6 +2193,8 @@ tr:last-child td {
 
   .stats-grid,
   .form-grid,
+  .destination-mode-grid,
+  .price-mode-grid,
   .rate-options,
   .vehicle-unit-options,
   .payment-proof-meta {

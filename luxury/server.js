@@ -93,6 +93,30 @@ function parseBoolean(value) {
   return value === true || value === "true" || value === 1 || value === "1";
 }
 
+function guatemalaDateParts(date = new Date()) {
+  return Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Guatemala",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+      .formatToParts(date)
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value]),
+  );
+}
+
+function guatemalaDateValue(date = new Date()) {
+  const parts = guatemalaDateParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function guatemalaMonthValue(date = new Date()) {
+  const parts = guatemalaDateParts(date);
+  return `${parts.year}-${parts.month}`;
+}
+
 const SERVICE_STATUSES = new Set(["aceptada", "confirmada", "completada"]);
 const PAYMENT_MIME_TYPES = new Set([
   "application/pdf",
@@ -136,8 +160,10 @@ function cleanServiceSelections(value) {
           ? undefined
           : parseBoolean(item?.hasLuggage),
       luggageDescription: cleanString(item?.luggageDescription, 500),
+      notes: cleanString(item?.notes, 1200),
+      legNumber: Math.max(0, Math.round(cleanNumber(item?.legNumber))),
     }))
-    .filter((item) => item.destination && item.type && item.amount > 0)
+    .filter((item) => item.destination && item.type)
     .slice(0, 50);
 }
 
@@ -313,6 +339,13 @@ function normalizeQuote(body, rates, existing = {}) {
   const vehicleId = vehicleIds[0] || cleanString(body.vehicleId, 80);
   const serviceSelections = cleanServiceSelections(body.serviceSelections || body.serviceSelectionsJson);
   const selectedFare = serviceSelections.reduce((sum, item) => sum + item.amount, 0);
+  const priceDisplayMode = cleanString(body.priceDisplayMode || existing.priceDisplayMode || "detailed", 20) === "final"
+    ? "final"
+    : "detailed";
+  const finalManualPrice = Math.max(0, cleanNumber(body.finalManualPrice, existing.finalManualPrice || 0));
+  const fixedFare = priceDisplayMode === "final"
+    ? finalManualPrice || Math.max(0, cleanNumber(body.fixedFare, existing.fixedFare || 0))
+    : selectedFare || Math.max(0, cleanNumber(body.fixedFare, existing.fixedFare || 0));
   const selectedDestinations = [...new Set(serviceSelections.map((item) => item.destination).filter(Boolean))].join(" + ");
   const selectedServiceType =
     serviceSelections.length === 1
@@ -359,7 +392,14 @@ function normalizeQuote(body, rates, existing = {}) {
     destinationRateName: cleanString(body.destinationRateName || selectedDestinations, 300),
     serviceRateType: cleanString(body.serviceRateType, 40),
     serviceSelections,
-    fixedFare: selectedFare || Math.max(0, cleanNumber(body.fixedFare)),
+    destinationMode: cleanString(body.destinationMode || existing.destinationMode || (serviceSelections.length > 1 ? "multiple" : "single"), 20) === "multiple"
+      ? "multiple"
+      : "single",
+    destinationCount: Math.max(1, Math.min(20, Math.round(cleanNumber(body.destinationCount, serviceSelections.length || 1)))),
+    priceDisplayMode,
+    finalManualPrice,
+    fixedFare,
+    fixedFareIsTotal: priceDisplayMode === "final",
     fixedFareIncludesTax:
       body.fixedFareIncludesTax === undefined ? true : parseBoolean(body.fixedFareIncludesTax),
     kilometers: Math.max(0, cleanNumber(body.kilometers)),
@@ -717,7 +757,7 @@ export async function createApp(options = {}) {
     if (pathname === "/api/admin/database-backup" && req.method === "GET") {
       requirePermission(user, "users");
       const snapshot = db.exportSnapshot();
-      const date = new Date().toISOString().slice(0, 10);
+      const date = guatemalaDateValue();
       res.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
         "Content-Disposition": `attachment; filename="luxury-travel-backup-${date}.json"`,
@@ -835,14 +875,14 @@ export async function createApp(options = {}) {
     if (pathname === "/api/dashboard" && req.method === "GET") {
       requirePermission(user, "dashboard");
       const quotes = db.list("quotes");
-      const currentMonth = new Date().toISOString().slice(0, 7);
+      const currentMonth = guatemalaMonthValue();
       const monthQuotes = quotes.filter((item) => String(item.acceptedAt || "").startsWith(currentMonth));
       json(res, 200, {
         quotes: quotes.length,
         clients: db.list("clients").length,
         upcomingServices: quotes.filter(
           (item) =>
-            item.serviceDate >= new Date().toISOString().slice(0, 10) &&
+            item.serviceDate >= guatemalaDateValue() &&
             SERVICE_STATUSES.has(item.status) &&
             item.paymentProof,
         ).length,

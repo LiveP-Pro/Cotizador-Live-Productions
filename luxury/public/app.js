@@ -226,6 +226,30 @@ function passengerOptions(selected = 1, maximum = 15, upperLimit = 15) {
     .join("");
 }
 
+function guatemalaDateParts(date = new Date()) {
+  return Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Guatemala",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+      .formatToParts(date)
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value]),
+  );
+}
+
+function guatemalaDateValue(date = new Date()) {
+  const parts = guatemalaDateParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function guatemalaMonthValue(date = new Date()) {
+  const parts = guatemalaDateParts(date);
+  return `${parts.year}-${parts.month}`;
+}
+
 function formatDate(value, options = {}) {
   if (!value) return "Por definir";
   const safeValue = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value;
@@ -400,7 +424,7 @@ async function navigate(moduleId) {
 
 function renderDashboard() {
   const accepted = state.quotes.filter(isServiceQuote);
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = guatemalaMonthValue();
   const monthSales = accepted
     .filter((quote) => String(quote.acceptedAt || "").startsWith(currentMonth))
     .reduce((sum, quote) => sum + Number(quote.amountPaid || quote.totals?.total || 0), 0);
@@ -408,7 +432,7 @@ function renderDashboard() {
     .filter((quote) => String(quote.acceptedAt || "").startsWith(currentMonth))
     .sort((a, b) => String(b.acceptedAt).localeCompare(String(a.acceptedAt)));
   const upcoming = [...state.quotes]
-    .filter((quote) => quote.serviceDate >= new Date().toISOString().slice(0, 10) && isServiceQuote(quote))
+    .filter((quote) => quote.serviceDate >= guatemalaDateValue() && isServiceQuote(quote))
     .sort((a, b) => a.serviceDate.localeCompare(b.serviceDate))
     .slice(0, 6);
 
@@ -761,7 +785,7 @@ function numberField(name, label, value, suffix, note = "") {
 }
 
 function renderHistory() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = guatemalaDateValue();
   const services = state.permissions.includes("quotes")
     ? [...state.quotes]
         .filter(
@@ -1086,7 +1110,7 @@ function normalizeServiceSelection(selection = {}) {
   const label = String(selection.label || rateType?.label || selection.serviceType || "Servicio seleccionado").trim();
   const amount = Number(selection.amount ?? (rate && rateType ? rate[rateType.field] : selection.fixedFare || 0));
   const passengers = Number(selection.passengers);
-  if (!destination || !type || !Number.isFinite(amount) || amount <= 0) return null;
+  if (!destination || !type || !Number.isFinite(amount) || amount < 0) return null;
   return {
     instanceId: String(selection.instanceId || "").trim() || serviceInstanceId(String(destinationId).startsWith("manual-") ? "manual" : "svc"),
     destinationId: destinationId || destination.toLowerCase().replace(/\s+/g, "-"),
@@ -1106,6 +1130,8 @@ function normalizeServiceSelection(selection = {}) {
         ? ""
         : selection.hasLuggage === true || selection.hasLuggage === "true",
     luggageDescription: String(selection.luggageDescription || "").trim(),
+    notes: String(selection.notes || "").trim(),
+    legNumber: Math.max(0, Math.round(Number(selection.legNumber || 0))),
   };
 }
 
@@ -1332,34 +1358,136 @@ function passengerSelectOptions(value, form) {
   return passengerOptions(value || 1, Math.max(1, maximum || 15));
 }
 
+function routePointLabel(index) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  return index < alphabet.length ? `Punto ${alphabet[index]}` : `Punto ${index + 1}`;
+}
+
+function destinationModeValue(form) {
+  return form.elements.destinationMode?.value === "multiple" ? "multiple" : "single";
+}
+
+function createRouteSelection(index, form, previous = {}) {
+  const type = "oneWay";
+  return {
+    instanceId: serviceInstanceId("route"),
+    destinationId: `manual-route-${index + 1}-${Date.now()}`,
+    destination: `Destino ${index + 1}`,
+    type,
+    label: serviceRateTypes[type].label,
+    amount: 0,
+    serviceDate: form.elements.serviceDate?.value || guatemalaDateValue(),
+    returnDate: form.elements.returnDate?.value || form.elements.serviceDate?.value || guatemalaDateValue(),
+    origin: previous.destinationAddress || "",
+    destinationAddress: "",
+    departureTime: form.elements.departureTime?.value || "08:00",
+    returnTime: "",
+    passengers: Number(form.elements.passengers?.value || 1),
+    hasLuggage: true,
+    luggageDescription: "",
+    notes: "",
+    legNumber: index + 1,
+  };
+}
+
+function syncDestinationMode(form, { ensureCount = false } = {}) {
+  const mode = destinationModeValue(form);
+  const countField = $(`[data-destination-count-wrap]`, form);
+  const singleBuilder = $(`[data-single-destination-builder]`, form);
+  const sections = $(".quote-form-sections", form);
+  const vehicleStep = $('[data-quote-step="vehicles"]', form);
+  const clientStep = $('[data-quote-step="client"]', form);
+  if (countField) countField.hidden = mode !== "multiple";
+  if (singleBuilder) singleBuilder.hidden = mode === "multiple";
+  if (sections && vehicleStep && clientStep) {
+    if (mode === "multiple") sections.insertBefore(clientStep, vehicleStep);
+    else sections.insertBefore(vehicleStep, clientStep);
+    $("h3", vehicleStep).textContent = mode === "multiple" ? "3. Mercedes y pasajeros" : "2. Mercedes y pasajeros";
+    $("h3", clientStep).textContent = mode === "multiple" ? "2. Datos del cliente" : "3. Datos del cliente";
+  }
+  $$(`[data-destination-mode-option]`, form).forEach((option) => {
+    const input = $("input", option);
+    option.classList.toggle("active", Boolean(input?.checked));
+  });
+
+  if (mode !== "multiple" || !ensureCount) return;
+  const requested = Math.max(2, Math.min(12, Number(form.elements.destinationCount?.value || 2)));
+  const current = serviceSelectionsWithDetailsFromForm(form);
+  const next = current.slice(0, requested);
+  while (next.length < requested) {
+    next.push(createRouteSelection(next.length, form, next[next.length - 1]));
+  }
+  next.forEach((selection, index) => {
+    selection.legNumber = index + 1;
+    if (!selection.destination || /^Destino \d+$/.test(selection.destination)) {
+      selection.destination = `Destino ${index + 1}`;
+    }
+  });
+  form.elements.serviceSelectionsJson.value = JSON.stringify(next);
+  renderDestinationRatePreview(form);
+  syncServiceSelections(form);
+}
+
+function syncPriceDisplayMode(form) {
+  const mode = form.elements.priceDisplayMode?.value === "final" ? "final" : "detailed";
+  const finalPrice = $("[data-final-price-wrap]", form);
+  if (finalPrice) finalPrice.hidden = mode !== "final";
+  $$(`[data-price-mode-option]`, form).forEach((option) => {
+    const input = $("input", option);
+    option.classList.toggle("active", Boolean(input?.checked));
+  });
+}
+
 function renderServiceDetailBlocks(form) {
   const target = $("[data-service-detail-list]", form);
   if (!target) return;
   const selections = selectedServiceEntriesFromForm(form);
-  const extraSelections = selections.slice(1);
-  if (!extraSelections.length) {
-    target.innerHTML = "";
+  const mode = destinationModeValue(form);
+  if (!selections.length) {
+    target.innerHTML = `
+      <div class="service-detail-empty">
+        <strong>Aún no hay destinos</strong>
+        <span>Agregue un destino manual o elija una tarifa para crear automáticamente su ficha de viaje.</span>
+      </div>
+    `;
     return;
   }
   const rootLuggage = form.elements.hasLuggage?.value || "true";
   target.innerHTML = `
     <div class="service-detail-intro">
-      <strong>Datos por servicio adicional</strong>
-      <span>Complete un cuadro por cada servicio agregado al cotizador.</span>
+      <strong>Información de cada destino</strong>
+      <span>Complete una ficha por trayecto. La cotización final crecerá automáticamente para mostrar toda la información.</span>
     </div>
-    ${extraSelections
+    ${selections
       .map((selection, index) => {
-        const serviceNumber = index + 2;
+        const serviceNumber = index + 1;
         const hasLuggageValue =
           selection.hasLuggage === true ? "true" : selection.hasLuggage === false ? "false" : rootLuggage;
+        const routeTitle = mode === "multiple"
+          ? `${routePointLabel(index)} → ${routePointLabel(index + 1)}`
+          : selection.destination;
         return `
-          <article class="service-detail-card" data-service-detail-card>
+          <article class="service-detail-card" data-service-detail-card data-service-instance-id="${escapeHtml(selection.instanceId)}">
             <div class="service-detail-card-head">
-              <span>Servicio ${serviceNumber}</span>
-              <strong>${escapeHtml(selection.label)} · ${escapeHtml(selection.destination)}</strong>
-              <em>${money(selection.amount)}</em>
+              <span>Destino ${serviceNumber}</span>
+              <strong>${escapeHtml(routeTitle)}</strong>
+              <em>${Number(selection.amount || 0) > 0 ? money(selection.amount) : "Precio pendiente"}</em>
+              <button type="button" class="service-card-remove" data-remove-service-card="${escapeHtml(selection.instanceId)}" aria-label="Quitar destino ${serviceNumber}">Quitar</button>
             </div>
             <div class="form-grid">
+              <label class="full">Nombre del destino o servicio
+                <input name="${serviceDetailInputName(selection, "destination")}" value="${escapeHtml(selection.destination)}" placeholder="Ej. Antigua, Aeropuerto, Evento privado" required />
+              </label>
+              <label>Tipo de servicio
+                <select name="${serviceDetailInputName(selection, "type")}">
+                  <option value="oneWay" ${selection.type === "oneWay" ? "selected" : ""}>Ida</option>
+                  <option value="roundTrip" ${selection.type === "roundTrip" ? "selected" : ""}>Ida y vuelta</option>
+                  <option value="internal" ${selection.type === "internal" ? "selected" : ""}>Traslados internos</option>
+                </select>
+              </label>
+              <label>Precio manual
+                <input type="number" name="${serviceDetailInputName(selection, "amount")}" value="${Number(selection.amount || 0) || ""}" min="0" step="0.01" placeholder="0.00" />
+              </label>
               <label>Fecha de inicio del servicio
                 <input type="date" name="${serviceDetailInputName(selection, "serviceDate")}" value="${escapeHtml(serviceDetailValue(selection, "serviceDate", form.elements.serviceDate.value))}" />
               </label>
@@ -1367,21 +1495,16 @@ function renderServiceDetailBlocks(form) {
                 <input type="date" name="${serviceDetailInputName(selection, "returnDate")}" value="${escapeHtml(serviceDetailValue(selection, "returnDate", form.elements.returnDate.value))}" />
               </label>
               <label class="full">Origen (dirección exacta)
-                <input name="${serviceDetailInputName(selection, "origin")}" value="${escapeHtml(serviceDetailValue(selection, "origin", form.elements.origin.value))}" placeholder="Origen para este servicio" />
+                <input name="${serviceDetailInputName(selection, "origin")}" value="${escapeHtml(serviceDetailValue(selection, "origin", form.elements.origin.value))}" placeholder="${escapeHtml(mode === "multiple" ? routePointLabel(index) : "Origen para este servicio")}" required />
               </label>
               <label class="full">Destino (dirección exacta)
-                <input name="${serviceDetailInputName(selection, "destinationAddress")}" value="${escapeHtml(serviceDetailValue(selection, "destinationAddress", selection.destination))}" placeholder="Destino para este servicio" />
+                <input name="${serviceDetailInputName(selection, "destinationAddress")}" value="${escapeHtml(serviceDetailValue(selection, "destinationAddress", mode === "multiple" ? "" : selection.destination))}" placeholder="${escapeHtml(mode === "multiple" ? routePointLabel(index + 1) : "Destino para este servicio")}" required />
               </label>
               <label>Horario de salida
                 <input type="time" name="${serviceDetailInputName(selection, "departureTime")}" value="${escapeHtml(serviceDetailValue(selection, "departureTime", form.elements.departureTime.value))}" />
               </label>
               <label>Horario de regreso
                 <input type="time" name="${serviceDetailInputName(selection, "returnTime")}" value="${escapeHtml(serviceDetailValue(selection, "returnTime", form.elements.returnTime.value))}" />
-              </label>
-              <label>Número de pasajeros
-                <select name="${serviceDetailInputName(selection, "passengers")}">
-                  ${passengerSelectOptions(serviceDetailValue(selection, "passengers", form.elements.passengers.value), form)}
-                </select>
               </label>
               <label>Equipaje
                 <select name="${serviceDetailInputName(selection, "hasLuggage")}" data-service-detail-luggage>
@@ -1392,6 +1515,9 @@ function renderServiceDetailBlocks(form) {
               <label class="full">¿Qué tipo de equipaje?
                 <textarea name="${serviceDetailInputName(selection, "luggageDescription")}" data-service-detail-luggage-description placeholder="Ej. 3 carry on, 1 pañalera, 1 carruaje plegable">${escapeHtml(serviceDetailValue(selection, "luggageDescription", form.elements.luggageDescription.value))}</textarea>
               </label>
+              <label class="full">Notas para este destino
+                <textarea name="${serviceDetailInputName(selection, "notes")}" placeholder="Indicaciones, disponibilidad, cortesías o información especial">${escapeHtml(serviceDetailValue(selection, "notes"))}</textarea>
+              </label>
             </div>
           </article>
         `;
@@ -1401,22 +1527,8 @@ function renderServiceDetailBlocks(form) {
 }
 
 function serviceSelectionsWithDetailsFromForm(form) {
+  const mode = destinationModeValue(form);
   return selectedServiceEntriesFromForm(form).map((selection, index) => {
-    if (index === 0) {
-      return {
-        ...selection,
-        serviceDate: form.elements.serviceDate.value,
-        returnDate: form.elements.returnDate.value,
-        origin: form.elements.origin.value.trim(),
-        destinationAddress: form.elements.destination.value.trim(),
-        departureTime: form.elements.departureTime.value,
-        returnTime: form.elements.returnTime.value,
-        passengers: Number(form.elements.passengers.value || 1),
-        hasLuggage: form.elements.hasLuggage.value === "true",
-        luggageDescription: form.elements.hasLuggage.value === "true" ? form.elements.luggageDescription.value.trim() : "",
-      };
-    }
-
     const get = (field) => form.elements[serviceDetailInputName(selection, field)];
     const hasLuggageInput = get("hasLuggage");
     const hasLuggage = hasLuggageInput
@@ -1426,24 +1538,45 @@ function serviceSelectionsWithDetailsFromForm(form) {
         : Boolean(selection.hasLuggage);
     return {
       ...selection,
+      destination: get("destination")?.value?.trim() || selection.destination || `Destino ${index + 1}`,
+      type: get("type")?.value || selection.type || "oneWay",
+      label: serviceRateTypes[get("type")?.value || selection.type]?.label || selection.label,
+      amount: Math.max(0, Number(get("amount")?.value ?? selection.amount ?? 0)),
       serviceDate: get("serviceDate")?.value || selection.serviceDate || form.elements.serviceDate.value,
       returnDate: get("returnDate")?.value || selection.returnDate || form.elements.returnDate.value,
       origin: get("origin")?.value?.trim() || selection.origin || form.elements.origin.value.trim(),
       destinationAddress:
-        get("destinationAddress")?.value?.trim() || selection.destinationAddress || selection.destination,
+        get("destinationAddress")?.value?.trim() || selection.destinationAddress || (mode === "multiple" ? "" : selection.destination),
       departureTime: get("departureTime")?.value || selection.departureTime || form.elements.departureTime.value,
       returnTime: get("returnTime")?.value || selection.returnTime || form.elements.returnTime.value,
-      passengers: Number(get("passengers")?.value || selection.passengers || form.elements.passengers.value || 1),
+      passengers: Number(form.elements.passengers.value || selection.passengers || 1),
       hasLuggage,
       luggageDescription: hasLuggage
         ? get("luggageDescription")?.value?.trim() || selection.luggageDescription || ""
         : "",
+      notes: get("notes")?.value?.trim() || "",
+      legNumber: mode === "multiple" ? index + 1 : Number(selection.legNumber || 0),
     };
   });
 }
 
+function syncPrimaryServiceFields(form, selections) {
+  const first = selections[0] || {};
+  if (!selections.length) return;
+  form.elements.serviceDate.value = first.serviceDate || form.elements.serviceDate.value || guatemalaDateValue();
+  form.elements.returnDate.value = first.returnDate || first.serviceDate || form.elements.returnDate.value || guatemalaDateValue();
+  form.elements.origin.value = first.origin || "";
+  form.elements.destination.value = first.destinationAddress || first.destination || "";
+  form.elements.departureTime.value = first.departureTime || form.elements.departureTime.value || "08:00";
+  form.elements.returnTime.value = first.returnTime || "";
+  form.elements.hasLuggage.value = first.hasLuggage === false ? "false" : "true";
+  form.elements.luggageDescription.value = first.hasLuggage === false ? "" : first.luggageDescription || "";
+  form.elements.serviceStartDate.value = form.elements.serviceDate.value;
+  form.elements.serviceEndDate.value = form.elements.returnDate.value;
+}
+
 function syncServiceSelections(form) {
-  const selections = selectedServiceEntriesFromForm(form);
+  const selections = serviceSelectionsWithDetailsFromForm(form);
   const first = selections[0];
   form.elements.serviceSelectionsJson.value = JSON.stringify(selections);
   form.elements.fixedFare.value = String(serviceSelectionsTotal(selections));
@@ -1452,7 +1585,7 @@ function syncServiceSelections(form) {
   form.elements.serviceRateType.value = first?.type || "oneWay";
   form.elements.destinationRateName.value = serviceSelectionsDestinationLabel(selections);
   form.elements.serviceType.value = serviceSelectionsServiceLabel(selections);
-  if (first && !form.elements.destination.value) form.elements.destination.value = first.destination;
+  syncPrimaryServiceFields(form, selections);
   $$("[data-service-selection-option]", form).forEach((label) => {
     const input = $("input", label);
     label.classList.toggle("active", Boolean(input?.checked));
@@ -1539,12 +1672,17 @@ function openQuoteModal(quote = {}) {
   const isEdit = Boolean(quote.id);
   const draft = !isEdit ? loadQuoteDraft() : null;
   if (draft) quote = { ...quote, ...draft };
-  const today = new Date().toISOString().slice(0, 10);
+  const today = guatemalaDateValue();
   const quoteDate = quote.quoteDate || String(quote.createdAt || "").slice(0, 10) || today;
   const serviceStartDate = quote.serviceStartDate || quote.serviceDate || today;
   const serviceEndDate = quote.serviceEndDate || quote.returnDate || quote.serviceDate || today;
   const defaultVehicleName = quote.vehicleManualName || quote.vehicleName || "Mercedes Benz Sprinter";
   const initialServiceSelections = quoteServiceSelections(quote);
+  const initialDestinationMode = quote.destinationMode === "multiple" || (!quote.destinationMode && initialServiceSelections.length > 1)
+    ? "multiple"
+    : "single";
+  const initialDestinationCount = Math.max(2, Math.min(12, Number(quote.destinationCount || initialServiceSelections.length || 2)));
+  const initialPriceDisplayMode = quote.priceDisplayMode === "final" ? "final" : "detailed";
   openModal(
     isEdit ? `Editar ${quote.number}` : "Nueva cotización",
     `
@@ -1552,83 +1690,37 @@ function openQuoteModal(quote = {}) {
         <div class="quote-layout">
           <div class="quote-form-sections">
             <section class="form-section">
-              <h3>Datos principales</h3>
-              <div class="form-grid">
-                <label>Nombre del cliente<input name="clientName" value="${escapeHtml(quote.clientName)}" required /></label>
-                <label>Número de teléfono<input type="tel" name="clientPhone" value="${escapeHtml(quote.clientPhone)}" placeholder="Ej. 5555-5555" autocomplete="tel" /></label>
-                <label>Fecha de cotización<input type="date" name="quoteDate" value="${escapeHtml(quoteDate)}" required /></label>
+              <h3>1. Elegir recorrido</h3>
+              <div class="destination-mode-grid">
+                <label class="destination-mode-option ${initialDestinationMode === "single" ? "active" : ""}" data-destination-mode-option>
+                  <input type="radio" name="destinationMode" value="single" ${initialDestinationMode === "single" ? "checked" : ""} />
+                  <b>1 destino</b>
+                  <span>Agregue uno o varios viajes manualmente, cada uno con su propia información.</span>
+                </label>
+                <label class="destination-mode-option ${initialDestinationMode === "multiple" ? "active" : ""}" data-destination-mode-option>
+                  <input type="radio" name="destinationMode" value="multiple" ${initialDestinationMode === "multiple" ? "checked" : ""} />
+                  <b>Destinos múltiples</b>
+                  <span>Cree una ruta consecutiva: Punto A → B, Punto B → C y los trayectos que necesite.</span>
+                </label>
               </div>
+              <label class="destination-count-field" data-destination-count-wrap ${initialDestinationMode === "multiple" ? "" : "hidden"}>¿Cuántos destinos tendrá la ruta?
+                <select name="destinationCount">
+                  ${Array.from({ length: 11 }, (_, index) => index + 2).map((count) => `<option value="${count}" ${count === initialDestinationCount ? "selected" : ""}>${count} destinos</option>`).join("")}
+                </select>
+              </label>
             </section>
-            <section class="form-section">
-              <h3>Tipo de servicio</h3>
-              <div class="manual-service-box">
-                <h4>Destino Manual</h4>
-                <div class="form-grid">
-                  <label>Destino manual<input name="manualDestination" placeholder="Ej. Río Dulce, ruta especial, evento privado" /></label>
-                  <label>Tipo de servicio
-                    <select name="manualServiceRateType">
-                      <option value="oneWay">Ida</option>
-                      <option value="roundTrip">Ida y Vuelta</option>
-                      <option value="internal">Traslados internos</option>
-                    </select>
-                  </label>
-                  <label>Precio manual<input type="number" name="manualPrice" min="0" step="0.01" placeholder="0.00" /></label>
-                  <div class="manual-service-action">
-                    <button type="button" class="button button-secondary" data-add-manual-service>Agregar destino manual</button>
-                  </div>
-                </div>
-              </div>
+            <section class="form-section" data-quote-step="vehicles">
+              <h3>2. Mercedes y pasajeros</h3>
               <div class="form-grid">
-                <label class="visually-hidden">Destino tarifado
-                  <select name="destinationRateId" data-destination-rate-select>
-                    <option value="">Personalizado / calcular por ruta</option>
-                    ${destinationRates.map((rate) => `<option value="${rate.id}" ${quote.destinationRateId === rate.id ? "selected" : ""}>${escapeHtml(rate.destination)}</option>`).join("")}
-                  </select>
-                </label>
-                <label class="visually-hidden">Tipo de tarifa
-                  <select name="serviceRateType" data-service-rate-type>
-                    ${Object.entries(serviceRateTypes).map(([value, item]) => `<option value="${value}" ${quote.serviceRateType === value ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
-                  </select>
-                </label>
-                <div class="destination-rate-preview full" data-destination-rate-preview></div>
-              </div>
-            </section>
-            <section class="form-section">
-              <h3>Datos del servicio</h3>
-              <div class="form-grid">
-                <label>Fecha de inicio del servicio<input type="date" name="serviceDate" value="${escapeHtml(serviceStartDate)}" required /></label>
-                <label>Fecha de finalización del servicio<input type="date" name="returnDate" value="${escapeHtml(serviceEndDate)}" required /></label>
-                <label class="full">Origen (dirección exacta)<input name="origin" value="${escapeHtml(quote.origin)}" placeholder="Ej. Dirección exacta, zona, municipio" required /></label>
-                <label class="full">Destino (dirección exacta)<input name="destination" value="${escapeHtml(quote.destination)}" placeholder="Ej. Dirección exacta o destino turístico" required /></label>
-                <label>Horario de salida<input type="time" name="departureTime" value="${escapeHtml(quote.departureTime || "08:00")}" required /></label>
-                <label>Horario de regreso<input type="time" name="returnTime" value="${escapeHtml(quote.returnTime)}" /></label>
-                <label>Número de pasajeros
-                  <select name="passengers" data-passenger-select required>
-                    ${passengerOptions(quote.passengers || 1, quote.maxPassengers || 15)}
-                  </select>
-                </label>
-                <label>Equipaje
-                  <select name="hasLuggage" data-luggage-select>
-                    <option value="true" ${quote.hasLuggage === false ? "" : "selected"}>Sí</option>
-                    <option value="false" ${quote.hasLuggage === false ? "selected" : ""}>No</option>
-                  </select>
-                </label>
-                <label class="full">¿Qué tipo de equipaje?
-                  <textarea name="luggageDescription" placeholder="Ej. 3 carry on, 1 pañalera, 1 carruaje plegable">${escapeHtml(quote.luggageDescription || (quote.luggage ? `${quote.luggage} maletas` : ""))}</textarea>
-                </label>
-                <div class="service-detail-list full" data-service-detail-list></div>
-                <label class="full">Notas para cotización
-                  <textarea name="notes" placeholder="Ej. Servicio sujeto a disponibilidad, punto exacto de ingreso, cortesías especiales...">${escapeHtml(quote.notes)}</textarea>
-                </label>
-              </div>
-            </section>
-            <section class="form-section">
-              <h3>Vehículos y ajustes</h3>
-              <div class="form-grid">
-                <label class="full">Tipo de Mercedes
+                <label>Tipo de Mercedes
                   <select name="vehicleModel" data-vehicle-model-select>
                     ${allowedVehicleModels.map((model) => `<option value="${model}" ${quoteVehicleModel(quote) === model ? "selected" : ""}>${escapeHtml(model)}</option>`).join("")}
                     <option value="${largeGroupVehicleModel}" ${quoteVehicleModel(quote) === largeGroupVehicleModel ? "selected" : ""}>Usar las 3 Mercedes Benz Sprinter</option>
+                  </select>
+                </label>
+                <label>Cantidad de pasajeros
+                  <select name="passengers" data-passenger-select required>
+                    ${passengerOptions(quote.passengers || 1, quote.maxPassengers || 15)}
                   </select>
                 </label>
                 <div class="vehicle-unit-panel full" data-vehicle-unit-panel></div>
@@ -1655,6 +1747,74 @@ function openQuoteModal(quote = {}) {
                     <span><strong>Cama</strong><small>Al seleccionar cama, la capacidad baja a 7 pasajeros atrás y 2 adelante.</small></span>
                   </label>
                 </div>
+              </div>
+            </section>
+            <section class="form-section" data-quote-step="client">
+              <h3>3. Datos del cliente</h3>
+              <div class="form-grid">
+                <label>Nombre del cliente<input name="clientName" value="${escapeHtml(quote.clientName)}" placeholder="Persona a quien se dirige la cotización" required /></label>
+                <label>Número de teléfono<input type="tel" name="clientPhone" value="${escapeHtml(quote.clientPhone)}" placeholder="Ej. 5555-5555" autocomplete="tel" /></label>
+                <label>Fecha de cotización<input type="date" name="quoteDate" value="${escapeHtml(quoteDate)}" required /></label>
+              </div>
+            </section>
+            <section class="form-section">
+              <h3>4. Información del viaje</h3>
+              <div data-single-destination-builder ${initialDestinationMode === "multiple" ? "hidden" : ""}>
+                <div class="manual-service-box">
+                  <h4>Agregar destino manual</h4>
+                  <div class="form-grid">
+                    <label>Destino o nombre del viaje<input name="manualDestination" placeholder="Ej. Río Dulce, ruta especial, evento privado" /></label>
+                    <label>Tipo de servicio
+                      <select name="manualServiceRateType">
+                        <option value="oneWay">Ida</option>
+                        <option value="roundTrip">Ida y Vuelta</option>
+                        <option value="internal">Traslados internos</option>
+                      </select>
+                    </label>
+                    <label>Precio manual<input type="number" name="manualPrice" min="0" step="0.01" placeholder="0.00" /></label>
+                    <div class="manual-service-action">
+                      <button type="button" class="button button-secondary" data-add-manual-service>Agregar destino manual</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-grid service-rate-picker">
+                  <label class="visually-hidden">Destino tarifado
+                    <select name="destinationRateId" data-destination-rate-select>
+                      <option value="">Personalizado / calcular por ruta</option>
+                      ${destinationRates.map((rate) => `<option value="${rate.id}" ${quote.destinationRateId === rate.id ? "selected" : ""}>${escapeHtml(rate.destination)}</option>`).join("")}
+                    </select>
+                  </label>
+                  <label class="visually-hidden">Tipo de tarifa
+                    <select name="serviceRateType" data-service-rate-type>
+                      ${Object.entries(serviceRateTypes).map(([value, item]) => `<option value="${value}" ${quote.serviceRateType === value ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
+                    </select>
+                  </label>
+                  <div class="destination-rate-preview full" data-destination-rate-preview></div>
+                </div>
+              </div>
+              <div class="service-detail-list" data-service-detail-list></div>
+              <label>Notas generales para la cotización
+                <textarea name="notes" placeholder="Condiciones generales, disponibilidad o información que aplica a toda la cotización">${escapeHtml(quote.notes)}</textarea>
+              </label>
+            </section>
+            <section class="form-section">
+              <h3>5. Presentación del precio</h3>
+              <div class="price-mode-grid">
+                <label class="price-mode-option ${initialPriceDisplayMode === "detailed" ? "active" : ""}" data-price-mode-option>
+                  <input type="radio" name="priceDisplayMode" value="detailed" ${initialPriceDisplayMode === "detailed" ? "checked" : ""} />
+                  <b>Precios desglosados</b>
+                  <span>Muestra cada destino ordenado por fecha y el total al final.</span>
+                </label>
+                <label class="price-mode-option ${initialPriceDisplayMode === "final" ? "active" : ""}" data-price-mode-option>
+                  <input type="radio" name="priceDisplayMode" value="final" ${initialPriceDisplayMode === "final" ? "checked" : ""} />
+                  <b>Solo precio final</b>
+                  <span>Oculta los precios individuales y muestra únicamente el monto final.</span>
+                </label>
+              </div>
+              <label data-final-price-wrap ${initialPriceDisplayMode === "final" ? "" : "hidden"}>Precio final de toda la cotización
+                <input type="number" name="finalManualPrice" value="${quote.finalManualPrice || (initialPriceDisplayMode === "final" ? quote.fixedFare || "" : "")}" min="0" step="0.01" placeholder="0.00" />
+              </label>
+              <div class="form-grid">
                 <label><span><input type="checkbox" name="includeTax" ${quote.includeTax === true ? "checked" : ""} /> Agregar IVA 12%</span></label>
                 <label>Descuento editable<input type="number" name="discountAmount" value="${quote.discountAmount || 0}" min="0" step="0.01" /></label>
               </div>
@@ -1662,6 +1822,14 @@ function openQuoteModal(quote = {}) {
           </div>
           <aside class="quote-summary" data-quote-summary></aside>
         </div>
+        <input type="hidden" name="serviceDate" value="${escapeHtml(serviceStartDate)}" />
+        <input type="hidden" name="returnDate" value="${escapeHtml(serviceEndDate)}" />
+        <input type="hidden" name="origin" value="${escapeHtml(quote.origin)}" />
+        <input type="hidden" name="destination" value="${escapeHtml(quote.destination)}" />
+        <input type="hidden" name="departureTime" value="${escapeHtml(quote.departureTime || "08:00")}" />
+        <input type="hidden" name="returnTime" value="${escapeHtml(quote.returnTime)}" />
+        <input type="hidden" name="hasLuggage" value="${quote.hasLuggage === false ? "false" : "true"}" />
+        <input type="hidden" name="luggageDescription" value="${escapeHtml(quote.luggageDescription || (quote.luggage ? `${quote.luggage} maletas` : ""))}" />
         <input type="hidden" name="clientId" value="${escapeHtml(quote.clientId)}" />
         <input type="hidden" name="clientNit" value="${escapeHtml(quote.clientNit)}" />
         <input type="hidden" name="clientEmail" value="${escapeHtml(quote.clientEmail)}" />
@@ -1737,6 +1905,47 @@ function openQuoteModal(quote = {}) {
     addManualServiceSelection(form);
     if (!isEdit) saveQuoteDraft(form);
   });
+  $$('input[name="destinationMode"]', form).forEach((input) => {
+    input.addEventListener("change", () => {
+      syncDestinationMode(form, { ensureCount: input.value === "multiple" && input.checked });
+      if (!isEdit) saveQuoteDraft(form);
+    });
+  });
+  form.elements.destinationCount.addEventListener("change", () => {
+    syncDestinationMode(form, { ensureCount: true });
+    if (!isEdit) saveQuoteDraft(form);
+  });
+  $$('input[name="priceDisplayMode"]', form).forEach((input) => {
+    input.addEventListener("change", () => {
+      syncPriceDisplayMode(form);
+      updateQuoteSummary(form);
+      if (!isEdit) saveQuoteDraft(form);
+    });
+  });
+  $("[data-service-detail-list]", form).addEventListener("click", (event) => {
+    const removeButton = event.target.closest("[data-remove-service-card]");
+    if (!removeButton) return;
+    removeServiceSelection(form, removeButton.dataset.removeServiceCard);
+    if (destinationModeValue(form) === "multiple") {
+      form.elements.destinationCount.value = String(Math.max(2, serviceSelectionsWithDetailsFromForm(form).length));
+      syncDestinationMode(form, { ensureCount: true });
+    }
+    if (!isEdit) saveQuoteDraft(form);
+  });
+  $("[data-service-detail-list]", form).addEventListener("change", (event) => {
+    if (event.target.matches("[data-service-detail-luggage]")) {
+      const card = event.target.closest("[data-service-detail-card]");
+      const description = $("[data-service-detail-luggage-description]", card);
+      if (event.target.value === "false" && description) description.value = "";
+    }
+    if (destinationModeValue(form) === "multiple" && event.target.name?.endsWith("_destinationAddress")) {
+      const cards = $$('[data-service-detail-card]', form);
+      const card = event.target.closest("[data-service-detail-card]");
+      const index = cards.indexOf(card);
+      const nextOrigin = cards[index + 1]?.querySelector('input[name$="_origin"]');
+      if (nextOrigin) nextOrigin.value = event.target.value;
+    }
+  });
   renderVehicleUnitPanel(form, quoteVehicleIds(quote));
   syncQuoteCapacity(form);
   $("[data-vehicle-model-select]").addEventListener("change", () => {
@@ -1766,6 +1975,8 @@ function openQuoteModal(quote = {}) {
   form.addEventListener("change", trackFormChange);
   form.addEventListener("submit", (event) => saveQuote(event, quote.id));
   renderDestinationRatePreview(form);
+  syncDestinationMode(form, { ensureCount: initialDestinationMode === "multiple" });
+  syncPriceDisplayMode(form);
   syncServiceSelections(form);
   updateQuoteSummary(form);
   if (draft) toast("Borrador recuperado.");
@@ -1820,17 +2031,32 @@ function quoteFormData(form) {
   const body = Object.fromEntries(new FormData(form));
   const serviceSelections = serviceSelectionsWithDetailsFromForm(form);
   const firstService = serviceSelections[0];
+  syncPrimaryServiceFields(form, serviceSelections);
   body.serviceSelections = serviceSelections;
   body.serviceSelectionsJson = JSON.stringify(serviceSelections);
   form.elements.serviceSelectionsJson.value = body.serviceSelectionsJson;
-  body.fixedFare = String(serviceSelectionsTotal(serviceSelections));
+  body.destinationMode = destinationModeValue(form);
+  body.destinationCount = body.destinationMode === "multiple"
+    ? Math.max(2, Number(form.elements.destinationCount.value || serviceSelections.length || 2))
+    : Math.max(1, serviceSelections.length || 1);
+  body.priceDisplayMode = form.elements.priceDisplayMode.value === "final" ? "final" : "detailed";
+  body.finalManualPrice = Math.max(0, Number(form.elements.finalManualPrice.value || 0));
+  body.fixedFare = String(body.priceDisplayMode === "final" ? body.finalManualPrice : serviceSelectionsTotal(serviceSelections));
+  body.fixedFareIsTotal = body.priceDisplayMode === "final";
   body.destinationRateId = firstService?.destinationId || "";
   body.destinationRateName = serviceSelectionsDestinationLabel(serviceSelections);
   body.serviceRateType = firstService?.type || "oneWay";
   body.serviceType = serviceSelectionsServiceLabel(serviceSelections);
+  body.serviceDate = form.elements.serviceDate.value;
+  body.returnDate = form.elements.returnDate.value;
+  body.origin = form.elements.origin.value;
+  body.destination = form.elements.destination.value;
+  body.departureTime = form.elements.departureTime.value;
+  body.returnTime = form.elements.returnTime.value;
   body.serviceStartDate = body.serviceDate;
   body.serviceEndDate = body.returnDate || body.serviceDate;
   body.hasLuggage = form.elements.hasLuggage.value === "true";
+  body.luggageDescription = form.elements.luggageDescription.value;
   if (!body.hasLuggage) body.luggageDescription = "";
   body.luggage = body.hasLuggage && body.luggageDescription ? 1 : 0;
   body.vehicleIds = $$('input[name="vehicleIds"]:checked', form).map((input) => input.value);
@@ -1856,8 +2082,10 @@ function calculateTotalsLocal(body) {
   const fixedFareIncludesTax = false;
   const distanceCharge = fixedFare ? 0 : kilometers * rates.pricePerKm;
   const timeCharge = fixedFare ? 0 : minutes * rates.pricePerMinute;
-  const baseCalculated = fixedFare ? fixedFare * vehicleCount : distanceCharge + timeCharge;
-  const baseFare = Math.max(baseCalculated, rates.minimumFare);
+  const fixedFareIsTotal = body.fixedFareIsTotal === true || body.fixedFareIsTotal === "true";
+  const baseCalculated = fixedFare ? (fixedFareIsTotal ? fixedFare : fixedFare * vehicleCount) : distanceCharge + timeCharge;
+  const hasPricedRoute = fixedFare > 0 || distanceCharge > 0 || timeCharge > 0;
+  const baseFare = hasPricedRoute ? Math.max(baseCalculated, rates.minimumFare) : 0;
   const night = body.applyNightSurcharge ? rates.nightSurcharge : 0;
   const airport = body.applyAirportSurcharge ? rates.airportSurcharge : 0;
   const waiting = (Number(body.waitingMinutes || 0) / 60) * rates.waitingPerHour;
@@ -1876,6 +2104,7 @@ function calculateTotalsLocal(body) {
     fixedFare,
     vehicleCount,
     fixedFareIncludesTax,
+    fixedFareIsTotal,
     distanceCharge,
     timeCharge,
     baseFare,
@@ -1894,13 +2123,17 @@ function calculateTotalsLocal(body) {
 function updateQuoteSummary(form) {
   const body = quoteFormData(form);
   const totals = calculateTotalsLocal(body);
+  const sortedServices = [...body.serviceSelections].sort((a, b) => {
+    const dateOrder = String(a.serviceDate || "9999-12-31").localeCompare(String(b.serviceDate || "9999-12-31"));
+    return dateOrder || Number(a.legNumber || 0) - Number(b.legNumber || 0);
+  });
   const serviceLines = body.serviceSelections.length
-    ? body.serviceSelections
+    ? sortedServices
         .map(
           (item) => `
             <div class="summary-service-row">
-              <span>${escapeHtml(item.label)} · ${escapeHtml(item.destination)}</span>
-              <strong>${money(item.amount)}</strong>
+              <span>${item.serviceDate ? `${escapeHtml(formatDate(item.serviceDate, { short: true }))} · ` : ""}${escapeHtml(item.label)} · ${escapeHtml(item.destination)}</span>
+              ${body.priceDisplayMode === "detailed" ? `<strong>${money(Number(item.amount || 0) * totals.vehicleCount)}</strong>` : ""}
             </div>
           `,
         )
@@ -1909,14 +2142,14 @@ function updateQuoteSummary(form) {
   $("[data-quote-summary]", form).innerHTML = `
     <div class="quote-summary-header"><span>${totals.fixedFare ? "Total del servicio" : "Total estimado"}</span><strong>${money(totals.total)}</strong></div>
     <div class="summary-lines">
-      <div class="summary-service-list"><span>Tipo de Servicio</span>${serviceLines}</div>
-      <div class="summary-line"><span>Total servicios por Mercedes</span><strong>${money(totals.fixedFare)}</strong></div>
+      <div class="summary-service-list"><span>${body.priceDisplayMode === "detailed" ? "Desglose por destino" : "Destinos incluidos"}</span>${serviceLines}</div>
+      ${body.priceDisplayMode === "detailed" ? `<div class="summary-line"><span>Total servicios por Mercedes</span><strong>${money(totals.fixedFare)}</strong></div>` : ""}
       <div class="summary-line"><span>Mercedes seleccionadas</span><strong>${escapeHtml(totals.vehicleCount)}</strong></div>
-      <div class="summary-line"><span>Subtotal vehículos</span><strong>${money(totals.baseFare)}</strong></div>
+      <div class="summary-line"><span>${body.priceDisplayMode === "final" ? "Precio final ingresado" : "Subtotal vehículos"}</span><strong>${money(totals.baseFare)}</strong></div>
       <div class="summary-line"><span>Descuento</span><strong>-${money(totals.discount)}</strong></div>
       <div class="summary-line"><span>IVA ${body.includeTax ? state.rates.taxPercent : 0}%</span><strong>${money(totals.tax)}</strong></div>
-      <div class="summary-line"><span>Fecha inicio</span><strong>${escapeHtml(formatDate(body.serviceDate, { short: true }))}</strong></div>
-      <div class="summary-line"><span>Fecha final</span><strong>${escapeHtml(formatDate(body.returnDate, { short: true }))}</strong></div>
+      <div class="summary-line"><span>Fecha inicio</span><strong>${escapeHtml(formatDate(sortedServices[0]?.serviceDate || body.serviceDate, { short: true }))}</strong></div>
+      <div class="summary-line"><span>Fecha final</span><strong>${escapeHtml(formatDate(sortedServices.at(-1)?.returnDate || body.returnDate, { short: true }))}</strong></div>
       <div class="summary-line"><span>Pasajeros</span><strong>${escapeHtml(body.passengers || 1)}</strong></div>
       <div class="summary-line"><span>Equipaje</span><strong>${escapeHtml(body.hasLuggage ? body.luggageDescription || "Sí" : "No")}</strong></div>
       <div class="summary-line"><span>Comodidades</span><strong>${escapeHtml(quoteAmenityLabels(body).join(" · ") || "Estándar")}</strong></div>
@@ -1959,8 +2192,16 @@ async function saveQuote(event, id) {
   const form = event.currentTarget;
   const button = $('button[type="submit"]', form);
   const body = quoteFormData(form);
-  if (!body.serviceSelections.length || !Number(body.fixedFare || 0)) {
-    $("[data-form-error]", form).textContent = "Seleccione al menos un servicio en Tipo de Servicio.";
+  if (!body.serviceSelections.length) {
+    $("[data-form-error]", form).textContent = "Agregue al menos un destino con la información del viaje.";
+    return;
+  }
+  if (body.priceDisplayMode === "detailed" && body.serviceSelections.some((item) => Number(item.amount || 0) <= 0)) {
+    $("[data-form-error]", form).textContent = "Ingrese el precio manual de cada destino para mostrar el desglose.";
+    return;
+  }
+  if (body.priceDisplayMode === "final" && Number(body.finalManualPrice || 0) <= 0) {
+    $("[data-form-error]", form).textContent = "Ingrese el precio final de toda la cotización.";
     return;
   }
   if (!body.vehicleIds.length && !String(body.vehicleManualName || "").trim()) {
@@ -2157,6 +2398,10 @@ function quoteVehicleCountForPrice(quote) {
   return Math.max(1, Number(quote.vehicleCount || quote.vehicleIds?.length || 1));
 }
 
+function quoteFixedFareIsTotal(quote) {
+  return quote.priceDisplayMode === "final" || quote.fixedFareIsTotal === true || quote.fixedFareIsTotal === "true";
+}
+
 function quoteTaxBreakdown(quote) {
   const totals = quote.totals || {};
   const subtotal = Number(totals.subtotalBeforeDiscount ?? totals.baseFare ?? quoteSelectedFare(quote));
@@ -2239,7 +2484,7 @@ function quoteFeature(icon, label, detail = "") {
 function quotePosterPrice(quote) {
   const fare = quoteSelectedFare(quote);
   const vehicleCount = quoteVehicleCountForPrice(quote);
-  const totalFare = fare * vehicleCount;
+  const totalFare = quoteFixedFareIsTotal(quote) ? fare : fare * vehicleCount;
   const selections = quoteServiceSelections(quote);
   const breakdown = quoteTaxBreakdown(quote);
   const oneWayAmount = quote.serviceRateType === "roundTrip" ? totalFare / 2 : totalFare;
@@ -2314,9 +2559,12 @@ function quotePosterPrimaryService(quote) {
 function quotePosterServiceLines(quote) {
   const selections = quoteServiceSelections(quote);
   if (!selections.length) return [{ label: quoteServiceText(quote), amount: quoteSelectedFare(quote) }];
-  return selections.map((item, index) => ({
+  return [...selections].sort((a, b) => {
+    const dateOrder = String(a.serviceDate || "9999-12-31").localeCompare(String(b.serviceDate || "9999-12-31"));
+    return dateOrder || Number(a.legNumber || 0) - Number(b.legNumber || 0);
+  }).map((item, index) => ({
     label: `${index + 1}. ${item.label || "Servicio"}${item.destination ? ` · ${item.destination}` : ""}`,
-    amount: Number(item.amount || 0) * quoteVehicleCountForPrice(quote),
+    amount: quote.priceDisplayMode === "final" ? null : Number(item.amount || 0) * quoteVehicleCountForPrice(quote),
   }));
 }
 
@@ -2329,7 +2577,7 @@ function quotePosterServicesHtml(quote) {
           (item) => `
             <div class="poster-service-row">
               <span>${escapeHtml(item.label)}</span>
-              <strong>${escapeHtml(posterMoney(item.amount))}</strong>
+              ${item.amount === null ? "" : `<strong>${escapeHtml(posterMoney(item.amount))}</strong>`}
             </div>
           `,
         )
@@ -2345,9 +2593,67 @@ function quotePosterPriceBandHtml(quote) {
   const special = breakdown.total;
   const taxPercent = Number(quote.totals?.taxPercent || 0);
   return `
-    <div class="poster-regular-price">${escapeHtml(posterMoney(regular))}</div>
+    <div class="poster-regular-price">${quote.priceDisplayMode === "final" ? "" : escapeHtml(posterMoney(regular))}</div>
     <div class="poster-special-price-value">${escapeHtml(posterMoney(special))}</div>
     ${taxPercent > 0 ? '<div class="poster-tax-status poster-tax-status-included">Precio incluye IVA</div>' : ""}
+  `;
+}
+
+function quotePosterContinuationHtml(quote) {
+  const selections = [...quoteServiceSelections(quote)].sort((a, b) => {
+    const dateOrder = String(a.serviceDate || "9999-12-31").localeCompare(String(b.serviceDate || "9999-12-31"));
+    return dateOrder || Number(a.legNumber || 0) - Number(b.legNumber || 0);
+  });
+  const hasServiceNotes = selections.some((item) => item.notes);
+  if (selections.length < 2 && !hasServiceNotes && !quote.notes) return "";
+
+  const detailed = quote.priceDisplayMode !== "final";
+  const vehicleCount = quoteVehicleCountForPrice(quote);
+  const totals = quoteTaxBreakdown(quote);
+  return `
+    <section class="poster-continuation">
+      <header class="poster-continuation-header">
+        <div><span>Luxury Travel Guatemala</span><h2>Detalle del recorrido</h2></div>
+        <strong>${selections.length} destino${selections.length === 1 ? "" : "s"}</strong>
+      </header>
+      <div class="poster-route-list">
+        ${selections
+          .map(
+            (item, index) => `
+              <article class="poster-route-card">
+                <div class="poster-route-number">${String(index + 1).padStart(2, "0")}</div>
+                <div class="poster-route-content">
+                  <div class="poster-route-heading">
+                    <div>
+                      <span>${escapeHtml(item.label || "Servicio privado")}</span>
+                      <h3>${escapeHtml(item.origin || routePointLabel(index))} <b>→</b> ${escapeHtml(item.destinationAddress || item.destination || routePointLabel(index + 1))}</h3>
+                    </div>
+                    ${detailed ? `<strong>${escapeHtml(posterMoney(Number(item.amount || 0) * vehicleCount))}</strong>` : ""}
+                  </div>
+                  <div class="poster-route-meta">
+                    <span><b>Fecha</b>${escapeHtml(formatDocumentDate(item.serviceDate))}</span>
+                    <span><b>Finalización</b>${escapeHtml(formatDocumentDate(item.returnDate || item.serviceDate))}</span>
+                    <span><b>Salida</b>${escapeHtml(pending(item.departureTime))}</span>
+                    <span><b>Regreso</b>${escapeHtml(pending(item.returnTime))}</span>
+                    <span><b>Equipaje</b>${escapeHtml(item.hasLuggage === false ? "No" : item.luggageDescription || "Sí")}</span>
+                  </div>
+                  ${item.notes ? `<p><b>Notas:</b> ${escapeHtml(item.notes)}</p>` : ""}
+                </div>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+      ${quote.notes ? `<aside class="poster-general-notes"><strong>Notas generales</strong><p>${escapeHtml(quote.notes)}</p></aside>` : ""}
+      <section class="poster-continuation-price">
+        <div>
+          <span>${detailed ? "Total de destinos" : "Precio final"}</span>
+          <strong>${escapeHtml(posterMoney(totals.total))}</strong>
+        </div>
+        <small>${escapeHtml(quoteTaxLabel(quote))}${vehicleCount > 1 && detailed ? ` · ${vehicleCount} Mercedes seleccionadas` : ""}</small>
+      </section>
+      <footer>Viaja con <b>comodidad, exclusividad y seguridad.</b></footer>
+    </section>
   `;
 }
 
@@ -2549,6 +2855,7 @@ function downloadQuotePdf(id) {
         ${quotePosterVehicleHtml(quote)}
         ${quotePosterAmenitiesHtml(quote)}
       </div>
+      ${quotePosterContinuationHtml(quote)}
     `,
   );
 }
@@ -2683,8 +2990,8 @@ function vehicleDocumentCard(item, features) {
 
 function quoteDocumentStyles() {
   return `
-    .sheet-quote{position:relative;width:1023px;height:1537px;min-height:1537px;background:#fff;color:#080d17;font-family:Arial,sans-serif;box-shadow:0 0 30px #777;overflow:hidden}
-    .quote-poster-content{position:absolute;inset:0;background:#fff;font-family:Arial,sans-serif}
+    .sheet-quote{position:relative;width:1023px;height:auto;min-height:1537px;background:#fff;color:#080d17;font-family:Arial,sans-serif;box-shadow:0 0 30px #777;overflow:hidden}
+    .quote-poster-content{position:absolute;left:0;top:0;width:1023px;height:1537px;background:#fff;font-family:Arial,sans-serif}
     .quote-template-bg{position:absolute;inset:0;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
     .quote-poster-content>*:not(.quote-template-bg){z-index:2}
     .poster-client-name{position:absolute;left:45px;top:662px;width:545px;overflow:hidden;color:#bd8123;font-size:48px;font-weight:900;letter-spacing:.025em;line-height:1.08;text-transform:uppercase;white-space:nowrap;text-overflow:ellipsis}
@@ -2710,6 +3017,11 @@ function quoteDocumentStyles() {
     .poster-vehicle-features.poster-feature-count-5 .poster-feature-icon,.poster-vehicle-features.poster-feature-count-6 .poster-feature-icon{width:36px;height:36px}.poster-vehicle-features.poster-feature-count-5 .poster-feature-item span,.poster-vehicle-features.poster-feature-count-6 .poster-feature-item span{font-size:8.5px}
     .poster-vehicle-features.poster-feature-count-7 .poster-feature-icon,.poster-vehicle-features.poster-feature-count-8 .poster-feature-icon{width:30px;height:30px;stroke-width:3}.poster-vehicle-features.poster-feature-count-7 .poster-feature-item span,.poster-vehicle-features.poster-feature-count-8 .poster-feature-item span{font-size:7.5px;line-height:1}
     .poster-included-features .poster-feature-icon{width:36px;height:36px}.poster-included-features .poster-feature-item span{font-size:10px}
+    .poster-continuation{position:relative;z-index:4;display:grid;gap:24px;margin-top:1537px;background:linear-gradient(180deg,#faf8f3,#f3eee4);padding:56px 54px 0;color:#111}
+    .poster-continuation-header{display:flex;align-items:end;justify-content:space-between;gap:24px;border-bottom:2px solid #c99532;padding-bottom:18px}.poster-continuation-header span{color:#ad7820;font-size:13px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}.poster-continuation-header h2{margin:7px 0 0;font-family:Georgia,serif;font-size:38px;font-weight:500}.poster-continuation-header>strong{border:1px solid #c99532;border-radius:999px;padding:9px 15px;color:#9a6716;font-size:14px;text-transform:uppercase}
+    .poster-route-list{display:grid;gap:16px}.poster-route-card{display:grid;grid-template-columns:64px minmax(0,1fr);gap:18px;border:1px solid #d7b46c;border-radius:18px;background:#fff;padding:20px;box-shadow:0 10px 30px rgba(25,22,15,.06)}.poster-route-number{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#050a13;color:#dcae45;font-family:Georgia,serif;font-size:21px}.poster-route-content{min-width:0}.poster-route-heading{display:flex;align-items:start;justify-content:space-between;gap:18px}.poster-route-heading span{color:#a16d19;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.poster-route-heading h3{margin:5px 0 0;font-size:20px;line-height:1.25}.poster-route-heading h3 b{color:#c18b2c}.poster-route-heading>strong{color:#aa741b;font-family:Georgia,serif;font-size:23px;white-space:nowrap}.poster-route-meta{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:16px;border-top:1px solid #ead8b4;padding-top:14px}.poster-route-meta span{color:#333;font-size:11px;line-height:1.35}.poster-route-meta b{display:block;margin-bottom:3px;color:#9a6a1e;font-size:9px;letter-spacing:.08em;text-transform:uppercase}.poster-route-content p{margin:14px 0 0;border-left:3px solid #c99532;background:#f8f2e7;padding:10px 12px;font-size:12px;line-height:1.45}
+    .poster-general-notes{border:1px solid #d7b46c;border-radius:16px;background:#fff;padding:18px 20px}.poster-general-notes strong{color:#9a6a1e;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.poster-general-notes p{margin:7px 0 0;font-size:13px;line-height:1.5}
+    .poster-continuation-price{display:flex;align-items:center;justify-content:space-between;gap:24px;border-radius:18px;background:#020712;color:#fff;padding:24px 30px}.poster-continuation-price span{display:block;color:#dcae45;font-size:12px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.poster-continuation-price strong{display:block;margin-top:5px;color:#e3b64c;font-family:Georgia,serif;font-size:38px}.poster-continuation-price small{font-size:15px;font-weight:900;text-transform:uppercase}.poster-continuation footer{margin:0 -54px;background:#020712;padding:17px;color:#fff;font-size:14px;letter-spacing:.18em;text-align:center;text-transform:uppercase}.poster-continuation footer b{color:#dcae45}
   `;
 }
 
@@ -2999,7 +3311,7 @@ async function logout() {
 function setupPwa() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register(appPath("/sw.js?v=46"), { scope: appPath("/") })
+      .register(appPath("/sw.js?v=47"), { scope: appPath("/") })
       .catch(() => {});
   }
   window.addEventListener("beforeinstallprompt", (event) => {

@@ -8,11 +8,16 @@ export function calculateQuote(input, rates) {
   const waitingMinutes = Math.max(0, Number(input.waitingMinutes || 0));
   const fixedFare = Math.max(0, Number(input.fixedFare || 0));
   const vehicleCount = Math.max(1, Number(input.vehicleCount || input.vehicleIds?.length || 1));
+  const fixedFareIsTotal = input.fixedFareIsTotal === true || input.fixedFareIsTotal === "true";
   const fixedFareIncludesTax = false;
 
   const distanceCharge = fixedFare ? 0 : kilometers * Number(rates.pricePerKm || 0);
   const timeCharge = fixedFare ? 0 : minutes * Number(rates.pricePerMinute || 0);
-  const baseCalculated = fixedFare ? fixedFare * vehicleCount : distanceCharge + timeCharge;
+  const baseCalculated = fixedFare
+    ? fixedFareIsTotal
+      ? fixedFare
+      : fixedFare * vehicleCount
+    : distanceCharge + timeCharge;
   const baseFare = Math.max(baseCalculated, Number(rates.minimumFare || 0));
 
   const nightSurcharge = input.applyNightSurcharge
@@ -48,6 +53,7 @@ export function calculateQuote(input, rates) {
     minutes: Math.round(minutes),
     fixedFare: roundMoney(fixedFare),
     vehicleCount: roundMoney(vehicleCount),
+    fixedFareIsTotal,
     fixedFareIncludesTax,
     distanceCharge: roundMoney(distanceCharge),
     timeCharge: roundMoney(timeCharge),
