@@ -1807,8 +1807,12 @@ tr:last-child td {
 }
 
 .document-preview-quote .document-preview-scroll {
-  display: grid;
-  justify-items: center;
+  display: block;
+}
+
+.document-preview-quote .sheet-quote {
+  margin-right: auto;
+  margin-left: auto;
 }
 
 .modal-header {

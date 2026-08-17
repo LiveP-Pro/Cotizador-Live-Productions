@@ -2413,9 +2413,14 @@ function quoteTaxBreakdown(quote) {
   const totals = quote.totals || {};
   const subtotal = Number(totals.subtotalBeforeDiscount ?? totals.baseFare ?? quoteSelectedFare(quote));
   const discount = Number(totals.discount || 0);
+  const storedJourney = Number(totals.subtotal);
+  const journey = Number.isFinite(storedJourney)
+    ? storedJourney
+    : Math.max(0, subtotal - discount);
   const tax = Number(totals.tax || 0);
-  const total = Number(totals.total || Math.max(0, subtotal - discount) + tax);
-  return { subtotal, discount, tax, total };
+  const total = Number(totals.total || journey + tax);
+  const taxPercent = Number(totals.taxPercent || 0);
+  return { subtotal, discount, journey, taxPercent, tax, total };
 }
 
 function quotePriceCard(quote) {
@@ -2430,7 +2435,7 @@ function quotePriceCard(quote) {
       ${selections.length > 1 ? `<div>${selections.map((item) => `${escapeHtml(item.label)} ${money(item.amount)}`).join(" · ")}</div>` : ""}
       ${vehicleCount > 1 ? `<div>${vehicleCount} Mercedes seleccionadas · ${money(fare)} c/u</div>` : ""}
       ${breakdown.discount ? `<div>Descuento -${money(breakdown.discount)}</div>` : ""}
-      <div>${money(Math.max(0, breakdown.subtotal - breakdown.discount))}</div>
+      <div>${money(breakdown.journey)}</div>
       <div>+ IVA ${money(breakdown.tax)}</div>
       <div>Total ${money(breakdown.total)}</div>
     </section>
@@ -2633,11 +2638,56 @@ function quotePosterServicesHtml(quote) {
       <div class="poster-service-price-columns">
         ${columns.map((column) => `<div class="poster-service-price-list">${column.map(row).join("")}</div>`).join("")}
       </div>
-      <footer>
-        <span>${escapeHtml(quoteTaxLabel(quote))}</span>
-        <strong>TOTAL: ${escapeHtml(posterMoney(totals.total))}</strong>
+      <footer class="poster-price-breakdown">
+        <div>
+          <span>Viaje</span>
+          <strong>${escapeHtml(posterMoney(totals.journey))}</strong>
+          ${totals.discount ? `<small>Descuento aplicado: -${escapeHtml(posterMoney(totals.discount))}</small>` : ""}
+        </div>
+        <div>
+          <span>IVA${totals.taxPercent ? ` ${escapeHtml(totals.taxPercent)}%` : ""}</span>
+          <strong>${totals.taxPercent ? escapeHtml(posterMoney(totals.tax)) : "No incluido"}</strong>
+        </div>
+        <div class="poster-price-total">
+          <span>Total</span>
+          <strong>${escapeHtml(posterMoney(totals.total))}</strong>
+        </div>
       </footer>
     </section>
+  `;
+}
+
+function quotePosterNoteEntries(quote) {
+  const entries = [];
+  if (String(quote.notes || "").trim()) {
+    entries.push({ label: "Nota general", text: String(quote.notes).trim() });
+  }
+  orderedQuoteServices(quote).forEach((item, index) => {
+    if (!String(item.notes || "").trim()) return;
+    entries.push({
+      label: `Destino ${index + 1}`,
+      text: String(item.notes).trim(),
+    });
+  });
+  return entries;
+}
+
+function quotePosterNotesHtml(quote) {
+  const notes = quotePosterNoteEntries(quote);
+  if (!notes.length) return "";
+  return `
+    <aside class="poster-quote-notes">
+      <strong>Notas del servicio</strong>
+      <div>
+        ${notes
+          .map(
+            (note) => `
+              <p><b>${escapeHtml(note.label)}:</b> ${escapeHtml(note.text)}</p>
+            `,
+          )
+          .join("")}
+      </div>
+    </aside>
   `;
 }
 
@@ -2686,10 +2736,17 @@ function quotePosterContinuationHtml(quote) {
       ${quote.notes ? `<aside class="poster-general-notes"><strong>Notas generales</strong><p>${escapeHtml(quote.notes)}</p></aside>` : ""}
       <section class="poster-continuation-price">
         <div>
-          <span>${detailed ? "Total de destinos" : "Precio final"}</span>
+          <span>Viaje</span>
+          <strong>${escapeHtml(posterMoney(totals.journey))}</strong>
+        </div>
+        <div>
+          <span>IVA${totals.taxPercent ? ` ${escapeHtml(totals.taxPercent)}%` : ""}</span>
+          <strong>${totals.taxPercent ? escapeHtml(posterMoney(totals.tax)) : "No incluido"}</strong>
+        </div>
+        <div class="poster-continuation-total">
+          <span>Total</span>
           <strong>${escapeHtml(posterMoney(totals.total))}</strong>
         </div>
-        <small>${escapeHtml(quoteTaxLabel(quote))}${vehicleCount > 1 && detailed ? ` · ${vehicleCount} Mercedes seleccionadas` : ""}</small>
       </section>
       <footer>Viaja con <b>comodidad, exclusividad y seguridad.</b></footer>
     </section>
@@ -2874,13 +2931,14 @@ function downloadQuotePdf(id) {
   const quote = state.quotes.find((item) => item.id === id);
   if (!quote) return;
   const service = quotePosterPrimaryService(quote);
+  const templateImage = `${assetUrl("quote-template-master-2x.png")}?v=5`;
 
   openPremiumDocument(
     quote.number,
     "quote",
     `
       <div class="quote-poster-content quote-poster-v2">
-        <img class="quote-template-bg" src="${assetUrl("quote-template-master-2x.png")}?v=5" alt="">
+        <img class="quote-template-bg" src="${templateImage}" alt="">
         <strong class="poster-client-name">${escapeHtml(quote.clientName || "Cliente")}</strong>
         <div class="poster-dynamic-value poster-start-date">${escapeHtml(formatPosterDate(service.serviceDate))}</div>
         <div class="poster-dynamic-value poster-start-time">${escapeHtml(pending(service.departureTime))}</div>
@@ -2889,9 +2947,16 @@ function downloadQuotePdf(id) {
         <div class="poster-dynamic-value poster-end-date"><span>${escapeHtml(formatPosterDate(service.returnDate))}</span></div>
         <div class="poster-dynamic-value poster-return-time"><span>${escapeHtml(pending(service.returnTime))}</span></div>
         <div class="poster-dynamic-value poster-passengers">${escapeHtml(`${service.passengers || 1} pasajeros`)}</div>
-        ${quotePosterServicesHtml(quote)}
-        ${quotePosterVehicleHtml(quote)}
-        ${quotePosterAmenitiesHtml(quote)}
+        <div class="poster-top-spacer" aria-hidden="true"></div>
+        <section class="poster-adaptive-lower">
+          ${quotePosterServicesHtml(quote)}
+          ${quotePosterNotesHtml(quote)}
+          <div class="poster-template-lower">
+            <img class="quote-template-lower-bg" src="${templateImage}" alt="" aria-hidden="true">
+            ${quotePosterVehicleHtml(quote)}
+            ${quotePosterAmenitiesHtml(quote)}
+          </div>
+        </section>
       </div>
       ${quotePosterContinuationHtml(quote)}
     `,
@@ -3028,37 +3093,41 @@ function vehicleDocumentCard(item, features) {
 
 function quoteDocumentStyles() {
   return `
-    .sheet-quote{position:relative;width:1023px;height:auto;min-height:1537px;background:#fff;color:#080d17;font-family:Arial,sans-serif;box-shadow:0 0 30px #777;overflow:hidden}
-    .quote-poster-content{position:absolute;left:0;top:0;width:1023px;height:1537px;background:#fff;font-family:Arial,sans-serif}
+    .sheet.sheet-quote{position:relative;align-self:start;justify-self:center;width:1023px;height:max-content;min-height:1537px;background:#fff;color:#080d17;font-family:Arial,sans-serif;box-shadow:0 0 30px #777;overflow:hidden}
+    .quote-poster-content{position:relative;inset:auto;width:1023px;min-height:1537px;background:#fff;font-family:Arial,sans-serif}
     .quote-template-bg{position:absolute;inset:0;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
     .quote-poster-content>*:not(.quote-template-bg){z-index:2}
+    .poster-top-spacer{position:relative;height:1000px;pointer-events:none}
+    .poster-adaptive-lower{position:relative;z-index:5;background:#fff;padding-top:0}
     .poster-client-name{position:absolute;left:45px;top:662px;width:545px;overflow:hidden;color:#bd8123;font-size:48px;font-weight:900;letter-spacing:.025em;line-height:1.08;text-transform:uppercase;white-space:nowrap;text-overflow:ellipsis}
     .poster-dynamic-value{position:absolute;display:flex;align-items:flex-start;justify-content:center;color:#111;font-size:20px;font-weight:500;line-height:1.2;text-align:center;text-wrap:balance}
     .poster-start-date{left:104px;top:817px;width:156px;height:94px}.poster-start-time{left:104px;top:956px;width:156px;height:45px;align-items:center}
     .poster-origin{left:282px;top:852px;width:188px;height:97px}.poster-destination{left:493px;top:852px;width:155px;height:94px}
     .poster-end-date{left:696px;top:846px;width:138px;height:78px}.poster-end-date>span,.poster-return-time>span{display:inline-block;width:max-content;max-width:100%;border-bottom:2px solid #d9ad57;padding:0 5px 7px}.poster-return-time{left:696px;top:949px;width:138px;height:68px}
     .poster-passengers{left:858px;top:842px;width:147px;height:82px;align-items:flex-start;justify-content:center;text-align:center}
-    .poster-service-price-box{position:absolute;left:16px;top:1020px;width:991px;height:254px;display:flex;flex-direction:column;border:2px solid #d1a044;border-radius:24px;background:linear-gradient(145deg,#02050c,#080d17);box-shadow:0 10px 25px rgba(0,0,0,.12);padding:14px 28px 12px;color:#fff;overflow:hidden}
-    .poster-service-price-box>header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid rgba(213,166,72,.62);padding-bottom:7px;color:#dfb24e;text-transform:uppercase}.poster-service-price-box>header span{font-size:16px;font-weight:900;letter-spacing:.12em}.poster-service-price-box>header small{font-size:11px;font-weight:850;letter-spacing:.08em}
-    .poster-service-price-columns{display:grid;grid-template-columns:1fr;gap:26px;min-height:0;flex:1;padding:8px 0 6px}.poster-service-price-box-columns .poster-service-price-columns{grid-template-columns:repeat(2,minmax(0,1fr))}.poster-service-price-list{display:grid;align-content:center;gap:4px;min-width:0}.poster-service-price-box-columns .poster-service-price-list+ .poster-service-price-list{border-left:1px solid rgba(213,166,72,.38);padding-left:22px}
-    .poster-service-price-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;min-width:0;color:#f8f8f6;font-size:14px;line-height:1.15}.poster-service-price-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.poster-service-price-row strong{color:#e2b348;font-size:14px;font-weight:900;white-space:nowrap}.poster-service-price-box-columns .poster-service-price-row{gap:8px;font-size:11px}.poster-service-price-box-columns .poster-service-price-row strong{font-size:11px}.poster-service-price-box-dense .poster-service-price-list{gap:2px}.poster-service-price-box-dense .poster-service-price-row,.poster-service-price-box-dense .poster-service-price-row strong{font-size:9px;line-height:1.05}
-    .poster-service-price-box>footer{display:flex;align-items:center;justify-content:space-between;gap:24px;border-top:1px solid rgba(213,166,72,.62);padding-top:8px;text-transform:uppercase}.poster-service-price-box>footer span{color:#fff;font-size:13px;font-weight:850;letter-spacing:.08em}.poster-service-price-box>footer strong{color:#e5b64c;font-family:Georgia,serif;font-size:28px;line-height:1;white-space:nowrap}
-    .poster-vehicle-value{position:absolute;left:197px;top:1301px;height:119px;display:inline-grid;grid-template-columns:58px minmax(0,max-content);gap:10px;align-items:center;color:#111;text-transform:uppercase}
+    .poster-service-price-box{position:relative;width:calc(100% - 16px);min-height:274px;margin:0 8px;display:flex;flex-direction:column;border:2px solid #d1a044;border-radius:26px;background:linear-gradient(145deg,#02050c,#080d17);box-shadow:0 10px 25px rgba(0,0,0,.12);padding:18px 30px 16px;color:#fff;overflow:hidden}
+    .poster-service-price-box>header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid rgba(213,166,72,.62);padding-bottom:10px;color:#dfb24e;text-transform:uppercase}.poster-service-price-box>header span,.poster-service-price-box>header small{font-size:18px;font-weight:900;letter-spacing:.1em}
+    .poster-service-price-columns{display:grid;grid-template-columns:1fr;gap:26px;min-height:0;flex:1;padding:13px 0 11px}.poster-service-price-box-columns .poster-service-price-columns{grid-template-columns:repeat(2,minmax(0,1fr))}.poster-service-price-list{display:grid;align-content:center;gap:6px;min-width:0}.poster-service-price-box-columns .poster-service-price-list+ .poster-service-price-list{border-left:1px solid rgba(213,166,72,.38);padding-left:22px}
+    .poster-service-price-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;min-width:0;color:#f8f8f6;font-size:15px;line-height:1.2}.poster-service-price-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.poster-service-price-row strong{color:#e2b348;font-size:18px;font-weight:900;white-space:nowrap}.poster-service-price-box-columns .poster-service-price-row{gap:9px;font-size:12px}.poster-service-price-box-columns .poster-service-price-row strong{font-size:16px}.poster-service-price-box-dense .poster-service-price-list{gap:3px}.poster-service-price-box-dense .poster-service-price-row{font-size:10px;line-height:1.08}.poster-service-price-box-dense .poster-service-price-row strong{font-size:13px;line-height:1.08}
+    .poster-price-breakdown{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;border-top:1px solid rgba(213,166,72,.62);padding-top:11px;text-transform:uppercase}.poster-price-breakdown>div{display:grid;align-content:center;min-width:0;border-left:1px solid rgba(213,166,72,.42);padding:0 20px}.poster-price-breakdown>div:first-child{border-left:0;padding-left:0}.poster-price-breakdown>div:last-child{padding-right:0;text-align:right}.poster-price-breakdown span{color:#f5f5f3;font-size:12px;font-weight:900;letter-spacing:.1em}.poster-price-breakdown strong{display:block;margin-top:4px;color:#e5b64c;font-family:Georgia,serif;font-size:24px;line-height:1;white-space:nowrap}.poster-price-breakdown small{display:block;margin-top:3px;color:#d4cab8;font-size:8px;font-weight:800;letter-spacing:.04em}.poster-price-total strong{font-size:30px}
+    .poster-quote-notes{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;margin:16px 48px;border-left:5px solid #c99532;background:#fff;padding:5px 0 5px 18px;color:#171717}.poster-quote-notes>strong{padding-top:2px;color:#9e6b1a;font-size:13px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}.poster-quote-notes>div{display:grid;gap:5px}.poster-quote-notes p{margin:0;font-size:13px;line-height:1.42}.poster-quote-notes b{color:#9e6b1a}
+    .poster-template-lower{position:relative;height:263px;overflow:hidden;background:#fff}.quote-template-lower-bg{position:absolute;left:0;top:-1274px;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
+    .poster-vehicle-value{position:absolute;left:197px;top:27px;z-index:3;height:119px;display:inline-grid;grid-template-columns:58px minmax(0,max-content);gap:10px;align-items:center;color:#111;text-transform:uppercase}
     .poster-vehicle-value>b{color:#bd8123;font-size:65px;line-height:1;text-align:center}.poster-vehicle-copy{max-width:132px;border-right:2px solid #d9ad57;padding-right:12px}.poster-vehicle-value strong,.poster-vehicle-value span{display:block}.poster-vehicle-value strong{font-size:16px;font-weight:900;line-height:1.04}.poster-vehicle-value span{margin-top:5px;font-size:13px;font-weight:800}
     .poster-feature-grid{position:absolute;z-index:3;display:grid;grid-template-columns:repeat(var(--feature-count),minmax(0,1fr));color:#bc7b19;text-transform:uppercase}
-    .poster-vehicle-features{left:412px;top:1323px;width:594px;height:94px}
-    .poster-included-features{left:25px;top:1455px;width:973px;height:64px}
+    .poster-vehicle-features{left:412px;top:49px;width:594px;height:94px}
+    .poster-included-features{left:25px;top:181px;width:973px;height:64px}
     .poster-feature-item{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #e1bc79;padding:1px 5px;text-align:center}
     .poster-feature-item:first-child{border-left:0}.poster-feature-icon{display:block;width:42px;height:42px;overflow:visible;fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
     .poster-feature-item span{display:block;margin-top:3px;color:#171717;font-size:10px;font-weight:900;line-height:1.05;text-wrap:balance}
     .poster-vehicle-features.poster-feature-count-5 .poster-feature-icon,.poster-vehicle-features.poster-feature-count-6 .poster-feature-icon{width:36px;height:36px}.poster-vehicle-features.poster-feature-count-5 .poster-feature-item span,.poster-vehicle-features.poster-feature-count-6 .poster-feature-item span{font-size:8.5px}
     .poster-vehicle-features.poster-feature-count-7 .poster-feature-icon,.poster-vehicle-features.poster-feature-count-8 .poster-feature-icon{width:30px;height:30px;stroke-width:3}.poster-vehicle-features.poster-feature-count-7 .poster-feature-item span,.poster-vehicle-features.poster-feature-count-8 .poster-feature-item span{font-size:7.5px;line-height:1}
     .poster-included-features .poster-feature-icon{width:36px;height:36px}.poster-included-features .poster-feature-item span{font-size:10px}
-    .poster-continuation{position:relative;z-index:4;display:grid;gap:24px;margin-top:1537px;background:linear-gradient(180deg,#faf8f3,#f3eee4);padding:56px 54px 0;color:#111}
+    .poster-continuation{position:relative;z-index:4;display:grid;gap:24px;background:linear-gradient(180deg,#faf8f3,#f3eee4);padding:56px 54px 0;color:#111}
     .poster-continuation-header{display:flex;align-items:end;justify-content:space-between;gap:24px;border-bottom:2px solid #c99532;padding-bottom:18px}.poster-continuation-header span{color:#ad7820;font-size:13px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}.poster-continuation-header h2{margin:7px 0 0;font-family:Georgia,serif;font-size:38px;font-weight:500}.poster-continuation-header>strong{border:1px solid #c99532;border-radius:999px;padding:9px 15px;color:#9a6716;font-size:14px;text-transform:uppercase}
     .poster-route-list{display:grid;gap:16px}.poster-route-card{display:grid;grid-template-columns:64px minmax(0,1fr);gap:18px;border:1px solid #d7b46c;border-radius:18px;background:#fff;padding:20px;box-shadow:0 10px 30px rgba(25,22,15,.06)}.poster-route-number{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#050a13;color:#dcae45;font-family:Georgia,serif;font-size:21px}.poster-route-content{min-width:0}.poster-route-heading{display:flex;align-items:start;justify-content:space-between;gap:18px}.poster-route-heading span{color:#a16d19;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.poster-route-heading h3{margin:5px 0 0;font-size:20px;line-height:1.25}.poster-route-heading h3 b{color:#c18b2c}.poster-route-heading>strong{color:#aa741b;font-family:Georgia,serif;font-size:23px;white-space:nowrap}.poster-route-meta{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:16px;border-top:1px solid #ead8b4;padding-top:14px}.poster-route-meta span{color:#333;font-size:11px;line-height:1.35}.poster-route-meta b{display:block;margin-bottom:3px;color:#9a6a1e;font-size:9px;letter-spacing:.08em;text-transform:uppercase}.poster-route-content p{margin:14px 0 0;border-left:3px solid #c99532;background:#f8f2e7;padding:10px 12px;font-size:12px;line-height:1.45}
     .poster-general-notes{border:1px solid #d7b46c;border-radius:16px;background:#fff;padding:18px 20px}.poster-general-notes strong{color:#9a6a1e;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.poster-general-notes p{margin:7px 0 0;font-size:13px;line-height:1.5}
-    .poster-continuation-price{display:flex;align-items:center;justify-content:space-between;gap:24px;border-radius:18px;background:#020712;color:#fff;padding:24px 30px}.poster-continuation-price span{display:block;color:#dcae45;font-size:12px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.poster-continuation-price strong{display:block;margin-top:5px;color:#e3b64c;font-family:Georgia,serif;font-size:38px}.poster-continuation-price small{font-size:15px;font-weight:900;text-transform:uppercase}.poster-continuation footer{margin:0 -54px;background:#020712;padding:17px;color:#fff;font-size:14px;letter-spacing:.18em;text-align:center;text-transform:uppercase}.poster-continuation footer b{color:#dcae45}
+    .poster-continuation-price{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:0;border-radius:18px;background:#020712;color:#fff;padding:24px 30px}.poster-continuation-price>div{border-left:1px solid rgba(220,174,69,.5);padding:0 24px}.poster-continuation-price>div:first-child{border-left:0;padding-left:0}.poster-continuation-price>div:last-child{padding-right:0;text-align:right}.poster-continuation-price span{display:block;color:#dcae45;font-size:12px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.poster-continuation-price strong{display:block;margin-top:5px;color:#e3b64c;font-family:Georgia,serif;font-size:30px;white-space:nowrap}.poster-continuation-total strong{font-size:38px}.poster-continuation footer{margin:0 -54px;background:#020712;padding:17px;color:#fff;font-size:14px;letter-spacing:.18em;text-align:center;text-transform:uppercase}.poster-continuation footer b{color:#dcae45}
   `;
 }
 
@@ -3158,9 +3227,11 @@ async function downloadDocumentImage(title, format = "png") {
   try {
     const clone = sheet.cloneNode(true);
     await inlineImages(clone);
-    const rect = sheet.getBoundingClientRect();
-    const width = Math.ceil(rect.width);
-    const height = Math.ceil(rect.height);
+    const width = Math.ceil(Math.max(sheet.offsetWidth, sheet.scrollWidth));
+    const height = Math.ceil(Math.max(sheet.offsetHeight, sheet.scrollHeight));
+    clone.style.width = `${width}px`;
+    clone.style.height = `${height}px`;
+    clone.style.zoom = "1";
     const scale = 2;
     const serialized = new XMLSerializer().serializeToString(clone);
     const svg = `
