@@ -1135,6 +1135,25 @@ tr:last-child td {
   grid-column: 1 / -1;
 }
 
+.discount-control {
+  display: grid;
+  gap: 10px;
+  min-height: 46px;
+  border: 1px solid #d7d8d4;
+  border-radius: var(--radius-small);
+  background: white;
+  padding: 13px;
+}
+
+.discount-control > label:first-child {
+  min-height: 18px;
+}
+
+.discount-control [data-discount-amount-wrap] {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
 .visually-hidden {
   position: absolute !important;
   width: 1px !important;
@@ -1934,6 +1953,13 @@ tr:last-child td {
   gap: 12px;
   color: rgba(255, 255, 255, 0.62);
   font-size: 10px;
+}
+
+.summary-tax-message span {
+  color: var(--gold-light);
+  font-weight: 800;
+  line-height: 1.35;
+  text-transform: uppercase;
 }
 
 .summary-line strong {

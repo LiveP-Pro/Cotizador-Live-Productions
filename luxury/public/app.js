@@ -1687,6 +1687,7 @@ function openQuoteModal(quote = {}) {
     : "single";
   const initialDestinationCount = Math.max(2, Math.min(20, Math.round(Number(quote.destinationCount || initialServiceSelections.length || 2))));
   const initialPriceDisplayMode = quote.priceDisplayMode === "final" ? "final" : "detailed";
+  const initialDiscountAmount = Math.max(0, Number(quote.discountAmount || quote.totals?.discountAmount || quote.totals?.discount || 0));
   openModal(
     isEdit ? `Editar ${quote.number}` : "Nueva cotización",
     `
@@ -1819,7 +1820,12 @@ function openQuoteModal(quote = {}) {
               </label>
               <div class="form-grid">
                 <label><span><input type="checkbox" name="includeTax" ${quote.includeTax === true ? "checked" : ""} /> Agregar IVA 12%</span></label>
-                <label>Descuento editable<input type="number" name="discountAmount" value="${quote.discountAmount || 0}" min="0" step="0.01" /></label>
+                <div class="discount-control">
+                  <label><span><input type="checkbox" name="includeDiscount" ${initialDiscountAmount > 0 ? "checked" : ""} /> Aplicar descuento</span></label>
+                  <label data-discount-amount-wrap ${initialDiscountAmount > 0 ? "" : "hidden"}>Monto del descuento
+                    <input type="number" name="discountAmount" value="${initialDiscountAmount || ""}" min="0" step="0.01" inputmode="decimal" placeholder="0.00" />
+                  </label>
+                </div>
               </div>
             </section>
           </div>
@@ -1974,6 +1980,15 @@ function openQuoteModal(quote = {}) {
   form.elements.hasLuggage.addEventListener("change", () => {
     if (form.elements.hasLuggage.value === "false") form.elements.luggageDescription.value = "";
   });
+  const syncDiscountControl = () => {
+    const enabled = form.elements.includeDiscount.checked;
+    const amountWrap = $("[data-discount-amount-wrap]", form);
+    amountWrap.hidden = !enabled;
+    form.elements.discountAmount.disabled = !enabled;
+    if (enabled && !form.elements.discountAmount.value) form.elements.discountAmount.focus();
+  };
+  form.elements.includeDiscount.addEventListener("change", syncDiscountControl);
+  syncDiscountControl();
   const trackFormChange = () => {
     updateQuoteSummary(form);
     if (!isEdit) saveQuoteDraft(form);
@@ -2076,6 +2091,10 @@ function quoteFormData(form) {
   body.applyNightSurcharge = form.elements.applyNightSurcharge.checked;
   body.applyAirportSurcharge = form.elements.applyAirportSurcharge.checked;
   body.includeTax = form.elements.includeTax.checked;
+  body.includeDiscount = form.elements.includeDiscount.checked;
+  body.discountAmount = body.includeDiscount
+    ? Math.max(0, Number(form.elements.discountAmount.value || 0))
+    : 0;
   body.fixedFareIncludesTax = form.elements.fixedFareIncludesTax.value !== "false";
   return body;
 }
@@ -2147,14 +2166,16 @@ function updateQuoteSummary(form) {
         .join("")
     : `<div class="summary-service-row"><span>Seleccione servicios en el menú</span><strong>${money(0)}</strong></div>`;
   $("[data-quote-summary]", form).innerHTML = `
-    <div class="quote-summary-header"><span>${totals.fixedFare ? "Total del servicio" : "Total estimado"}</span><strong>${money(totals.total)}</strong></div>
+    <div class="quote-summary-header"><span>${totals.fixedFare ? "Total de la cotización" : "Total estimado"}</span><strong>${money(totals.total)}</strong></div>
     <div class="summary-lines">
       <div class="summary-service-list"><span>${body.priceDisplayMode === "detailed" ? "Desglose por destino" : "Destinos incluidos"}</span>${serviceLines}</div>
       ${body.priceDisplayMode === "detailed" ? `<div class="summary-line"><span>Total servicios por Mercedes</span><strong>${money(totals.fixedFare)}</strong></div>` : ""}
       <div class="summary-line"><span>Mercedes seleccionadas</span><strong>${escapeHtml(totals.vehicleCount)}</strong></div>
       <div class="summary-line"><span>${body.priceDisplayMode === "final" ? "Precio final ingresado" : "Subtotal vehículos"}</span><strong>${money(totals.baseFare)}</strong></div>
-      <div class="summary-line"><span>Descuento</span><strong>-${money(totals.discount)}</strong></div>
-      <div class="summary-line"><span>IVA ${body.includeTax ? state.rates.taxPercent : 0}%</span><strong>${money(totals.tax)}</strong></div>
+      ${totals.discount > 0 ? `<div class="summary-line"><span>Descuento</span><strong>-${money(totals.discount)}</strong></div>` : ""}
+      ${body.includeTax
+        ? `<div class="summary-line"><span>IVA ${state.rates.taxPercent}%</span><strong>${money(totals.tax)}</strong></div>`
+        : '<div class="summary-line summary-tax-message"><span>Esta cotización no incluye IVA</span></div>'}
       <div class="summary-line"><span>Fecha inicio</span><strong>${escapeHtml(formatDate(sortedServices[0]?.serviceDate || body.serviceDate, { short: true }))}</strong></div>
       <div class="summary-line"><span>Fecha final</span><strong>${escapeHtml(formatDate(sortedServices.at(-1)?.returnDate || body.returnDate, { short: true }))}</strong></div>
       <div class="summary-line"><span>Pasajeros</span><strong>${escapeHtml(body.passengers || 1)}</strong></div>
@@ -2411,16 +2432,39 @@ function quoteFixedFareIsTotal(quote) {
 
 function quoteTaxBreakdown(quote) {
   const totals = quote.totals || {};
-  const subtotal = Number(totals.subtotalBeforeDiscount ?? totals.baseFare ?? quoteSelectedFare(quote));
-  const discount = Number(totals.discount || 0);
+  const discount = Number(totals.discount ?? quote.discountAmount ?? 0);
   const storedJourney = Number(totals.subtotal);
+  const subtotal = Number(
+    totals.subtotalBeforeDiscount ??
+      (Number.isFinite(storedJourney) ? storedJourney + discount : totals.baseFare ?? quoteSelectedFare(quote)),
+  );
   const journey = Number.isFinite(storedJourney)
     ? storedJourney
     : Math.max(0, subtotal - discount);
   const tax = Number(totals.tax || 0);
   const total = Number(totals.total || journey + tax);
   const taxPercent = Number(totals.taxPercent || 0);
-  return { subtotal, discount, journey, taxPercent, tax, total };
+  const includesTax = quote.includeTax === true || taxPercent > 0;
+  return { subtotal, discount, journey, taxPercent, tax, total, includesTax };
+}
+
+function quotePosterFinancialRows(totals) {
+  return `
+    <div class="poster-price-summary-row">
+      <span>Total del servicio</span>
+      <strong>${escapeHtml(posterMoney(totals.subtotal))}</strong>
+    </div>
+    ${totals.discount > 0
+      ? `<div class="poster-price-summary-row poster-price-discount"><span>Descuento</span><strong>-${escapeHtml(posterMoney(totals.discount))}</strong></div>`
+      : ""}
+    ${totals.includesTax
+      ? `<div class="poster-price-summary-row"><span>IVA ${escapeHtml(totals.taxPercent || 12)}%</span><strong>${escapeHtml(posterMoney(totals.tax))}</strong></div>`
+      : '<div class="poster-price-no-tax">Esta cotizacion no incluye IVA</div>'}
+    <div class="poster-price-summary-row poster-price-total">
+      <span>Total</span>
+      <strong>${escapeHtml(posterMoney(totals.total))}</strong>
+    </div>
+  `;
 }
 
 function quotePriceCard(quote) {
@@ -2639,19 +2683,7 @@ function quotePosterServicesHtml(quote) {
         ${columns.map((column) => `<div class="poster-service-price-list">${column.map(row).join("")}</div>`).join("")}
       </div>
       <footer class="poster-price-breakdown">
-        <div>
-          <span>Viaje</span>
-          <strong>${escapeHtml(posterMoney(totals.journey))}</strong>
-          ${totals.discount ? `<small>Descuento aplicado: -${escapeHtml(posterMoney(totals.discount))}</small>` : ""}
-        </div>
-        <div>
-          <span>IVA${totals.taxPercent ? ` ${escapeHtml(totals.taxPercent)}%` : ""}</span>
-          <strong>${totals.taxPercent ? escapeHtml(posterMoney(totals.tax)) : "No incluido"}</strong>
-        </div>
-        <div class="poster-price-total">
-          <span>Total</span>
-          <strong>${escapeHtml(posterMoney(totals.total))}</strong>
-        </div>
+        ${quotePosterFinancialRows(totals)}
       </footer>
     </section>
   `;
@@ -2735,18 +2767,7 @@ function quotePosterContinuationHtml(quote) {
       </div>
       ${quote.notes ? `<aside class="poster-general-notes"><strong>Notas generales</strong><p>${escapeHtml(quote.notes)}</p></aside>` : ""}
       <section class="poster-continuation-price">
-        <div>
-          <span>Viaje</span>
-          <strong>${escapeHtml(posterMoney(totals.journey))}</strong>
-        </div>
-        <div>
-          <span>IVA${totals.taxPercent ? ` ${escapeHtml(totals.taxPercent)}%` : ""}</span>
-          <strong>${totals.taxPercent ? escapeHtml(posterMoney(totals.tax)) : "No incluido"}</strong>
-        </div>
-        <div class="poster-continuation-total">
-          <span>Total</span>
-          <strong>${escapeHtml(posterMoney(totals.total))}</strong>
-        </div>
+        ${quotePosterFinancialRows(totals)}
       </section>
       <footer>Viaja con <b>comodidad, exclusividad y seguridad.</b></footer>
     </section>
@@ -3109,7 +3130,7 @@ function quoteDocumentStyles() {
     .poster-service-price-box>header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid rgba(213,166,72,.62);padding-bottom:10px;color:#dfb24e;text-transform:uppercase}.poster-service-price-box>header span,.poster-service-price-box>header small{font-size:18px;font-weight:900;letter-spacing:.1em}
     .poster-service-price-columns{display:grid;grid-template-columns:1fr;gap:26px;min-height:0;flex:1;padding:13px 0 11px}.poster-service-price-box-columns .poster-service-price-columns{grid-template-columns:repeat(2,minmax(0,1fr))}.poster-service-price-list{display:grid;align-content:center;gap:6px;min-width:0}.poster-service-price-box-columns .poster-service-price-list+ .poster-service-price-list{border-left:1px solid rgba(213,166,72,.38);padding-left:22px}
     .poster-service-price-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;min-width:0;color:#f8f8f6;font-size:15px;line-height:1.2}.poster-service-price-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.poster-service-price-row strong{color:#e2b348;font-size:18px;font-weight:900;white-space:nowrap}.poster-service-price-box-columns .poster-service-price-row{gap:9px;font-size:12px}.poster-service-price-box-columns .poster-service-price-row strong{font-size:16px}.poster-service-price-box-dense .poster-service-price-list{gap:3px}.poster-service-price-box-dense .poster-service-price-row{font-size:10px;line-height:1.08}.poster-service-price-box-dense .poster-service-price-row strong{font-size:13px;line-height:1.08}
-    .poster-price-breakdown{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;border-top:1px solid rgba(213,166,72,.62);padding-top:11px;text-transform:uppercase}.poster-price-breakdown>div{display:grid;align-content:center;min-width:0;border-left:1px solid rgba(213,166,72,.42);padding:0 20px}.poster-price-breakdown>div:first-child{border-left:0;padding-left:0}.poster-price-breakdown>div:last-child{padding-right:0;text-align:right}.poster-price-breakdown span{color:#f5f5f3;font-size:12px;font-weight:900;letter-spacing:.1em}.poster-price-breakdown strong{display:block;margin-top:4px;color:#e5b64c;font-family:Georgia,serif;font-size:24px;line-height:1;white-space:nowrap}.poster-price-breakdown small{display:block;margin-top:3px;color:#d4cab8;font-size:8px;font-weight:800;letter-spacing:.04em}.poster-price-total strong{font-size:30px}
+    .poster-price-breakdown{display:grid;width:540px;max-width:100%;margin-left:auto;border-top:1px solid rgba(213,166,72,.62);text-transform:uppercase}.poster-price-summary-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:28px;min-height:38px;border-bottom:1px solid rgba(213,166,72,.32);padding:7px 4px 7px 20px}.poster-price-summary-row span{color:#f5f5f3;font-size:12px;font-weight:900;letter-spacing:.1em}.poster-price-summary-row strong{color:#e5b64c;font-family:Georgia,serif;font-size:22px;line-height:1;white-space:nowrap}.poster-price-discount strong{color:#f0d48e}.poster-price-no-tax{border-bottom:1px solid rgba(213,166,72,.32);padding:10px 4px 10px 20px;color:#fff;font-size:12px;font-weight:900;letter-spacing:.08em;text-align:right}.poster-price-total{min-height:51px;border-bottom:0;padding-top:10px;padding-bottom:10px}.poster-price-total span{font-size:14px}.poster-price-total strong{font-size:32px}
     .poster-quote-notes{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;margin:16px 48px;border-left:5px solid #c99532;background:#fff;padding:5px 0 5px 18px;color:#171717}.poster-quote-notes>strong{padding-top:2px;color:#9e6b1a;font-size:13px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}.poster-quote-notes>div{display:grid;gap:5px}.poster-quote-notes p{margin:0;font-size:13px;line-height:1.42}.poster-quote-notes b{color:#9e6b1a}
     .poster-template-lower{position:relative;height:263px;overflow:hidden;background:#fff}.quote-template-lower-bg{position:absolute;left:0;top:-1274px;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
     .poster-vehicle-value{position:absolute;left:197px;top:27px;z-index:3;height:119px;display:inline-grid;grid-template-columns:58px minmax(0,max-content);gap:10px;align-items:center;color:#111;text-transform:uppercase}
@@ -3127,7 +3148,7 @@ function quoteDocumentStyles() {
     .poster-continuation-header{display:flex;align-items:end;justify-content:space-between;gap:24px;border-bottom:2px solid #c99532;padding-bottom:18px}.poster-continuation-header span{color:#ad7820;font-size:13px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}.poster-continuation-header h2{margin:7px 0 0;font-family:Georgia,serif;font-size:38px;font-weight:500}.poster-continuation-header>strong{border:1px solid #c99532;border-radius:999px;padding:9px 15px;color:#9a6716;font-size:14px;text-transform:uppercase}
     .poster-route-list{display:grid;gap:16px}.poster-route-card{display:grid;grid-template-columns:64px minmax(0,1fr);gap:18px;border:1px solid #d7b46c;border-radius:18px;background:#fff;padding:20px;box-shadow:0 10px 30px rgba(25,22,15,.06)}.poster-route-number{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#050a13;color:#dcae45;font-family:Georgia,serif;font-size:21px}.poster-route-content{min-width:0}.poster-route-heading{display:flex;align-items:start;justify-content:space-between;gap:18px}.poster-route-heading span{color:#a16d19;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.poster-route-heading h3{margin:5px 0 0;font-size:20px;line-height:1.25}.poster-route-heading h3 b{color:#c18b2c}.poster-route-heading>strong{color:#aa741b;font-family:Georgia,serif;font-size:23px;white-space:nowrap}.poster-route-meta{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:16px;border-top:1px solid #ead8b4;padding-top:14px}.poster-route-meta span{color:#333;font-size:11px;line-height:1.35}.poster-route-meta b{display:block;margin-bottom:3px;color:#9a6a1e;font-size:9px;letter-spacing:.08em;text-transform:uppercase}.poster-route-content p{margin:14px 0 0;border-left:3px solid #c99532;background:#f8f2e7;padding:10px 12px;font-size:12px;line-height:1.45}
     .poster-general-notes{border:1px solid #d7b46c;border-radius:16px;background:#fff;padding:18px 20px}.poster-general-notes strong{color:#9a6a1e;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.poster-general-notes p{margin:7px 0 0;font-size:13px;line-height:1.5}
-    .poster-continuation-price{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:0;border-radius:18px;background:#020712;color:#fff;padding:24px 30px}.poster-continuation-price>div{border-left:1px solid rgba(220,174,69,.5);padding:0 24px}.poster-continuation-price>div:first-child{border-left:0;padding-left:0}.poster-continuation-price>div:last-child{padding-right:0;text-align:right}.poster-continuation-price span{display:block;color:#dcae45;font-size:12px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.poster-continuation-price strong{display:block;margin-top:5px;color:#e3b64c;font-family:Georgia,serif;font-size:30px;white-space:nowrap}.poster-continuation-total strong{font-size:38px}.poster-continuation footer{margin:0 -54px;background:#020712;padding:17px;color:#fff;font-size:14px;letter-spacing:.18em;text-align:center;text-transform:uppercase}.poster-continuation footer b{color:#dcae45}
+    .poster-continuation-price{display:grid;justify-self:end;width:540px;max-width:100%;overflow:hidden;border:1px solid #c99532;border-radius:18px;background:#020712;color:#fff;padding:8px 24px;text-transform:uppercase}.poster-continuation-price .poster-price-summary-row{padding-right:0}.poster-continuation footer{margin:0 -54px;background:#020712;padding:17px;color:#fff;font-size:14px;letter-spacing:.18em;text-align:center;text-transform:uppercase}.poster-continuation footer b{color:#dcae45}
   `;
 }
 
