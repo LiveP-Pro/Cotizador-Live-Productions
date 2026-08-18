@@ -2256,6 +2256,16 @@ tr:last-child td {
     flex-wrap: wrap;
   }
 
+  .document-preview-toolbar strong {
+    flex: 1 0 100%;
+    margin-right: 0;
+  }
+
+  .document-preview-toolbar .button {
+    flex: 1 1 100%;
+    white-space: normal;
+  }
+
   .document-preview-scroll .sheet {
     zoom: 0.64;
   }

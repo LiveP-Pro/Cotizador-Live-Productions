@@ -2728,9 +2728,6 @@ function quotePosterContinuationHtml(quote) {
   const hasServiceNotes = selections.some((item) => item.notes);
   if (selections.length < 2 && !hasServiceNotes && !quote.notes) return "";
 
-  const detailed = quote.priceDisplayMode !== "final";
-  const vehicleCount = quoteVehicleCountForPrice(quote);
-  const totals = quoteTaxBreakdown(quote);
   return `
     <section class="poster-continuation">
       <header class="poster-continuation-header">
@@ -2749,7 +2746,6 @@ function quotePosterContinuationHtml(quote) {
                       <span>${escapeHtml(item.label || "Servicio privado")}</span>
                       <h3>${escapeHtml(item.origin || routePointLabel(index))} <b>→</b> ${escapeHtml(item.destinationAddress || item.destination || routePointLabel(index + 1))}</h3>
                     </div>
-                    ${detailed ? `<strong>${escapeHtml(posterMoney(Number(item.amount || 0) * vehicleCount))}</strong>` : ""}
                   </div>
                   <div class="poster-route-meta">
                     <span><b>Fecha</b>${escapeHtml(formatDocumentDate(item.serviceDate))}</span>
@@ -2766,9 +2762,6 @@ function quotePosterContinuationHtml(quote) {
           .join("")}
       </div>
       ${quote.notes ? `<aside class="poster-general-notes"><strong>Notas generales</strong><p>${escapeHtml(quote.notes)}</p></aside>` : ""}
-      <section class="poster-continuation-price">
-        ${quotePosterFinancialRows(totals)}
-      </section>
       <footer>Viaja con <b>comodidad, exclusividad y seguridad.</b></footer>
     </section>
   `;
@@ -3148,7 +3141,7 @@ function quoteDocumentStyles() {
     .poster-continuation-header{display:flex;align-items:end;justify-content:space-between;gap:24px;border-bottom:2px solid #c99532;padding-bottom:18px}.poster-continuation-header span{color:#ad7820;font-size:13px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}.poster-continuation-header h2{margin:7px 0 0;font-family:Georgia,serif;font-size:38px;font-weight:500}.poster-continuation-header>strong{border:1px solid #c99532;border-radius:999px;padding:9px 15px;color:#9a6716;font-size:14px;text-transform:uppercase}
     .poster-route-list{display:grid;gap:16px}.poster-route-card{display:grid;grid-template-columns:64px minmax(0,1fr);gap:18px;border:1px solid #d7b46c;border-radius:18px;background:#fff;padding:20px;box-shadow:0 10px 30px rgba(25,22,15,.06)}.poster-route-number{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#050a13;color:#dcae45;font-family:Georgia,serif;font-size:21px}.poster-route-content{min-width:0}.poster-route-heading{display:flex;align-items:start;justify-content:space-between;gap:18px}.poster-route-heading span{color:#a16d19;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.poster-route-heading h3{margin:5px 0 0;font-size:20px;line-height:1.25}.poster-route-heading h3 b{color:#c18b2c}.poster-route-heading>strong{color:#aa741b;font-family:Georgia,serif;font-size:23px;white-space:nowrap}.poster-route-meta{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:16px;border-top:1px solid #ead8b4;padding-top:14px}.poster-route-meta span{color:#333;font-size:11px;line-height:1.35}.poster-route-meta b{display:block;margin-bottom:3px;color:#9a6a1e;font-size:9px;letter-spacing:.08em;text-transform:uppercase}.poster-route-content p{margin:14px 0 0;border-left:3px solid #c99532;background:#f8f2e7;padding:10px 12px;font-size:12px;line-height:1.45}
     .poster-general-notes{border:1px solid #d7b46c;border-radius:16px;background:#fff;padding:18px 20px}.poster-general-notes strong{color:#9a6a1e;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.poster-general-notes p{margin:7px 0 0;font-size:13px;line-height:1.5}
-    .poster-continuation-price{display:grid;justify-self:end;width:540px;max-width:100%;overflow:hidden;border:1px solid #c99532;border-radius:18px;background:#020712;color:#fff;padding:8px 24px;text-transform:uppercase}.poster-continuation-price .poster-price-summary-row{padding-right:0}.poster-continuation footer{margin:0 -54px;background:#020712;padding:17px;color:#fff;font-size:14px;letter-spacing:.18em;text-align:center;text-transform:uppercase}.poster-continuation footer b{color:#dcae45}
+    .poster-continuation footer{margin:0 -54px;background:#020712;padding:17px;color:#fff;font-size:14px;letter-spacing:.18em;text-align:center;text-transform:uppercase}.poster-continuation footer b{color:#dcae45}
   `;
 }
 
@@ -3170,6 +3163,14 @@ function openPremiumDocument(title, type, content) {
   const parsedDocument = new DOMParser().parseFromString(documentHtml, "text/html");
   const documentStyles = parsedDocument.querySelector("style").textContent;
   const sheetMarkup = parsedDocument.querySelector(".sheet").outerHTML;
+  const hasQuoteContinuation = type === "quote" && Boolean(parsedDocument.querySelector(".poster-continuation"));
+  const quoteDownloadButtons =
+    type === "quote"
+      ? `
+          <button class="button button-gold" data-download-document-image="png" data-document-page=".quote-poster-content" data-file-suffix="01-Cotizacion">Descargar cotización PNG Full HD</button>
+          ${hasQuoteContinuation ? '<button class="button button-gold" data-download-document-image="png" data-document-page=".poster-continuation" data-file-suffix="02-Recorrido">Descargar recorrido PNG Full HD</button>' : ""}
+        `
+      : "";
 
   $("#modal-root").innerHTML = `
     <style data-premium-document-styles>${documentStyles}</style>
@@ -3177,7 +3178,7 @@ function openPremiumDocument(title, type, content) {
       <section class="document-preview-modal document-preview-${type}" role="dialog" aria-modal="true" aria-label="Vista previa ${escapeHtml(title)}">
         <header class="document-preview-toolbar">
           <strong>${escapeHtml(title)}</strong>
-          ${type === "quote" ? `<button class="button button-gold" data-download-document-image="png">Descargar PNG</button>` : ""}
+          ${quoteDownloadButtons}
           <button class="button button-secondary" data-print-document>Imprimir / Guardar PDF</button>
           <button class="button button-secondary" data-close-document>Cerrar</button>
         </header>
@@ -3191,7 +3192,17 @@ function openPremiumDocument(title, type, content) {
     setTimeout(() => document.body.classList.remove("printing-document"), 200);
   });
   $$("[data-download-document-image]").forEach((button) => {
-    button.addEventListener("click", () => downloadDocumentImage(title, button.dataset.downloadDocumentImage));
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        await downloadDocumentImage(title, button.dataset.downloadDocumentImage, {
+          pageSelector: button.dataset.documentPage,
+          fileSuffix: button.dataset.fileSuffix,
+        });
+      } finally {
+        button.disabled = false;
+      }
+    });
   });
   $("[data-close-document]").addEventListener("click", () => {
     document.body.classList.remove("printing-document");
@@ -3241,25 +3252,29 @@ function loadImage(src) {
   });
 }
 
-async function downloadDocumentImage(title, format = "png") {
+async function downloadDocumentImage(title, format = "png", options = {}) {
   const sheet = $(".document-preview-scroll .sheet");
   const style = $("[data-premium-document-styles]")?.textContent || "";
   if (!sheet) return;
+  const pageSelector = options.pageSelector || ".sheet";
+  const page = pageSelector === ".sheet" ? sheet : $(pageSelector, sheet);
+  if (!page) return;
   try {
-    const clone = sheet.cloneNode(true);
+    const clone = page.cloneNode(true);
     await inlineImages(clone);
-    const width = Math.ceil(Math.max(sheet.offsetWidth, sheet.scrollWidth));
-    const height = Math.ceil(Math.max(sheet.offsetHeight, sheet.scrollHeight));
+    const width = Math.ceil(Math.max(page.offsetWidth, page.scrollWidth));
+    const height = Math.ceil(Math.max(page.offsetHeight, page.scrollHeight));
     clone.style.width = `${width}px`;
     clone.style.height = `${height}px`;
     clone.style.zoom = "1";
-    const scale = 2;
+    clone.style.margin = "0";
+    const scale = 3;
     const serialized = new XMLSerializer().serializeToString(clone);
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
         <foreignObject width="100%" height="100%">
           <div xmlns="http://www.w3.org/1999/xhtml">
-            <style>${style}.sheet{margin:0!important;box-shadow:none!important}</style>
+            <style>${style}.sheet,.quote-poster-content,.poster-continuation{margin:0!important;box-shadow:none!important}</style>
             ${serialized}
           </div>
         </foreignObject>
@@ -3275,7 +3290,7 @@ async function downloadDocumentImage(title, format = "png") {
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     const extension = format === "jpeg" ? "jpg" : "png";
     const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
-    const fileName = safeFileName(title, extension);
+    const fileName = safeFileName(options.fileSuffix ? `${title}-${options.fileSuffix}` : title, extension);
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, mimeType, 0.94));
     if (window.showSaveFilePicker && blob) {
       const handle = await window.showSaveFilePicker({
@@ -3292,7 +3307,7 @@ async function downloadDocumentImage(title, format = "png") {
       link.click();
       if (blob) setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }
-    toast(`Cotización descargada en ${format.toUpperCase()}.`);
+    toast(`${options.fileSuffix === "02-Recorrido" ? "Recorrido" : "Cotización"} descargado en ${format.toUpperCase()} Full HD.`);
   } catch (error) {
     toast(error.message, "error");
   }
