@@ -357,6 +357,12 @@ function normalizeEntity(collection, body) {
 function normalizeQuote(body, rates, existing = {}) {
   const vehicleIds = cleanIdList(body.vehicleIds);
   const vehicleId = vehicleIds[0] || cleanString(body.vehicleId, 80);
+  const vehicleManualName = cleanString(body.vehicleManualName, 140);
+  const vehicleCount = vehicleIds.length
+    ? vehicleIds.length
+    : vehicleId || vehicleManualName
+      ? 1
+      : Math.max(1, Math.round(cleanNumber(body.vehicleCount, 1)));
   const serviceSelections = cleanServiceSelections(body.serviceSelections || body.serviceSelectionsJson);
   const selectedFare = serviceSelections.reduce((sum, item) => sum + item.amount, 0);
   const priceDisplayMode = cleanString(body.priceDisplayMode || existing.priceDisplayMode || "detailed", 20) === "final"
@@ -408,8 +414,8 @@ function normalizeQuote(body, rates, existing = {}) {
     luggageDescription: cleanString(body.luggageDescription, 500),
     vehicleId,
     vehicleIds: vehicleIds.length ? vehicleIds : vehicleId ? [vehicleId] : [],
-    vehicleCount: Math.max(1, Math.round(cleanNumber(body.vehicleCount, vehicleIds.length || 1))),
-    vehicleManualName: cleanString(body.vehicleManualName, 140),
+    vehicleCount,
+    vehicleManualName,
     hasBed: parseBoolean(body.hasBed),
     hasPlayStation5: parseBoolean(body.hasPlayStation5),
     hasTv: parseBoolean(body.hasTv),

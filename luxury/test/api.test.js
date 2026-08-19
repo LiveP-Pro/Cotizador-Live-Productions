@@ -329,12 +329,13 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
       origin: "Ciudad de Guatemala",
       destination: "Destino especial",
       passengers: 4,
+      vehicleIds: [vehicleId],
+      vehicleCount: 2,
       vehicleManualName: "Vehículo externo VIP",
       driverManualName: "Piloto externo",
       hasTv: true,
-      kilometers: 10,
-      minutes: 20,
-      includeTax: true,
+      fixedFare: 7500,
+      includeTax: false,
       status: "borrador",
       pdfTemplate: "noir",
     }),
@@ -344,6 +345,9 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
   assert.equal(manualVehicleQuote.vehicleManualName, "Vehículo externo VIP");
   assert.equal(manualVehicleQuote.driverManualName, "Piloto externo");
   assert.equal(manualVehicleQuote.hasTv, true);
+  assert.equal(manualVehicleQuote.vehicleCount, 1);
+  assert.equal(manualVehicleQuote.totals.baseFare, 7500);
+  assert.equal(manualVehicleQuote.totals.total, 7500);
 
   const incompleteQuoteResponse = await request(app.baseUrl, cookie, "/api/quotes", {
     method: "POST",

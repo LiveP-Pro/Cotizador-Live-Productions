@@ -7,7 +7,14 @@ export function calculateQuote(input, rates) {
   const minutes = Math.max(0, Number(input.minutes || 0));
   const waitingMinutes = Math.max(0, Number(input.waitingMinutes || 0));
   const fixedFare = Math.max(0, Number(input.fixedFare || 0));
-  const vehicleCount = Math.max(1, Number(input.vehicleCount || input.vehicleIds?.length || 1));
+  const vehicleIds = Array.isArray(input.vehicleIds)
+    ? [...new Set(input.vehicleIds.filter(Boolean))]
+    : [];
+  const vehicleCount = vehicleIds.length
+    ? vehicleIds.length
+    : input.vehicleId || String(input.vehicleManualName || "").trim()
+      ? 1
+      : Math.max(1, Number(input.vehicleCount || 1));
   const fixedFareIsTotal = input.fixedFareIsTotal === true || input.fixedFareIsTotal === "true";
   const fixedFareIncludesTax = false;
 

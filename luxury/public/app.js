@@ -202,6 +202,15 @@ function selectedVehiclesFromForm(form) {
   return fallback ? [fallback] : [];
 }
 
+function explicitVehicleCount(source = {}) {
+  const vehicleIds = Array.isArray(source.vehicleIds)
+    ? [...new Set(source.vehicleIds.filter(Boolean))]
+    : [];
+  if (vehicleIds.length) return vehicleIds.length;
+  if (source.vehicleId || String(source.vehicleManualName || "").trim()) return 1;
+  return Math.max(1, Number(source.vehicleCount || 1));
+}
+
 function quoteAmenityLabels(item = {}) {
   const seatLabel = item.seatConfiguration === "luxury" || item.hasSuperLuxurySeats
     ? "Butacas de lujo"
@@ -1579,7 +1588,7 @@ function syncServiceSelections(form) {
 function renderVehicleUnitPanel(form, selectedIds = []) {
   const vehicles = luxuryVehicles();
   const selectedSet = new Set(selectedIds);
-  const shouldSelectFirst = !selectedIds.length;
+  const shouldSelectFirst = !selectedIds.length && !String(form.elements.vehicleManualName?.value || "").trim();
   $("[data-vehicle-unit-panel]", form).innerHTML = vehicles.length
     ? `
       <span class="unit-panel-title">Seleccione una o varias Mercedes Benz Sprinter</span>
@@ -1688,7 +1697,7 @@ function openQuoteModal(quote = {}) {
               <h3>3. Tipo de vehículo, pasajeros y equipaje</h3>
               <div class="form-grid">
                 <div class="vehicle-unit-panel full" data-vehicle-unit-panel></div>
-                <label class="full">Otro tipo de vehículo <small class="field-hint">Opcional. Puede usarlo solo o agregarlo junto con las Mercedes seleccionadas.</small>
+                <label class="full">Otro tipo de vehículo <small class="field-hint">Opcional. Describe una alternativa y no suma otra unidad al precio.</small>
                   <input name="vehicleManualName" value="${escapeHtml(defaultVehicleName)}" placeholder="Ej. Toyota Hiace, microbús o camioneta ejecutiva" />
                 </label>
                 <div class="seat-configuration full" data-seat-configuration>
@@ -2062,7 +2071,7 @@ function quoteFormData(form) {
   body.vehicleIds = $$('input[name="vehicleIds"]:checked', form).map((input) => input.value);
   body.vehicleId = body.vehicleIds[0] || form.elements.vehicleId.value;
   body.vehicleManualName = String(form.elements.vehicleManualName.value || "").trim();
-  body.vehicleCount = Math.max(1, body.vehicleIds.length + (body.vehicleManualName ? 1 : 0));
+  body.vehicleCount = explicitVehicleCount(body);
   body.hasBed = form.elements.hasBed.checked;
   body.hasPlayStation5 = form.elements.hasPlayStation5.checked;
   body.hasTv = form.elements.hasTv.checked;
@@ -2083,7 +2092,7 @@ function quoteFormData(form) {
 
 function calculateTotalsLocal(body) {
   const rates = state.rates;
-  const vehicleCount = Math.max(1, Number(body.vehicleCount || body.vehicleIds?.length || 1));
+  const vehicleCount = explicitVehicleCount(body);
   const kilometers = Number(body.kilometers || 0);
   const minutes = Number(body.minutes || 0);
   const fixedFare = Number(body.fixedFare || 0);
@@ -2464,7 +2473,7 @@ function quoteSelectedFare(quote) {
 }
 
 function quoteVehicleCountForPrice(quote) {
-  return Math.max(1, Number(quote.vehicleCount || quote.vehicleIds?.length || 1));
+  return explicitVehicleCount(quote);
 }
 
 function quoteFixedFareIsTotal(quote) {
@@ -2931,7 +2940,7 @@ function quoteDisplayVehicles(quote) {
   if (!names.length) names.push("Mercedes Benz Sprinter");
   const uniqueNames = [...new Set(names)];
   return {
-    count: Math.max(1, Number(quote.vehicleCount || uniqueNames.length || 1)),
+    count: quoteVehicleCountForPrice(quote),
     primary: cleanVehicleLabel(uniqueNames[0]),
     all: uniqueNames,
   };
@@ -3161,14 +3170,14 @@ function quoteDocumentStyles() {
     .quote-poster-content{position:relative;inset:auto;width:1023px;min-height:1537px;background:#fff;font-family:Arial,sans-serif}
     .quote-template-bg{position:absolute;inset:0;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
     .quote-poster-content>*:not(.quote-template-bg){z-index:2}
-    .poster-top-spacer{position:relative;height:1000px;pointer-events:none}
+    .poster-top-spacer{position:relative;height:1038px;pointer-events:none}
     .poster-adaptive-lower{position:relative;z-index:5;background:#fff;padding-top:0}
     .poster-client-name{position:absolute;left:45px;top:662px;width:545px;overflow:hidden;color:#bd8123;font-size:48px;font-weight:900;letter-spacing:.025em;line-height:1.08;text-transform:uppercase;white-space:nowrap;text-overflow:ellipsis}
-    .poster-dynamic-value{position:absolute;display:flex;align-items:flex-start;justify-content:center;color:#111;font-size:20px;font-weight:500;line-height:1.2;text-align:center;text-wrap:balance}
+    .poster-dynamic-value{position:absolute;display:flex;align-items:flex-start;justify-content:center;color:#111;font-size:18px;font-weight:600;line-height:1.15;text-align:center;text-wrap:balance}
     .poster-start-date{left:104px;top:817px;width:156px;height:94px}.poster-start-time{left:104px;top:956px;width:156px;height:45px;align-items:center}
     .poster-origin{left:282px;top:852px;width:188px;height:97px}.poster-destination{left:493px;top:852px;width:155px;height:94px}
     .poster-end-date{left:696px;top:846px;width:138px;height:78px}.poster-end-date>span,.poster-return-time>span{display:inline-block;width:max-content;max-width:100%;border-bottom:2px solid #d9ad57;padding:0 5px 7px}.poster-return-time{left:696px;top:949px;width:138px;height:68px}
-    .poster-passengers{left:858px;top:842px;width:147px;height:72px;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}.poster-passengers strong{font-size:20px}.poster-passengers small{display:block;margin-top:5px;color:#555;font-size:12px;line-height:1.2}.poster-luggage{left:865px;top:918px;width:133px;min-height:72px;display:flex;flex-direction:column;align-items:center;border-top:2px solid #d9ad57;padding:8px 3px 0;text-align:center}.poster-luggage span{font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}.poster-luggage strong{display:block;margin-top:5px;font-size:12px;line-height:1.12;text-wrap:balance}
+    .poster-passengers{left:852px;top:842px;width:157px;height:76px;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}.poster-passengers strong,.poster-passengers small{font-size:18px;line-height:1.12}.poster-passengers strong{font-weight:800}.poster-passengers small{display:block;margin-top:5px;color:#111;font-weight:600}.poster-luggage{left:852px;top:923px;width:157px;min-height:105px;display:flex;flex-direction:column;align-items:center;border-top:2px solid #d9ad57;padding:8px 2px 0;text-align:center}.poster-luggage span,.poster-luggage strong{font-size:18px;line-height:1.08}.poster-luggage span{font-weight:800;letter-spacing:0;text-transform:uppercase}.poster-luggage strong{display:block;margin-top:5px;font-weight:600;text-wrap:balance}
     .poster-service-price-box{position:relative;width:calc(100% - 16px);min-height:274px;margin:0 8px;display:flex;flex-direction:column;border:2px solid #d1a044;border-radius:26px;background:linear-gradient(145deg,#02050c,#080d17);box-shadow:0 10px 25px rgba(0,0,0,.12);padding:18px 30px 16px;color:#fff;overflow:hidden}
     .poster-service-price-box>header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid rgba(213,166,72,.62);padding-bottom:10px;color:#dfb24e;text-transform:uppercase}.poster-service-price-box>header span,.poster-service-price-box>header small{font-size:18px;font-weight:900;letter-spacing:.1em}
     .poster-service-price-columns{display:grid;grid-template-columns:1fr;gap:26px;min-height:0;flex:1;padding:13px 0 11px}.poster-service-price-box-columns .poster-service-price-columns{grid-template-columns:repeat(2,minmax(0,1fr))}.poster-service-price-list{display:grid;align-content:center;gap:6px;min-width:0}.poster-service-price-box-columns .poster-service-price-list+ .poster-service-price-list{border-left:1px solid rgba(213,166,72,.38);padding-left:22px}
@@ -3505,7 +3514,7 @@ async function logout() {
 function setupPwa() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register(appPath("/sw.js?v=59"), { scope: appPath("/") })
+      .register(appPath("/sw.js?v=60"), { scope: appPath("/") })
       .catch(() => {});
   }
   window.addEventListener("beforeinstallprompt", (event) => {
