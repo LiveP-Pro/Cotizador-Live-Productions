@@ -2,6 +2,7 @@ import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/pro
 import { dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "./auth.js";
+import { calculateQuote } from "./pricing.js";
 
 const now = () => new Date().toISOString();
 const COLLECTION_NAMES = ["users", "clients", "drivers", "vehicles", "quotes", "itineraries", "history"];
@@ -107,7 +108,7 @@ function seedDatabase() {
   const driverId = randomUUID();
 
   return {
-    schemaVersion: 9,
+    schemaVersion: 10,
     users: [
       {
         id: adminId,
@@ -373,6 +374,39 @@ export class JsonDatabase {
         ...itinerary,
       }));
       this.data.schemaVersion = 9;
+      changed = true;
+    }
+    if (Number(this.data.schemaVersion || 1) < 10) {
+      this.data.quotes = this.data.quotes.map((quote) => {
+        const vehicleIds = [...new Set(
+          (Array.isArray(quote.vehicleIds) ? quote.vehicleIds : quote.vehicleId ? [quote.vehicleId] : [])
+            .map((id) => String(id || "").trim())
+            .filter(Boolean),
+        )];
+        const serviceSelections = Array.isArray(quote.serviceSelections)
+          ? quote.serviceSelections
+          : [];
+        const transferTotal = serviceSelections.reduce(
+          (sum, item) => sum + Math.max(0, Number(item?.amount || 0)),
+          0,
+        );
+        const priceDisplayMode = quote.priceDisplayMode === "final" ? "final" : "detailed";
+        if (priceDisplayMode !== "detailed" || transferTotal <= 0) return quote;
+        const repaired = {
+          ...quote,
+          vehicleId: vehicleIds[0] || quote.vehicleId || "",
+          vehicleIds,
+          vehicleCount: vehicleIds.length || (quote.vehicleId || quote.vehicleManualName ? 1 : Math.max(1, Number(quote.vehicleCount || 1))),
+          priceDisplayMode,
+          fixedFare: transferTotal,
+          fixedFareIsTotal: false,
+        };
+        return {
+          ...repaired,
+          totals: calculateQuote(repaired, this.data.rates),
+        };
+      });
+      this.data.schemaVersion = 10;
       changed = true;
     }
     if (changed) await this.persist();

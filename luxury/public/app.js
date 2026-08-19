@@ -576,7 +576,7 @@ function quoteTable(quotes, options = {}) {
                   <td><span class="cell-primary">${escapeHtml(quote.clientName)}</span><span class="cell-secondary">${escapeHtml([quote.clientNit ? `NIT ${quote.clientNit}` : "", quote.clientPhone].filter(Boolean).join(" · "))}</span></td>
                   <td><span class="cell-primary">${formatDate(quote.serviceDate, { short: true })}</span><span class="cell-secondary">${escapeHtml(quote.departureTime)} · ${escapeHtml(quote.serviceType)}</span></td>
                   <td><span class="cell-primary">${escapeHtml(quote.origin)}</span><span class="cell-secondary">a ${escapeHtml(quote.destination)} · ${quote.kilometers || 0} km</span></td>
-                  <td><span class="cell-primary">${money(quote.amountPaid || quote.totals?.total)}</span><span class="cell-secondary">${quote.amountPaid ? "Monto pagado" : `IVA ${quote.totals?.taxPercent || 0}%`}</span></td>
+                  <td><span class="cell-primary">${money(quote.amountPaid || quoteTaxBreakdown(quote).total)}</span><span class="cell-secondary">${quote.amountPaid ? "Monto pagado" : `IVA ${quoteTaxBreakdown(quote).taxPercent || 0}%`}</span></td>
                   <td>${statusBadge(quote.status)}</td>
                   ${
                     options.compact
@@ -3035,6 +3035,7 @@ function downloadQuotePdf(id) {
     `
       <div class="quote-poster-content quote-poster-v2">
         <img class="quote-template-bg" src="${templateImage}" alt="">
+        <div class="poster-template-clean-mask" aria-hidden="true"></div>
         <strong class="poster-client-name">${escapeHtml(quote.clientName || "Cliente")}</strong>
         <div class="poster-dynamic-value poster-start-date">${escapeHtml(formatPosterDate(service.serviceDate))}</div>
         ${service.departureTime ? `<div class="poster-dynamic-value poster-start-time">${escapeHtml(formatTime12(service.departureTime))}</div>` : ""}
@@ -3200,6 +3201,7 @@ function quoteDocumentStyles() {
     .quote-poster-content{position:relative;inset:auto;width:1023px;min-height:1537px;background:#fff;font-family:Arial,sans-serif}
     .quote-template-bg{position:absolute;inset:0;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
     .quote-poster-content>*:not(.quote-template-bg){z-index:2}
+    .quote-poster-content>.poster-template-clean-mask{position:absolute;left:0;top:1004px;z-index:1;width:1023px;height:270px;background:#fff;pointer-events:none}
     .poster-top-spacer{position:relative;height:1038px;pointer-events:none}
     .poster-adaptive-lower{position:relative;z-index:5;background:#fff;padding-top:0}
     .poster-client-name{position:absolute;left:45px;top:662px;width:545px;overflow:hidden;color:#bd8123;font-size:48px;font-weight:900;letter-spacing:.025em;line-height:1.08;text-transform:uppercase;white-space:nowrap;text-overflow:ellipsis}
@@ -3544,7 +3546,7 @@ async function logout() {
 function setupPwa() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register(appPath("/sw.js?v=61"), { scope: appPath("/") })
+      .register(appPath("/sw.js?v=62"), { scope: appPath("/") })
       .catch(() => {});
   }
   window.addEventListener("beforeinstallprompt", (event) => {
