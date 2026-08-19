@@ -144,7 +144,7 @@ function cleanServiceSelections(value) {
     .map((item) => ({
       instanceId: cleanString(item?.instanceId, 80),
       destinationId: cleanString(item?.destinationId || item?.destinationRateId, 80),
-      destination: cleanString(item?.destination || item?.destinationRateName, 140),
+      destination: cleanString(item?.destination || item?.destinationRateName, 300),
       type: cleanString(item?.type || item?.serviceRateType, 40),
       label: cleanString(item?.label || item?.serviceType, 100),
       amount: Math.max(0, cleanNumber(item?.amount ?? item?.fixedFare)),
@@ -315,9 +315,25 @@ function normalizeEntity(collection, body) {
         capacity,
         Math.max(1, Math.round(cleanNumber(body.capacityWithBed, 8))),
       ),
+      capacityWithLuggage: Math.min(
+        capacity,
+        Math.max(1, Math.round(cleanNumber(body.capacityWithLuggage, 10))),
+      ),
       superLuxuryCapacity: Math.min(
         capacity,
         Math.max(0, Math.round(cleanNumber(body.superLuxuryCapacity, 0))),
+      ),
+      luxurySeatCapacity: Math.min(
+        capacity,
+        Math.max(0, Math.round(cleanNumber(body.luxurySeatCapacity, 0))),
+      ),
+      m1SeatCapacity: Math.min(
+        capacity,
+        Math.max(0, Math.round(cleanNumber(body.m1SeatCapacity, 0))),
+      ),
+      m3SeatCapacity: Math.min(
+        capacity,
+        Math.max(0, Math.round(cleanNumber(body.m3SeatCapacity, 0))),
       ),
       luggageCapacity: Math.max(0, Math.round(cleanNumber(body.luggageCapacity))),
       color: cleanString(body.color, 40),
@@ -343,6 +359,16 @@ function normalizeQuote(body, rates, existing = {}) {
     ? "final"
     : "detailed";
   const finalManualPrice = Math.max(0, cleanNumber(body.finalManualPrice, existing.finalManualPrice || 0));
+  const hasSeatConfigurationField = Object.prototype.hasOwnProperty.call(body, "seatConfiguration");
+  const requestedSeatConfiguration = cleanString(
+    hasSeatConfigurationField
+      ? body.seatConfiguration
+      : existing.seatConfiguration || (parseBoolean(body.hasSuperLuxurySeats) ? "luxury" : ""),
+    20,
+  );
+  const seatConfiguration = ["luxury", "m1", "m3"].includes(requestedSeatConfiguration)
+    ? requestedSeatConfiguration
+    : "";
   const fixedFare = priceDisplayMode === "final"
     ? finalManualPrice || Math.max(0, cleanNumber(body.fixedFare, existing.fixedFare || 0))
     : selectedFare || Math.max(0, cleanNumber(body.fixedFare, existing.fixedFare || 0));
@@ -351,7 +377,7 @@ function normalizeQuote(body, rates, existing = {}) {
     serviceSelections.length === 1
       ? serviceSelections[0].label
       : serviceSelections.length
-        ? `${serviceSelections.length} servicios seleccionados`
+        ? `${serviceSelections.length} traslados seleccionados`
         : "";
   const quote = {
     ...existing,
@@ -372,6 +398,7 @@ function normalizeQuote(body, rates, existing = {}) {
     returnTime: cleanString(body.returnTime, 10),
     endLocation: cleanString(body.endLocation, 300),
     passengers: Math.max(1, Math.round(cleanNumber(body.passengers, 1))),
+    passengerDescription: cleanString(body.passengerDescription, 240),
     luggage: Math.max(0, Math.round(cleanNumber(body.luggage))),
     hasLuggage: body.hasLuggage === undefined ? Boolean(cleanString(body.luggageDescription, 500) || cleanNumber(body.luggage)) : parseBoolean(body.hasLuggage),
     luggageDescription: cleanString(body.luggageDescription, 500),
@@ -382,7 +409,10 @@ function normalizeQuote(body, rates, existing = {}) {
     hasBed: parseBoolean(body.hasBed),
     hasPlayStation5: parseBoolean(body.hasPlayStation5),
     hasTv: parseBoolean(body.hasTv),
-    hasSuperLuxurySeats: parseBoolean(body.hasSuperLuxurySeats),
+    seatConfiguration,
+    hasSuperLuxurySeats: seatConfiguration
+      ? seatConfiguration === "luxury"
+      : parseBoolean(body.hasSuperLuxurySeats),
     driverId: cleanString(body.driverId, 80),
     driverUserId: cleanString(body.driverUserId, 80),
     driverManualName: cleanString(body.driverManualName, 120),
@@ -423,46 +453,32 @@ function validateQuoteCapacity(db, quote) {
   const vehicles = (quote.vehicleIds?.length ? quote.vehicleIds : quote.vehicleId ? [quote.vehicleId] : [])
     .map((id) => db.find("vehicles", id))
     .filter(Boolean);
-  const vehicleSupportsSuperLuxurySeats = (vehicle) =>
-    vehicle.supportsSuperLuxurySeats === true ||
-    (vehicle.brand === "Mercedes Benz" && vehicle.model === "Sprinter 316" && Number(vehicle.unitNumber) === 3);
-  const baseCapacity = (vehicle) =>
-    vehicleSupportsSuperLuxurySeats(vehicle)
-      ? Math.min(14, Math.max(1, Number(vehicle.capacity || 14)))
-      : Math.min(15, Math.max(1, Number(vehicle.capacity || 15)));
-  const standardCapacity = vehicles.length
-    ? vehicles.reduce((sum, vehicle) => sum + baseCapacity(vehicle), 0)
-    : 15;
-  const bedCapacity = vehicles.length
-    ? vehicles.reduce(
-        (sum, vehicle) =>
-          sum +
-          Math.min(
-            baseCapacity(vehicle),
-            Math.max(1, Number(vehicle.capacityWithBed || 8)),
-          ),
-        0,
-      )
-    : 8;
-  const superLuxuryCapacity = vehicles.length
-    ? vehicles.reduce(
-        (sum, vehicle) =>
-          sum +
-          (vehicleSupportsSuperLuxurySeats(vehicle)
-            ? Math.min(baseCapacity(vehicle), Math.max(1, Number(vehicle.superLuxuryCapacity || 9)))
-            : baseCapacity(vehicle)),
-        0,
-      )
-    : 9;
-  const maximum = quote.hasSuperLuxurySeats
-    ? Math.min(quote.hasBed ? bedCapacity : standardCapacity, superLuxuryCapacity)
+  const isSprinter316 = (vehicle) =>
+    vehicle.brand === "Mercedes Benz" && vehicle.model === "Sprinter 316";
+  const hasLuggage = Number(quote.luggage || 0) > 0 || quote.hasLuggage === true;
+  const capacityForVehicle = (vehicle) => {
+    if (isSprinter316(vehicle)) {
+      if (quote.seatConfiguration === "luxury" || quote.hasSuperLuxurySeats) {
+        return Math.max(1, Number(vehicle.luxurySeatCapacity || vehicle.superLuxuryCapacity || 10));
+      }
+      if (quote.seatConfiguration === "m3") return Math.max(1, Number(vehicle.m3SeatCapacity || 11));
+      return Math.max(1, Number(vehicle.m1SeatCapacity || vehicle.capacity || 14));
+    }
+    if (quote.hasBed) return Math.max(1, Number(vehicle.capacityWithBed || 8));
+    if (hasLuggage) return Math.max(1, Number(vehicle.capacityWithLuggage || 10));
+    return Math.max(1, Number(vehicle.capacity || 15));
+  };
+  const maximum = vehicles.length
+    ? vehicles.reduce((sum, vehicle) => sum + capacityForVehicle(vehicle), 0)
     : quote.hasBed
-      ? bedCapacity
-      : standardCapacity;
+      ? 8
+      : hasLuggage
+        ? 10
+        : 15;
   quote.maxPassengers = maximum;
 
-  if (quote.hasBed && vehicles.some((vehicle) => vehicle.supportsBed === false)) {
-    const error = new Error("El vehículo seleccionado no permite instalar cama.");
+  if (quote.hasBed && vehicles.length && !vehicles.some((vehicle) => !isSprinter316(vehicle))) {
+    const error = new Error("La cama solo aplica para las Mercedes Benz Sprinter 311.");
     error.statusCode = 400;
     throw error;
   }
@@ -471,18 +487,20 @@ function validateQuoteCapacity(db, quote) {
     error.statusCode = 400;
     throw error;
   }
-  if (quote.hasSuperLuxurySeats && !vehicles.some(vehicleSupportsSuperLuxurySeats)) {
-    const error = new Error("Butacas Super Lujo solo aplica para Mercedes Benz Sprinter 316, unidad 3.");
+  if (quote.seatConfiguration && !vehicles.some(isSprinter316)) {
+    const error = new Error("La configuración de asientos seleccionada solo aplica para Mercedes Benz Sprinter 316.");
     error.statusCode = 400;
     throw error;
   }
   if (quote.passengers > maximum) {
     const error = new Error(
-      quote.hasSuperLuxurySeats
-        ? "Con Butacas Super Lujo la capacidad máxima es de 9 pasajeros."
-        : quote.hasBed
-        ? "Con cama seleccionada la capacidad máxima es de 8 pasajeros."
-        : `La capacidad máxima del vehículo es de ${maximum} pasajeros.`,
+      quote.seatConfiguration === "luxury" || quote.hasSuperLuxurySeats
+        ? `Con Butacas de lujo la capacidad máxima total es de ${maximum} pasajeros.`
+        : quote.seatConfiguration === "m3"
+          ? `Con Sillones M3 la capacidad máxima total es de ${maximum} pasajeros.`
+          : quote.hasBed
+            ? `Con cama seleccionada la capacidad máxima total es de ${maximum} pasajeros.`
+            : `La capacidad máxima del vehículo es de ${maximum} pasajeros.`,
     );
     error.statusCode = 400;
     throw error;
@@ -1055,7 +1073,9 @@ export async function createApp(options = {}) {
           destination: quote.destination,
           endLocation: quote.endLocation,
           passengers: quote.passengers,
+          passengerDescription: quote.passengerDescription,
           luggage: quote.luggage,
+          luggageDescription: quote.luggageDescription,
           vehicleId: quote.vehicleId,
           vehicleIds: quote.vehicleIds || (quote.vehicleId ? [quote.vehicleId] : []),
           vehicleManualName: quote.vehicleManualName,
@@ -1063,6 +1083,7 @@ export async function createApp(options = {}) {
           hasBed: quote.hasBed,
           hasPlayStation5: quote.hasPlayStation5,
           hasTv: quote.hasTv,
+          seatConfiguration: quote.seatConfiguration,
           hasSuperLuxurySeats: quote.hasSuperLuxurySeats,
           maxPassengers: quote.maxPassengers,
           driverId: quote.driverId,

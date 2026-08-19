@@ -68,7 +68,10 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
   const threeVehicleIds = initialBootstrap.vehicles.map((vehicle) => vehicle.id);
   const sprinter316 = initialBootstrap.vehicles.find((vehicle) => vehicle.id === sprinter316Id);
   assert.equal(sprinter316.capacity, 14);
-  assert.equal(sprinter316.superLuxuryCapacity, 9);
+  assert.equal(sprinter316.superLuxuryCapacity, 10);
+  assert.equal(sprinter316.luxurySeatCapacity, 10);
+  assert.equal(sprinter316.m1SeatCapacity, 14);
+  assert.equal(sprinter316.m3SeatCapacity, 11);
   assert.equal(sprinter316.supportsSuperLuxurySeats, true);
 
   const quoteResponse = await request(app.baseUrl, cookie, "/api/quotes", {
@@ -249,7 +252,7 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
       departureTime: "10:00",
       origin: "Ciudad de Guatemala",
       destination: "Antigua",
-      passengers: 9,
+      passengers: 10,
       vehicleId: sprinter316Id,
       hasPlayStation5: true,
       hasTv: true,
@@ -267,7 +270,8 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
   });
   assert.equal(superLuxuryResponse.status, 201);
   const superLuxuryQuote = await superLuxuryResponse.json();
-  assert.equal(superLuxuryQuote.maxPassengers, 9);
+  assert.equal(superLuxuryQuote.maxPassengers, 10);
+  assert.equal(superLuxuryQuote.seatConfiguration, "luxury");
   assert.equal(superLuxuryQuote.hasSuperLuxurySeats, true);
 
   const superLuxuryOverCapacityResponse = await request(app.baseUrl, cookie, "/api/quotes", {
@@ -278,13 +282,13 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
       departureTime: "10:00",
       origin: "Ciudad de Guatemala",
       destination: "Antigua",
-      passengers: 10,
+      passengers: 11,
       vehicleId: sprinter316Id,
       hasSuperLuxurySeats: true,
     }),
   });
   assert.equal(superLuxuryOverCapacityResponse.status, 400);
-  assert.match((await superLuxuryOverCapacityResponse.json()).error, /Butacas Super Lujo/);
+  assert.match((await superLuxuryOverCapacityResponse.json()).error, /Butacas de lujo/);
 
   const multiVehicleResponse = await request(app.baseUrl, cookie, "/api/quotes", {
     method: "POST",
@@ -355,7 +359,7 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
     }),
   });
   assert.equal(overCapacityResponse.status, 400);
-  assert.match((await overCapacityResponse.json()).error, /máxima es de 8 pasajeros/);
+  assert.match((await overCapacityResponse.json()).error, /máxima total es de 8 pasajeros/);
 
   const pdfResponse = await request(
     app.baseUrl,

@@ -87,7 +87,6 @@ const icons = {
 
 const serviceStatuses = new Set(["aceptada", "confirmada", "completada"]);
 const allowedVehicleModels = ["Mercedes Benz Sprinter 311", "Mercedes Benz Sprinter 316"];
-const largeGroupVehicleModel = "__grupo_grande__";
 const serviceRateTypes = {
   oneWay: { label: "Servicio de Ida", field: "oneWay" },
   roundTrip: { label: "Servicio de Ida y Vuelta", field: "roundTrip" },
@@ -158,26 +157,28 @@ function vehicleModelName(vehicle) {
   return `${vehicle?.brand || ""} ${vehicle?.model || ""}`.trim();
 }
 
-function vehicleSupportsSuperLuxurySeats(vehicle) {
-  const model = vehicleModelName(vehicle).toLowerCase();
-  return vehicle?.supportsSuperLuxurySeats === true || (model.includes("sprinter 316") && Number(vehicle?.unitNumber) === 3);
+function vehicleIsSprinter316(vehicle) {
+  return vehicleModelName(vehicle).toLowerCase().includes("sprinter 316");
 }
 
 function vehicleBaseCapacity(vehicle) {
-  const fallback = vehicleSupportsSuperLuxurySeats(vehicle) ? 14 : 15;
+  const fallback = vehicleIsSprinter316(vehicle) ? 14 : 15;
   const configured = Math.max(1, Number(vehicle?.capacity || fallback));
-  return vehicleSupportsSuperLuxurySeats(vehicle) ? Math.min(14, configured) : Math.min(15, configured);
+  return vehicleIsSprinter316(vehicle) ? Math.min(14, configured) : Math.min(15, configured);
 }
 
 function vehicleCapacityWithOptions(vehicle, form) {
-  let capacity = vehicleBaseCapacity(vehicle);
-  if (form.elements.hasBed?.checked) {
-    capacity = Math.min(capacity, Math.max(1, Number(vehicle?.capacityWithBed || 8)));
+  if (vehicleIsSprinter316(vehicle)) {
+    const configuration = form.elements.seatConfiguration?.value || "m1";
+    if (configuration === "luxury") return Math.max(1, Number(vehicle?.luxurySeatCapacity || 10));
+    if (configuration === "m3") return Math.max(1, Number(vehicle?.m3SeatCapacity || 11));
+    return Math.max(1, Number(vehicle?.m1SeatCapacity || 14));
   }
-  if (form.elements.hasSuperLuxurySeats?.checked && vehicleSupportsSuperLuxurySeats(vehicle)) {
-    capacity = Math.min(capacity, Math.max(1, Number(vehicle?.superLuxuryCapacity || 9)));
+  if (form.elements.hasBed?.checked) return Math.max(1, Number(vehicle?.capacityWithBed || 8));
+  if (Number(form.elements.luggage?.value || 0) > 0) {
+    return Math.max(1, Number(vehicle?.capacityWithLuggage || 10));
   }
-  return capacity;
+  return vehicleBaseCapacity(vehicle);
 }
 
 function luxuryVehicles() {
@@ -192,13 +193,6 @@ function quoteVehicleIds(quote = {}) {
       : [];
 }
 
-function quoteVehicleModel(quote = {}) {
-  const ids = quoteVehicleIds(quote);
-  if (ids.length > 1) return largeGroupVehicleModel;
-  const vehicle = state.vehicles.find((item) => item.id === ids[0]);
-  return vehicle ? vehicleModelName(vehicle) : allowedVehicleModels[0];
-}
-
 function selectedVehiclesFromForm(form) {
   const selected = $$('input[name="vehicleIds"]:checked', form)
     .map((input) => state.vehicles.find((vehicle) => vehicle.id === input.value))
@@ -209,21 +203,19 @@ function selectedVehiclesFromForm(form) {
 }
 
 function quoteAmenityLabels(item = {}) {
+  const seatLabel = item.seatConfiguration === "luxury" || item.hasSuperLuxurySeats
+    ? "Butacas de lujo"
+    : item.seatConfiguration === "m1"
+      ? "Butacas M1"
+      : item.seatConfiguration === "m3"
+        ? "Sillones M3"
+        : "";
   return [
     item.hasPlayStation5 ? "PlayStation 5" : "",
     item.hasTv ? "TV" : "",
-    item.hasSuperLuxurySeats ? "Butacas Super Lujo" : "",
+    seatLabel,
     item.hasBed ? "Cama" : "",
   ].filter(Boolean);
-}
-
-function passengerOptions(selected = 1, maximum = 15, upperLimit = 15) {
-  return Array.from({ length: Math.max(15, maximum, upperLimit) }, (_, index) => index + 1)
-    .map(
-      (value) =>
-        `<option value="${value}" ${Number(selected) === value ? "selected" : ""} ${value > maximum ? "disabled" : ""}>${value} pasajero${value === 1 ? "" : "s"}</option>`,
-    )
-    .join("");
 }
 
 function guatemalaDateParts(date = new Date()) {
@@ -1007,13 +999,17 @@ function openRecordModal(collection, record = {}) {
         <label>Placa<input name="plate" value="${escapeHtml(record.plate)}" required /></label>
         <label>Capacidad de pasajeros<input type="number" name="capacity" value="${record.capacity || 15}" min="1" max="15" /></label>
         <label>Capacidad con cama<input type="number" name="capacityWithBed" value="${record.capacityWithBed || 8}" min="1" max="8" /></label>
-        <label>Capacidad Butacas Super Lujo<input type="number" name="superLuxuryCapacity" value="${record.superLuxuryCapacity || 0}" min="0" max="14" /></label>
+        <label>Capacidad con equipaje<input type="number" name="capacityWithLuggage" value="${record.capacityWithLuggage || 10}" min="1" max="15" /></label>
+        <label>Capacidad Butacas de lujo<input type="number" name="luxurySeatCapacity" value="${record.luxurySeatCapacity ?? record.superLuxuryCapacity ?? (vehicleIsSprinter316(record) ? 10 : 0)}" min="0" max="14" /></label>
+        <label>Capacidad Butacas M1<input type="number" name="m1SeatCapacity" value="${record.m1SeatCapacity ?? (vehicleIsSprinter316(record) ? 14 : 0)}" min="0" max="14" /></label>
+        <label>Capacidad Sillones M3<input type="number" name="m3SeatCapacity" value="${record.m3SeatCapacity ?? (vehicleIsSprinter316(record) ? 11 : 0)}" min="0" max="14" /></label>
+        <input type="hidden" name="superLuxuryCapacity" value="${record.luxurySeatCapacity ?? record.superLuxuryCapacity ?? (vehicleIsSprinter316(record) ? 10 : 0)}" />
         <label>Capacidad de maletas<input type="number" name="luggageCapacity" value="${record.luggageCapacity || 4}" min="0" /></label>
         <label>Color<input name="color" value="${escapeHtml(record.color)}" /></label>
         <label>Estado<select name="status">${statusOptions(record.status)}</select></label>
         <label><span><input type="checkbox" name="supportsBed" ${record.supportsBed !== false ? "checked" : ""} /> Permite cama</span></label>
         <label><span><input type="checkbox" name="supportsPlayStation5" ${record.supportsPlayStation5 !== false ? "checked" : ""} /> Incluye PlayStation 5</span></label>
-        <label><span><input type="checkbox" name="supportsSuperLuxurySeats" ${record.supportsSuperLuxurySeats ? "checked" : ""} /> Permite Butacas Super Lujo</span></label>
+        <label><span><input type="checkbox" name="supportsSuperLuxurySeats" ${record.supportsSuperLuxurySeats ? "checked" : ""} /> Permite configuraciones especiales</span></label>
         <label class="full">Notas<textarea name="notes">${escapeHtml(record.notes)}</textarea></label>
       </div>`,
     drivers: `
@@ -1069,10 +1065,6 @@ function serviceTypeOptions(selected = "") {
 
 function serviceSelectionKey(selection) {
   return `${selection.destinationId}|${selection.type}`;
-}
-
-function manualServiceKey(selection) {
-  return serviceSelectionKey(selection).replace(/[^a-zA-Z0-9|_-]+/g, "-");
 }
 
 function serviceInstanceId(prefix = "svc") {
@@ -1202,22 +1194,22 @@ function serviceSelectionsDestinationLabel(selections) {
 function serviceSelectionsServiceLabel(selections) {
   if (!selections.length) return "Servicio personalizado";
   if (selections.length === 1) return selections[0].label;
-  return `${selections.length} servicios seleccionados`;
+  return `${selections.length} traslados seleccionados`;
 }
 
 function serviceSelectionToggleText(selections) {
   return selections.length
-    ? `${selections.length} servicio${selections.length === 1 ? "" : "s"} elegido${selections.length === 1 ? "" : "s"}`
-    : "Click para elegir servicios";
+    ? `${selections.length} traslado${selections.length === 1 ? "" : "s"} elegido${selections.length === 1 ? "" : "s"}`
+    : "Click para agregar traslados";
 }
 
 function serviceSelectionSummaryHtml(selections) {
   if (!selections.length) {
-    return `<p class="service-selection-empty">Sin servicios seleccionados. Abra el menú y haga clic en un precio para agregarlo.</p>`;
+    return `<p class="service-selection-empty">Sin traslados seleccionados. Abra el menú y haga clic en un precio para agregarlo.</p>`;
   }
   return `
     <div class="selected-services-total">
-      <span>${selections.length} servicio${selections.length === 1 ? "" : "s"} seleccionado${selections.length === 1 ? "" : "s"}</span>
+      <span>${selections.length} traslado${selections.length === 1 ? "" : "s"} seleccionado${selections.length === 1 ? "" : "s"}</span>
       <strong>${money(serviceSelectionsTotal(selections))}</strong>
     </div>
     <ul>
@@ -1254,10 +1246,21 @@ function addRateServiceSelection(form, key) {
   const [destinationId, type] = String(key || "").split("|");
   const selection = serviceSelectionFromRate(destinationId, type);
   if (!selection) return;
-  const nextSelections = [
-    ...serviceSelectionsWithDetailsFromForm(form),
-    { ...selection, instanceId: serviceInstanceId("svc") },
-  ];
+  const currentSelections = serviceSelectionsWithDetailsFromForm(form);
+  const first = currentSelections[0];
+  const canReplaceBlank = currentSelections.length === 1
+    && /^(?:Destino|Traslado) 1$/i.test(String(first?.destination || "").trim())
+    && Number(first?.amount || 0) === 0
+    && !first?.departureTime
+    && !first?.notes;
+  const nextSelections = canReplaceBlank
+    ? [{ ...first, ...selection, instanceId: first.instanceId }]
+    : [...currentSelections, { ...selection, instanceId: serviceInstanceId("svc") }];
+  if (nextSelections.length > 1) {
+    form.elements.destinationMode.value = "multiple";
+    form.elements.destinationCount.value = String(nextSelections.length);
+    syncDestinationMode(form);
+  }
   setServiceSelections(form, nextSelections, { keepMenuOpen: true });
   toast(`${selection.label} · ${selection.destination} agregado.`);
 }
@@ -1272,34 +1275,18 @@ function removeServiceSelection(form, instanceId, indexValue) {
 }
 
 function addManualServiceSelection(form) {
-  const destination = form.elements.manualDestination.value.trim();
-  const type = form.elements.manualServiceRateType.value;
-  const amount = Number(form.elements.manualPrice.value);
-  const rateType = serviceRateTypes[type];
-  if (!destination || !rateType || !Number.isFinite(amount) || amount <= 0) {
-    toast("Ingrese destino manual, tipo de servicio y precio manual válido.", "error");
-    return;
-  }
-  const base = destination
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase();
-  const manualSelection = {
-    instanceId: serviceInstanceId("manual"),
-    destinationId: `manual-${base || Date.now()}-${type}`,
-    destination,
-    type,
-    label: rateType.label,
-    amount,
-  };
   const selections = serviceSelectionsWithDetailsFromForm(form);
-  const nextSelections = [...selections, manualSelection];
-  form.elements.manualDestination.value = "";
-  form.elements.manualPrice.value = "";
+  const nextSelections = [
+    ...selections,
+    createRouteSelection(selections.length, form, selections.at(-1) || {}),
+  ];
+  if (nextSelections.length > 1) {
+    form.elements.destinationMode.value = "multiple";
+    form.elements.destinationCount.value = String(nextSelections.length);
+    syncDestinationMode(form);
+  }
   setServiceSelections(form, nextSelections);
-  toast("Destino manual agregado.");
+  toast(`Traslado ${nextSelections.length} agregado.`);
 }
 
 function renderDestinationRatePreview(form) {
@@ -1350,14 +1337,6 @@ function renderDestinationRatePreview(form) {
   `;
 }
 
-function passengerSelectOptions(value, form) {
-  const maximum = [...(form.elements.passengers?.options || [])].reduce(
-    (highest, option) => Math.max(highest, Number(option.value || 0)),
-    Number(value || 15),
-  );
-  return passengerOptions(value || 1, Math.max(1, maximum || 15));
-}
-
 function routePointLabel(index) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   return index < alphabet.length ? `Punto ${alphabet[index]}` : `Punto ${index + 1}`;
@@ -1372,7 +1351,7 @@ function createRouteSelection(index, form, previous = {}) {
   return {
     instanceId: serviceInstanceId("route"),
     destinationId: `manual-route-${index + 1}-${Date.now()}`,
-    destination: `Destino ${index + 1}`,
+    destination: `Traslado ${index + 1}`,
     type,
     label: serviceRateTypes[type].label,
     amount: 0,
@@ -1380,11 +1359,11 @@ function createRouteSelection(index, form, previous = {}) {
     returnDate: form.elements.returnDate?.value || form.elements.serviceDate?.value || guatemalaDateValue(),
     origin: previous.destinationAddress || "",
     destinationAddress: "",
-    departureTime: form.elements.departureTime?.value || "08:00",
+    departureTime: "",
     returnTime: "",
     passengers: Number(form.elements.passengers?.value || 1),
-    hasLuggage: true,
-    luggageDescription: "",
+    hasLuggage: Number(form.elements.luggage?.value || 0) > 0,
+    luggageDescription: form.elements.luggageDescription?.value || "",
     notes: "",
     legNumber: index + 1,
   };
@@ -1394,24 +1373,17 @@ function syncDestinationMode(form, { ensureCount = false } = {}) {
   const mode = destinationModeValue(form);
   const countField = $(`[data-destination-count-wrap]`, form);
   const singleBuilder = $(`[data-single-destination-builder]`, form);
-  const sections = $(".quote-form-sections", form);
-  const vehicleStep = $('[data-quote-step="vehicles"]', form);
-  const clientStep = $('[data-quote-step="client"]', form);
   if (countField) countField.hidden = mode !== "multiple";
   if (singleBuilder) singleBuilder.hidden = mode === "multiple";
-  if (sections && vehicleStep && clientStep) {
-    if (mode === "multiple") sections.insertBefore(clientStep, vehicleStep);
-    else sections.insertBefore(vehicleStep, clientStep);
-    $("h3", vehicleStep).textContent = mode === "multiple" ? "3. Mercedes y pasajeros" : "2. Mercedes y pasajeros";
-    $("h3", clientStep).textContent = mode === "multiple" ? "2. Datos del cliente" : "3. Datos del cliente";
-  }
   $$(`[data-destination-mode-option]`, form).forEach((option) => {
     const input = $("input", option);
     option.classList.toggle("active", Boolean(input?.checked));
   });
 
-  if (mode !== "multiple" || !ensureCount) return;
-  const requested = Math.max(2, Math.min(20, Math.round(Number(form.elements.destinationCount?.value || 2))));
+  if (!ensureCount) return;
+  const requested = mode === "multiple"
+    ? Math.max(2, Math.min(20, Math.round(Number(form.elements.destinationCount?.value || 2))))
+    : 1;
   const current = serviceSelectionsWithDetailsFromForm(form);
   const next = current.slice(0, requested);
   while (next.length < requested) {
@@ -1419,8 +1391,8 @@ function syncDestinationMode(form, { ensureCount = false } = {}) {
   }
   next.forEach((selection, index) => {
     selection.legNumber = index + 1;
-    if (!selection.destination || /^Destino \d+$/.test(selection.destination)) {
-      selection.destination = `Destino ${index + 1}`;
+    if (!selection.destination || /^(?:Destino|Traslado) \d+$/.test(selection.destination)) {
+      selection.destination = `Traslado ${index + 1}`;
     }
   });
   form.elements.serviceSelectionsJson.value = JSON.stringify(next);
@@ -1442,80 +1414,44 @@ function renderServiceDetailBlocks(form) {
   const target = $("[data-service-detail-list]", form);
   if (!target) return;
   const selections = selectedServiceEntriesFromForm(form);
-  const mode = destinationModeValue(form);
   if (!selections.length) {
     target.innerHTML = `
       <div class="service-detail-empty">
-        <strong>Aún no hay destinos</strong>
-        <span>Agregue un destino manual o elija una tarifa para crear automáticamente su ficha de viaje.</span>
+        <strong>Aún no hay traslados</strong>
+        <span>Agregue un traslado manual o elija una tarifa para crear su ficha.</span>
       </div>
     `;
     return;
   }
-  const rootLuggage = form.elements.hasLuggage?.value || "true";
   target.innerHTML = `
     <div class="service-detail-intro">
-      <strong>Información de cada destino</strong>
-      <span>Complete una ficha por trayecto. La cotización final crecerá automáticamente para mostrar toda la información.</span>
+      <strong>Datos de cada traslado</strong>
+      <span>Complete fecha, descripción, hora de salida opcional y precio. Puede agregar todos los traslados que necesite.</span>
     </div>
     ${selections
       .map((selection, index) => {
         const serviceNumber = index + 1;
-        const hasLuggageValue =
-          selection.hasLuggage === true ? "true" : selection.hasLuggage === false ? "false" : rootLuggage;
-        const routeTitle = mode === "multiple"
-          ? `${routePointLabel(index)} → ${routePointLabel(index + 1)}`
-          : selection.destination;
         return `
           <article class="service-detail-card" data-service-detail-card data-service-instance-id="${escapeHtml(selection.instanceId)}">
             <div class="service-detail-card-head">
-              <span>Destino ${serviceNumber}</span>
-              <strong>${escapeHtml(routeTitle)}</strong>
+              <span>Traslado ${serviceNumber}</span>
               <em>${Number(selection.amount || 0) > 0 ? money(selection.amount) : "Precio pendiente"}</em>
-              <button type="button" class="service-card-remove" data-remove-service-card="${escapeHtml(selection.instanceId)}" aria-label="Quitar destino ${serviceNumber}">Quitar</button>
+              ${selections.length > 1 ? `<button type="button" class="service-card-remove" data-remove-service-card="${escapeHtml(selection.instanceId)}" aria-label="Quitar traslado ${serviceNumber}">Quitar</button>` : ""}
             </div>
-            <div class="form-grid">
-              <label class="full">Nombre del destino o servicio
-                <input name="${serviceDetailInputName(selection, "destination")}" value="${escapeHtml(selection.destination)}" placeholder="Ej. Antigua, Aeropuerto, Evento privado" required />
+            <div class="form-grid transfer-detail-grid">
+              <label>Fecha
+                <input type="date" name="${serviceDetailInputName(selection, "serviceDate")}" value="${escapeHtml(serviceDetailValue(selection, "serviceDate", form.elements.serviceDate.value))}" required />
               </label>
-              <label>Tipo de servicio
-                <select name="${serviceDetailInputName(selection, "type")}">
-                  <option value="oneWay" ${selection.type === "oneWay" ? "selected" : ""}>Ida</option>
-                  <option value="roundTrip" ${selection.type === "roundTrip" ? "selected" : ""}>Ida y vuelta</option>
-                  <option value="internal" ${selection.type === "internal" ? "selected" : ""}>Traslados internos</option>
-                </select>
+              <label>Descripción
+                <input name="${serviceDetailInputName(selection, "destination")}" value="${escapeHtml(selection.destination)}" placeholder="Ej. Hotel Camino Real → Aeropuerto La Aurora" required />
               </label>
-              <label>Precio manual
+              <label>Hora de salida <small class="field-hint">Opcional; si queda vacía no aparecerá en la cotización.</small>
+                <input type="time" name="${serviceDetailInputName(selection, "departureTime")}" value="${escapeHtml(serviceDetailValue(selection, "departureTime"))}" />
+              </label>
+              <label>Precio
                 <input type="number" name="${serviceDetailInputName(selection, "amount")}" value="${Number(selection.amount || 0) || ""}" min="0" step="0.01" placeholder="0.00" />
               </label>
-              <label>Fecha de inicio del servicio
-                <input type="date" name="${serviceDetailInputName(selection, "serviceDate")}" value="${escapeHtml(serviceDetailValue(selection, "serviceDate", form.elements.serviceDate.value))}" />
-              </label>
-              <label>Fecha de finalización del servicio
-                <input type="date" name="${serviceDetailInputName(selection, "returnDate")}" value="${escapeHtml(serviceDetailValue(selection, "returnDate", form.elements.returnDate.value))}" />
-              </label>
-              <label class="full">Origen (dirección exacta)
-                <input name="${serviceDetailInputName(selection, "origin")}" value="${escapeHtml(serviceDetailValue(selection, "origin", form.elements.origin.value))}" placeholder="${escapeHtml(mode === "multiple" ? routePointLabel(index) : "Origen para este servicio")}" required />
-              </label>
-              <label class="full">Destino (dirección exacta)
-                <input name="${serviceDetailInputName(selection, "destinationAddress")}" value="${escapeHtml(serviceDetailValue(selection, "destinationAddress", mode === "multiple" ? "" : selection.destination))}" placeholder="${escapeHtml(mode === "multiple" ? routePointLabel(index + 1) : "Destino para este servicio")}" required />
-              </label>
-              <label>Horario de salida
-                <input type="time" name="${serviceDetailInputName(selection, "departureTime")}" value="${escapeHtml(serviceDetailValue(selection, "departureTime", form.elements.departureTime.value))}" />
-              </label>
-              <label>Horario de regreso
-                <input type="time" name="${serviceDetailInputName(selection, "returnTime")}" value="${escapeHtml(serviceDetailValue(selection, "returnTime", form.elements.returnTime.value))}" />
-              </label>
-              <label>Equipaje
-                <select name="${serviceDetailInputName(selection, "hasLuggage")}" data-service-detail-luggage>
-                  <option value="true" ${hasLuggageValue === "false" ? "" : "selected"}>Sí</option>
-                  <option value="false" ${hasLuggageValue === "false" ? "selected" : ""}>No</option>
-                </select>
-              </label>
-              <label class="full">¿Qué tipo de equipaje?
-                <textarea name="${serviceDetailInputName(selection, "luggageDescription")}" data-service-detail-luggage-description placeholder="Ej. 3 carry on, 1 pañalera, 1 carruaje plegable">${escapeHtml(serviceDetailValue(selection, "luggageDescription", form.elements.luggageDescription.value))}</textarea>
-              </label>
-              <label class="full">Notas para este destino
+              <label class="full">Notas opcionales
                 <textarea name="${serviceDetailInputName(selection, "notes")}" placeholder="Indicaciones, disponibilidad, cortesías o información especial">${escapeHtml(serviceDetailValue(selection, "notes"))}</textarea>
               </label>
             </div>
@@ -1527,35 +1463,28 @@ function renderServiceDetailBlocks(form) {
 }
 
 function serviceSelectionsWithDetailsFromForm(form) {
-  const mode = destinationModeValue(form);
   return selectedServiceEntriesFromForm(form).map((selection, index) => {
     const get = (field) => form.elements[serviceDetailInputName(selection, field)];
-    const hasLuggageInput = get("hasLuggage");
-    const hasLuggage = hasLuggageInput
-      ? hasLuggageInput.value === "true"
-      : selection.hasLuggage === "" || selection.hasLuggage === undefined
-        ? form.elements.hasLuggage.value === "true"
-        : Boolean(selection.hasLuggage);
+    const description = get("destination")?.value?.trim() || selection.destination || `Traslado ${index + 1}`;
+    const serviceDate = get("serviceDate")?.value || selection.serviceDate || form.elements.serviceDate.value;
+    const hasLuggage = Number(form.elements.luggage?.value || 0) > 0;
     return {
       ...selection,
-      destination: get("destination")?.value?.trim() || selection.destination || `Destino ${index + 1}`,
+      destination: description,
       type: get("type")?.value || selection.type || "oneWay",
       label: serviceRateTypes[get("type")?.value || selection.type]?.label || selection.label,
       amount: Math.max(0, Number(get("amount")?.value ?? selection.amount ?? 0)),
-      serviceDate: get("serviceDate")?.value || selection.serviceDate || form.elements.serviceDate.value,
-      returnDate: get("returnDate")?.value || selection.returnDate || form.elements.returnDate.value,
-      origin: get("origin")?.value?.trim() || selection.origin || form.elements.origin.value.trim(),
-      destinationAddress:
-        get("destinationAddress")?.value?.trim() || selection.destinationAddress || (mode === "multiple" ? "" : selection.destination),
-      departureTime: get("departureTime")?.value || selection.departureTime || form.elements.departureTime.value,
-      returnTime: get("returnTime")?.value || selection.returnTime || form.elements.returnTime.value,
+      serviceDate,
+      returnDate: serviceDate,
+      origin: selection.origin || "",
+      destinationAddress: description,
+      departureTime: get("departureTime") ? get("departureTime").value : selection.departureTime || "",
+      returnTime: "",
       passengers: Number(form.elements.passengers.value || selection.passengers || 1),
       hasLuggage,
-      luggageDescription: hasLuggage
-        ? get("luggageDescription")?.value?.trim() || selection.luggageDescription || ""
-        : "",
-      notes: get("notes")?.value?.trim() || "",
-      legNumber: mode === "multiple" ? index + 1 : Number(selection.legNumber || 0),
+      luggageDescription: hasLuggage ? form.elements.luggageDescription?.value?.trim() || "" : "",
+      notes: get("notes") ? get("notes").value.trim() : selection.notes || "",
+      legNumber: index + 1,
     };
   });
 }
@@ -1571,10 +1500,8 @@ function syncPrimaryServiceFields(form, selections) {
     : first.returnDate || first.serviceDate || form.elements.returnDate.value || guatemalaDateValue();
   form.elements.origin.value = first.origin || "";
   form.elements.destination.value = first.destinationAddress || first.destination || "";
-  form.elements.departureTime.value = first.departureTime || form.elements.departureTime.value || "08:00";
+  form.elements.departureTime.value = first.departureTime || "";
   form.elements.returnTime.value = selections.length > 1 ? last.returnTime || "" : first.returnTime || "";
-  form.elements.hasLuggage.value = first.hasLuggage === false ? "false" : "true";
-  form.elements.luggageDescription.value = first.hasLuggage === false ? "" : first.luggageDescription || "";
   form.elements.serviceStartDate.value = form.elements.serviceDate.value;
   form.elements.serviceEndDate.value = form.elements.returnDate.value;
 }
@@ -1602,42 +1529,31 @@ function syncServiceSelections(form) {
   updateQuoteSummary(form);
 }
 
-function vehiclesForCurrentModel(form) {
-  const model = form.elements.vehicleModel.value;
-  const vehicles = luxuryVehicles();
-  if (model === largeGroupVehicleModel) return vehicles;
-  return vehicles.filter((vehicle) => vehicleModelName(vehicle) === model);
-}
-
 function renderVehicleUnitPanel(form, selectedIds = []) {
-  const vehicles = vehiclesForCurrentModel(form);
+  const vehicles = luxuryVehicles();
   const selectedSet = new Set(selectedIds);
-  const shouldSelectAll = form.elements.vehicleModel.value === largeGroupVehicleModel && !selectedIds.length;
-  const shouldSelectFirst = form.elements.vehicleModel.value !== largeGroupVehicleModel && !selectedIds.length;
+  const shouldSelectFirst = !selectedIds.length;
   $("[data-vehicle-unit-panel]", form).innerHTML = vehicles.length
     ? `
-      <span class="unit-panel-title">Unidad(es) disponibles</span>
+      <span class="unit-panel-title">Seleccione una o varias Mercedes Benz Sprinter</span>
       <div class="vehicle-unit-options">
         ${vehicles
           .map((vehicle, index) => {
-            const checked = selectedSet.has(vehicle.id) || shouldSelectAll || (shouldSelectFirst && index === 0);
-            const capacityDetails = [
-              `Unidad ${vehicle.unitNumber || index + 1}`,
-              `${vehicleBaseCapacity(vehicle)} pasajeros`,
-              `${vehicle.capacityWithBed || 8} con cama`,
-              vehicleSupportsSuperLuxurySeats(vehicle) ? `${vehicle.superLuxuryCapacity || 9} Butacas Super Lujo` : "",
-            ].filter(Boolean).join(" · ");
+            const checked = selectedSet.has(vehicle.id) || (shouldSelectFirst && index === 0);
+            const capacityDetails = vehicleIsSprinter316(vehicle)
+              ? "Butacas de lujo: 9 atrás + 1 adelante · Butacas M1: 13 atrás + 1 adelante · Sillones M3: 10 atrás + 1 adelante"
+              : "8 con cama y equipaje · 10 con equipaje sin cama · 15 sin equipaje";
             return `
               <label class="vehicle-unit-option">
                 <input type="checkbox" name="vehicleIds" value="${vehicle.id}" ${checked ? "checked" : ""} />
-                <span><strong>${escapeHtml(vehicleUnitLabel(vehicle))}</strong><small>${escapeHtml(capacityDetails)}</small></span>
+                <span><strong>${escapeHtml(vehicleUnitLabel(vehicle))}</strong><small>Unidad ${escapeHtml(vehicle.unitNumber || index + 1)} · ${escapeHtml(capacityDetails)}</small></span>
               </label>
             `;
           })
           .join("")}
       </div>
     `
-    : `<div class="rate-empty">No hay Sprinter disponibles para este modelo.</div>`;
+    : `<div class="rate-empty">No hay Sprinter disponibles.</div>`;
   syncSelectedVehicleField(form);
 }
 
@@ -1688,46 +1604,69 @@ function openQuoteModal(quote = {}) {
   const initialDestinationCount = Math.max(2, Math.min(20, Math.round(Number(quote.destinationCount || initialServiceSelections.length || 2))));
   const initialPriceDisplayMode = quote.priceDisplayMode === "final" ? "final" : "detailed";
   const initialDiscountAmount = Math.max(0, Number(quote.discountAmount || quote.totals?.discountAmount || quote.totals?.discount || 0));
+  const initialSeatConfiguration = ["luxury", "m1", "m3"].includes(quote.seatConfiguration)
+    ? quote.seatConfiguration
+    : quote.hasSuperLuxurySeats
+      ? "luxury"
+      : "m1";
+  const initialLuggageQuantity = Math.max(0, Number(quote.luggage || (quote.hasLuggage ? 1 : 0)));
   openModal(
     isEdit ? `Editar ${quote.number}` : "Nueva cotización",
     `
       <form id="quote-form" class="modal-form">
         <div class="quote-layout">
           <div class="quote-form-sections">
-            <section class="form-section">
-              <h3>1. Elegir recorrido</h3>
+            <section class="form-section" data-quote-step="route">
+              <h3>2. Elegir traslados</h3>
               <div class="destination-mode-grid">
                 <label class="destination-mode-option ${initialDestinationMode === "single" ? "active" : ""}" data-destination-mode-option>
                   <input type="radio" name="destinationMode" value="single" ${initialDestinationMode === "single" ? "checked" : ""} />
-                  <b>1 destino</b>
-                  <span>Agregue uno o varios viajes manualmente, cada uno con su propia información.</span>
+                  <b>1 traslado</b>
+                  <span>Complete una sola ficha con fecha, descripción, hora opcional y precio.</span>
                 </label>
                 <label class="destination-mode-option ${initialDestinationMode === "multiple" ? "active" : ""}" data-destination-mode-option>
                   <input type="radio" name="destinationMode" value="multiple" ${initialDestinationMode === "multiple" ? "checked" : ""} />
-                  <b>Destinos múltiples</b>
-                  <span>Cree una ruta consecutiva: Punto A → B, Punto B → C y los trayectos que necesite.</span>
+                  <b>Traslados múltiples</b>
+                  <span>Cree todos los traslados que necesite, cada uno con fecha, descripción, hora opcional y precio.</span>
                 </label>
               </div>
-              <label class="destination-count-field" data-destination-count-wrap ${initialDestinationMode === "multiple" ? "" : "hidden"}>¿Cuántos destinos tendrá la ruta?
+              <label class="destination-count-field" data-destination-count-wrap ${initialDestinationMode === "multiple" ? "" : "hidden"}>¿Cuántos traslados necesita?
                 <input type="number" name="destinationCount" value="${initialDestinationCount}" min="2" max="20" step="1" inputmode="numeric" required />
-                <small>Escriba la cantidad de destinos que necesita, de 2 a 20.</small>
+                <small>Escriba la cantidad de traslados, de 2 a 20.</small>
               </label>
             </section>
             <section class="form-section" data-quote-step="vehicles">
-              <h3>2. Mercedes y pasajeros</h3>
+              <h3>1. Mercedes, pasajeros y equipaje</h3>
               <div class="form-grid">
-                <label>Tipo de Mercedes
-                  <select name="vehicleModel" data-vehicle-model-select>
-                    ${allowedVehicleModels.map((model) => `<option value="${model}" ${quoteVehicleModel(quote) === model ? "selected" : ""}>${escapeHtml(model)}</option>`).join("")}
-                    <option value="${largeGroupVehicleModel}" ${quoteVehicleModel(quote) === largeGroupVehicleModel ? "selected" : ""}>Usar las 3 Mercedes Benz Sprinter</option>
-                  </select>
-                </label>
-                <label>Cantidad de pasajeros
-                  <select name="passengers" data-passenger-select required>
-                    ${passengerOptions(quote.passengers || 1, quote.maxPassengers || 15)}
-                  </select>
-                </label>
                 <div class="vehicle-unit-panel full" data-vehicle-unit-panel></div>
+                <div class="seat-configuration full" data-seat-configuration>
+                  <strong>Configuración Mercedes Benz Sprinter 316</strong>
+                  <div class="seat-configuration-options">
+                    <label><input type="radio" name="seatConfiguration" value="luxury" ${initialSeatConfiguration === "luxury" ? "checked" : ""} /><span><b>Butacas de lujo</b><small>9 pasajeros atrás + 1 adelante con equipaje. Máximo 10.</small></span></label>
+                    <label><input type="radio" name="seatConfiguration" value="m1" ${initialSeatConfiguration === "m1" ? "checked" : ""} /><span><b>Butacas M1</b><small>13 pasajeros atrás + 1 adelante con equipaje. Máximo 14.</small></span></label>
+                    <label><input type="radio" name="seatConfiguration" value="m3" ${initialSeatConfiguration === "m3" ? "checked" : ""} /><span><b>Sillones M3</b><small>10 pasajeros atrás + 1 adelante. Máximo 11.</small></span></label>
+                  </div>
+                </div>
+                <div class="passenger-luggage-editor full">
+                  <fieldset>
+                    <legend>Pasajeros</legend>
+                    <label>Cantidad
+                      <input type="number" name="passengers" value="${Math.max(1, Number(quote.passengers || 1))}" min="1" max="${Math.max(1, Number(quote.maxPassengers || 15))}" step="1" inputmode="numeric" required />
+                    </label>
+                    <label>Descripción
+                      <input name="passengerDescription" value="${escapeHtml(quote.passengerDescription || "")}" placeholder="Ej. 9 atrás y 1 adelante" />
+                    </label>
+                  </fieldset>
+                  <fieldset>
+                    <legend>Equipaje</legend>
+                    <label>Cantidad
+                      <input type="number" name="luggage" value="${initialLuggageQuantity}" min="0" step="1" inputmode="numeric" />
+                    </label>
+                    <label>Descripción
+                      <input name="luggageDescription" value="${escapeHtml(quote.luggageDescription || "")}" placeholder="Ej. 8 maletas de mano" />
+                    </label>
+                  </fieldset>
+                </div>
                 <div class="capacity-note full" data-capacity-note>Capacidad disponible.</div>
                 <div class="premium-options full">
                   <label class="premium-option">
@@ -1741,14 +1680,9 @@ function openQuoteModal(quote = {}) {
                     <span><strong>TV</strong><small>Mostrar TV en la imagen final.</small></span>
                   </label>
                   <label class="premium-option premium-option-full">
-                    <input type="checkbox" name="hasSuperLuxurySeats" ${quote.hasSuperLuxurySeats ? "checked" : ""} data-super-luxury-seats />
-                    <span class="premium-option-icon">SL</span>
-                    <span><strong>Butacas Super Lujo</strong><small>Solo Mercedes Benz Sprinter 316, unidad 3. Capacidad máxima: 9 pasajeros.</small></span>
-                  </label>
-                  <label class="premium-option premium-option-full">
                     <input type="checkbox" name="hasBed" ${quote.hasBed ? "checked" : ""} />
                     <span class="premium-option-icon">CM</span>
-                    <span><strong>Cama</strong><small>Al seleccionar cama, la capacidad baja a 7 pasajeros atrás y 2 adelante.</small></span>
+                    <span><strong>Cama</strong><small>Solo para las Mercedes 311. Capacidad por unidad: 8 pasajeros con equipaje.</small></span>
                   </label>
                 </div>
               </div>
@@ -1765,21 +1699,9 @@ function openQuoteModal(quote = {}) {
               <h3>4. Información del viaje</h3>
               <div data-single-destination-builder ${initialDestinationMode === "multiple" ? "hidden" : ""}>
                 <div class="manual-service-box">
-                  <h4>Agregar destino manual</h4>
-                  <div class="form-grid">
-                    <label>Destino o nombre del viaje<input name="manualDestination" placeholder="Ej. Río Dulce, ruta especial, evento privado" /></label>
-                    <label>Tipo de servicio
-                      <select name="manualServiceRateType">
-                        <option value="oneWay">Ida</option>
-                        <option value="roundTrip">Ida y Vuelta</option>
-                        <option value="internal">Traslados internos</option>
-                      </select>
-                    </label>
-                    <label>Precio manual<input type="number" name="manualPrice" min="0" step="0.01" placeholder="0.00" /></label>
-                    <div class="manual-service-action">
-                      <button type="button" class="button button-secondary" data-add-manual-service>Agregar destino manual</button>
-                    </div>
-                  </div>
+                  <h4>¿Necesita otro traslado?</h4>
+                  <p class="form-note">Puede agregar una nueva ficha y completar sus datos de forma independiente.</p>
+                  <button type="button" class="button button-secondary" data-add-manual-service>Agregar otro traslado</button>
                 </div>
                 <div class="form-grid service-rate-picker">
                   <label class="visually-hidden">Destino tarifado
@@ -1807,7 +1729,7 @@ function openQuoteModal(quote = {}) {
                 <label class="price-mode-option ${initialPriceDisplayMode === "detailed" ? "active" : ""}" data-price-mode-option>
                   <input type="radio" name="priceDisplayMode" value="detailed" ${initialPriceDisplayMode === "detailed" ? "checked" : ""} />
                   <b>Precios desglosados</b>
-                  <span>Muestra cada destino ordenado por fecha y el total al final.</span>
+                  <span>Muestra cada traslado ordenado por fecha y el total al final.</span>
                 </label>
                 <label class="price-mode-option ${initialPriceDisplayMode === "final" ? "active" : ""}" data-price-mode-option>
                   <input type="radio" name="priceDisplayMode" value="final" ${initialPriceDisplayMode === "final" ? "checked" : ""} />
@@ -1835,10 +1757,9 @@ function openQuoteModal(quote = {}) {
         <input type="hidden" name="returnDate" value="${escapeHtml(serviceEndDate)}" />
         <input type="hidden" name="origin" value="${escapeHtml(quote.origin)}" />
         <input type="hidden" name="destination" value="${escapeHtml(quote.destination)}" />
-        <input type="hidden" name="departureTime" value="${escapeHtml(quote.departureTime || "08:00")}" />
+        <input type="hidden" name="departureTime" value="${escapeHtml(quote.departureTime || "")}" />
         <input type="hidden" name="returnTime" value="${escapeHtml(quote.returnTime)}" />
-        <input type="hidden" name="hasLuggage" value="${quote.hasLuggage === false ? "false" : "true"}" />
-        <input type="hidden" name="luggageDescription" value="${escapeHtml(quote.luggageDescription || (quote.luggage ? `${quote.luggage} maletas` : ""))}" />
+        <input type="hidden" name="hasLuggage" value="${initialLuggageQuantity > 0 ? "true" : "false"}" />
         <input type="hidden" name="clientId" value="${escapeHtml(quote.clientId)}" />
         <input type="hidden" name="clientNit" value="${escapeHtml(quote.clientNit)}" />
         <input type="hidden" name="clientEmail" value="${escapeHtml(quote.clientEmail)}" />
@@ -1855,7 +1776,6 @@ function openQuoteModal(quote = {}) {
         <input type="hidden" name="serviceEndDate" value="${escapeHtml(serviceEndDate)}" />
         <input type="hidden" name="arrivalTime" value="${escapeHtml(quote.arrivalTime)}" />
         <input type="hidden" name="endLocation" value="${escapeHtml(quote.endLocation)}" />
-        <input type="hidden" name="luggage" value="${quote.luggage || 0}" />
         <input type="hidden" name="kilometers" value="${quote.kilometers || 0}" />
         <input type="hidden" name="minutes" value="${quote.minutes || 0}" />
         <input type="hidden" name="waitingMinutes" value="${quote.waitingMinutes || 0}" />
@@ -1879,6 +1799,10 @@ function openQuoteModal(quote = {}) {
   );
 
   const form = $("#quote-form");
+  const formSections = $(".quote-form-sections", form);
+  const vehicleStep = $('[data-quote-step="vehicles"]', form);
+  const routeStep = $('[data-quote-step="route"]', form);
+  if (formSections && vehicleStep && routeStep) formSections.insertBefore(vehicleStep, routeStep);
   $("[data-close-form]").addEventListener("click", closeModal);
   $("[data-clear-quote-draft]")?.addEventListener("click", () => {
     clearQuoteDraft();
@@ -1916,7 +1840,7 @@ function openQuoteModal(quote = {}) {
   });
   $$('input[name="destinationMode"]', form).forEach((input) => {
     input.addEventListener("change", () => {
-      syncDestinationMode(form, { ensureCount: input.value === "multiple" && input.checked });
+      syncDestinationMode(form, { ensureCount: input.checked });
       if (!isEdit) saveQuoteDraft(form);
     });
   });
@@ -1945,40 +1869,22 @@ function openQuoteModal(quote = {}) {
     }
     if (!isEdit) saveQuoteDraft(form);
   });
-  $("[data-service-detail-list]", form).addEventListener("change", (event) => {
-    if (event.target.matches("[data-service-detail-luggage]")) {
-      const card = event.target.closest("[data-service-detail-card]");
-      const description = $("[data-service-detail-luggage-description]", card);
-      if (event.target.value === "false" && description) description.value = "";
-    }
-    if (destinationModeValue(form) === "multiple" && event.target.name?.endsWith("_destinationAddress")) {
-      const cards = $$('[data-service-detail-card]', form);
-      const card = event.target.closest("[data-service-detail-card]");
-      const index = cards.indexOf(card);
-      const nextOrigin = cards[index + 1]?.querySelector('input[name$="_origin"]');
-      if (nextOrigin) nextOrigin.value = event.target.value;
-    }
-  });
   renderVehicleUnitPanel(form, quoteVehicleIds(quote));
   syncQuoteCapacity(form);
-  $("[data-vehicle-model-select]").addEventListener("change", () => {
-    renderVehicleUnitPanel(form);
-    syncQuoteCapacity(form);
-  });
   $("[data-vehicle-unit-panel]").addEventListener("change", () => syncQuoteCapacity(form));
   form.elements.hasPlayStation5.addEventListener("change", () => syncQuoteCapacity(form));
   form.elements.hasTv.addEventListener("change", () => syncQuoteCapacity(form));
   form.elements.hasBed.addEventListener("change", () => syncQuoteCapacity(form, true));
-  form.elements.hasSuperLuxurySeats.addEventListener("change", () => syncQuoteCapacity(form, true));
+  $$('input[name="seatConfiguration"]', form).forEach((input) => {
+    input.addEventListener("change", () => syncQuoteCapacity(form, true));
+  });
+  form.elements.luggage.addEventListener("input", () => syncQuoteCapacity(form, true));
   form.elements.serviceDate.addEventListener("change", () => {
     form.elements.serviceStartDate.value = form.elements.serviceDate.value;
     if (!form.elements.returnDate.value) form.elements.returnDate.value = form.elements.serviceDate.value;
   });
   form.elements.returnDate.addEventListener("change", () => {
     form.elements.serviceEndDate.value = form.elements.returnDate.value;
-  });
-  form.elements.hasLuggage.addEventListener("change", () => {
-    if (form.elements.hasLuggage.value === "false") form.elements.luggageDescription.value = "";
   });
   const syncDiscountControl = () => {
     const enabled = form.elements.includeDiscount.checked;
@@ -1997,7 +1903,7 @@ function openQuoteModal(quote = {}) {
   form.addEventListener("change", trackFormChange);
   form.addEventListener("submit", (event) => saveQuote(event, quote.id));
   renderDestinationRatePreview(form);
-  syncDestinationMode(form, { ensureCount: initialDestinationMode === "multiple" });
+  syncDestinationMode(form, { ensureCount: true });
   syncPriceDisplayMode(form);
   syncServiceSelections(form);
   updateQuoteSummary(form);
@@ -2007,33 +1913,30 @@ function openQuoteModal(quote = {}) {
 function syncQuoteCapacity(form, announce = false) {
   syncSelectedVehicleField(form);
   const vehicles = selectedVehiclesFromForm(form);
-  const superLuxuryAvailable = vehicles.some(vehicleSupportsSuperLuxurySeats);
-  if (form.elements.hasSuperLuxurySeats.checked && !superLuxuryAvailable) {
-    form.elements.hasSuperLuxurySeats.checked = false;
-    if (announce) toast("Butacas Super Lujo solo aplica para Mercedes Benz Sprinter 316, unidad 3.", "error");
+  const hasSprinter316 = vehicles.some(vehicleIsSprinter316);
+  const hasSprinter311 = vehicles.some((vehicle) => !vehicleIsSprinter316(vehicle));
+  const seatPanel = $(`[data-seat-configuration]`, form);
+  if (seatPanel) seatPanel.hidden = !hasSprinter316;
+  form.elements.hasBed.disabled = !hasSprinter311;
+  if (!hasSprinter311 && form.elements.hasBed.checked) {
+    form.elements.hasBed.checked = false;
+    if (announce) toast("La cama solo aplica para las Mercedes Benz Sprinter 311.");
   }
-  form.elements.hasSuperLuxurySeats.disabled = !superLuxuryAvailable;
+  const luggageQuantity = Math.max(0, Math.round(Number(form.elements.luggage.value || 0)));
+  form.elements.luggage.value = String(luggageQuantity);
+  form.elements.hasLuggage.value = luggageQuantity > 0 ? "true" : "false";
   const maximum = vehicles.length
     ? vehicles.reduce((sum, vehicle) => sum + vehicleCapacityWithOptions(vehicle, form), 0)
-    : form.elements.hasSuperLuxurySeats.checked
-      ? 9
-      : form.elements.hasBed.checked
-        ? 8
-        : 15;
-  const select = form.elements.passengers;
-  if (select.options.length < maximum) {
-    select.innerHTML = passengerOptions(select.value, maximum, maximum);
-  }
-  [...select.options].forEach((option) => {
-    option.disabled = Number(option.value) > maximum;
-  });
-  if (Number(select.value) > maximum) {
-    select.value = String(maximum);
+    : 15;
+  const passengerInput = form.elements.passengers;
+  passengerInput.max = String(maximum);
+  if (Number(passengerInput.value) > maximum) {
+    passengerInput.value = String(maximum);
     if (announce) {
-      const reason = form.elements.hasSuperLuxurySeats.checked ? "Butacas Super Lujo" : form.elements.hasBed.checked ? "cama" : "la unidad seleccionada";
-      toast(`La capacidad se ajustó a ${maximum} pasajeros por ${reason}.`);
+      toast(`La cantidad se ajustó a la capacidad máxima de ${maximum} pasajeros.`);
     }
   }
+  if (Number(passengerInput.value) < 1) passengerInput.value = "1";
   const vehicleText = vehicles.length
     ? vehicles.map(vehicleDisplayName).join(" + ")
     : "la Sprinter seleccionada";
@@ -2041,11 +1944,22 @@ function syncQuoteCapacity(form, announce = false) {
     form.elements.hasPlayStation5.checked ? "PlayStation 5" : "",
     form.elements.hasTv.checked ? "TV" : "",
   ].filter(Boolean).join(" · ");
-  $("[data-capacity-note]", form).textContent = form.elements.hasSuperLuxurySeats.checked
-    ? `${vehicleText}: máximo ${maximum} pasajeros con Butacas Super Lujo.`
-    : form.elements.hasBed.checked
-      ? `${vehicleText}: máximo ${maximum} pasajeros con cama instalada (${vehicles.length || 1} unidad(es), 7 atrás y 2 adelante por unidad).`
-      : `${vehicleText}: capacidad disponible de 1 a ${maximum} pasajeros${amenities ? ` · ${amenities}` : ""}.`;
+  const configuration = form.elements.seatConfiguration?.value || "m1";
+  const configurationLabel = configuration === "luxury"
+    ? "Butacas de lujo (9 atrás + 1 adelante)"
+    : configuration === "m3"
+      ? "Sillones M3 (10 atrás + 1 adelante)"
+      : "Butacas M1 (13 atrás + 1 adelante)";
+  const details = [];
+  if (hasSprinter311) {
+    details.push(form.elements.hasBed.checked
+      ? "Mercedes 311: 8 pasajeros por unidad con cama y equipaje"
+      : luggageQuantity > 0
+        ? "Mercedes 311: 10 pasajeros por unidad con equipaje"
+        : "Mercedes 311: 15 pasajeros por unidad sin equipaje");
+  }
+  if (hasSprinter316) details.push(`Mercedes 316: ${configurationLabel}`);
+  $("[data-capacity-note]", form).textContent = `${vehicleText}: máximo total ${maximum} pasajeros. ${details.join(" · ")}${amenities ? ` · ${amenities}` : ""}`;
   updateQuoteSummary(form);
 }
 
@@ -2077,17 +1991,21 @@ function quoteFormData(form) {
   body.returnTime = form.elements.returnTime.value;
   body.serviceStartDate = body.serviceDate;
   body.serviceEndDate = body.returnDate || body.serviceDate;
-  body.hasLuggage = form.elements.hasLuggage.value === "true";
-  body.luggageDescription = form.elements.luggageDescription.value;
+  body.passengerDescription = form.elements.passengerDescription.value.trim();
+  body.luggage = Math.max(0, Math.round(Number(form.elements.luggage.value || 0)));
+  body.hasLuggage = body.luggage > 0;
+  body.luggageDescription = form.elements.luggageDescription.value.trim();
   if (!body.hasLuggage) body.luggageDescription = "";
-  body.luggage = body.hasLuggage && body.luggageDescription ? 1 : 0;
   body.vehicleIds = $$('input[name="vehicleIds"]:checked', form).map((input) => input.value);
   body.vehicleId = body.vehicleIds[0] || form.elements.vehicleId.value;
   body.vehicleCount = Math.max(1, body.vehicleIds.length || 1);
   body.hasBed = form.elements.hasBed.checked;
   body.hasPlayStation5 = form.elements.hasPlayStation5.checked;
   body.hasTv = form.elements.hasTv.checked;
-  body.hasSuperLuxurySeats = form.elements.hasSuperLuxurySeats.checked;
+  body.seatConfiguration = selectedVehiclesFromForm(form).some(vehicleIsSprinter316)
+    ? form.elements.seatConfiguration.value
+    : "";
+  body.hasSuperLuxurySeats = body.seatConfiguration === "luxury";
   body.applyNightSurcharge = form.elements.applyNightSurcharge.checked;
   body.applyAirportSurcharge = form.elements.applyAirportSurcharge.checked;
   body.includeTax = form.elements.includeTax.checked;
@@ -2164,11 +2082,11 @@ function updateQuoteSummary(form) {
           `,
         )
         .join("")
-    : `<div class="summary-service-row"><span>Seleccione servicios en el menú</span><strong>${money(0)}</strong></div>`;
+    : `<div class="summary-service-row"><span>Agregue al menos un traslado</span><strong>${money(0)}</strong></div>`;
   $("[data-quote-summary]", form).innerHTML = `
     <div class="quote-summary-header"><span>${totals.fixedFare ? "Total de la cotización" : "Total estimado"}</span><strong>${money(totals.total)}</strong></div>
     <div class="summary-lines">
-      <div class="summary-service-list"><span>${body.priceDisplayMode === "detailed" ? "Desglose por destino" : "Destinos incluidos"}</span>${serviceLines}</div>
+      <div class="summary-service-list"><span>${body.priceDisplayMode === "detailed" ? "Desglose por traslado" : "Traslados incluidos"}</span>${serviceLines}</div>
       ${body.priceDisplayMode === "detailed" ? `<div class="summary-line"><span>Total servicios por Mercedes</span><strong>${money(totals.fixedFare)}</strong></div>` : ""}
       <div class="summary-line"><span>Mercedes seleccionadas</span><strong>${escapeHtml(totals.vehicleCount)}</strong></div>
       <div class="summary-line"><span>${body.priceDisplayMode === "final" ? "Precio final ingresado" : "Subtotal vehículos"}</span><strong>${money(totals.baseFare)}</strong></div>
@@ -2178,8 +2096,8 @@ function updateQuoteSummary(form) {
         : '<div class="summary-line summary-tax-message"><span>Esta cotización no incluye IVA</span></div>'}
       <div class="summary-line"><span>Fecha inicio</span><strong>${escapeHtml(formatDate(sortedServices[0]?.serviceDate || body.serviceDate, { short: true }))}</strong></div>
       <div class="summary-line"><span>Fecha final</span><strong>${escapeHtml(formatDate(sortedServices.at(-1)?.returnDate || body.returnDate, { short: true }))}</strong></div>
-      <div class="summary-line"><span>Pasajeros</span><strong>${escapeHtml(body.passengers || 1)}</strong></div>
-      <div class="summary-line"><span>Equipaje</span><strong>${escapeHtml(body.hasLuggage ? body.luggageDescription || "Sí" : "No")}</strong></div>
+      <div class="summary-line"><span>Pasajeros</span><strong>${escapeHtml(`${body.passengers || 1}${body.passengerDescription ? ` · ${body.passengerDescription}` : ""}`)}</strong></div>
+      <div class="summary-line"><span>Equipaje</span><strong>${escapeHtml(body.hasLuggage ? `${body.luggage}${body.luggageDescription ? ` · ${body.luggageDescription}` : ""}` : "Sin equipaje")}</strong></div>
       <div class="summary-line"><span>Comodidades</span><strong>${escapeHtml(quoteAmenityLabels(body).join(" · ") || "Estándar")}</strong></div>
       <div class="summary-line summary-total"><span>Total</span><strong>${money(totals.total)}</strong></div>
     </div>
@@ -2221,11 +2139,11 @@ async function saveQuote(event, id) {
   const button = $('button[type="submit"]', form);
   const body = quoteFormData(form);
   if (!body.serviceSelections.length) {
-    $("[data-form-error]", form).textContent = "Agregue al menos un destino con la información del viaje.";
+    $("[data-form-error]", form).textContent = "Agregue al menos un traslado con la información del viaje.";
     return;
   }
   if (body.priceDisplayMode === "detailed" && body.serviceSelections.some((item) => Number(item.amount || 0) <= 0)) {
-    $("[data-form-error]", form).textContent = "Ingrese el precio manual de cada destino para mostrar el desglose.";
+    $("[data-form-error]", form).textContent = "Ingrese el precio de cada traslado para mostrar el desglose.";
     return;
   }
   if (body.priceDisplayMode === "final" && Number(body.finalManualPrice || 0) <= 0) {
@@ -2409,8 +2327,9 @@ function quoteServiceText(quote) {
 
 function quoteLuggageText(quote) {
   if (quote.hasLuggage === false) return "No";
+  if (Number(quote.luggage || 0) > 0 && quote.luggageDescription) return `${quote.luggage} · ${quote.luggageDescription}`;
   if (quote.luggageDescription) return quote.luggageDescription;
-  if (Number(quote.luggage || 0) > 0) return `${quote.luggage} maletas`;
+  if (Number(quote.luggage || 0) > 0) return `${quote.luggage} piezas`;
   return "Pendiente";
 }
 
@@ -2627,6 +2546,7 @@ function quotePosterPrimaryService(quote) {
     departureTime: first.departureTime || quote.departureTime,
     returnTime: selections.length > 1 ? last.returnTime || quote.returnTime : first.returnTime || quote.returnTime,
     passengers: quote.passengers || first.passengers || 1,
+    passengerDescription: quote.passengerDescription || "",
     luggageDescription: first.hasLuggage === false ? "No" : first.luggageDescription || quoteLuggageText(quote),
   };
 }
@@ -2648,14 +2568,14 @@ function posterServiceDateRange(item) {
 
 function quotePosterServiceLines(quote) {
   const selections = orderedQuoteServices(quote);
-  if (!selections.length) return [{ label: `1. Destino 1 · ${quoteServiceText(quote)}`, amount: quoteSelectedFare(quote) }];
+  if (!selections.length) return [{ label: `1. Traslado 1 · ${quoteServiceText(quote)}`, amount: quoteSelectedFare(quote) }];
   return selections.map((item, index) => {
-    const genericDestination = /^Destino \d+$/i.test(String(item.destination || "").trim());
+    const genericDestination = /^(?:Destino|Traslado) \d+$/i.test(String(item.destination || "").trim());
     const destination = genericDestination
       ? item.destinationAddress || item.destination
       : item.destination || item.destinationAddress;
     return {
-      label: `${index + 1}. Destino ${index + 1} · ${item.label || "Servicio privado"}${destination ? ` · ${destination}` : ""} · ${posterServiceDateRange(item)}`,
+      label: `${index + 1}. Traslado ${index + 1} · ${posterServiceDateRange(item)}${destination ? ` · ${destination}` : ""}${item.departureTime ? ` · Salida ${item.departureTime}` : ""}`,
       amount: quote.priceDisplayMode === "final" ? null : Number(item.amount || 0) * quoteVehicleCountForPrice(quote),
     };
   });
@@ -2677,7 +2597,7 @@ function quotePosterServicesHtml(quote) {
     <section class="poster-service-price-box ${useColumns ? "poster-service-price-box-columns" : ""} ${lines.length > 12 ? "poster-service-price-box-dense" : ""}">
       <header>
         <span>Detalle del servicio</span>
-        <small>${lines.length} destino${lines.length === 1 ? "" : "s"}</small>
+        <small>${lines.length} traslado${lines.length === 1 ? "" : "s"}</small>
       </header>
       <div class="poster-service-price-columns">
         ${columns.map((column) => `<div class="poster-service-price-list">${column.map(row).join("")}</div>`).join("")}
@@ -2697,7 +2617,7 @@ function quotePosterNoteEntries(quote) {
   orderedQuoteServices(quote).forEach((item, index) => {
     if (!String(item.notes || "").trim()) return;
     entries.push({
-      label: `Destino ${index + 1}`,
+      label: `Traslado ${index + 1}`,
       text: String(item.notes).trim(),
     });
   });
@@ -2732,7 +2652,7 @@ function quotePosterContinuationHtml(quote) {
     <section class="poster-continuation">
       <header class="poster-continuation-header">
         <div><span>Luxury Travel Guatemala</span><h2>Detalle del recorrido</h2></div>
-        <strong>${selections.length} destino${selections.length === 1 ? "" : "s"}</strong>
+        <strong>${selections.length} traslado${selections.length === 1 ? "" : "s"}</strong>
       </header>
       <div class="poster-route-list">
         ${selections
@@ -2743,15 +2663,13 @@ function quotePosterContinuationHtml(quote) {
                 <div class="poster-route-content">
                   <div class="poster-route-heading">
                     <div>
-                      <span>${escapeHtml(item.label || "Servicio privado")}</span>
-                      <h3>${escapeHtml(item.origin || routePointLabel(index))} <b>→</b> ${escapeHtml(item.destinationAddress || item.destination || routePointLabel(index + 1))}</h3>
+                      <span>Traslado ${index + 1}</span>
+                      <h3>${escapeHtml(item.destination || item.destinationAddress || "Descripción pendiente")}</h3>
                     </div>
                   </div>
                   <div class="poster-route-meta">
                     <span><b>Fecha</b>${escapeHtml(formatDocumentDate(item.serviceDate))}</span>
-                    <span><b>Finalización</b>${escapeHtml(formatDocumentDate(item.returnDate || item.serviceDate))}</span>
-                    <span><b>Salida</b>${escapeHtml(pending(item.departureTime))}</span>
-                    <span><b>Regreso</b>${escapeHtml(pending(item.returnTime))}</span>
+                    ${item.departureTime ? `<span><b>Hora de salida</b>${escapeHtml(item.departureTime)}</span>` : ""}
                     <span><b>Equipaje</b>${escapeHtml(item.hasLuggage === false ? "No" : item.luggageDescription || "Sí")}</span>
                   </div>
                   ${item.notes ? `<p><b>Notas:</b> ${escapeHtml(item.notes)}</p>` : ""}
@@ -2812,7 +2730,9 @@ function quotePosterAmenitiesHtml(quote) {
   if (quote.hasPlayStation5) vehicleItems.push(["playstation", "PlayStation 5"]);
   if (quote.hasTv) vehicleItems.push(["tv", "TV"]);
   if (quote.hasBed) vehicleItems.push(["bed", "Cama"]);
-  if (quote.hasSuperLuxurySeats) vehicleItems.push(["luxury", "Butacas de Super Lujo"]);
+  if (quote.seatConfiguration === "luxury" || quote.hasSuperLuxurySeats) vehicleItems.push(["luxury", "Butacas de lujo"]);
+  if (quote.seatConfiguration === "m1") vehicleItems.push(["luxury", "Butacas M1"]);
+  if (quote.seatConfiguration === "m3") vehicleItems.push(["luxury", "Sillones M3"]);
 
   const includedItems = [
     ["driver", "Piloto profesional"],
@@ -2955,12 +2875,12 @@ function downloadQuotePdf(id) {
         <img class="quote-template-bg" src="${templateImage}" alt="">
         <strong class="poster-client-name">${escapeHtml(quote.clientName || "Cliente")}</strong>
         <div class="poster-dynamic-value poster-start-date">${escapeHtml(formatPosterDate(service.serviceDate))}</div>
-        <div class="poster-dynamic-value poster-start-time">${escapeHtml(pending(service.departureTime))}</div>
+        ${service.departureTime ? `<div class="poster-dynamic-value poster-start-time">${escapeHtml(service.departureTime)}</div>` : ""}
         <div class="poster-dynamic-value poster-origin">${escapeHtml(service.origin || "Pendiente")}</div>
         <div class="poster-dynamic-value poster-destination">${escapeHtml(service.destination || "Pendiente")}</div>
         <div class="poster-dynamic-value poster-end-date"><span>${escapeHtml(formatPosterDate(service.returnDate))}</span></div>
         <div class="poster-dynamic-value poster-return-time"><span>${escapeHtml(pending(service.returnTime))}</span></div>
-        <div class="poster-dynamic-value poster-passengers">${escapeHtml(`${service.passengers || 1} pasajeros`)}</div>
+        <div class="poster-dynamic-value poster-passengers"><strong>${escapeHtml(`${service.passengers || 1} pasajeros`)}</strong>${service.passengerDescription ? `<small>${escapeHtml(service.passengerDescription)}</small>` : ""}</div>
         <div class="poster-top-spacer" aria-hidden="true"></div>
         <section class="poster-adaptive-lower">
           ${quotePosterServicesHtml(quote)}
@@ -3043,7 +2963,13 @@ function printItinerary(id) {
     "Aire acondicionado",
     "WiFi",
     "Combustible",
-    item.hasSuperLuxurySeats ? "Butacas Super Lujo" : "Butacas cómodas",
+    item.seatConfiguration === "luxury" || item.hasSuperLuxurySeats
+      ? "Butacas de lujo"
+      : item.seatConfiguration === "m1"
+        ? "Butacas M1"
+        : item.seatConfiguration === "m3"
+          ? "Sillones M3"
+          : "Butacas cómodas",
     item.hasBed ? "Cama instalada" : "",
     item.hasPlayStation5 ? "PlayStation 5" : "",
     item.hasTv ? "TV" : "",
@@ -3118,7 +3044,7 @@ function quoteDocumentStyles() {
     .poster-start-date{left:104px;top:817px;width:156px;height:94px}.poster-start-time{left:104px;top:956px;width:156px;height:45px;align-items:center}
     .poster-origin{left:282px;top:852px;width:188px;height:97px}.poster-destination{left:493px;top:852px;width:155px;height:94px}
     .poster-end-date{left:696px;top:846px;width:138px;height:78px}.poster-end-date>span,.poster-return-time>span{display:inline-block;width:max-content;max-width:100%;border-bottom:2px solid #d9ad57;padding:0 5px 7px}.poster-return-time{left:696px;top:949px;width:138px;height:68px}
-    .poster-passengers{left:858px;top:842px;width:147px;height:82px;align-items:flex-start;justify-content:center;text-align:center}
+    .poster-passengers{left:858px;top:842px;width:147px;height:82px;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}.poster-passengers strong{font-size:20px}.poster-passengers small{display:block;margin-top:5px;color:#555;font-size:12px;line-height:1.2}
     .poster-service-price-box{position:relative;width:calc(100% - 16px);min-height:274px;margin:0 8px;display:flex;flex-direction:column;border:2px solid #d1a044;border-radius:26px;background:linear-gradient(145deg,#02050c,#080d17);box-shadow:0 10px 25px rgba(0,0,0,.12);padding:18px 30px 16px;color:#fff;overflow:hidden}
     .poster-service-price-box>header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid rgba(213,166,72,.62);padding-bottom:10px;color:#dfb24e;text-transform:uppercase}.poster-service-price-box>header span,.poster-service-price-box>header small{font-size:18px;font-weight:900;letter-spacing:.1em}
     .poster-service-price-columns{display:grid;grid-template-columns:1fr;gap:26px;min-height:0;flex:1;padding:13px 0 11px}.poster-service-price-box-columns .poster-service-price-columns{grid-template-columns:repeat(2,minmax(0,1fr))}.poster-service-price-list{display:grid;align-content:center;gap:6px;min-width:0}.poster-service-price-box-columns .poster-service-price-list+ .poster-service-price-list{border-left:1px solid rgba(213,166,72,.38);padding-left:22px}
@@ -3139,7 +3065,7 @@ function quoteDocumentStyles() {
     .poster-included-features .poster-feature-icon{width:36px;height:36px}.poster-included-features .poster-feature-item span{font-size:10px}
     .poster-continuation{position:relative;z-index:4;display:grid;gap:24px;background:linear-gradient(180deg,#faf8f3,#f3eee4);padding:56px 54px 0;color:#111}
     .poster-continuation-header{display:flex;align-items:end;justify-content:space-between;gap:24px;border-bottom:2px solid #c99532;padding-bottom:18px}.poster-continuation-header span{color:#ad7820;font-size:13px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}.poster-continuation-header h2{margin:7px 0 0;font-family:Georgia,serif;font-size:38px;font-weight:500}.poster-continuation-header>strong{border:1px solid #c99532;border-radius:999px;padding:9px 15px;color:#9a6716;font-size:14px;text-transform:uppercase}
-    .poster-route-list{display:grid;gap:16px}.poster-route-card{display:grid;grid-template-columns:64px minmax(0,1fr);gap:18px;border:1px solid #d7b46c;border-radius:18px;background:#fff;padding:20px;box-shadow:0 10px 30px rgba(25,22,15,.06)}.poster-route-number{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#050a13;color:#dcae45;font-family:Georgia,serif;font-size:21px}.poster-route-content{min-width:0}.poster-route-heading{display:flex;align-items:start;justify-content:space-between;gap:18px}.poster-route-heading span{color:#a16d19;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.poster-route-heading h3{margin:5px 0 0;font-size:20px;line-height:1.25}.poster-route-heading h3 b{color:#c18b2c}.poster-route-heading>strong{color:#aa741b;font-family:Georgia,serif;font-size:23px;white-space:nowrap}.poster-route-meta{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:16px;border-top:1px solid #ead8b4;padding-top:14px}.poster-route-meta span{color:#333;font-size:11px;line-height:1.35}.poster-route-meta b{display:block;margin-bottom:3px;color:#9a6a1e;font-size:9px;letter-spacing:.08em;text-transform:uppercase}.poster-route-content p{margin:14px 0 0;border-left:3px solid #c99532;background:#f8f2e7;padding:10px 12px;font-size:12px;line-height:1.45}
+    .poster-route-list{display:grid;gap:16px}.poster-route-card{display:grid;grid-template-columns:64px minmax(0,1fr);gap:18px;border:1px solid #d7b46c;border-radius:18px;background:#fff;padding:20px;box-shadow:0 10px 30px rgba(25,22,15,.06)}.poster-route-number{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#050a13;color:#dcae45;font-family:Georgia,serif;font-size:21px}.poster-route-content{min-width:0}.poster-route-heading{display:flex;align-items:start;justify-content:space-between;gap:18px}.poster-route-heading span{color:#a16d19;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.poster-route-heading h3{margin:5px 0 0;font-size:20px;line-height:1.25}.poster-route-heading h3 b{color:#c18b2c}.poster-route-heading>strong{color:#aa741b;font-family:Georgia,serif;font-size:23px;white-space:nowrap}.poster-route-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:16px;border-top:1px solid #ead8b4;padding-top:14px}.poster-route-meta span{color:#333;font-size:11px;line-height:1.35}.poster-route-meta b{display:block;margin-bottom:3px;color:#9a6a1e;font-size:9px;letter-spacing:.08em;text-transform:uppercase}.poster-route-content p{margin:14px 0 0;border-left:3px solid #c99532;background:#f8f2e7;padding:10px 12px;font-size:12px;line-height:1.45}
     .poster-general-notes{border:1px solid #d7b46c;border-radius:16px;background:#fff;padding:18px 20px}.poster-general-notes strong{color:#9a6a1e;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.poster-general-notes p{margin:7px 0 0;font-size:13px;line-height:1.5}
     .poster-continuation footer{margin:0 -54px;background:#020712;padding:17px;color:#fff;font-size:14px;letter-spacing:.18em;text-align:center;text-transform:uppercase}.poster-continuation footer b{color:#dcae45}
   `;
@@ -3455,7 +3381,7 @@ async function logout() {
 function setupPwa() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register(appPath("/sw.js?v=49"), { scope: appPath("/") })
+      .register(appPath("/sw.js?v=58"), { scope: appPath("/") })
       .catch(() => {});
   }
   window.addEventListener("beforeinstallprompt", (event) => {

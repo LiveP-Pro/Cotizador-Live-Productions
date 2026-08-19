@@ -46,6 +46,7 @@ function luxuryVehicles(adminId, createdAt) {
       plate: "SPRINTER-1",
       capacity: 15,
       capacityWithBed: 8,
+      capacityWithLuggage: 10,
       luggageCapacity: 12,
       status: "disponible",
       color: "Negro",
@@ -64,6 +65,7 @@ function luxuryVehicles(adminId, createdAt) {
       plate: "SPRINTER-2",
       capacity: 15,
       capacityWithBed: 8,
+      capacityWithLuggage: 10,
       luggageCapacity: 12,
       status: "disponible",
       color: "Negro",
@@ -82,11 +84,15 @@ function luxuryVehicles(adminId, createdAt) {
       plate: "SPRINTER-3",
       capacity: 14,
       capacityWithBed: 8,
-      superLuxuryCapacity: 9,
+      capacityWithLuggage: 14,
+      superLuxuryCapacity: 10,
+      luxurySeatCapacity: 10,
+      m1SeatCapacity: 14,
+      m3SeatCapacity: 11,
       luggageCapacity: 12,
       status: "disponible",
       color: "Negro",
-      supportsBed: true,
+      supportsBed: false,
       supportsPlayStation5: true,
       supportsSuperLuxurySeats: true,
       createdAt,
@@ -101,7 +107,7 @@ function seedDatabase() {
   const driverId = randomUUID();
 
   return {
-    schemaVersion: 8,
+    schemaVersion: 9,
     users: [
       {
         id: adminId,
@@ -172,24 +178,40 @@ export class JsonDatabase {
       : join(dirname(this.filePath), "backups");
     this.data = null;
     this.writeQueue = Promise.resolve();
+    this.recoverySource = "";
   }
 
   async init() {
     await mkdir(dirname(this.filePath), { recursive: true });
-    try {
-      this.data = validateSnapshot(JSON.parse(await readFile(this.filePath, "utf8")));
-    } catch (error) {
-      if (error.code !== "ENOENT") throw error;
-      if (this.mirrorFilePath) {
-        try {
-          this.data = validateSnapshot(JSON.parse(await readFile(this.mirrorFilePath, "utf8")));
-        } catch (mirrorError) {
-          if (mirrorError.code !== "ENOENT") throw mirrorError;
-        }
+    await mkdir(this.backupDirectory, { recursive: true });
+    const backupFiles = (await readdir(this.backupDirectory))
+      .filter((name) => name.endsWith(".json"))
+      .sort()
+      .reverse()
+      .map((name) => join(this.backupDirectory, name));
+    const candidates = [this.filePath, this.mirrorFilePath, ...backupFiles].filter(Boolean);
+    const invalidCandidates = [];
+
+    for (const candidate of [...new Set(candidates)]) {
+      try {
+        this.data = validateSnapshot(JSON.parse(await readFile(candidate, "utf8")));
+        this.recoverySource = candidate;
+        break;
+      } catch (error) {
+        if (error.code !== "ENOENT") invalidCandidates.push(`${candidate}: ${error.message}`);
       }
-      if (!this.data) this.data = seedDatabase();
-      await this.persist();
     }
+
+    if (!this.data) {
+      if (invalidCandidates.length) {
+        throw new Error(
+          `No se encontró una copia válida de Luxury Travel. ${invalidCandidates.join(" | ")}`,
+        );
+      }
+      this.data = seedDatabase();
+      this.recoverySource = "nueva";
+    }
+    await this.persist();
     await this.migrate();
     await this.createDailyBackup();
     return this;
@@ -311,6 +333,46 @@ export class JsonDatabase {
         ...itinerary,
       }));
       this.data.schemaVersion = 8;
+      changed = true;
+    }
+    if (Number(this.data.schemaVersion || 1) < 9) {
+      this.data.vehicles = this.data.vehicles.map((vehicle) => {
+        const isSprinter316 = vehicle.brand === "Mercedes Benz" && vehicle.model === "Sprinter 316";
+        const isSprinter311 = vehicle.brand === "Mercedes Benz" && vehicle.model === "Sprinter 311";
+        return {
+          ...vehicle,
+          ...(isSprinter311
+            ? {
+                capacity: 15,
+                capacityWithBed: 8,
+                capacityWithLuggage: 10,
+              }
+            : {}),
+          ...(isSprinter316
+            ? {
+                capacity: 14,
+                capacityWithLuggage: 14,
+                supportsBed: false,
+                supportsSuperLuxurySeats: true,
+                superLuxuryCapacity: 10,
+                luxurySeatCapacity: 10,
+                m1SeatCapacity: 14,
+                m3SeatCapacity: 11,
+              }
+            : {}),
+        };
+      });
+      this.data.quotes = this.data.quotes.map((quote) => ({
+        passengerDescription: "",
+        seatConfiguration: quote.hasSuperLuxurySeats ? "luxury" : "",
+        ...quote,
+      }));
+      this.data.itineraries = this.data.itineraries.map((itinerary) => ({
+        passengerDescription: "",
+        seatConfiguration: itinerary.hasSuperLuxurySeats ? "luxury" : "",
+        ...itinerary,
+      }));
+      this.data.schemaVersion = 9;
       changed = true;
     }
     if (changed) await this.persist();

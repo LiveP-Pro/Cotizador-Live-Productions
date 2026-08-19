@@ -1417,6 +1417,7 @@ tr:last-child td {
 
 .service-detail-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -1536,11 +1537,16 @@ tr:last-child td {
 
 .service-detail-card {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   border: 1px solid var(--gold-light);
   border-radius: 16px;
   background: #fffdf8;
   padding: 14px;
+}
+
+.service-detail-card > * {
+  min-width: 0;
 }
 
 .service-detail-card-head {
@@ -1633,18 +1639,143 @@ tr:last-child td {
 }
 
 .vehicle-unit-option {
+  position: relative;
   align-items: start;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 9px !important;
+  min-height: 118px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: white;
-  padding: 10px;
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.vehicle-unit-option:has(input:checked) {
+  border-color: var(--gold);
+  background: #fffaf0;
+  box-shadow: 0 0 0 3px rgba(189, 150, 80, 0.12);
+}
+
+.vehicle-unit-option input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold);
 }
 
 .vehicle-unit-option strong,
 .vehicle-unit-option small {
   display: block;
+}
+
+.vehicle-unit-option > span {
+  min-width: 0;
+}
+
+.vehicle-unit-option small {
+  overflow-wrap: anywhere;
+}
+
+.seat-configuration {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--gold-light);
+  border-radius: 14px;
+  background: #fffaf0;
+  padding: 14px;
+}
+
+.seat-configuration[hidden] {
+  display: none !important;
+}
+
+.seat-configuration > strong {
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.seat-configuration-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.seat-configuration-options label {
+  position: relative;
+  min-height: 82px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.seat-configuration-options label:has(input:checked) {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px var(--gold-light);
+}
+
+.seat-configuration-options input {
+  position: absolute;
+  opacity: 0;
+}
+
+.seat-configuration-options b,
+.seat-configuration-options small {
+  display: block;
+}
+
+.seat-configuration-options b {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.seat-configuration-options small {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.passenger-luggage-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.passenger-luggage-editor fieldset {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.6fr) minmax(0, 1.4fr);
+  gap: 12px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: white;
+  padding: 14px;
+}
+
+.passenger-luggage-editor legend {
+  padding: 0 6px;
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.transfer-detail-grid {
+  grid-template-columns: minmax(135px, 0.75fr) minmax(260px, 1.7fr) minmax(155px, 0.85fr) minmax(135px, 0.7fr);
+}
+
+.field-hint {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .vehicle-unit-option small {
@@ -1864,13 +1995,21 @@ tr:last-child td {
   gap: 24px;
 }
 
+.quote-layout > *,
+.quote-form-sections,
+.form-section {
+  min-width: 0;
+}
+
 .quote-form-sections {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 26px;
 }
 
 .form-section {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 15px;
 }
 
@@ -2198,6 +2337,20 @@ tr:last-child td {
   }
 }
 
+@media (max-width: 760px) {
+  .vehicle-unit-options,
+  .seat-configuration-options,
+  .passenger-luggage-editor,
+  .transfer-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vehicle-unit-option,
+  .seat-configuration-options label {
+    min-width: 0;
+  }
+}
+
 @media (max-width: 620px) {
   .login-panel {
     align-items: start;
@@ -2227,7 +2380,14 @@ tr:last-child td {
   .price-mode-grid,
   .rate-options,
   .vehicle-unit-options,
+  .seat-configuration-options,
+  .passenger-luggage-editor,
   .payment-proof-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .passenger-luggage-editor fieldset,
+  .transfer-detail-grid {
     grid-template-columns: 1fr;
   }
 
