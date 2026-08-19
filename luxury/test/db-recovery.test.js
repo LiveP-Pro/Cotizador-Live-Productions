@@ -80,9 +80,9 @@ test("repara totales duplicados de cotizaciones existentes", async (context) => 
     priceDisplayMode: "detailed",
     fixedFare: 24800,
     fixedFareIsTotal: false,
-    discountAmount: 4600,
+    discountAmount: 0,
     discountPercent: 0,
-    includeTax: true,
+    includeTax: false,
     serviceSelections: [4000, 2500, 7500, 3000, 7800].map((amount, index) => ({
       amount,
       destination: `Traslado ${index + 1}`,
@@ -91,6 +91,7 @@ test("repara totales duplicados de cotizaciones existentes", async (context) => 
       baseFare: 49600,
       discount: 4600,
       tax: 5400,
+      taxPercent: 12,
       total: 50400,
     },
   });
@@ -98,9 +99,11 @@ test("repara totales duplicados de cotizaciones existentes", async (context) => 
 
   const repaired = await openDatabase(files).init();
   const quote = repaired.data.quotes.find((item) => item.id === "cotizacion-total-duplicado");
-  assert.equal(repaired.data.schemaVersion, 10);
+  assert.equal(repaired.data.schemaVersion, 11);
   assert.equal(quote.vehicleCount, 1);
   assert.equal(quote.fixedFare, 24800);
+  assert.equal(quote.discountAmount, 4600);
+  assert.equal(quote.includeTax, true);
   assert.equal(quote.totals.baseFare, 24800);
   assert.equal(quote.totals.discount, 4600);
   assert.equal(quote.totals.tax, 2424);

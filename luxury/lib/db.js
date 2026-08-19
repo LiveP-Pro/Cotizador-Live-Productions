@@ -108,7 +108,7 @@ function seedDatabase() {
   const driverId = randomUUID();
 
   return {
-    schemaVersion: 10,
+    schemaVersion: 11,
     users: [
       {
         id: adminId,
@@ -392,6 +392,13 @@ export class JsonDatabase {
         );
         const priceDisplayMode = quote.priceDisplayMode === "final" ? "final" : "detailed";
         if (priceDisplayMode !== "detailed" || transferTotal <= 0) return quote;
+        const storedTotals = quote.totals && typeof quote.totals === "object"
+          ? quote.totals
+          : {};
+        const explicitDiscount = Math.max(0, Number(quote.discountAmount || 0));
+        const storedDiscount = Math.max(0, Number(storedTotals.discount || 0));
+        const includeStoredTax = Number(storedTotals.tax || 0) > 0
+          || Number(storedTotals.taxPercent || 0) > 0;
         const repaired = {
           ...quote,
           vehicleId: vehicleIds[0] || quote.vehicleId || "",
@@ -400,6 +407,8 @@ export class JsonDatabase {
           priceDisplayMode,
           fixedFare: transferTotal,
           fixedFareIsTotal: false,
+          discountAmount: explicitDiscount || storedDiscount,
+          includeTax: quote.includeTax === true || includeStoredTax,
         };
         return {
           ...repaired,
@@ -407,6 +416,10 @@ export class JsonDatabase {
         };
       });
       this.data.schemaVersion = 10;
+      changed = true;
+    }
+    if (Number(this.data.schemaVersion || 1) < 11) {
+      this.data.schemaVersion = 11;
       changed = true;
     }
     if (changed) await this.persist();
