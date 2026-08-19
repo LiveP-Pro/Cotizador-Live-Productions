@@ -345,6 +345,30 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
   assert.equal(manualVehicleQuote.driverManualName, "Piloto externo");
   assert.equal(manualVehicleQuote.hasTv, true);
 
+  const incompleteQuoteResponse = await request(app.baseUrl, cookie, "/api/quotes", {
+    method: "POST",
+    body: JSON.stringify({
+      allowIncomplete: true,
+      quoteDate: "2026-08-19",
+      passengers: 1,
+      includeTax: false,
+      serviceSelections: [
+        {
+          instanceId: "route-incomplete",
+          destinationId: "manual-route-incomplete",
+          destination: "Traslado 1",
+          type: "oneWay",
+          label: "Servicio de ida",
+          amount: 0,
+        },
+      ],
+    }),
+  });
+  assert.equal(incompleteQuoteResponse.status, 201);
+  const incompleteQuote = await incompleteQuoteResponse.json();
+  assert.equal(incompleteQuote.clientId, "");
+  assert.equal(incompleteQuote.serviceSelections.length, 1);
+
   const overCapacityResponse = await request(app.baseUrl, cookie, "/api/quotes", {
     method: "POST",
     body: JSON.stringify({
@@ -417,7 +441,7 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
   const bootstrapResponse = await request(app.baseUrl, cookie, "/api/bootstrap");
   assert.equal(bootstrapResponse.status, 200);
   const bootstrap = await bootstrapResponse.json();
-  assert.equal(bootstrap.quotes.length, 7);
+  assert.equal(bootstrap.quotes.length, 8);
   assert.equal(bootstrap.clients.length, 6);
   assert.equal(bootstrap.clients.find((client) => client.name === "Cliente de prueba").nit, "1234567-8");
   assert.equal(bootstrap.itineraries.length, 1);

@@ -229,6 +229,10 @@ function normalizePaymentProof(body, actorId) {
 }
 
 async function syncClientForQuote(db, quote, actorId) {
+  if (!quote.clientName) {
+    quote.clientId = "";
+    return null;
+  }
   let client = quote.clientId ? db.find("clients", quote.clientId) : null;
   if (!client) {
     client = db
@@ -468,8 +472,9 @@ function validateQuoteCapacity(db, quote) {
     if (hasLuggage) return Math.max(1, Number(vehicle.capacityWithLuggage || 10));
     return Math.max(1, Number(vehicle.capacity || 15));
   };
-  const maximum = vehicles.length
-    ? vehicles.reduce((sum, vehicle) => sum + capacityForVehicle(vehicle), 0)
+  const manualCapacity = quote.vehicleManualName ? Math.max(15, Number(quote.passengers || 1)) : 0;
+  const maximum = vehicles.length || quote.vehicleManualName
+    ? vehicles.reduce((sum, vehicle) => sum + capacityForVehicle(vehicle), 0) + manualCapacity
     : quote.hasBed
       ? 8
       : hasLuggage
@@ -1144,9 +1149,11 @@ export async function createApp(options = {}) {
       let patch;
       if (collection === "quotes") {
         patch = normalizeQuote(body, db.data.rates, current);
-        validateRequired(patch, ["clientName", "serviceDate", "departureTime", "origin", "destination"]);
-        validateQuoteVehicle(patch);
-        validateQuoteCapacity(db, patch);
+        if (!parseBoolean(body.allowIncomplete)) {
+          validateRequired(patch, ["clientName"]);
+          validateQuoteVehicle(patch);
+          validateQuoteCapacity(db, patch);
+        }
         if (SERVICE_STATUSES.has(patch.status) && !current.paymentProof) {
           const error = new Error("Para aceptar una cotización debe subir la boleta de pago o depósito.");
           error.statusCode = 400;
@@ -1218,9 +1225,11 @@ export async function createApp(options = {}) {
       let entity;
       if (collection === "quotes") {
         entity = normalizeQuote(body, db.data.rates);
-        validateRequired(entity, ["clientName", "serviceDate", "departureTime", "origin", "destination"]);
-        validateQuoteVehicle(entity);
-        validateQuoteCapacity(db, entity);
+        if (!parseBoolean(body.allowIncomplete)) {
+          validateRequired(entity, ["clientName"]);
+          validateQuoteVehicle(entity);
+          validateQuoteCapacity(db, entity);
+        }
         if (SERVICE_STATUSES.has(entity.status)) {
           const error = new Error("Para aceptar una cotización debe subir la boleta de pago o depósito.");
           error.statusCode = 400;

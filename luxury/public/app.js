@@ -242,6 +242,43 @@ function guatemalaMonthValue(date = new Date()) {
   return `${parts.year}-${parts.month}`;
 }
 
+function time12Parts(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  if (!raw) return { time: "", period: "AM" };
+  const match = raw.match(/^(\d{1,2})(?::?(\d{2}))?\s*(AM|PM)?$/);
+  if (!match) return { time: raw, period: "AM" };
+  let hour = Number(match[1]);
+  const minute = Number(match[2] || 0);
+  if (minute > 59 || hour > 23) return { time: raw, period: match[3] || "AM" };
+  let period = match[3];
+  if (period) {
+    if (hour > 12 || hour < 1) return { time: raw, period };
+  } else {
+    period = hour >= 12 ? "PM" : "AM";
+    hour %= 12;
+    if (!hour) hour = 12;
+  }
+  return {
+    time: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+    period,
+  };
+}
+
+function time12To24(value, period) {
+  const parts = time12Parts(`${String(value || "").trim()} ${period || ""}`);
+  const match = parts.time.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return String(value || "").trim();
+  let hour = Number(match[1]) % 12;
+  if (parts.period === "PM") hour += 12;
+  return `${String(hour).padStart(2, "0")}:${match[2]}`;
+}
+
+function formatTime12(value) {
+  if (!value) return "";
+  const parts = time12Parts(value);
+  return parts.time ? `${parts.time} ${parts.period}` : String(value);
+}
+
 function formatDate(value, options = {}) {
   if (!value) return "Por definir";
   const safeValue = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value;
@@ -1431,6 +1468,7 @@ function renderServiceDetailBlocks(form) {
     ${selections
       .map((selection, index) => {
         const serviceNumber = index + 1;
+        const departure = time12Parts(serviceDetailValue(selection, "departureTime"));
         return `
           <article class="service-detail-card" data-service-detail-card data-service-instance-id="${escapeHtml(selection.instanceId)}">
             <div class="service-detail-card-head">
@@ -1440,13 +1478,19 @@ function renderServiceDetailBlocks(form) {
             </div>
             <div class="form-grid transfer-detail-grid">
               <label>Fecha
-                <input type="date" name="${serviceDetailInputName(selection, "serviceDate")}" value="${escapeHtml(serviceDetailValue(selection, "serviceDate", form.elements.serviceDate.value))}" required />
+                <input type="date" name="${serviceDetailInputName(selection, "serviceDate")}" value="${escapeHtml(serviceDetailValue(selection, "serviceDate", form.elements.serviceDate.value))}" />
               </label>
               <label>Descripción
-                <input name="${serviceDetailInputName(selection, "destination")}" value="${escapeHtml(selection.destination)}" placeholder="Ej. Hotel Camino Real → Aeropuerto La Aurora" required />
+                <input name="${serviceDetailInputName(selection, "destination")}" value="${escapeHtml(selection.destination)}" placeholder="Ej. Hotel Camino Real → Aeropuerto La Aurora" />
               </label>
               <label>Hora de salida <small class="field-hint">Opcional; si queda vacía no aparecerá en la cotización.</small>
-                <input type="time" name="${serviceDetailInputName(selection, "departureTime")}" value="${escapeHtml(serviceDetailValue(selection, "departureTime"))}" />
+                <span class="time-12-editor">
+                  <input name="${serviceDetailInputName(selection, "departureTime12")}" value="${escapeHtml(departure.time)}" inputmode="numeric" placeholder="Ej. 08:30" aria-label="Hora de salida en formato de 12 horas" />
+                  <select name="${serviceDetailInputName(selection, "departurePeriod")}" aria-label="AM o PM">
+                    <option value="AM" ${departure.period === "AM" ? "selected" : ""}>AM</option>
+                    <option value="PM" ${departure.period === "PM" ? "selected" : ""}>PM</option>
+                  </select>
+                </span>
               </label>
               <label>Precio
                 <input type="number" name="${serviceDetailInputName(selection, "amount")}" value="${Number(selection.amount || 0) || ""}" min="0" step="0.01" placeholder="0.00" />
@@ -1467,7 +1511,8 @@ function serviceSelectionsWithDetailsFromForm(form) {
     const get = (field) => form.elements[serviceDetailInputName(selection, field)];
     const description = get("destination")?.value?.trim() || selection.destination || `Traslado ${index + 1}`;
     const serviceDate = get("serviceDate")?.value || selection.serviceDate || form.elements.serviceDate.value;
-    const hasLuggage = Number(form.elements.luggage?.value || 0) > 0;
+    const luggageDescription = form.elements.luggageDescription?.value?.trim() || "";
+    const hasLuggage = Number(form.elements.luggage?.value || 0) > 0 || Boolean(luggageDescription);
     return {
       ...selection,
       destination: description,
@@ -1478,11 +1523,13 @@ function serviceSelectionsWithDetailsFromForm(form) {
       returnDate: serviceDate,
       origin: selection.origin || "",
       destinationAddress: description,
-      departureTime: get("departureTime") ? get("departureTime").value : selection.departureTime || "",
+      departureTime: get("departureTime12")
+        ? time12To24(get("departureTime12").value, get("departurePeriod")?.value)
+        : selection.departureTime || "",
       returnTime: "",
       passengers: Number(form.elements.passengers.value || selection.passengers || 1),
       hasLuggage,
-      luggageDescription: hasLuggage ? form.elements.luggageDescription?.value?.trim() || "" : "",
+      luggageDescription: hasLuggage ? luggageDescription : "",
       notes: get("notes") ? get("notes").value.trim() : selection.notes || "",
       legNumber: index + 1,
     };
@@ -1593,10 +1640,12 @@ function openQuoteModal(quote = {}) {
   const draft = !isEdit ? loadQuoteDraft() : null;
   if (draft) quote = { ...quote, ...draft };
   const today = guatemalaDateValue();
-  const quoteDate = quote.quoteDate || String(quote.createdAt || "").slice(0, 10) || today;
+  const quoteDate = isEdit
+    ? quote.quoteDate || String(quote.createdAt || "").slice(0, 10) || today
+    : today;
   const serviceStartDate = quote.serviceStartDate || quote.serviceDate || today;
   const serviceEndDate = quote.serviceEndDate || quote.returnDate || quote.serviceDate || today;
-  const defaultVehicleName = quote.vehicleManualName || quote.vehicleName || "Mercedes Benz Sprinter";
+  const defaultVehicleName = quote.vehicleManualName || "";
   const initialServiceSelections = quoteServiceSelections(quote);
   const initialDestinationMode = quote.destinationMode === "multiple" || (!quote.destinationMode && initialServiceSelections.length > 1)
     ? "multiple"
@@ -1613,11 +1662,11 @@ function openQuoteModal(quote = {}) {
   openModal(
     isEdit ? `Editar ${quote.number}` : "Nueva cotización",
     `
-      <form id="quote-form" class="modal-form">
+      <form id="quote-form" class="modal-form" novalidate>
         <div class="quote-layout">
           <div class="quote-form-sections">
             <section class="form-section" data-quote-step="route">
-              <h3>2. Elegir traslados</h3>
+              <h3>1. Elegir traslados</h3>
               <div class="destination-mode-grid">
                 <label class="destination-mode-option ${initialDestinationMode === "single" ? "active" : ""}" data-destination-mode-option>
                   <input type="radio" name="destinationMode" value="single" ${initialDestinationMode === "single" ? "checked" : ""} />
@@ -1631,14 +1680,17 @@ function openQuoteModal(quote = {}) {
                 </label>
               </div>
               <label class="destination-count-field" data-destination-count-wrap ${initialDestinationMode === "multiple" ? "" : "hidden"}>¿Cuántos traslados necesita?
-                <input type="number" name="destinationCount" value="${initialDestinationCount}" min="2" max="20" step="1" inputmode="numeric" required />
+                <input type="number" name="destinationCount" value="${initialDestinationCount}" min="2" max="20" step="1" inputmode="numeric" />
                 <small>Escriba la cantidad de traslados, de 2 a 20.</small>
               </label>
             </section>
             <section class="form-section" data-quote-step="vehicles">
-              <h3>1. Mercedes, pasajeros y equipaje</h3>
+              <h3>3. Tipo de vehículo, pasajeros y equipaje</h3>
               <div class="form-grid">
                 <div class="vehicle-unit-panel full" data-vehicle-unit-panel></div>
+                <label class="full">Otro tipo de vehículo <small class="field-hint">Opcional. Puede usarlo solo o agregarlo junto con las Mercedes seleccionadas.</small>
+                  <input name="vehicleManualName" value="${escapeHtml(defaultVehicleName)}" placeholder="Ej. Toyota Hiace, microbús o camioneta ejecutiva" />
+                </label>
                 <div class="seat-configuration full" data-seat-configuration>
                   <strong>Configuración Mercedes Benz Sprinter 316</strong>
                   <div class="seat-configuration-options">
@@ -1651,7 +1703,7 @@ function openQuoteModal(quote = {}) {
                   <fieldset>
                     <legend>Pasajeros</legend>
                     <label>Cantidad
-                      <input type="number" name="passengers" value="${Math.max(1, Number(quote.passengers || 1))}" min="1" max="${Math.max(1, Number(quote.maxPassengers || 15))}" step="1" inputmode="numeric" required />
+                      <input type="number" name="passengers" value="${Math.max(1, Number(quote.passengers || 1))}" min="1" max="${Math.max(1, Number(quote.maxPassengers || 15))}" step="1" inputmode="numeric" />
                     </label>
                     <label>Descripción
                       <input name="passengerDescription" value="${escapeHtml(quote.passengerDescription || "")}" placeholder="Ej. 9 atrás y 1 adelante" />
@@ -1662,8 +1714,8 @@ function openQuoteModal(quote = {}) {
                     <label>Cantidad
                       <input type="number" name="luggage" value="${initialLuggageQuantity}" min="0" step="1" inputmode="numeric" />
                     </label>
-                    <label>Descripción
-                      <input name="luggageDescription" value="${escapeHtml(quote.luggageDescription || "")}" placeholder="Ej. 8 maletas de mano" />
+                    <label>Categorías y cantidades
+                      <input name="luggageDescription" value="${escapeHtml(quote.luggageDescription || "")}" placeholder="Ej. 8 maletas grandes, 4 mochilas, 2 hieleras" />
                     </label>
                   </fieldset>
                 </div>
@@ -1688,11 +1740,11 @@ function openQuoteModal(quote = {}) {
               </div>
             </section>
             <section class="form-section" data-quote-step="client">
-              <h3>3. Datos del cliente</h3>
+              <h3>2. Datos del cliente</h3>
               <div class="form-grid">
-                <label>Nombre del cliente<input name="clientName" value="${escapeHtml(quote.clientName)}" placeholder="Persona a quien se dirige la cotización" required /></label>
+                <label>Nombre del cliente<input name="clientName" value="${escapeHtml(quote.clientName)}" placeholder="Persona a quien se dirige la cotización" /></label>
                 <label>Número de teléfono<input type="tel" name="clientPhone" value="${escapeHtml(quote.clientPhone)}" placeholder="Ej. 5555-5555" autocomplete="tel" /></label>
-                <label>Fecha de cotización<input type="date" name="quoteDate" value="${escapeHtml(quoteDate)}" required /></label>
+                <label>Fecha de cotización<input type="date" name="quoteDate" value="${escapeHtml(quoteDate)}" /></label>
               </div>
             </section>
             <section class="form-section">
@@ -1764,7 +1816,6 @@ function openQuoteModal(quote = {}) {
         <input type="hidden" name="clientNit" value="${escapeHtml(quote.clientNit)}" />
         <input type="hidden" name="clientEmail" value="${escapeHtml(quote.clientEmail)}" />
         <input type="hidden" name="vehicleId" value="${escapeHtml(quote.vehicleId)}" />
-        <input type="hidden" name="vehicleManualName" value="${escapeHtml(defaultVehicleName)}" />
         <input type="hidden" name="driverId" value="${escapeHtml(quote.driverId)}" />
         <input type="hidden" name="driverManualName" value="${escapeHtml(quote.driverManualName)}" />
         <input type="hidden" name="destinationRateName" value="${escapeHtml(quote.destinationRateName)}" />
@@ -1801,8 +1852,8 @@ function openQuoteModal(quote = {}) {
   const form = $("#quote-form");
   const formSections = $(".quote-form-sections", form);
   const vehicleStep = $('[data-quote-step="vehicles"]', form);
-  const routeStep = $('[data-quote-step="route"]', form);
-  if (formSections && vehicleStep && routeStep) formSections.insertBefore(vehicleStep, routeStep);
+  const clientStep = $('[data-quote-step="client"]', form);
+  if (formSections && vehicleStep && clientStep) formSections.insertBefore(clientStep, vehicleStep);
   $("[data-close-form]").addEventListener("click", closeModal);
   $("[data-clear-quote-draft]")?.addEventListener("click", () => {
     clearQuoteDraft();
@@ -1840,7 +1891,8 @@ function openQuoteModal(quote = {}) {
   });
   $$('input[name="destinationMode"]', form).forEach((input) => {
     input.addEventListener("change", () => {
-      syncDestinationMode(form, { ensureCount: input.checked });
+      if (!input.checked) return;
+      syncDestinationMode(form, { ensureCount: true });
       if (!isEdit) saveQuoteDraft(form);
     });
   });
@@ -1872,6 +1924,7 @@ function openQuoteModal(quote = {}) {
   renderVehicleUnitPanel(form, quoteVehicleIds(quote));
   syncQuoteCapacity(form);
   $("[data-vehicle-unit-panel]").addEventListener("change", () => syncQuoteCapacity(form));
+  form.elements.vehicleManualName.addEventListener("input", () => syncQuoteCapacity(form));
   form.elements.hasPlayStation5.addEventListener("change", () => syncQuoteCapacity(form));
   form.elements.hasTv.addEventListener("change", () => syncQuoteCapacity(form));
   form.elements.hasBed.addEventListener("change", () => syncQuoteCapacity(form, true));
@@ -1879,6 +1932,7 @@ function openQuoteModal(quote = {}) {
     input.addEventListener("change", () => syncQuoteCapacity(form, true));
   });
   form.elements.luggage.addEventListener("input", () => syncQuoteCapacity(form, true));
+  form.elements.luggageDescription.addEventListener("input", () => syncQuoteCapacity(form));
   form.elements.serviceDate.addEventListener("change", () => {
     form.elements.serviceStartDate.value = form.elements.serviceDate.value;
     if (!form.elements.returnDate.value) form.elements.returnDate.value = form.elements.serviceDate.value;
@@ -1907,12 +1961,16 @@ function openQuoteModal(quote = {}) {
   syncPriceDisplayMode(form);
   syncServiceSelections(form);
   updateQuoteSummary(form);
-  if (draft) toast("Borrador recuperado.");
+  if (draft) {
+    saveQuoteDraft(form);
+    toast("Borrador recuperado con la fecha de hoy.");
+  }
 }
 
 function syncQuoteCapacity(form, announce = false) {
   syncSelectedVehicleField(form);
   const vehicles = selectedVehiclesFromForm(form);
+  const manualVehicleName = String(form.elements.vehicleManualName?.value || "").trim();
   const hasSprinter316 = vehicles.some(vehicleIsSprinter316);
   const hasSprinter311 = vehicles.some((vehicle) => !vehicleIsSprinter316(vehicle));
   const seatPanel = $(`[data-seat-configuration]`, form);
@@ -1923,10 +1981,14 @@ function syncQuoteCapacity(form, announce = false) {
     if (announce) toast("La cama solo aplica para las Mercedes Benz Sprinter 311.");
   }
   const luggageQuantity = Math.max(0, Math.round(Number(form.elements.luggage.value || 0)));
+  const hasLuggage = luggageQuantity > 0 || Boolean(String(form.elements.luggageDescription?.value || "").trim());
   form.elements.luggage.value = String(luggageQuantity);
-  form.elements.hasLuggage.value = luggageQuantity > 0 ? "true" : "false";
-  const maximum = vehicles.length
-    ? vehicles.reduce((sum, vehicle) => sum + vehicleCapacityWithOptions(vehicle, form), 0)
+  form.elements.hasLuggage.value = hasLuggage ? "true" : "false";
+  const manualCapacity = manualVehicleName
+    ? Math.max(15, Math.round(Number(form.elements.passengers?.value || 1)))
+    : 0;
+  const maximum = vehicles.length || manualVehicleName
+    ? vehicles.reduce((sum, vehicle) => sum + vehicleCapacityWithOptions(vehicle, form), 0) + manualCapacity
     : 15;
   const passengerInput = form.elements.passengers;
   passengerInput.max = String(maximum);
@@ -1937,8 +1999,9 @@ function syncQuoteCapacity(form, announce = false) {
     }
   }
   if (Number(passengerInput.value) < 1) passengerInput.value = "1";
-  const vehicleText = vehicles.length
-    ? vehicles.map(vehicleDisplayName).join(" + ")
+  const vehicleNames = [...vehicles.map(vehicleDisplayName), manualVehicleName].filter(Boolean);
+  const vehicleText = vehicleNames.length
+    ? vehicleNames.join(" + ")
     : "la Sprinter seleccionada";
   const amenities = [
     form.elements.hasPlayStation5.checked ? "PlayStation 5" : "",
@@ -1954,7 +2017,7 @@ function syncQuoteCapacity(form, announce = false) {
   if (hasSprinter311) {
     details.push(form.elements.hasBed.checked
       ? "Mercedes 311: 8 pasajeros por unidad con cama y equipaje"
-      : luggageQuantity > 0
+      : hasLuggage
         ? "Mercedes 311: 10 pasajeros por unidad con equipaje"
         : "Mercedes 311: 15 pasajeros por unidad sin equipaje");
   }
@@ -1993,12 +2056,13 @@ function quoteFormData(form) {
   body.serviceEndDate = body.returnDate || body.serviceDate;
   body.passengerDescription = form.elements.passengerDescription.value.trim();
   body.luggage = Math.max(0, Math.round(Number(form.elements.luggage.value || 0)));
-  body.hasLuggage = body.luggage > 0;
   body.luggageDescription = form.elements.luggageDescription.value.trim();
+  body.hasLuggage = body.luggage > 0 || Boolean(body.luggageDescription);
   if (!body.hasLuggage) body.luggageDescription = "";
   body.vehicleIds = $$('input[name="vehicleIds"]:checked', form).map((input) => input.value);
   body.vehicleId = body.vehicleIds[0] || form.elements.vehicleId.value;
-  body.vehicleCount = Math.max(1, body.vehicleIds.length || 1);
+  body.vehicleManualName = String(form.elements.vehicleManualName.value || "").trim();
+  body.vehicleCount = Math.max(1, body.vehicleIds.length + (body.vehicleManualName ? 1 : 0));
   body.hasBed = form.elements.hasBed.checked;
   body.hasPlayStation5 = form.elements.hasPlayStation5.checked;
   body.hasTv = form.elements.hasTv.checked;
@@ -2097,7 +2161,7 @@ function updateQuoteSummary(form) {
       <div class="summary-line"><span>Fecha inicio</span><strong>${escapeHtml(formatDate(sortedServices[0]?.serviceDate || body.serviceDate, { short: true }))}</strong></div>
       <div class="summary-line"><span>Fecha final</span><strong>${escapeHtml(formatDate(sortedServices.at(-1)?.returnDate || body.returnDate, { short: true }))}</strong></div>
       <div class="summary-line"><span>Pasajeros</span><strong>${escapeHtml(`${body.passengers || 1}${body.passengerDescription ? ` · ${body.passengerDescription}` : ""}`)}</strong></div>
-      <div class="summary-line"><span>Equipaje</span><strong>${escapeHtml(body.hasLuggage ? `${body.luggage}${body.luggageDescription ? ` · ${body.luggageDescription}` : ""}` : "Sin equipaje")}</strong></div>
+      <div class="summary-line"><span>Equipaje</span><strong>${escapeHtml(body.hasLuggage ? body.luggageDescription || `${body.luggage} piezas` : "Sin equipaje")}</strong></div>
       <div class="summary-line"><span>Comodidades</span><strong>${escapeHtml(quoteAmenityLabels(body).join(" · ") || "Estándar")}</strong></div>
       <div class="summary-line summary-total"><span>Total</span><strong>${money(totals.total)}</strong></div>
     </div>
@@ -2133,27 +2197,86 @@ async function calculateRouteForForm(form) {
   }
 }
 
+function quoteMissingInformation(body) {
+  const missing = [];
+  if (!String(body.clientName || "").trim()) missing.push("Nombre del cliente");
+  if (!String(body.clientPhone || "").trim()) missing.push("Número de teléfono del cliente");
+  if (!String(body.quoteDate || "").trim()) missing.push("Fecha de cotización");
+  if (!body.vehicleIds?.length && !String(body.vehicleManualName || "").trim()) {
+    missing.push("Tipo de vehículo");
+  }
+  if (!Number(body.passengers || 0)) missing.push("Cantidad de pasajeros");
+  if (Number(body.luggage || 0) > 0 && !String(body.luggageDescription || "").trim()) {
+    missing.push("Categorías y cantidades del equipaje");
+  }
+  if (!body.serviceSelections?.length) {
+    missing.push("Al menos un traslado");
+  } else {
+    body.serviceSelections.forEach((item, index) => {
+      const number = index + 1;
+      const description = String(item.destination || "").trim();
+      if (!String(item.serviceDate || "").trim()) missing.push(`Fecha del traslado ${number}`);
+      if (!description || /^(?:Destino|Traslado) \d+$/i.test(description)) {
+        missing.push(`Descripción del traslado ${number}`);
+      }
+      if (body.priceDisplayMode === "detailed" && Number(item.amount || 0) <= 0) {
+        missing.push(`Precio del traslado ${number}`);
+      }
+    });
+  }
+  if (body.priceDisplayMode === "final" && Number(body.finalManualPrice || 0) <= 0) {
+    missing.push("Precio final de la cotización");
+  }
+  return missing;
+}
+
+function confirmIncompleteQuote(missing) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "quote-confirm-overlay";
+    overlay.innerHTML = `
+      <section class="quote-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="quote-confirm-title">
+        <span class="quote-confirm-eyebrow">Información pendiente</span>
+        <h2 id="quote-confirm-title">¿Desea guardar sin completar estos datos?</h2>
+        <p>La cotización puede guardarse. Revise exactamente qué información quedará pendiente:</p>
+        <ul>${missing.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+        <div class="quote-confirm-actions">
+          <button type="button" class="button button-secondary" data-incomplete-cancel>Volver a completar</button>
+          <button type="button" class="button button-primary" data-incomplete-save>Guardar de todos modos</button>
+        </div>
+      </section>
+    `;
+    const finish = (accepted) => {
+      document.removeEventListener("keydown", onKeyDown);
+      overlay.remove();
+      resolve(accepted);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") finish(false);
+    };
+    overlay.querySelector("[data-incomplete-cancel]").addEventListener("click", () => finish(false));
+    overlay.querySelector("[data-incomplete-save]").addEventListener("click", () => finish(true));
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) finish(false);
+    });
+    document.addEventListener("keydown", onKeyDown);
+    document.body.appendChild(overlay);
+    overlay.querySelector("[data-incomplete-cancel]").focus();
+  });
+}
+
 async function saveQuote(event, id) {
   event.preventDefault();
   const form = event.currentTarget;
   const button = $('button[type="submit"]', form);
   const body = quoteFormData(form);
-  if (!body.serviceSelections.length) {
-    $("[data-form-error]", form).textContent = "Agregue al menos un traslado con la información del viaje.";
-    return;
+  const missing = quoteMissingInformation(body);
+  $("[data-form-error]", form).textContent = "";
+  if (missing.length) {
+    const shouldSave = await confirmIncompleteQuote(missing);
+    if (!shouldSave) return;
   }
-  if (body.priceDisplayMode === "detailed" && body.serviceSelections.some((item) => Number(item.amount || 0) <= 0)) {
-    $("[data-form-error]", form).textContent = "Ingrese el precio de cada traslado para mostrar el desglose.";
-    return;
-  }
-  if (body.priceDisplayMode === "final" && Number(body.finalManualPrice || 0) <= 0) {
-    $("[data-form-error]", form).textContent = "Ingrese el precio final de toda la cotización.";
-    return;
-  }
-  if (!body.vehicleIds.length && !String(body.vehicleManualName || "").trim()) {
-    $("[data-form-error]", form).textContent = "Seleccione una Sprinter o escriba un vehículo manual.";
-    return;
-  }
+  body.allowIncomplete = missing.length > 0;
   button.disabled = true;
   try {
     await api(`/api/quotes${id ? `/${id}` : ""}`, {
@@ -2327,7 +2450,6 @@ function quoteServiceText(quote) {
 
 function quoteLuggageText(quote) {
   if (quote.hasLuggage === false) return "No";
-  if (Number(quote.luggage || 0) > 0 && quote.luggageDescription) return `${quote.luggage} · ${quote.luggageDescription}`;
   if (quote.luggageDescription) return quote.luggageDescription;
   if (Number(quote.luggage || 0) > 0) return `${quote.luggage} piezas`;
   return "Pendiente";
@@ -2368,6 +2490,7 @@ function quoteTaxBreakdown(quote) {
 }
 
 function quotePosterFinancialRows(totals) {
+  const hasAdjustments = totals.discount > 0 || totals.includesTax;
   return `
     <div class="poster-price-summary-row">
       <span>Total del servicio</span>
@@ -2378,11 +2501,10 @@ function quotePosterFinancialRows(totals) {
       : ""}
     ${totals.includesTax
       ? `<div class="poster-price-summary-row"><span>IVA ${escapeHtml(totals.taxPercent || 12)}%</span><strong>${escapeHtml(posterMoney(totals.tax))}</strong></div>`
-      : '<div class="poster-price-no-tax">Esta cotizacion no incluye IVA</div>'}
-    <div class="poster-price-summary-row poster-price-total">
-      <span>Total</span>
-      <strong>${escapeHtml(posterMoney(totals.total))}</strong>
-    </div>
+      : ""}
+    ${hasAdjustments
+      ? `<div class="poster-price-summary-row poster-price-total"><span>Total</span><strong>${escapeHtml(posterMoney(totals.total))}</strong></div>`
+      : ""}
   `;
 }
 
@@ -2575,7 +2697,7 @@ function quotePosterServiceLines(quote) {
       ? item.destinationAddress || item.destination
       : item.destination || item.destinationAddress;
     return {
-      label: `${index + 1}. Traslado ${index + 1} · ${posterServiceDateRange(item)}${destination ? ` · ${destination}` : ""}${item.departureTime ? ` · Salida ${item.departureTime}` : ""}`,
+      label: `${index + 1}. Traslado ${index + 1} · ${posterServiceDateRange(item)}${destination ? ` · ${destination}` : ""}${item.departureTime ? ` · Salida ${formatTime12(item.departureTime)}` : ""}`,
       amount: quote.priceDisplayMode === "final" ? null : Number(item.amount || 0) * quoteVehicleCountForPrice(quote),
     };
   });
@@ -2602,6 +2724,7 @@ function quotePosterServicesHtml(quote) {
       <div class="poster-service-price-columns">
         ${columns.map((column) => `<div class="poster-service-price-list">${column.map(row).join("")}</div>`).join("")}
       </div>
+      ${totals.includesTax ? "" : '<div class="poster-service-tax-note">NOTA: Esta cotización no incluye IVA</div>'}
       <footer class="poster-price-breakdown">
         ${quotePosterFinancialRows(totals)}
       </footer>
@@ -2669,7 +2792,7 @@ function quotePosterContinuationHtml(quote) {
                   </div>
                   <div class="poster-route-meta">
                     <span><b>Fecha</b>${escapeHtml(formatDocumentDate(item.serviceDate))}</span>
-                    ${item.departureTime ? `<span><b>Hora de salida</b>${escapeHtml(item.departureTime)}</span>` : ""}
+                    ${item.departureTime ? `<span><b>Hora de salida</b>${escapeHtml(formatTime12(item.departureTime))}</span>` : ""}
                     <span><b>Equipaje</b>${escapeHtml(item.hasLuggage === false ? "No" : item.luggageDescription || "Sí")}</span>
                   </div>
                   ${item.notes ? `<p><b>Notas:</b> ${escapeHtml(item.notes)}</p>` : ""}
@@ -2875,12 +2998,13 @@ function downloadQuotePdf(id) {
         <img class="quote-template-bg" src="${templateImage}" alt="">
         <strong class="poster-client-name">${escapeHtml(quote.clientName || "Cliente")}</strong>
         <div class="poster-dynamic-value poster-start-date">${escapeHtml(formatPosterDate(service.serviceDate))}</div>
-        ${service.departureTime ? `<div class="poster-dynamic-value poster-start-time">${escapeHtml(service.departureTime)}</div>` : ""}
+        ${service.departureTime ? `<div class="poster-dynamic-value poster-start-time">${escapeHtml(formatTime12(service.departureTime))}</div>` : ""}
         <div class="poster-dynamic-value poster-origin">${escapeHtml(service.origin || "Pendiente")}</div>
         <div class="poster-dynamic-value poster-destination">${escapeHtml(service.destination || "Pendiente")}</div>
         <div class="poster-dynamic-value poster-end-date"><span>${escapeHtml(formatPosterDate(service.returnDate))}</span></div>
-        <div class="poster-dynamic-value poster-return-time"><span>${escapeHtml(pending(service.returnTime))}</span></div>
+        <div class="poster-dynamic-value poster-return-time"><span>${escapeHtml(service.returnTime ? formatTime12(service.returnTime) : "Pendiente")}</span></div>
         <div class="poster-dynamic-value poster-passengers"><strong>${escapeHtml(`${service.passengers || 1} pasajeros`)}</strong>${service.passengerDescription ? `<small>${escapeHtml(service.passengerDescription)}</small>` : ""}</div>
+        <div class="poster-dynamic-value poster-luggage"><span>Equipaje</span><strong>${escapeHtml(service.luggageDescription || "No")}</strong></div>
         <div class="poster-top-spacer" aria-hidden="true"></div>
         <section class="poster-adaptive-lower">
           ${quotePosterServicesHtml(quote)}
@@ -3044,12 +3168,12 @@ function quoteDocumentStyles() {
     .poster-start-date{left:104px;top:817px;width:156px;height:94px}.poster-start-time{left:104px;top:956px;width:156px;height:45px;align-items:center}
     .poster-origin{left:282px;top:852px;width:188px;height:97px}.poster-destination{left:493px;top:852px;width:155px;height:94px}
     .poster-end-date{left:696px;top:846px;width:138px;height:78px}.poster-end-date>span,.poster-return-time>span{display:inline-block;width:max-content;max-width:100%;border-bottom:2px solid #d9ad57;padding:0 5px 7px}.poster-return-time{left:696px;top:949px;width:138px;height:68px}
-    .poster-passengers{left:858px;top:842px;width:147px;height:82px;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}.poster-passengers strong{font-size:20px}.poster-passengers small{display:block;margin-top:5px;color:#555;font-size:12px;line-height:1.2}
+    .poster-passengers{left:858px;top:842px;width:147px;height:72px;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}.poster-passengers strong{font-size:20px}.poster-passengers small{display:block;margin-top:5px;color:#555;font-size:12px;line-height:1.2}.poster-luggage{left:865px;top:918px;width:133px;min-height:72px;display:flex;flex-direction:column;align-items:center;border-top:2px solid #d9ad57;padding:8px 3px 0;text-align:center}.poster-luggage span{font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}.poster-luggage strong{display:block;margin-top:5px;font-size:12px;line-height:1.12;text-wrap:balance}
     .poster-service-price-box{position:relative;width:calc(100% - 16px);min-height:274px;margin:0 8px;display:flex;flex-direction:column;border:2px solid #d1a044;border-radius:26px;background:linear-gradient(145deg,#02050c,#080d17);box-shadow:0 10px 25px rgba(0,0,0,.12);padding:18px 30px 16px;color:#fff;overflow:hidden}
     .poster-service-price-box>header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid rgba(213,166,72,.62);padding-bottom:10px;color:#dfb24e;text-transform:uppercase}.poster-service-price-box>header span,.poster-service-price-box>header small{font-size:18px;font-weight:900;letter-spacing:.1em}
     .poster-service-price-columns{display:grid;grid-template-columns:1fr;gap:26px;min-height:0;flex:1;padding:13px 0 11px}.poster-service-price-box-columns .poster-service-price-columns{grid-template-columns:repeat(2,minmax(0,1fr))}.poster-service-price-list{display:grid;align-content:center;gap:6px;min-width:0}.poster-service-price-box-columns .poster-service-price-list+ .poster-service-price-list{border-left:1px solid rgba(213,166,72,.38);padding-left:22px}
     .poster-service-price-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;min-width:0;color:#f8f8f6;font-size:15px;line-height:1.2}.poster-service-price-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.poster-service-price-row strong{color:#e2b348;font-size:18px;font-weight:900;white-space:nowrap}.poster-service-price-box-columns .poster-service-price-row{gap:9px;font-size:12px}.poster-service-price-box-columns .poster-service-price-row strong{font-size:16px}.poster-service-price-box-dense .poster-service-price-list{gap:3px}.poster-service-price-box-dense .poster-service-price-row{font-size:10px;line-height:1.08}.poster-service-price-box-dense .poster-service-price-row strong{font-size:13px;line-height:1.08}
-    .poster-price-breakdown{display:grid;width:540px;max-width:100%;margin-left:auto;border-top:1px solid rgba(213,166,72,.62);text-transform:uppercase}.poster-price-summary-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:28px;min-height:38px;border-bottom:1px solid rgba(213,166,72,.32);padding:7px 4px 7px 20px}.poster-price-summary-row span{color:#f5f5f3;font-size:12px;font-weight:900;letter-spacing:.1em}.poster-price-summary-row strong{color:#e5b64c;font-family:Georgia,serif;font-size:22px;line-height:1;white-space:nowrap}.poster-price-discount strong{color:#f0d48e}.poster-price-no-tax{border-bottom:1px solid rgba(213,166,72,.32);padding:10px 4px 10px 20px;color:#fff;font-size:12px;font-weight:900;letter-spacing:.08em;text-align:right}.poster-price-total{min-height:51px;border-bottom:0;padding-top:10px;padding-bottom:10px}.poster-price-total span{font-size:14px}.poster-price-total strong{font-size:32px}
+    .poster-service-tax-note{border-top:1px solid rgba(213,166,72,.42);padding:9px 4px 7px;color:#fff;font-size:12px;font-weight:900;letter-spacing:.06em}.poster-price-breakdown{display:grid;width:540px;max-width:100%;margin-left:auto;border-top:1px solid rgba(213,166,72,.62);text-transform:uppercase}.poster-price-summary-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:28px;min-height:38px;border-bottom:1px solid rgba(213,166,72,.32);padding:7px 4px 7px 20px}.poster-price-summary-row span{color:#f5f5f3;font-size:12px;font-weight:900;letter-spacing:.1em}.poster-price-summary-row strong{color:#e5b64c;font-family:Georgia,serif;font-size:22px;line-height:1;white-space:nowrap}.poster-price-discount strong{color:#f0d48e}.poster-price-total{min-height:51px;border-bottom:0;padding-top:10px;padding-bottom:10px}.poster-price-total span{font-size:14px}.poster-price-total strong{font-size:32px}
     .poster-quote-notes{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;margin:16px 48px;border-left:5px solid #c99532;background:#fff;padding:5px 0 5px 18px;color:#171717}.poster-quote-notes>strong{padding-top:2px;color:#9e6b1a;font-size:13px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}.poster-quote-notes>div{display:grid;gap:5px}.poster-quote-notes p{margin:0;font-size:13px;line-height:1.42}.poster-quote-notes b{color:#9e6b1a}
     .poster-template-lower{position:relative;height:263px;overflow:hidden;background:#fff}.quote-template-lower-bg{position:absolute;left:0;top:-1274px;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
     .poster-vehicle-value{position:absolute;left:197px;top:27px;z-index:3;height:119px;display:inline-grid;grid-template-columns:58px minmax(0,max-content);gap:10px;align-items:center;color:#111;text-transform:uppercase}
@@ -3381,7 +3505,7 @@ async function logout() {
 function setupPwa() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register(appPath("/sw.js?v=58"), { scope: appPath("/") })
+      .register(appPath("/sw.js?v=59"), { scope: appPath("/") })
       .catch(() => {});
   }
   window.addEventListener("beforeinstallprompt", (event) => {

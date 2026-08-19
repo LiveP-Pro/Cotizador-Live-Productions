@@ -1771,6 +1771,17 @@ tr:last-child td {
   grid-template-columns: minmax(135px, 0.75fr) minmax(260px, 1.7fr) minmax(155px, 0.85fr) minmax(135px, 0.7fr);
 }
 
+.time-12-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 74px;
+  gap: 8px;
+}
+
+.time-12-editor input,
+.time-12-editor select {
+  min-width: 0;
+}
+
 .field-hint {
   color: var(--muted);
   font-size: 8px;
@@ -1897,6 +1908,75 @@ tr:last-child td {
   background: rgba(10, 17, 19, 0.68);
   padding: 22px;
   backdrop-filter: blur(5px);
+}
+
+.quote-confirm-overlay {
+  position: fixed;
+  z-index: 180;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  background: rgba(5, 10, 12, 0.78);
+  padding: 22px;
+  backdrop-filter: blur(7px);
+}
+
+.quote-confirm-dialog {
+  width: min(100%, 590px);
+  max-height: calc(100vh - 44px);
+  overflow-y: auto;
+  border: 1px solid rgba(194, 145, 55, 0.54);
+  border-radius: 22px;
+  background: white;
+  box-shadow: 0 28px 75px rgba(0, 0, 0, 0.34);
+  padding: 28px;
+}
+
+.quote-confirm-eyebrow {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.quote-confirm-dialog h2 {
+  margin: 8px 0 10px;
+  font-family: Georgia, serif;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.12;
+}
+
+.quote-confirm-dialog p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.quote-confirm-dialog ul {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  padding: 16px 18px 16px 36px;
+}
+
+.quote-confirm-dialog li {
+  color: var(--ink);
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.quote-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
 }
 
 .modal {
