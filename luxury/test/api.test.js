@@ -349,6 +349,37 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
   assert.equal(manualVehicleQuote.totals.baseFare, 7500);
   assert.equal(manualVehicleQuote.totals.total, 7500);
 
+  const singleVehicleTransfersResponse = await request(app.baseUrl, cookie, "/api/quotes", {
+    method: "POST",
+    body: JSON.stringify({
+      clientName: "Cliente cinco traslados",
+      serviceDate: "2026-08-19",
+      passengers: 8,
+      vehicleIds: [vehicleId],
+      vehicleCount: 2,
+      vehicleManualName: "Vehículo alternativo opcional",
+      priceDisplayMode: "detailed",
+      serviceSelections: [4000, 2500, 7500, 3000, 7800].map((amount, index) => ({
+        destination: `Traslado ${index + 1}`,
+        type: "oneWay",
+        label: "Servicio de Ida",
+        amount,
+        serviceDate: `2026-08-${19 + index}`,
+        legNumber: index + 1,
+      })),
+      discountAmount: 4600,
+      includeTax: true,
+      status: "borrador",
+    }),
+  });
+  assert.equal(singleVehicleTransfersResponse.status, 201);
+  const singleVehicleTransfersQuote = await singleVehicleTransfersResponse.json();
+  assert.equal(singleVehicleTransfersQuote.vehicleCount, 1);
+  assert.equal(singleVehicleTransfersQuote.totals.baseFare, 24800);
+  assert.equal(singleVehicleTransfersQuote.totals.discount, 4600);
+  assert.equal(singleVehicleTransfersQuote.totals.tax, 2424);
+  assert.equal(singleVehicleTransfersQuote.totals.total, 22624);
+
   const incompleteQuoteResponse = await request(app.baseUrl, cookie, "/api/quotes", {
     method: "POST",
     body: JSON.stringify({
@@ -445,8 +476,8 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
   const bootstrapResponse = await request(app.baseUrl, cookie, "/api/bootstrap");
   assert.equal(bootstrapResponse.status, 200);
   const bootstrap = await bootstrapResponse.json();
-  assert.equal(bootstrap.quotes.length, 8);
-  assert.equal(bootstrap.clients.length, 6);
+  assert.equal(bootstrap.quotes.length, 9);
+  assert.equal(bootstrap.clients.length, 7);
   assert.equal(bootstrap.clients.find((client) => client.name === "Cliente de prueba").nit, "1234567-8");
   assert.equal(bootstrap.itineraries.length, 1);
   assert.ok(bootstrap.history.length >= 3);

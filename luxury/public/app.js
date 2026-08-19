@@ -2482,6 +2482,36 @@ function quoteFixedFareIsTotal(quote) {
 
 function quoteTaxBreakdown(quote) {
   const totals = quote.totals || {};
+  const selections = quoteServiceSelections(quote);
+  const hasDetailedTransfers = quote.priceDisplayMode !== "final" && selections.length > 0;
+  if (hasDetailedTransfers) {
+    const vehicleCount = quoteVehicleCountForPrice(quote);
+    const subtotal = selections.reduce(
+      (sum, item) => sum + Math.max(0, Number(item.amount || 0)),
+      0,
+    ) * vehicleCount;
+    const discountAmount = Math.max(0, Number(quote.discountAmount || 0));
+    const discountPercent = Math.max(0, Number(quote.discountPercent || 0));
+    const configuredDiscount = discountAmount || discountPercent
+      ? discountAmount + subtotal * (discountPercent / 100)
+      : Math.max(0, Number(totals.discount || 0));
+    const discount = Math.min(subtotal, configuredDiscount);
+    const journey = subtotal - discount;
+    const taxPercent = quote.includeTax === true
+      ? Math.max(0, Number(totals.taxPercent || state.rates.taxPercent || 0))
+      : 0;
+    const tax = Math.round(journey * (taxPercent / 100) * 100) / 100;
+    const total = Math.round((journey + tax) * 100) / 100;
+    return {
+      subtotal,
+      discount,
+      journey,
+      taxPercent,
+      tax,
+      total,
+      includesTax: taxPercent > 0,
+    };
+  }
   const discount = Number(totals.discount ?? quote.discountAmount ?? 0);
   const storedJourney = Number(totals.subtotal);
   const subtotal = Number(
@@ -3514,7 +3544,7 @@ async function logout() {
 function setupPwa() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register(appPath("/sw.js?v=60"), { scope: appPath("/") })
+      .register(appPath("/sw.js?v=61"), { scope: appPath("/") })
       .catch(() => {});
   }
   window.addEventListener("beforeinstallprompt", (event) => {
