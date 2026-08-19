@@ -2457,9 +2457,16 @@ function quoteServiceText(quote) {
   return quote.serviceType || quote.notes || "Servicio personalizado.";
 }
 
+function formatLuggageDescription(value) {
+  return String(value || "")
+    .replace(/\s*,?\s+y\s+(?=\d+(?:[.,]\d+)?\b)/giu, ", ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function quoteLuggageText(quote) {
   if (quote.hasLuggage === false) return "No";
-  if (quote.luggageDescription) return quote.luggageDescription;
+  if (quote.luggageDescription) return formatLuggageDescription(quote.luggageDescription);
   if (Number(quote.luggage || 0) > 0) return `${quote.luggage} piezas`;
   return "Pendiente";
 }
@@ -2708,7 +2715,9 @@ function quotePosterPrimaryService(quote) {
     returnTime: selections.length > 1 ? last.returnTime || quote.returnTime : first.returnTime || quote.returnTime,
     passengers: quote.passengers || first.passengers || 1,
     passengerDescription: quote.passengerDescription || "",
-    luggageDescription: first.hasLuggage === false ? "No" : first.luggageDescription || quoteLuggageText(quote),
+    luggageDescription: first.hasLuggage === false
+      ? "No"
+      : formatLuggageDescription(first.luggageDescription || quoteLuggageText(quote)),
   };
 }
 
@@ -2832,7 +2841,7 @@ function quotePosterContinuationHtml(quote) {
                   <div class="poster-route-meta">
                     <span><b>Fecha</b>${escapeHtml(formatDocumentDate(item.serviceDate))}</span>
                     ${item.departureTime ? `<span><b>Hora de salida</b>${escapeHtml(formatTime12(item.departureTime))}</span>` : ""}
-                    <span><b>Equipaje</b>${escapeHtml(item.hasLuggage === false ? "No" : item.luggageDescription || "Sí")}</span>
+                    <span><b>Equipaje</b>${escapeHtml(item.hasLuggage === false ? "No" : formatLuggageDescription(item.luggageDescription || "Sí"))}</span>
                   </div>
                   ${item.notes ? `<p><b>Notas:</b> ${escapeHtml(item.notes)}</p>` : ""}
                 </div>
@@ -3202,14 +3211,14 @@ function quoteDocumentStyles() {
     .quote-template-bg{position:absolute;inset:0;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
     .quote-poster-content>*:not(.quote-template-bg){z-index:2}
     .quote-poster-content>.poster-template-clean-mask{position:absolute;left:0;top:1004px;z-index:1;width:1023px;height:270px;background:#fff;pointer-events:none}
-    .poster-top-spacer{position:relative;height:1038px;pointer-events:none}
+    .poster-top-spacer{position:relative;height:1004px;pointer-events:none}
     .poster-adaptive-lower{position:relative;z-index:5;background:#fff;padding-top:0}
     .poster-client-name{position:absolute;left:45px;top:662px;width:545px;overflow:hidden;color:#bd8123;font-size:48px;font-weight:900;letter-spacing:.025em;line-height:1.08;text-transform:uppercase;white-space:nowrap;text-overflow:ellipsis}
     .poster-dynamic-value{position:absolute;display:flex;align-items:flex-start;justify-content:center;color:#111;font-size:18px;font-weight:600;line-height:1.15;text-align:center;text-wrap:balance}
     .poster-start-date{left:104px;top:817px;width:156px;height:94px}.poster-start-time{left:104px;top:956px;width:156px;height:45px;align-items:center}
     .poster-origin{left:282px;top:852px;width:188px;height:97px}.poster-destination{left:493px;top:852px;width:155px;height:94px}
     .poster-end-date{left:696px;top:846px;width:138px;height:78px}.poster-end-date>span,.poster-return-time>span{display:inline-block;width:max-content;max-width:100%;border-bottom:2px solid #d9ad57;padding:0 5px 7px}.poster-return-time{left:696px;top:949px;width:138px;height:68px}
-    .poster-passengers{left:852px;top:842px;width:157px;height:76px;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}.poster-passengers strong,.poster-passengers small{font-size:18px;line-height:1.12}.poster-passengers strong{font-weight:800}.poster-passengers small{display:block;margin-top:5px;color:#111;font-weight:600}.poster-luggage{left:852px;top:923px;width:157px;min-height:105px;display:flex;flex-direction:column;align-items:center;border-top:2px solid #d9ad57;padding:8px 2px 0;text-align:center}.poster-luggage span,.poster-luggage strong{font-size:18px;line-height:1.08}.poster-luggage span{font-weight:800;letter-spacing:0;text-transform:uppercase}.poster-luggage strong{display:block;margin-top:5px;font-weight:600;text-wrap:balance}
+    .poster-passengers{left:852px;top:842px;width:157px;height:76px;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}.poster-passengers strong,.poster-passengers small{font-size:18px;line-height:1.12}.poster-passengers strong{font-weight:800}.poster-passengers small{display:block;margin-top:5px;color:#111;font-weight:600}.poster-luggage{left:852px;top:920px;width:157px;min-height:82px;display:flex;flex-direction:column;align-items:center;border-top:2px solid #d9ad57;padding:6px 2px 0;text-align:center}.poster-luggage span,.poster-luggage strong{font-size:17px;line-height:1.05}.poster-luggage span{font-weight:800;letter-spacing:0;text-transform:uppercase}.poster-luggage strong{display:block;margin-top:3px;font-weight:600;text-wrap:balance}
     .poster-service-price-box{position:relative;width:calc(100% - 16px);min-height:274px;margin:0 8px;display:flex;flex-direction:column;border:2px solid #d1a044;border-radius:26px;background:linear-gradient(145deg,#02050c,#080d17);box-shadow:0 10px 25px rgba(0,0,0,.12);padding:18px 30px 16px;color:#fff;overflow:hidden}
     .poster-service-price-box>header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid rgba(213,166,72,.62);padding-bottom:10px;color:#dfb24e;text-transform:uppercase}.poster-service-price-box>header span,.poster-service-price-box>header small{font-size:18px;font-weight:900;letter-spacing:.1em}
     .poster-service-price-columns{display:grid;grid-template-columns:1fr;gap:26px;min-height:0;flex:1;padding:13px 0 11px}.poster-service-price-box-columns .poster-service-price-columns{grid-template-columns:repeat(2,minmax(0,1fr))}.poster-service-price-list{display:grid;align-content:center;gap:6px;min-width:0}.poster-service-price-box-columns .poster-service-price-list+ .poster-service-price-list{border-left:1px solid rgba(213,166,72,.38);padding-left:22px}
@@ -3546,7 +3555,7 @@ async function logout() {
 function setupPwa() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register(appPath("/sw.js?v=63"), { scope: appPath("/") })
+      .register(appPath("/sw.js?v=64"), { scope: appPath("/") })
       .catch(() => {});
   }
   window.addEventListener("beforeinstallprompt", (event) => {
