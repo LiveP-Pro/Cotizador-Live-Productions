@@ -98,7 +98,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "72";
+const APP_VERSION = "73";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -1667,11 +1667,17 @@ async function saveRecord(event, collection, id) {
   const button = $('button[type="submit"]', form);
   button.disabled = true;
   try {
-    await api(`/api/${collection}${id ? `/${id}` : ""}`, {
+    const saved = await api(`/api/${collection}${id ? `/${id}` : ""}`, {
       method: id ? "PUT" : "POST",
       body: JSON.stringify(body),
     });
-    toast(id ? "Registro actualizado." : "Registro creado.");
+    toast(
+      saved.mergedExisting
+        ? "El cliente ya existía; su ficha fue actualizada sin crear un duplicado."
+        : id
+          ? "Registro actualizado."
+          : "Registro creado.",
+    );
     closeModal();
     await navigate(state.module);
   } catch (error) {

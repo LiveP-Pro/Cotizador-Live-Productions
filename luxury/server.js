@@ -3,7 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
-import { JsonDatabase } from "./lib/db.js";
+import { JsonDatabase, mergeClientDetails, normalizeClientName } from "./lib/db.js";
 import {
   hashPassword,
   parseCookies,
@@ -233,16 +233,13 @@ async function syncClientForQuote(db, quote, actorId) {
     quote.clientId = "";
     return null;
   }
-  let client = quote.clientId ? db.find("clients", quote.clientId) : null;
-  if (!client) {
-    client = db
-      .list("clients")
-      .find(
-        (item) =>
-          (quote.clientNit && item.nit === quote.clientNit) ||
-          (quote.clientEmail && item.email === quote.clientEmail) ||
-          (quote.clientPhone && item.phone === quote.clientPhone),
-      );
+  const clientNameKey = normalizeClientName(quote.clientName);
+  let client = db
+    .list("clients")
+    .find((item) => normalizeClientName(item.name) === clientNameKey);
+  if (!client && quote.clientId) {
+    const linkedClient = db.find("clients", quote.clientId);
+    if (normalizeClientName(linkedClient?.name) === clientNameKey) client = linkedClient;
   }
   const payload = {
     name: quote.clientName,
@@ -264,14 +261,7 @@ async function syncClientForQuote(db, quote, actorId) {
     client = await db.update(
       "clients",
       client.id,
-      {
-        name: payload.name || client.name,
-        nit: payload.nit || client.nit || "",
-        phone: payload.phone || client.phone || "",
-        email: payload.email || client.email || "",
-        company: client.company || "",
-        notes: client.notes || "",
-      },
+      mergeClientDetails(client, payload),
       actorId,
     );
   }
@@ -1193,6 +1183,20 @@ export async function createApp(options = {}) {
         if (body.password) patch.passwordHash = hashPassword(String(body.password));
       } else {
         patch = normalizeEntity(collection, body);
+        if (collection === "clients") {
+          validateRequired(patch, ["name"]);
+          const clientNameKey = normalizeClientName(patch.name);
+          if (
+            db
+              .list("clients")
+              .some((item) => item.id !== id && normalizeClientName(item.name) === clientNameKey)
+          ) {
+            json(res, 409, {
+              error: "Ya existe un cliente con ese nombre. Edite su ficha existente.",
+            });
+            return;
+          }
+        }
       }
       const updated = await db.update(collection, id, patch, user.id);
       await db.audit(user.id, "actualizar", collection, id, updated.number || updated.name || "");
@@ -1276,6 +1280,29 @@ export async function createApp(options = {}) {
               ? ["action"]
               : ["name"],
         );
+        if (collection === "clients") {
+          const clientNameKey = normalizeClientName(entity.name);
+          const existingClient = db
+            .list("clients")
+            .find((item) => normalizeClientName(item.name) === clientNameKey);
+          if (existingClient) {
+            const updatedClient = await db.update(
+              "clients",
+              existingClient.id,
+              mergeClientDetails(existingClient, entity),
+              user.id,
+            );
+            await db.audit(
+              user.id,
+              "actualizar",
+              "clients",
+              updatedClient.id,
+              `${updatedClient.name} · cliente existente reutilizado`,
+            );
+            json(res, 200, { ...updatedClient, mergedExisting: true });
+            return;
+          }
+        }
       }
       const created = await db.create(collection, entity, user.id);
       await db.audit(

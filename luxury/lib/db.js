@@ -7,6 +7,155 @@ import { calculateQuote } from "./pricing.js";
 const now = () => new Date().toISOString();
 const COLLECTION_NAMES = ["users", "clients", "drivers", "vehicles", "quotes", "itineraries", "history"];
 
+export function normalizeClientName(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/\p{Mark}/gu, "")
+    .toLocaleLowerCase("es-GT")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function cleanClientValue(value) {
+  return String(value ?? "").trim();
+}
+
+function clientNameQuality(value) {
+  const name = cleanClientValue(value);
+  if (!name) return 0;
+  const letters = name.replace(/[^\p{Letter}]/gu, "");
+  if (!letters) return 1;
+  if (letters === letters.toLocaleUpperCase("es-GT")) return 2;
+  if (letters === letters.toLocaleLowerCase("es-GT")) return 3;
+  return 4;
+}
+
+function preferredClientName(current, incoming) {
+  const currentName = cleanClientValue(current);
+  const incomingName = cleanClientValue(incoming);
+  if (!currentName) return incomingName;
+  if (!incomingName) return currentName;
+  return clientNameQuality(incomingName) > clientNameQuality(currentName)
+    ? incomingName
+    : currentName;
+}
+
+function mergeClientNit(current, incoming) {
+  const currentNit = cleanClientValue(current);
+  const incomingNit = cleanClientValue(incoming);
+  if (!incomingNit) return currentNit;
+  const incomingIsGeneric = normalizeClientName(incomingNit) === "cf";
+  const currentIsSpecific = currentNit && normalizeClientName(currentNit) !== "cf";
+  return incomingIsGeneric && currentIsSpecific ? currentNit : incomingNit;
+}
+
+function mergeClientNotes(current, incoming) {
+  const currentNotes = cleanClientValue(current);
+  const incomingNotes = cleanClientValue(incoming);
+  if (!currentNotes) return incomingNotes;
+  if (!incomingNotes || currentNotes === incomingNotes) return currentNotes;
+  return `${currentNotes}\n${incomingNotes}`;
+}
+
+export function mergeClientDetails(current = {}, incoming = {}) {
+  return {
+    name: preferredClientName(current.name, incoming.name),
+    nit: mergeClientNit(current.nit, incoming.nit),
+    phone: cleanClientValue(incoming.phone) || cleanClientValue(current.phone),
+    email: cleanClientValue(incoming.email).toLocaleLowerCase("es-GT")
+      || cleanClientValue(current.email).toLocaleLowerCase("es-GT"),
+    company: cleanClientValue(incoming.company) || cleanClientValue(current.company),
+    notes: mergeClientNotes(current.notes, incoming.notes),
+  };
+}
+
+function clientTimestamp(client, field, fallback) {
+  const timestamp = Date.parse(client?.[field] || "");
+  return Number.isFinite(timestamp) ? timestamp : fallback;
+}
+
+export function consolidateDuplicateClients(data) {
+  if (!data || !Array.isArray(data.clients) || data.clients.length < 2) {
+    return { changed: false, mergedCount: 0 };
+  }
+
+  const groups = new Map();
+  data.clients.forEach((client, index) => {
+    const key = normalizeClientName(client?.name);
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({ client, index });
+  });
+
+  const replacementById = new Map();
+  const mergedById = new Map();
+  let mergedCount = 0;
+
+  for (const entries of groups.values()) {
+    if (entries.length < 2) continue;
+    const ordered = [...entries].sort((left, right) => {
+      const leftTime = clientTimestamp(left.client, "createdAt", left.index);
+      const rightTime = clientTimestamp(right.client, "createdAt", right.index);
+      return leftTime - rightTime || left.index - right.index;
+    });
+    const canonical = ordered[0].client;
+    let merged = { ...canonical };
+    for (const { client } of ordered.slice(1)) {
+      merged = {
+        ...merged,
+        ...mergeClientDetails(merged, client),
+      };
+      replacementById.set(client.id, canonical.id);
+      mergedCount += 1;
+    }
+    const latest = [...ordered].sort((left, right) => {
+      const leftTime = clientTimestamp(left.client, "updatedAt", left.index);
+      const rightTime = clientTimestamp(right.client, "updatedAt", right.index);
+      return rightTime - leftTime || right.index - left.index;
+    })[0].client;
+    mergedById.set(canonical.id, {
+      ...merged,
+      id: canonical.id,
+      createdAt: canonical.createdAt,
+      createdBy: canonical.createdBy,
+      updatedAt: latest.updatedAt || merged.updatedAt || canonical.createdAt,
+      updatedBy: latest.updatedBy || merged.updatedBy || canonical.createdBy,
+    });
+  }
+
+  if (!mergedCount) return { changed: false, mergedCount: 0 };
+
+  data.clients = data.clients
+    .filter((client) => !replacementById.has(client.id))
+    .map((client) => mergedById.get(client.id) || client);
+
+  const canonicalByName = new Map(
+    data.clients.map((client) => [normalizeClientName(client.name), client.id]),
+  );
+  for (const collection of ["quotes", "itineraries"]) {
+    if (!Array.isArray(data[collection])) continue;
+    data[collection] = data[collection].map((record) => {
+      const replacementId = replacementById.get(record.clientId);
+      const nameMatch = !record.clientId
+        ? canonicalByName.get(normalizeClientName(record.clientName))
+        : "";
+      const clientId = replacementId || nameMatch || record.clientId;
+      return clientId === record.clientId ? record : { ...record, clientId };
+    });
+  }
+  if (Array.isArray(data.history)) {
+    data.history = data.history.map((entry) => {
+      const replacementId = entry.entityType === "clients"
+        ? replacementById.get(entry.entityId)
+        : "";
+      return replacementId ? { ...entry, entityId: replacementId } : entry;
+    });
+  }
+
+  return { changed: true, mergedCount };
+}
+
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -108,7 +257,7 @@ function seedDatabase() {
   const driverId = randomUUID();
 
   return {
-    schemaVersion: 11,
+    schemaVersion: 12,
     users: [
       {
         id: adminId,
@@ -420,6 +569,12 @@ export class JsonDatabase {
     }
     if (Number(this.data.schemaVersion || 1) < 11) {
       this.data.schemaVersion = 11;
+      changed = true;
+    }
+    const clientConsolidation = consolidateDuplicateClients(this.data);
+    if (clientConsolidation.changed) changed = true;
+    if (Number(this.data.schemaVersion || 1) < 12) {
+      this.data.schemaVersion = 12;
       changed = true;
     }
     if (changed) await this.persist();

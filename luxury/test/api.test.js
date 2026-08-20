@@ -510,6 +510,52 @@ test("un vendedor no puede modificar tarifas", async (context) => {
   assert.equal(ratesResponse.status, 403);
 });
 
+test("reutiliza el mismo cliente aunque cambien mayúsculas, acentos o datos de contacto", async (context) => {
+  const app = await startTestApp();
+  context.after(app.close);
+  const admin = await login(app.baseUrl);
+
+  const firstResponse = await request(app.baseUrl, admin.cookie, "/api/clients", {
+    method: "POST",
+    body: JSON.stringify({
+      name: "Denis Tanchez",
+      phone: "5555-1212",
+    }),
+  });
+  assert.equal(firstResponse.status, 201);
+  const firstClient = await firstResponse.json();
+
+  const repeatedResponse = await request(app.baseUrl, admin.cookie, "/api/clients", {
+    method: "POST",
+    body: JSON.stringify({
+      name: "  DENÍS   TANCHEZ ",
+      nit: "1234567-8",
+    }),
+  });
+  assert.equal(repeatedResponse.status, 200);
+  const repeatedClient = await repeatedResponse.json();
+  assert.equal(repeatedClient.id, firstClient.id);
+  assert.equal(repeatedClient.mergedExisting, true);
+
+  const quoteResponse = await request(app.baseUrl, admin.cookie, "/api/quotes", {
+    method: "POST",
+    body: JSON.stringify({
+      clientName: "denis tanchez",
+      clientEmail: "denis@example.com",
+      allowIncomplete: true,
+    }),
+  });
+  assert.equal(quoteResponse.status, 201);
+
+  const bootstrapResponse = await request(app.baseUrl, admin.cookie, "/api/bootstrap");
+  const bootstrap = await bootstrapResponse.json();
+  assert.equal(bootstrap.clients.length, 1);
+  assert.equal(bootstrap.clients[0].name, "Denis Tanchez");
+  assert.equal(bootstrap.clients[0].phone, "5555-1212");
+  assert.equal(bootstrap.clients[0].nit, "1234567-8");
+  assert.equal(bootstrap.clients[0].email, "denis@example.com");
+});
+
 test("un administrador puede exportar e importar un respaldo sin perder su acceso", async (context) => {
   const app = await startTestApp();
   context.after(app.close);
