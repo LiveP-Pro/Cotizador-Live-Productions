@@ -98,7 +98,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "71";
+const APP_VERSION = "72";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -3195,6 +3195,9 @@ function quotePosterFact(icon, label, value) {
 function quotePosterPageHtml(quote) {
   const service = quotePosterPrimaryService(quote);
   const templateImage = `${assetUrl("quote-template-master-2x.png")}?v=5`;
+  const passengerDescription = String(service.passengerDescription || "")
+    .trim()
+    .replace(/^\((.*)\)$/, "$1");
   return `
     <div class="quote-poster-content quote-poster-v2">
       <img class="quote-template-bg" src="${templateImage}" alt="">
@@ -3206,7 +3209,7 @@ function quotePosterPageHtml(quote) {
       <div class="poster-dynamic-value poster-destination">${escapeHtml(service.destination || "Pendiente")}</div>
       <div class="poster-dynamic-value poster-end-date"><span>${escapeHtml(formatPosterDate(service.returnDate))}</span></div>
       <div class="poster-dynamic-value poster-return-time"><span>${escapeHtml(service.returnTime ? formatTime12(service.returnTime) : "Pendiente")}</span></div>
-      <div class="poster-dynamic-value poster-passengers"><strong>${escapeHtml(`${service.passengers || 1} pasajeros`)}</strong>${service.passengerDescription ? `<small>${escapeHtml(service.passengerDescription)}</small>` : ""}</div>
+      <div class="poster-dynamic-value poster-passengers"><strong>${escapeHtml(`${service.passengers || 1} pasajeros`)}</strong>${passengerDescription ? `<small>(${escapeHtml(passengerDescription)})</small>` : ""}</div>
       <div class="poster-dynamic-value poster-luggage"><span>Equipaje</span><strong>${escapeHtml(service.luggageDescription || "No")}</strong></div>
       <div class="poster-top-spacer" aria-hidden="true"></div>
       <section class="poster-adaptive-lower">
