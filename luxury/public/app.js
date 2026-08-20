@@ -98,7 +98,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "65";
+const APP_VERSION = "66";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -168,6 +168,11 @@ function vehicleBaseCapacity(vehicle) {
   return vehicleIsSprinter316(vehicle) ? Math.min(14, configured) : Math.min(15, configured);
 }
 
+function formHasLuggage(form) {
+  return Number(form.elements.luggage?.value || 0) > 0 ||
+    Boolean(String(form.elements.luggageDescription?.value || "").trim());
+}
+
 function vehicleCapacityWithOptions(vehicle, form) {
   if (vehicleIsSprinter316(vehicle)) {
     const configuration = form.elements.seatConfiguration?.value || "m1";
@@ -176,7 +181,7 @@ function vehicleCapacityWithOptions(vehicle, form) {
     return Math.max(1, Number(vehicle?.m1SeatCapacity || 14));
   }
   if (form.elements.hasBed?.checked) return Math.max(1, Number(vehicle?.capacityWithBed || 8));
-  if (Number(form.elements.luggage?.value || 0) > 0) {
+  if (formHasLuggage(form)) {
     return Math.max(1, Number(vehicle?.capacityWithLuggage || 10));
   }
   return vehicleBaseCapacity(vehicle);
@@ -1770,7 +1775,7 @@ function openQuoteModal(quote = {}) {
                     </label>
                   </fieldset>
                 </div>
-                <div class="capacity-note full" data-capacity-note>Capacidad disponible.</div>
+                <div class="capacity-note full" data-capacity-note role="status" aria-live="polite">Capacidad disponible.</div>
                 <div class="premium-options full">
                   <label class="premium-option">
                     <input type="checkbox" name="hasPlayStation5" ${quote.hasPlayStation5 ? "checked" : ""} />
@@ -2028,7 +2033,12 @@ function openQuoteModal(quote = {}) {
     input.addEventListener("change", () => syncQuoteCapacity(form, true));
   });
   form.elements.luggage.addEventListener("input", () => syncQuoteCapacity(form, true));
-  form.elements.luggageDescription.addEventListener("input", () => syncQuoteCapacity(form));
+  form.elements.luggageDescription.addEventListener("input", () => syncQuoteCapacity(form, true));
+  form.elements.passengers.addEventListener("input", () => {
+    delete form.dataset.capacityWarning;
+    delete form.dataset.capacityWarningKey;
+    syncQuoteCapacity(form, true);
+  });
   form.elements.serviceDate.addEventListener("change", () => {
     form.elements.serviceStartDate.value = form.elements.serviceDate.value;
     if (!form.elements.returnDate.value) form.elements.returnDate.value = form.elements.serviceDate.value;
@@ -2063,6 +2073,39 @@ function openQuoteModal(quote = {}) {
   }
 }
 
+function capacityLimitMessage(form, vehicles, requestedPassengers, maximum) {
+  const sprinter311Count = vehicles.filter((vehicle) => !vehicleIsSprinter316(vehicle)).length;
+  const sprinter316Count = vehicles.filter(vehicleIsSprinter316).length;
+  const hasLuggage = formHasLuggage(form);
+  const rules = [];
+  if (sprinter311Count) {
+    const unitLabel = sprinter311Count === 1
+      ? "La Sprinter 311"
+      : `Cada una de las ${sprinter311Count} Sprinter 311`;
+    if (form.elements.hasBed.checked) {
+      rules.push(`${unitLabel} con cama permite un máximo de 8 pasajeros`);
+    } else if (hasLuggage) {
+      rules.push(`${unitLabel} con equipaje permite un máximo de 10 pasajeros`);
+    } else {
+      rules.push(`${unitLabel} sin equipaje permite un máximo de 15 pasajeros`);
+    }
+  }
+  if (sprinter316Count) {
+    const configuration = form.elements.seatConfiguration?.value || "m1";
+    const configurationRule = configuration === "luxury"
+      ? "butacas de lujo permite un máximo de 10 pasajeros"
+      : configuration === "m3"
+        ? "sillones M3 permite un máximo de 11 pasajeros"
+        : "butacas M1 permite un máximo de 14 pasajeros";
+    const unitLabel = sprinter316Count === 1
+      ? "La Sprinter 316 con"
+      : `Cada una de las ${sprinter316Count} Sprinter 316 con`;
+    rules.push(`${unitLabel} ${configurationRule}`);
+  }
+  const ruleText = rules.length ? `${rules.join("; ")}. ` : "";
+  return `Capacidad excedida: solicitó ${requestedPassengers} pasajeros. ${ruleText}Máximo total permitido: ${maximum}. La cantidad se ajustó automáticamente.`;
+}
+
 function syncQuoteCapacity(form, announce = false) {
   syncSelectedVehicleField(form);
   const vehicles = selectedVehiclesFromForm(form);
@@ -2077,8 +2120,8 @@ function syncQuoteCapacity(form, announce = false) {
     if (announce) toast("La cama solo aplica para las Mercedes Benz Sprinter 311.");
   }
   const luggageQuantity = Math.max(0, Math.round(Number(form.elements.luggage.value || 0)));
-  const hasLuggage = luggageQuantity > 0 || Boolean(String(form.elements.luggageDescription?.value || "").trim());
   form.elements.luggage.value = String(luggageQuantity);
+  const hasLuggage = formHasLuggage(form);
   form.elements.hasLuggage.value = hasLuggage ? "true" : "false";
   const manualCapacity = manualVehicleName
     ? Math.max(15, Math.round(Number(form.elements.passengers?.value || 1)))
@@ -2088,11 +2131,30 @@ function syncQuoteCapacity(form, announce = false) {
     : 15;
   const passengerInput = form.elements.passengers;
   passengerInput.max = String(maximum);
-  if (Number(passengerInput.value) > maximum) {
+  const requestedPassengers = Math.max(1, Math.round(Number(passengerInput.value || 1)));
+  const configuration = form.elements.seatConfiguration?.value || "m1";
+  const warningKey = [
+    vehicles.map((vehicle) => vehicle.id).sort().join(","),
+    manualVehicleName,
+    maximum,
+    hasLuggage ? "luggage" : "no-luggage",
+    form.elements.hasBed.checked ? "bed" : "no-bed",
+    configuration,
+  ].join("|");
+  if (form.dataset.capacityWarningKey && form.dataset.capacityWarningKey !== warningKey) {
+    delete form.dataset.capacityWarning;
+    delete form.dataset.capacityWarningKey;
+  }
+  if (requestedPassengers > maximum) {
     passengerInput.value = String(maximum);
+    const warningMessage = capacityLimitMessage(form, vehicles, requestedPassengers, maximum);
+    form.dataset.capacityWarning = warningMessage;
+    form.dataset.capacityWarningKey = warningKey;
     if (announce) {
-      toast(`La cantidad se ajustó a la capacidad máxima de ${maximum} pasajeros.`);
+      toast(warningMessage);
     }
+  } else {
+    passengerInput.value = String(requestedPassengers);
   }
   if (Number(passengerInput.value) < 1) passengerInput.value = "1";
   const vehicleNames = [...vehicles.map(vehicleDisplayName), manualVehicleName].filter(Boolean);
@@ -2103,7 +2165,6 @@ function syncQuoteCapacity(form, announce = false) {
     form.elements.hasPlayStation5.checked ? "PlayStation 5" : "",
     form.elements.hasTv.checked ? "TV" : "",
   ].filter(Boolean).join(" · ");
-  const configuration = form.elements.seatConfiguration?.value || "m1";
   const configurationLabel = configuration === "luxury"
     ? "Butacas de lujo (9 atrás + 1 adelante)"
     : configuration === "m3"
@@ -2118,7 +2179,10 @@ function syncQuoteCapacity(form, announce = false) {
         : "Mercedes 311: 15 pasajeros por unidad sin equipaje");
   }
   if (hasSprinter316) details.push(`Mercedes 316: ${configurationLabel}`);
-  $("[data-capacity-note]", form).textContent = `${vehicleText}: máximo total ${maximum} pasajeros. ${details.join(" · ")}${amenities ? ` · ${amenities}` : ""}`;
+  const capacityNote = $("[data-capacity-note]", form);
+  const warningMessage = form.dataset.capacityWarning || "";
+  capacityNote.classList.toggle("is-warning", Boolean(warningMessage));
+  capacityNote.textContent = warningMessage || `${vehicleText}: máximo total ${maximum} pasajeros. ${details.join(" · ")}${amenities ? ` · ${amenities}` : ""}`;
   updateQuoteSummary(form);
 }
 
@@ -2370,6 +2434,7 @@ async function saveQuote(event, id) {
   event.preventDefault();
   const form = event.currentTarget;
   const button = $('button[type="submit"]', form);
+  syncQuoteCapacity(form, true);
   const body = quoteFormData(form);
   const missing = quoteMissingInformation(body);
   $("[data-form-error]", form).textContent = "";

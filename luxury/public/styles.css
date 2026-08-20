@@ -1210,6 +1210,13 @@ tr:last-child td {
   font-weight: 700;
 }
 
+.capacity-note.is-warning {
+  border-color: #c2543f;
+  background: #fff1ed;
+  color: #8a2f22;
+  box-shadow: 0 0 0 3px rgba(194, 84, 63, 0.1);
+}
+
 .destination-rate-preview,
 .vehicle-unit-panel {
   display: grid;
