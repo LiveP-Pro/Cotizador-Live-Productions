@@ -2096,7 +2096,7 @@ tr:last-child td {
 
 .quote-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 390px;
   gap: 24px;
 }
 
@@ -2206,6 +2206,13 @@ tr:last-child td {
   position: static;
 }
 
+@media (min-width: 1101px) {
+  .quote-side-column .quote-summary {
+    width: 300px;
+    justify-self: end;
+  }
+}
+
 .quote-live-preview-panel {
   overflow: hidden;
   border: 1px solid var(--line);
@@ -2235,7 +2242,7 @@ tr:last-child td {
 
 .quote-live-preview-frame {
   width: 100%;
-  max-height: 520px;
+  max-height: 680px;
   overflow: auto;
   background: #d8d2c8;
   padding: 8px;
@@ -2244,7 +2251,7 @@ tr:last-child td {
 .quote-live-preview-canvas {
   width: 1023px;
   min-height: 1537px;
-  zoom: 0.268;
+  zoom: 0.356;
 }
 
 .quote-live-preview-canvas .quote-poster-content {
