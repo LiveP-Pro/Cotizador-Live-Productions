@@ -2017,6 +2017,10 @@ tr:last-child td {
   width: min(100%, 1120px);
 }
 
+.modal-wide:has(.quote-layout) {
+  width: min(calc(100vw - 32px), 1680px);
+}
+
 .document-preview-modal {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -2096,7 +2100,7 @@ tr:last-child td {
 
 .quote-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 390px;
+  grid-template-columns: minmax(0, 1fr) minmax(620px, 760px);
   gap: 24px;
 }
 
@@ -2242,8 +2246,7 @@ tr:last-child td {
 
 .quote-live-preview-frame {
   width: 100%;
-  max-height: 680px;
-  overflow: auto;
+  overflow: hidden;
   background: #d8d2c8;
   padding: 8px;
 }
@@ -2251,6 +2254,7 @@ tr:last-child td {
 .quote-live-preview-canvas {
   width: 1023px;
   min-height: 1537px;
+  margin: 0 auto;
   zoom: 0.712;
 }
 
@@ -2443,6 +2447,18 @@ tr:last-child td {
 
   .quote-side-column {
     position: static;
+    width: min(100%, 760px);
+    justify-self: center;
+  }
+}
+
+@media (min-width: 1101px) and (max-width: 1600px) {
+  .quote-layout {
+    grid-template-columns: minmax(0, 1fr) 620px;
+  }
+
+  .quote-live-preview-canvas {
+    zoom: 0.58;
   }
 }
 
@@ -2551,6 +2567,10 @@ tr:last-child td {
   .seat-configuration-options label {
     min-width: 0;
   }
+
+  .quote-live-preview-canvas {
+    zoom: 0.6;
+  }
 }
 
 @media (max-width: 620px) {
@@ -2637,6 +2657,10 @@ tr:last-child td {
     padding: 18px;
   }
 
+  .quote-live-preview-canvas {
+    zoom: 0.5;
+  }
+
   .itinerary-meta {
     grid-template-columns: 1fr 1fr;
   }
@@ -2647,6 +2671,12 @@ tr:last-child td {
 
   .topbar-actions .button {
     display: none;
+  }
+}
+
+@media (max-width: 440px) {
+  .quote-live-preview-canvas {
+    zoom: 0.29;
   }
 }
 
