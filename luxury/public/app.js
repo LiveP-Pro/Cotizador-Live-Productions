@@ -98,6 +98,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
+const APP_VERSION = "65";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -249,6 +250,24 @@ function guatemalaDateValue(date = new Date()) {
 function guatemalaMonthValue(date = new Date()) {
   const parts = guatemalaDateParts(date);
   return `${parts.year}-${parts.month}`;
+}
+
+function addDaysToDateValue(value, days = 1) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  date.setUTCDate(date.getUTCDate() + Number(days || 0));
+  return date.toISOString().slice(0, 10);
+}
+
+function newestQuotesFirst(quotes = []) {
+  return [...quotes].sort((a, b) => {
+    const createdOrder = String(b.createdAt || b.quoteDate || "").localeCompare(
+      String(a.createdAt || a.quoteDate || ""),
+    );
+    if (createdOrder) return createdOrder;
+    return Number(b.quoteSequence || 0) - Number(a.quoteSequence || 0);
+  });
 }
 
 function time12Parts(value) {
@@ -536,6 +555,7 @@ function quickAction(action, iconName, title, description) {
 }
 
 function renderQuotes() {
+  const quotes = newestQuotesFirst(state.quotes);
   $("#app-content").innerHTML = `
     <div class="page-actions">
       <p>Cree propuestas con ruta, tarifa, recargos, IVA y una presentación lista para enviar.</p>
@@ -543,10 +563,10 @@ function renderQuotes() {
     </div>
     <div class="panel">
       <div class="panel-header">
-        <h2>${state.quotes.length} cotizaciones</h2>
+        <h2>${quotes.length} cotizaciones</h2>
         <input class="search-input" type="search" placeholder="Buscar cliente o número" data-search-table />
       </div>
-      ${state.quotes.length ? quoteTable(state.quotes) : emptyState("Aún no hay cotizaciones", "Cree la primera para iniciar el historial comercial.")}
+      ${quotes.length ? quoteTable(quotes) : emptyState("Aún no hay cotizaciones", "Cree la primera para iniciar el historial comercial.")}
     </div>
   `;
   bindCommonActions();
@@ -564,7 +584,7 @@ function quoteTable(quotes, options = {}) {
             <th>Ruta</th>
             <th>Total</th>
             <th>Estado</th>
-            ${options.compact ? "" : "<th></th>"}
+            ${options.compact ? "" : '<th class="quote-actions-heading">Acciones</th>'}
           </tr>
         </thead>
         <tbody>
@@ -582,17 +602,17 @@ function quoteTable(quotes, options = {}) {
                     options.compact
                       ? ""
                       : `
-                    <td>
+                    <td class="quote-actions-cell">
                       <div class="table-actions">
                         ${
                           isServiceQuote(quote)
-                            ? `<button class="icon-button" title="Ver comprobante" data-action="view-payment-proof" data-id="${quote.id}">${icons.tag}</button>`
-                            : `<button class="icon-button" title="Aceptar servicio y subir comprobante" data-action="accept-quote" data-id="${quote.id}">${icons.tag}</button>`
+                            ? `<button class="icon-button" title="Ver comprobante" aria-label="Ver comprobante" data-action="view-payment-proof" data-id="${quote.id}">${icons.tag}</button>`
+                            : `<button class="icon-button" title="Aceptar servicio y subir comprobante" aria-label="Aceptar servicio" data-action="accept-quote" data-id="${quote.id}">${icons.tag}</button>`
                         }
-                        <button class="icon-button" title="Ver cotización premium / descargar PNG" data-action="quote-pdf" data-id="${quote.id}">${icons.download}</button>
-                        <button class="icon-button" title="Crear itinerarios" data-action="quote-itinerary" data-id="${quote.id}">${icons.itinerary}</button>
-                        <button class="icon-button" title="Editar" data-action="edit-quote" data-id="${quote.id}">${icons.edit}</button>
-                        <button class="icon-button" title="Eliminar" data-action="delete-record" data-collection="quotes" data-id="${quote.id}">${icons.trash}</button>
+                        <button class="icon-button" title="Descargar cotización" aria-label="Descargar cotización" data-action="quote-pdf" data-id="${quote.id}">${icons.download}</button>
+                        <button class="icon-button" title="Generar itinerarios" aria-label="Generar itinerarios" data-action="quote-itinerary" data-id="${quote.id}">${icons.itinerary}</button>
+                        <button class="icon-button" title="Editar cotización" aria-label="Editar cotización" data-action="edit-quote" data-id="${quote.id}">${icons.edit}</button>
+                        <button class="icon-button" title="Eliminar cotización" aria-label="Eliminar cotización" data-action="delete-record" data-collection="quotes" data-id="${quote.id}">${icons.trash}</button>
                       </div>
                     </td>`
                   }
@@ -1394,6 +1414,8 @@ function destinationModeValue(form) {
 
 function createRouteSelection(index, form, previous = {}) {
   const type = "oneWay";
+  const previousDate = previous.serviceDate || form.elements.serviceDate?.value || guatemalaDateValue();
+  const serviceDate = index > 0 ? addDaysToDateValue(previousDate, 1) : previousDate;
   return {
     instanceId: serviceInstanceId("route"),
     destinationId: `manual-route-${index + 1}-${Date.now()}`,
@@ -1401,8 +1423,8 @@ function createRouteSelection(index, form, previous = {}) {
     type,
     label: serviceRateTypes[type].label,
     amount: 0,
-    serviceDate: form.elements.serviceDate?.value || guatemalaDateValue(),
-    returnDate: form.elements.returnDate?.value || form.elements.serviceDate?.value || guatemalaDateValue(),
+    serviceDate,
+    returnDate: serviceDate,
     origin: previous.destinationAddress || "",
     destinationAddress: "",
     departureTime: "",
@@ -1413,6 +1435,18 @@ function createRouteSelection(index, form, previous = {}) {
     notes: "",
     legNumber: index + 1,
   };
+}
+
+function applySequentialTransferDates(form) {
+  const selections = selectedServiceEntriesFromForm(form);
+  if (selections.length < 2) return;
+  const firstDateInput = form.elements[serviceDetailInputName(selections[0], "serviceDate")];
+  const firstDate = firstDateInput?.value || selections[0].serviceDate;
+  if (!firstDate) return;
+  selections.slice(1).forEach((selection, index) => {
+    const input = form.elements[serviceDetailInputName(selection, "serviceDate")];
+    if (input) input.value = addDaysToDateValue(firstDate, index + 1);
+  });
 }
 
 function syncDestinationMode(form, { ensureCount = false } = {}) {
@@ -1554,8 +1588,6 @@ function syncPrimaryServiceFields(form, selections) {
   form.elements.returnDate.value = selections.length > 1
     ? finalDate || form.elements.returnDate.value || guatemalaDateValue()
     : first.returnDate || first.serviceDate || form.elements.returnDate.value || guatemalaDateValue();
-  form.elements.origin.value = first.origin || "";
-  form.elements.destination.value = first.destinationAddress || first.destination || "";
   form.elements.departureTime.value = first.departureTime || "";
   form.elements.returnTime.value = selections.length > 1 ? last.returnTime || "" : first.returnTime || "";
   form.elements.serviceStartDate.value = form.elements.serviceDate.value;
@@ -1672,6 +1704,16 @@ function openQuoteModal(quote = {}) {
     isEdit ? `Editar ${quote.number}` : "Nueva cotización",
     `
       <form id="quote-form" class="modal-form" novalidate>
+        <style data-quote-live-preview-styles>${quoteDocumentStyles()}</style>
+        ${!isEdit ? `
+          <div class="quote-form-toolbar">
+            <div>
+              <strong>Borrador automático activo</strong>
+              <span>Puede cerrar y continuar después, o limpiar todo para iniciar desde cero.</span>
+            </div>
+            <button type="button" class="button button-secondary" data-refresh-quote>Refresh</button>
+          </div>
+        ` : ""}
         <div class="quote-layout">
           <div class="quote-form-sections">
             <section class="form-section" data-quote-step="route">
@@ -1748,6 +1790,18 @@ function openQuoteModal(quote = {}) {
                 </div>
               </div>
             </section>
+            <section class="form-section" data-quote-step="route-summary">
+              <h3>4. Lugar de salida y destino</h3>
+              <p class="form-note">Estos dos textos son los que aparecerán en la cotización principal.</p>
+              <div class="form-grid">
+                <label>Lugar de salida
+                  <input name="displayOrigin" value="${escapeHtml(quote.origin)}" placeholder="Ej. Hotel Camino Real, Zona 10" />
+                </label>
+                <label>Destino
+                  <input name="displayDestination" value="${escapeHtml(quote.destination)}" placeholder="Ej. El Paredón, Escuintla" />
+                </label>
+              </div>
+            </section>
             <section class="form-section" data-quote-step="client">
               <h3>2. Datos del cliente</h3>
               <div class="form-grid">
@@ -1757,7 +1811,7 @@ function openQuoteModal(quote = {}) {
               </div>
             </section>
             <section class="form-section">
-              <h3>4. Información del viaje</h3>
+              <h3>5. Información del viaje</h3>
               <div data-single-destination-builder ${initialDestinationMode === "multiple" ? "hidden" : ""}>
                 <div class="manual-service-box">
                   <h4>¿Necesita otro traslado?</h4>
@@ -1785,7 +1839,7 @@ function openQuoteModal(quote = {}) {
               </label>
             </section>
             <section class="form-section">
-              <h3>5. Presentación del precio</h3>
+              <h3>6. Presentación del precio</h3>
               <div class="price-mode-grid">
                 <label class="price-mode-option ${initialPriceDisplayMode === "detailed" ? "active" : ""}" data-price-mode-option>
                   <input type="radio" name="priceDisplayMode" value="detailed" ${initialPriceDisplayMode === "detailed" ? "checked" : ""} />
@@ -1812,12 +1866,21 @@ function openQuoteModal(quote = {}) {
               </div>
             </section>
           </div>
-          <aside class="quote-summary" data-quote-summary></aside>
+          <div class="quote-side-column">
+            <aside class="quote-summary" data-quote-summary></aside>
+            <section class="quote-live-preview-panel">
+              <header>
+                <span>Previsualización en tiempo real</span>
+                <strong>Cotización principal</strong>
+              </header>
+              <div class="quote-live-preview-frame">
+                <div class="quote-live-preview-canvas" data-quote-live-preview></div>
+              </div>
+            </section>
+          </div>
         </div>
         <input type="hidden" name="serviceDate" value="${escapeHtml(serviceStartDate)}" />
         <input type="hidden" name="returnDate" value="${escapeHtml(serviceEndDate)}" />
-        <input type="hidden" name="origin" value="${escapeHtml(quote.origin)}" />
-        <input type="hidden" name="destination" value="${escapeHtml(quote.destination)}" />
         <input type="hidden" name="departureTime" value="${escapeHtml(quote.departureTime || "")}" />
         <input type="hidden" name="returnTime" value="${escapeHtml(quote.returnTime)}" />
         <input type="hidden" name="hasLuggage" value="${initialLuggageQuantity > 0 ? "true" : "false"}" />
@@ -1847,10 +1910,11 @@ function openQuoteModal(quote = {}) {
         <input type="hidden" name="driverUserId" value="${escapeHtml(quote.driverUserId)}" />
         <input class="visually-hidden" type="checkbox" name="applyNightSurcharge" ${quote.applyNightSurcharge ? "checked" : ""} />
         <input class="visually-hidden" type="checkbox" name="applyAirportSurcharge" ${quote.applyAirportSurcharge ? "checked" : ""} />
-        ${!isEdit ? `<div class="draft-note">Borrador automático activo. Si cierra esta ventana, sus datos se recuperarán al abrir Nueva cotización. <button type="button" class="text-inline-button" data-clear-quote-draft>Limpiar borrador</button></div>` : ""}
+        ${!isEdit ? `<div class="draft-note">Borrador automático activo. El botón Refresh de la parte superior limpia únicamente esta nueva cotización.</div>` : ""}
         <p class="form-error" data-form-error></p>
         <div class="form-footer">
           <button type="button" class="button button-secondary" data-close-form>Cancelar</button>
+          <button type="button" class="button button-gold" data-save-quote-preview>Guardar imagen de cotización</button>
           <button type="submit" class="button button-primary">${isEdit ? "Guardar cambios" : "Crear cotización"}</button>
         </div>
       </form>
@@ -1864,10 +1928,12 @@ function openQuoteModal(quote = {}) {
   const clientStep = $('[data-quote-step="client"]', form);
   if (formSections && vehicleStep && clientStep) formSections.insertBefore(clientStep, vehicleStep);
   $("[data-close-form]").addEventListener("click", closeModal);
-  $("[data-clear-quote-draft]")?.addEventListener("click", () => {
+  $("[data-refresh-quote]")?.addEventListener("click", () => {
     clearQuoteDraft();
-    toast("Borrador de nueva cotización limpiado.");
+    openQuoteModal();
+    toast("Cotización reiniciada desde cero.");
   });
+  $("[data-save-quote-preview]", form)?.addEventListener("click", () => saveQuotePreviewImage(form));
   $("[data-destination-rate-preview]").addEventListener("click", (event) => {
     const toggle = event.target.closest("[data-service-menu-toggle]");
     if (toggle) {
@@ -1930,10 +1996,31 @@ function openQuoteModal(quote = {}) {
     }
     if (!isEdit) saveQuoteDraft(form);
   });
+  $("[data-service-detail-list]", form).addEventListener("change", (event) => {
+    const selections = selectedServiceEntriesFromForm(form);
+    const first = selections[0];
+    if (!first || destinationModeValue(form) !== "multiple") return;
+    if (event.target.name !== serviceDetailInputName(first, "serviceDate")) return;
+    applySequentialTransferDates(form);
+    syncServiceSelections(form);
+    if (!isEdit) saveQuoteDraft(form);
+  });
   renderVehicleUnitPanel(form, quoteVehicleIds(quote));
   syncQuoteCapacity(form);
-  $("[data-vehicle-unit-panel]").addEventListener("change", () => syncQuoteCapacity(form));
-  form.elements.vehicleManualName.addEventListener("input", () => syncQuoteCapacity(form));
+  $("[data-vehicle-unit-panel]").addEventListener("change", (event) => {
+    if (event.target.matches('input[name="vehicleIds"]') && event.target.checked) {
+      form.elements.vehicleManualName.value = "";
+    }
+    syncQuoteCapacity(form);
+  });
+  form.elements.vehicleManualName.addEventListener("input", () => {
+    if (form.elements.vehicleManualName.value.trim()) {
+      $$('input[name="vehicleIds"]', form).forEach((input) => {
+        input.checked = false;
+      });
+    }
+    syncQuoteCapacity(form);
+  });
   form.elements.hasPlayStation5.addEventListener("change", () => syncQuoteCapacity(form));
   form.elements.hasTv.addEventListener("change", () => syncQuoteCapacity(form));
   form.elements.hasBed.addEventListener("change", () => syncQuoteCapacity(form, true));
@@ -2057,8 +2144,8 @@ function quoteFormData(form) {
   body.serviceType = serviceSelectionsServiceLabel(serviceSelections);
   body.serviceDate = form.elements.serviceDate.value;
   body.returnDate = form.elements.returnDate.value;
-  body.origin = form.elements.origin.value;
-  body.destination = form.elements.destination.value;
+  body.origin = form.elements.displayOrigin.value.trim();
+  body.destination = form.elements.displayDestination.value.trim();
   body.departureTime = form.elements.departureTime.value;
   body.returnTime = form.elements.returnTime.value;
   body.serviceStartDate = body.serviceDate;
@@ -2175,12 +2262,15 @@ function updateQuoteSummary(form) {
       <div class="summary-line summary-total"><span>Total</span><strong>${money(totals.total)}</strong></div>
     </div>
   `;
+  renderQuoteLivePreview(form, body, totals);
 }
 
 async function calculateRouteForForm(form) {
   const status = $("[data-route-status]", form);
   const button = $("[data-calculate-route]", form);
-  if (!form.elements.origin.value || !form.elements.destination.value) {
+  const originField = form.elements.displayOrigin || form.elements.origin;
+  const destinationField = form.elements.displayDestination || form.elements.destination;
+  if (!originField?.value || !destinationField?.value) {
     status.textContent = "Ingrese el punto de salida y el destino.";
     return;
   }
@@ -2190,8 +2280,8 @@ async function calculateRouteForForm(form) {
     const result = await api("/api/routes/calculate", {
       method: "POST",
       body: JSON.stringify({
-        origin: form.elements.origin.value,
-        destination: form.elements.destination.value,
+        origin: originField.value,
+        destination: destinationField.value,
       }),
     });
     form.elements.kilometers.value = result.kilometers;
@@ -2215,6 +2305,8 @@ function quoteMissingInformation(body) {
     missing.push("Tipo de vehículo");
   }
   if (!Number(body.passengers || 0)) missing.push("Cantidad de pasajeros");
+  if (!String(body.origin || "").trim()) missing.push("Lugar de salida");
+  if (!String(body.destination || "").trim()) missing.push("Destino principal");
   if (Number(body.luggage || 0) > 0 && !String(body.luggageDescription || "").trim()) {
     missing.push("Categorías y cantidades del equipaje");
   }
@@ -2288,7 +2380,7 @@ async function saveQuote(event, id) {
   body.allowIncomplete = missing.length > 0;
   button.disabled = true;
   try {
-    await api(`/api/quotes${id ? `/${id}` : ""}`, {
+    const savedQuote = await api(`/api/quotes${id ? `/${id}` : ""}`, {
       method: id ? "PUT" : "POST",
       body: JSON.stringify(body),
     });
@@ -2296,6 +2388,7 @@ async function saveQuote(event, id) {
     toast(id ? "Cotización actualizada." : "Cotización creada correctamente.");
     closeModal();
     await navigate("quotes");
+    if (!id) downloadQuotePdf(savedQuote.id);
   } catch (error) {
     $("[data-form-error]", form).textContent = error.message;
   } finally {
@@ -2709,8 +2802,8 @@ function quotePosterPrimaryService(quote) {
   return {
     serviceDate: first.serviceDate || quote.serviceStartDate || quote.serviceDate,
     returnDate: finalDate || quoteEndDate(quote),
-    origin: first.origin || quote.origin,
-    destination: first.destinationAddress || quote.destination || first.destination,
+    origin: quote.origin || first.origin,
+    destination: quote.destination || first.destinationAddress || first.destination,
     departureTime: first.departureTime || quote.departureTime,
     returnTime: selections.length > 1 ? last.returnTime || quote.returnTime : first.returnTime || quote.returnTime,
     passengers: quote.passengers || first.passengers || 1,
@@ -2820,7 +2913,7 @@ function quotePosterContinuationHtml(quote) {
   if (selections.length < 2 && !hasServiceNotes && !quote.notes) return "";
 
   return `
-    <section class="poster-continuation">
+    <section class="poster-continuation" data-client-name="${escapeHtml(quote.clientName || "")}">
       <header class="poster-continuation-header">
         <div><span>Luxury Travel Guatemala</span><h2>Detalle del recorrido</h2></div>
         <strong>${selections.length} traslado${selections.length === 1 ? "" : "s"}</strong>
@@ -2858,7 +2951,9 @@ function quotePosterContinuationHtml(quote) {
 
 function quotePosterVehicleHtml(quote) {
   const vehicles = quoteDisplayVehicles(quote);
+  const manualVehicleOnly = Boolean(String(quote.vehicleManualName || "").trim()) && !quoteVehicleIds(quote).length;
   return `
+    ${manualVehicleOnly ? '<div class="poster-manual-vehicle-mask" aria-hidden="true"></div>' : ""}
     <div class="poster-vehicle-value">
       <b>${escapeHtml(vehicles.count)}</b>
       <div class="poster-vehicle-copy">
@@ -3032,41 +3127,75 @@ function quotePosterFact(icon, label, value) {
   `;
 }
 
+function quotePosterPageHtml(quote) {
+  const service = quotePosterPrimaryService(quote);
+  const templateImage = `${assetUrl("quote-template-master-2x.png")}?v=5`;
+  return `
+    <div class="quote-poster-content quote-poster-v2">
+      <img class="quote-template-bg" src="${templateImage}" alt="">
+      <div class="poster-template-clean-mask" aria-hidden="true"></div>
+      <strong class="poster-client-name">${escapeHtml(quote.clientName || "Cliente")}</strong>
+      <div class="poster-dynamic-value poster-start-date">${escapeHtml(formatPosterDate(service.serviceDate))}</div>
+      ${service.departureTime ? `<div class="poster-dynamic-value poster-start-time">${escapeHtml(formatTime12(service.departureTime))}</div>` : ""}
+      <div class="poster-dynamic-value poster-origin">${escapeHtml(service.origin || "Pendiente")}</div>
+      <div class="poster-dynamic-value poster-destination">${escapeHtml(service.destination || "Pendiente")}</div>
+      <div class="poster-dynamic-value poster-end-date"><span>${escapeHtml(formatPosterDate(service.returnDate))}</span></div>
+      <div class="poster-dynamic-value poster-return-time"><span>${escapeHtml(service.returnTime ? formatTime12(service.returnTime) : "Pendiente")}</span></div>
+      <div class="poster-dynamic-value poster-passengers"><strong>${escapeHtml(`${service.passengers || 1} pasajeros`)}</strong>${service.passengerDescription ? `<small>${escapeHtml(service.passengerDescription)}</small>` : ""}</div>
+      <div class="poster-dynamic-value poster-luggage"><span>Equipaje</span><strong>${escapeHtml(service.luggageDescription || "No")}</strong></div>
+      <div class="poster-top-spacer" aria-hidden="true"></div>
+      <section class="poster-adaptive-lower">
+        ${quotePosterServicesHtml(quote)}
+        ${quotePosterNotesHtml(quote)}
+        <div class="poster-template-lower">
+          <img class="quote-template-lower-bg" src="${templateImage}" alt="" aria-hidden="true">
+          ${quotePosterVehicleHtml(quote)}
+          ${quotePosterAmenitiesHtml(quote)}
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function quotePreviewRecord(body, totals) {
+  return {
+    ...body,
+    id: "quote-live-preview",
+    number: "Vista previa",
+    createdAt: new Date().toISOString(),
+    totals: {
+      ...totals,
+      taxPercent: body.includeTax ? state.rates.taxPercent : 0,
+      subtotalBeforeDiscount: totals.baseFare,
+    },
+  };
+}
+
+function renderQuoteLivePreview(form, body, totals) {
+  const target = $("[data-quote-live-preview]", form);
+  if (!target) return;
+  target.innerHTML = quotePosterPageHtml(quotePreviewRecord(body, totals));
+}
+
+async function saveQuotePreviewImage(form) {
+  updateQuoteSummary(form);
+  const page = $("[data-quote-live-preview] .quote-poster-content", form);
+  if (!page) return;
+  const client = String(form.elements.clientName.value || "Borrador").trim();
+  await downloadDocumentImage(`Cotizacion-Luxury-${client}`, "png", {
+    pageElement: page,
+    style: quoteDocumentStyles(),
+    fileSuffix: "01-Cotizacion",
+  });
+}
+
 function downloadQuotePdf(id) {
   const quote = state.quotes.find((item) => item.id === id);
   if (!quote) return;
-  const service = quotePosterPrimaryService(quote);
-  const templateImage = `${assetUrl("quote-template-master-2x.png")}?v=5`;
-
   openPremiumDocument(
     quote.number,
     "quote",
-    `
-      <div class="quote-poster-content quote-poster-v2">
-        <img class="quote-template-bg" src="${templateImage}" alt="">
-        <div class="poster-template-clean-mask" aria-hidden="true"></div>
-        <strong class="poster-client-name">${escapeHtml(quote.clientName || "Cliente")}</strong>
-        <div class="poster-dynamic-value poster-start-date">${escapeHtml(formatPosterDate(service.serviceDate))}</div>
-        ${service.departureTime ? `<div class="poster-dynamic-value poster-start-time">${escapeHtml(formatTime12(service.departureTime))}</div>` : ""}
-        <div class="poster-dynamic-value poster-origin">${escapeHtml(service.origin || "Pendiente")}</div>
-        <div class="poster-dynamic-value poster-destination">${escapeHtml(service.destination || "Pendiente")}</div>
-        <div class="poster-dynamic-value poster-end-date"><span>${escapeHtml(formatPosterDate(service.returnDate))}</span></div>
-        <div class="poster-dynamic-value poster-return-time"><span>${escapeHtml(service.returnTime ? formatTime12(service.returnTime) : "Pendiente")}</span></div>
-        <div class="poster-dynamic-value poster-passengers"><strong>${escapeHtml(`${service.passengers || 1} pasajeros`)}</strong>${service.passengerDescription ? `<small>${escapeHtml(service.passengerDescription)}</small>` : ""}</div>
-        <div class="poster-dynamic-value poster-luggage"><span>Equipaje</span><strong>${escapeHtml(service.luggageDescription || "No")}</strong></div>
-        <div class="poster-top-spacer" aria-hidden="true"></div>
-        <section class="poster-adaptive-lower">
-          ${quotePosterServicesHtml(quote)}
-          ${quotePosterNotesHtml(quote)}
-          <div class="poster-template-lower">
-            <img class="quote-template-lower-bg" src="${templateImage}" alt="" aria-hidden="true">
-            ${quotePosterVehicleHtml(quote)}
-            ${quotePosterAmenitiesHtml(quote)}
-          </div>
-        </section>
-      </div>
-      ${quotePosterContinuationHtml(quote)}
-    `,
+    `${quotePosterPageHtml(quote)}${quotePosterContinuationHtml(quote)}`,
   );
 }
 
@@ -3226,6 +3355,7 @@ function quoteDocumentStyles() {
     .poster-service-tax-note{border-top:1px solid rgba(213,166,72,.42);padding:9px 4px 7px;color:#fff;font-size:12px;font-weight:900;letter-spacing:.06em}.poster-price-breakdown{display:grid;width:540px;max-width:100%;margin-left:auto;border-top:1px solid rgba(213,166,72,.62);text-transform:uppercase}.poster-price-summary-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:28px;min-height:38px;border-bottom:1px solid rgba(213,166,72,.32);padding:7px 4px 7px 20px}.poster-price-summary-row span{color:#f5f5f3;font-size:12px;font-weight:900;letter-spacing:.1em}.poster-price-summary-row strong{color:#e5b64c;font-family:Georgia,serif;font-size:22px;line-height:1;white-space:nowrap}.poster-price-discount strong{color:#f0d48e}.poster-price-total{min-height:51px;border-bottom:0;padding-top:10px;padding-bottom:10px}.poster-price-total span{font-size:14px}.poster-price-total strong{font-size:32px}
     .poster-quote-notes{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;margin:16px 48px;border-left:5px solid #c99532;background:#fff;padding:5px 0 5px 18px;color:#171717}.poster-quote-notes>strong{padding-top:2px;color:#9e6b1a;font-size:13px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}.poster-quote-notes>div{display:grid;gap:5px}.poster-quote-notes p{margin:0;font-size:13px;line-height:1.42}.poster-quote-notes b{color:#9e6b1a}
     .poster-template-lower{position:relative;height:263px;overflow:hidden;background:#fff}.quote-template-lower-bg{position:absolute;left:0;top:-1274px;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
+    .poster-manual-vehicle-mask{position:absolute;left:20px;top:14px;z-index:2;width:174px;height:135px;border-radius:0 0 0 20px;background:#fff}
     .poster-vehicle-value{position:absolute;left:197px;top:27px;z-index:3;height:119px;display:inline-grid;grid-template-columns:58px minmax(0,max-content);gap:10px;align-items:center;color:#111;text-transform:uppercase}
     .poster-vehicle-value>b{color:#bd8123;font-size:65px;line-height:1;text-align:center}.poster-vehicle-copy{max-width:132px;border-right:2px solid #d9ad57;padding-right:12px}.poster-vehicle-value strong,.poster-vehicle-value span{display:block}.poster-vehicle-value strong{font-size:16px;font-weight:900;line-height:1.04}.poster-vehicle-value span{margin-top:5px;font-size:13px;font-weight:800}
     .poster-feature-grid{position:absolute;z-index:3;display:grid;grid-template-columns:repeat(var(--feature-count),minmax(0,1fr));color:#bc7b19;text-transform:uppercase}
@@ -3238,6 +3368,7 @@ function quoteDocumentStyles() {
     .poster-vehicle-features.poster-feature-count-7 .poster-feature-icon,.poster-vehicle-features.poster-feature-count-8 .poster-feature-icon{width:30px;height:30px;stroke-width:3}.poster-vehicle-features.poster-feature-count-7 .poster-feature-item span,.poster-vehicle-features.poster-feature-count-8 .poster-feature-item span{font-size:7.5px;line-height:1}
     .poster-included-features .poster-feature-icon{width:36px;height:36px}.poster-included-features .poster-feature-item span{font-size:10px}
     .poster-continuation{position:relative;z-index:4;display:grid;gap:24px;background:linear-gradient(180deg,#faf8f3,#f3eee4);padding:56px 54px 0;color:#111}
+    .poster-continuation.is-editing{outline:4px solid #c99532;outline-offset:-4px}.poster-continuation.is-editing *{cursor:text}.poster-continuation.is-editing [contenteditable="true"]:focus{outline:2px dashed rgba(154,106,30,.7);outline-offset:3px}
     .poster-continuation-header{display:flex;align-items:end;justify-content:space-between;gap:24px;border-bottom:2px solid #c99532;padding-bottom:18px}.poster-continuation-header span{color:#ad7820;font-size:13px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}.poster-continuation-header h2{margin:7px 0 0;font-family:Georgia,serif;font-size:38px;font-weight:500}.poster-continuation-header>strong{border:1px solid #c99532;border-radius:999px;padding:9px 15px;color:#9a6716;font-size:14px;text-transform:uppercase}
     .poster-route-list{display:grid;gap:16px}.poster-route-card{display:grid;grid-template-columns:64px minmax(0,1fr);gap:18px;border:1px solid #d7b46c;border-radius:18px;background:#fff;padding:20px;box-shadow:0 10px 30px rgba(25,22,15,.06)}.poster-route-number{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#050a13;color:#dcae45;font-family:Georgia,serif;font-size:21px}.poster-route-content{min-width:0}.poster-route-heading{display:flex;align-items:start;justify-content:space-between;gap:18px}.poster-route-heading span{color:#a16d19;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.poster-route-heading h3{margin:5px 0 0;font-size:20px;line-height:1.25}.poster-route-heading h3 b{color:#c18b2c}.poster-route-heading>strong{color:#aa741b;font-family:Georgia,serif;font-size:23px;white-space:nowrap}.poster-route-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:16px;border-top:1px solid #ead8b4;padding-top:14px}.poster-route-meta span{color:#333;font-size:11px;line-height:1.35}.poster-route-meta b{display:block;margin-bottom:3px;color:#9a6a1e;font-size:9px;letter-spacing:.08em;text-transform:uppercase}.poster-route-content p{margin:14px 0 0;border-left:3px solid #c99532;background:#f8f2e7;padding:10px 12px;font-size:12px;line-height:1.45}
     .poster-general-notes{border:1px solid #d7b46c;border-radius:16px;background:#fff;padding:18px 20px}.poster-general-notes strong{color:#9a6a1e;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.poster-general-notes p{margin:7px 0 0;font-size:13px;line-height:1.5}
@@ -3267,6 +3398,7 @@ function openPremiumDocument(title, type, content) {
   const quoteDownloadButtons =
     type === "quote"
       ? `
+          ${hasQuoteContinuation ? '<button class="button button-secondary" data-edit-journey>Hacer todo editable</button>' : ""}
           <button class="button button-gold" data-download-document-image="png" data-document-page=".quote-poster-content" data-file-suffix="01-Cotizacion">Descargar cotización PNG Full HD</button>
           ${hasQuoteContinuation ? '<button class="button button-gold" data-download-document-image="png" data-document-page=".poster-continuation" data-file-suffix="02-Recorrido">Descargar recorrido PNG Full HD</button>' : ""}
         `
@@ -3291,10 +3423,33 @@ function openPremiumDocument(title, type, content) {
     window.print();
     setTimeout(() => document.body.classList.remove("printing-document"), 200);
   });
+  $("[data-edit-journey]")?.addEventListener("click", (event) => {
+    const continuation = $(".document-preview-scroll .poster-continuation");
+    if (!continuation) return;
+    const editing = continuation.contentEditable !== "true";
+    continuation.contentEditable = String(editing);
+    continuation.classList.toggle("is-editing", editing);
+    event.currentTarget.textContent = editing ? "Finalizar edición" : "Hacer todo editable";
+    if (editing) {
+      continuation.focus();
+      toast("El detalle del recorrido ya se puede editar directamente.");
+    }
+  });
   $$("[data-download-document-image]").forEach((button) => {
     button.addEventListener("click", async () => {
       button.disabled = true;
       try {
+        if (button.dataset.documentPage === ".poster-continuation") {
+          const continuation = $(".document-preview-scroll .poster-continuation");
+          const heading = $(".poster-continuation-header h2", continuation);
+          const clientName = String(continuation?.dataset.clientName || "").trim();
+          const includeClientName = window.confirm("¿Desea agregar el nombre del cliente al detalle del recorrido?");
+          if (heading) {
+            heading.textContent = includeClientName && clientName
+              ? `DETALLES DEL RECORRIDO CLIENTE: ${clientName}`
+              : "DETALLES DEL RECORRIDO";
+          }
+        }
         await downloadDocumentImage(title, button.dataset.downloadDocumentImage, {
           pageSelector: button.dataset.documentPage,
           fileSuffix: button.dataset.fileSuffix,
@@ -3353,11 +3508,12 @@ function loadImage(src) {
 }
 
 async function downloadDocumentImage(title, format = "png", options = {}) {
-  const sheet = $(".document-preview-scroll .sheet");
-  const style = $("[data-premium-document-styles]")?.textContent || "";
-  if (!sheet) return;
+  const suppliedPage = options.pageElement || null;
+  const sheet = suppliedPage?.closest(".sheet") || $(".document-preview-scroll .sheet");
+  const style = options.style || $("[data-premium-document-styles]")?.textContent || "";
+  if (!sheet && !suppliedPage) return;
   const pageSelector = options.pageSelector || ".sheet";
-  const page = pageSelector === ".sheet" ? sheet : $(pageSelector, sheet);
+  const page = suppliedPage || (pageSelector === ".sheet" ? sheet : $(pageSelector, sheet));
   if (!page) return;
   try {
     const clone = page.cloneNode(true);
@@ -3409,6 +3565,7 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
     }
     toast(`${options.fileSuffix === "02-Recorrido" ? "Recorrido" : "Cotización"} descargado en ${format.toUpperCase()} Full HD.`);
   } catch (error) {
+    if (error?.name === "AbortError") return;
     toast(error.message, "error");
   }
 }
@@ -3555,8 +3712,15 @@ async function logout() {
 function setupPwa() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register(appPath("/sw.js?v=64"), { scope: appPath("/") })
+      .register(appPath(`/sw.js?v=${APP_VERSION}`), { scope: appPath("/") })
+      .then((registration) => registration.update())
       .catch(() => {});
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
   }
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
