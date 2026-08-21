@@ -1,9 +1,9 @@
 window.requerimientoEquipoCatalog = {
-  "version": "20260818-01",
+  "version": "20260821-01",
   "source": {
     "spreadsheetId": "1AVOncyecjkDB2UfZmAqC__Te9XCkQTIU",
     "workbook": "EQUIPO-DE-AUDIO.xlsx",
-    "modifiedTime": "2026-08-18T16:45:19.942Z",
+    "modifiedTime": "2026-08-21T15:12:29.267Z",
     "sheets": [
       "SUNDAY FUNDAY",
       "AUDIO",
@@ -771,7 +771,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B112",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "A113",
@@ -843,7 +843,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B122",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "A123",
@@ -1223,7 +1223,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B178",
-          "value": "Par LED con cable ac"
+          "value": "Par LED RGB con cable ac"
         }
       ],
       "sourceNotes": [],
@@ -1631,7 +1631,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -1673,7 +1673,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               5,
@@ -1879,7 +1879,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Par LED con cable ac"
+              "Par LED RGB con cable ac"
             ]
           ]
         }
@@ -2140,7 +2140,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E39",
-          "value": "Bombo Grech con funda"
+          "value": "Bombo Gretsch con funda"
         },
         {
           "address": "D40",
@@ -2172,7 +2172,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E43",
-          "value": "Caja Grech con funda"
+          "value": "Caja Gretsch con funda"
         },
         {
           "address": "D44",
@@ -2180,7 +2180,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E44",
-          "value": "Tom no.1 Grech con funda"
+          "value": "Tom no.1 Gretsch con funda"
         },
         {
           "address": "D45",
@@ -2204,7 +2204,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E47",
-          "value": "Floortom Grech con funda"
+          "value": "Floortom Gretsch con funda"
         },
         {
           "address": "E48",
@@ -2636,7 +2636,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E112",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "D113",
@@ -2708,7 +2708,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E122",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "D123",
@@ -3088,7 +3088,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E178",
-          "value": "Par LED con cable ac"
+          "value": "Par LED RGB con cable ac"
         }
       ],
       "sourceNotes": [],
@@ -3226,7 +3226,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Bombo Grech con funda"
+              "Bombo Gretsch con funda"
             ],
             [
               1,
@@ -3242,11 +3242,11 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "Caja Grech con funda"
+              "Caja Gretsch con funda"
             ],
             [
               1,
-              "Tom no.1 Grech con funda"
+              "Tom no.1 Gretsch con funda"
             ],
             [
               1,
@@ -3258,7 +3258,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "Floortom Grech con funda"
+              "Floortom Gretsch con funda"
             ]
           ]
         },
@@ -3496,7 +3496,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -3538,7 +3538,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               5,
@@ -3744,7 +3744,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Par LED con cable ac"
+              "Par LED RGB con cable ac"
             ]
           ]
         }
@@ -4405,7 +4405,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H98",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "G99",
@@ -4477,7 +4477,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H108",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "G109",
@@ -4857,7 +4857,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H164",
-          "value": "Par LED con cable ac"
+          "value": "Par LED RGB con cable ac"
         }
       ],
       "sourceNotes": [],
@@ -5211,7 +5211,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -5253,7 +5253,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               5,
@@ -5459,7 +5459,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Par LED con cable ac"
+              "Par LED RGB con cable ac"
             ]
           ]
         }
@@ -6120,7 +6120,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "K99",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "J100",
@@ -6192,7 +6192,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "K109",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "J110",
@@ -6572,7 +6572,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "K165",
-          "value": "Par LED con cable ac"
+          "value": "Par LED RGB con cable ac"
         }
       ],
       "sourceNotes": [],
@@ -6926,7 +6926,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -6968,7 +6968,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               5,
@@ -7174,7 +7174,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Par LED con cable ac"
+              "Par LED RGB con cable ac"
             ]
           ]
         }
@@ -7931,7 +7931,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "N113",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "M114",
@@ -8107,7 +8107,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "N136",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "N137",
@@ -8135,7 +8135,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "N140",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "M141",
@@ -8203,7 +8203,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "N149",
-          "value": "retazos de tela color negro de 8 mts"
+          "value": "Retazo de tela color negro de 8 mts."
         },
         {
           "address": "N150",
@@ -8215,7 +8215,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "N151",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "M152",
@@ -8223,7 +8223,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "N152",
-          "value": "Distro pequeño"
+          "value": "Distro de corriente pequeño"
         },
         {
           "address": "M153",
@@ -8603,7 +8603,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "N208",
-          "value": "Par LED con cable ac"
+          "value": "Par LED RGB con cable ac"
         }
       ],
       "sourceNotes": [],
@@ -9011,7 +9011,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -9105,7 +9105,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -9122,7 +9122,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               6,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -9159,7 +9159,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "retazos de tela color negro de 8 mts"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         },
@@ -9168,11 +9168,11 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               1,
-              "Distro pequeño"
+              "Distro de corriente pequeño"
             ],
             [
               5,
@@ -9378,7 +9378,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Par LED con cable ac"
+              "Par LED RGB con cable ac"
             ]
           ]
         }
@@ -9891,7 +9891,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q79",
-          "value": "llamar a Marvin Bucu para situacion laboral actual"
+          "value": "Luz circular con cable power spicon"
         },
         {
           "address": "P80",
@@ -10135,7 +10135,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q114",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "P115",
@@ -10311,7 +10311,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q137",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "Q138",
@@ -10339,7 +10339,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q141",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "P142",
@@ -10407,7 +10407,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q150",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "P151",
@@ -10423,7 +10423,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q152",
-          "value": "Cubo 0.30 cm."
+          "value": "Cubo de elevación 0.30 cm"
         },
         {
           "address": "P153",
@@ -10467,7 +10467,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q158",
-          "value": "retazos de tela color negro de 8 mts"
+          "value": "Retazo de tela color negro de 8 mts."
         },
         {
           "address": "Q159",
@@ -10479,7 +10479,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q160",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "P161",
@@ -10487,7 +10487,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q161",
-          "value": "Distro pequeño"
+          "value": "Distro de corriente pequeño"
         },
         {
           "address": "P162",
@@ -10867,7 +10867,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q217",
-          "value": "Par LED con cable ac"
+          "value": "Par LED RGB con cable ac"
         }
       ],
       "sourceNotes": [],
@@ -11142,7 +11142,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "llamar a Marvin Bucu para situacion laboral actual"
+              "Luz circular con cable power spicon"
             ],
             [
               2,
@@ -11275,7 +11275,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -11369,7 +11369,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -11386,7 +11386,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               6,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -11423,7 +11423,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               3,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               3,
@@ -11431,7 +11431,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               3,
-              "Cubo 0.30 cm."
+              "Cubo de elevación 0.30 cm"
             ],
             [
               80,
@@ -11456,7 +11456,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "retazos de tela color negro de 8 mts"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         },
@@ -11465,11 +11465,11 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               1,
-              "Distro pequeño"
+              "Distro de corriente pequeño"
             ],
             [
               5,
@@ -11675,7 +11675,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Par LED con cable ac"
+              "Par LED RGB con cable ac"
             ]
           ]
         }
@@ -12620,7 +12620,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "T140",
-          "value": "Par LED con cable ac"
+          "value": "Par LED RGB con cable ac"
         }
       ],
       "sourceNotes": [],
@@ -13137,7 +13137,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Par LED con cable ac"
+              "Par LED RGB con cable ac"
             ]
           ]
         }
@@ -13970,7 +13970,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "W122",
-          "value": "Par LED con cable ac"
+          "value": "Par LED RGB con cable ac"
         }
       ],
       "sourceNotes": [],
@@ -14425,7 +14425,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Par LED con cable ac"
+              "Par LED RGB con cable ac"
             ]
           ]
         }
@@ -15278,7 +15278,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Z122",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "Z123",
@@ -15306,7 +15306,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Z126",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "Y127",
@@ -15366,7 +15366,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Z134",
-          "value": "retazos de tela de 8 metros color negro"
+          "value": "Retazo de tela color negro de 8 mts."
         },
         {
           "address": "Y135",
@@ -15386,7 +15386,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Z137",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "Y138",
@@ -15766,7 +15766,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Z193",
-          "value": "Par LED con cable ac"
+          "value": "Par LED RGB con cable ac"
         }
       ],
       "sourceNotes": [],
@@ -16223,7 +16223,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -16240,7 +16240,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               12,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -16273,7 +16273,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "retazos de tela de 8 metros color negro"
+              "Retazo de tela color negro de 8 mts."
             ],
             [
               2,
@@ -16286,7 +16286,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               5,
@@ -16492,7 +16492,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Par LED con cable ac"
+              "Par LED RGB con cable ac"
             ]
           ]
         }
@@ -16937,7 +16937,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B67",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "A68",
@@ -17009,7 +17009,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B77",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "A78",
@@ -17588,7 +17588,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               4,
@@ -17630,7 +17630,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               5,
@@ -18252,7 +18252,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E66",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "D67",
@@ -18841,7 +18841,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               2,
@@ -19895,7 +19895,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B127",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "A128",
@@ -20023,7 +20023,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B144",
-          "value": "retazos de tela color negro"
+          "value": "Retazo de tela color negro de 8 mts."
         },
         {
           "address": "B145",
@@ -20035,7 +20035,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B146",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "A147",
@@ -20407,7 +20407,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B201",
-          "value": "Par LED con cable ac"
+          "value": "Par LED RGB con cable ac"
         },
         {
           "address": "A203",
@@ -20958,7 +20958,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -21028,7 +21028,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               10,
-              "retazos de tela color negro"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         },
@@ -21037,7 +21037,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               5,
@@ -21239,7 +21239,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Par LED con cable ac"
+              "Par LED RGB con cable ac"
             ]
           ]
         },
@@ -21737,7 +21737,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E74",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "D75",
@@ -21797,7 +21797,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E82",
-          "value": "Pedazos de alfombra negra de 50 X 50cm "
+          "value": "Pedazos de alfombra negra de 0.50 cm x 0.50 cm"
         },
         {
           "address": "D83",
@@ -21805,7 +21805,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E83",
-          "value": "Strap gris"
+          "value": "Strap pequeño"
         },
         {
           "address": "D84",
@@ -21813,7 +21813,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E84",
-          "value": "Escalera"
+          "value": "Pedazos de alfombra negra de 0.50 cm x 0.50 cm"
         },
         {
           "address": "E85",
@@ -21849,7 +21849,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E89",
-          "value": "retazos de tela color negro"
+          "value": "Retazo de tela color negro de 8 mts."
         },
         {
           "address": "E90",
@@ -21861,7 +21861,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E91",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "D92",
@@ -21953,7 +21953,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E103",
-          "value": "Pasacable"
+          "value": "Pisacable"
         },
         {
           "address": "E105",
@@ -22455,7 +22455,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -22488,15 +22488,15 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               20,
-              "Pedazos de alfombra negra de 50 X 50cm"
+              "Pedazos de alfombra negra de 0.50 cm x 0.50 cm"
             ],
             [
               40,
-              "Strap gris"
+              "Strap pequeño"
             ],
             [
               3,
-              "Escalera"
+              "Pedazos de alfombra negra de 0.50 cm x 0.50 cm"
             ]
           ]
         },
@@ -22517,7 +22517,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               10,
-              "retazos de tela color negro"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         },
@@ -22526,7 +22526,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               5,
@@ -22575,7 +22575,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               30,
-              "Pasacable"
+              "Pisacable"
             ]
           ]
         },
@@ -23216,7 +23216,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H79",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "G80",
@@ -23344,7 +23344,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H96",
-          "value": "retazos de tela color negro"
+          "value": "Retazo de tela color negro de 8 mts."
         },
         {
           "address": "H97",
@@ -23356,7 +23356,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H98",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "G99",
@@ -23448,7 +23448,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H110",
-          "value": "Pasacable"
+          "value": "Pisacable"
         },
         {
           "address": "H112",
@@ -23969,7 +23969,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -24039,7 +24039,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               10,
-              "retazos de tela color negro"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         },
@@ -24048,7 +24048,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               5,
@@ -24097,7 +24097,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               10,
-              "Pasacable"
+              "Pisacable"
             ]
           ]
         },
@@ -24582,7 +24582,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B54",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "A55",
@@ -24654,7 +24654,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B64",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "A65",
@@ -25179,7 +25179,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -25221,7 +25221,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               5,
@@ -25953,7 +25953,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H52",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "G53",
@@ -26475,7 +26475,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               2,
@@ -26789,7 +26789,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B18",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "B19",
@@ -26877,7 +26877,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B30",
-          "value": "retazos de tela de 8 metros color negro"
+          "value": "Retazo de tela color negro de 8 mts."
         }
       ],
       "sourceNotes": [],
@@ -26947,7 +26947,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -26997,7 +26997,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "retazos de tela de 8 metros color negro"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         }
@@ -27126,7 +27126,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E18",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "E19",
@@ -27214,7 +27214,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E30",
-          "value": "retazos de tela de 8 metros color negro"
+          "value": "Retazo de tela color negro de 8 mts."
         }
       ],
       "sourceNotes": [],
@@ -27284,7 +27284,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -27334,7 +27334,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "retazos de tela de 8 metros color negro"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         }
@@ -27451,7 +27451,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H17",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "H18",
@@ -27523,7 +27523,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H27",
-          "value": "retazos de tela de 8 metros color negro"
+          "value": "Retazo de tela color negro de 8 mts."
         }
       ],
       "sourceNotes": [],
@@ -27584,7 +27584,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -27626,7 +27626,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "retazos de tela de 8 metros color negro"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         }
@@ -27743,7 +27743,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "K17",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "K18",
@@ -27815,7 +27815,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "K27",
-          "value": "retazos de tela de 8 metros color negro"
+          "value": "Retazo de tela color negro de 8 mts."
         }
       ],
       "sourceNotes": [],
@@ -27876,7 +27876,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -27918,7 +27918,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "retazos de tela de 8 metros color negro"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         }
@@ -27991,7 +27991,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "N11",
-          "value": "Atem mini con cargador "
+          "value": "Switcher Atem mini con cargador "
         },
         {
           "address": "M12",
@@ -28075,7 +28075,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "N22",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "M23",
@@ -28083,7 +28083,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "N23",
-          "value": "HDMI de 15mts"
+          "value": "Cable HDMI 15 mt"
         },
         {
           "address": "N24",
@@ -28155,7 +28155,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "N33",
-          "value": "retazos de tela grandes color negro"
+          "value": "Retazo de tela grande color negro"
         }
       ],
       "sourceNotes": [],
@@ -28191,7 +28191,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "Atem mini con cargador"
+              "Switcher Atem mini con cargador"
             ],
             [
               1,
@@ -28236,11 +28236,11 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ],
             [
               1,
-              "HDMI de 15mts"
+              "Cable HDMI 15 mt"
             ]
           ]
         },
@@ -28282,7 +28282,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               5,
-              "retazos de tela grandes color negro"
+              "Retazo de tela grande color negro"
             ]
           ]
         }
@@ -28355,7 +28355,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q11",
-          "value": "Atem mini con cargador "
+          "value": "Switcher Atem mini con cargador "
         },
         {
           "address": "P12",
@@ -28363,7 +28363,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q12",
-          "value": "Interfaz akain con cargador"
+          "value": "Interfaz Akai con cargador"
         },
         {
           "address": "Q13",
@@ -28439,7 +28439,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q22",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "P23",
@@ -28447,7 +28447,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q23",
-          "value": "HDMI de 15mts"
+          "value": "Cable HDMI 15 mt"
         },
         {
           "address": "Q24",
@@ -28519,7 +28519,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q33",
-          "value": "retazos de tela grandes color negro"
+          "value": "Retazo de tela grande color negro"
         }
       ],
       "sourceNotes": [],
@@ -28555,11 +28555,11 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "Atem mini con cargador"
+              "Switcher Atem mini con cargador"
             ],
             [
               1,
-              "Interfaz akain con cargador"
+              "Interfaz Akai con cargador"
             ]
           ]
         },
@@ -28600,11 +28600,11 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ],
             [
               1,
-              "HDMI de 15mts"
+              "Cable HDMI 15 mt"
             ]
           ]
         },
@@ -28646,7 +28646,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               5,
-              "retazos de tela grandes color negro"
+              "Retazo de tela grande color negro"
             ]
           ]
         }
@@ -28719,7 +28719,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "T11",
-          "value": "Atem mini con cargador "
+          "value": "Switcher Atem mini con cargador "
         },
         {
           "address": "S12",
@@ -28727,7 +28727,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "T12",
-          "value": "Interfaz akain con cargador"
+          "value": "Interfaz Akai con cargador"
         },
         {
           "address": "T13",
@@ -28803,7 +28803,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "T22",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "T23",
@@ -28875,7 +28875,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "T32",
-          "value": "retazos de tela color negro de 8 mts"
+          "value": "Retazo de tela color negro de 8 mts."
         }
       ],
       "sourceNotes": [],
@@ -28911,11 +28911,11 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "Atem mini con cargador"
+              "Switcher Atem mini con cargador"
             ],
             [
               1,
-              "Interfaz akain con cargador"
+              "Interfaz Akai con cargador"
             ]
           ]
         },
@@ -28956,7 +28956,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -28998,7 +28998,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "retazos de tela color negro de 8 mts"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         }
@@ -29071,7 +29071,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "W11",
-          "value": "Atem mini con cargador "
+          "value": "Switcher Atem mini con cargador "
         },
         {
           "address": "V12",
@@ -29079,7 +29079,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "W12",
-          "value": "Interfaz akain con cargador"
+          "value": "Interfaz Akai con cargador"
         },
         {
           "address": "W13",
@@ -29155,7 +29155,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "W22",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "W23",
@@ -29227,7 +29227,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "W32",
-          "value": "retazos de tela color negro de 8 mts"
+          "value": "Retazo de tela color negro de 8 mts."
         }
       ],
       "sourceNotes": [],
@@ -29263,11 +29263,11 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "Atem mini con cargador"
+              "Switcher Atem mini con cargador"
             ],
             [
               1,
-              "Interfaz akain con cargador"
+              "Interfaz Akai con cargador"
             ]
           ]
         },
@@ -29308,7 +29308,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -29350,7 +29350,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "retazos de tela color negro de 8 mts"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         }
@@ -29423,7 +29423,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Z11",
-          "value": "Atem mini con cargador "
+          "value": "Switcher Atem mini con cargador "
         },
         {
           "address": "Y12",
@@ -29431,7 +29431,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Z12",
-          "value": "Interfaz akain con cargador"
+          "value": "Interfaz Akai con cargador"
         },
         {
           "address": "Z13",
@@ -29507,7 +29507,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Z22",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "Z23",
@@ -29579,7 +29579,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Z32",
-          "value": "retazos de tela color negro de 8 mts"
+          "value": "Retazo de tela color negro de 8 mts."
         }
       ],
       "sourceNotes": [],
@@ -29615,11 +29615,11 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "Atem mini con cargador"
+              "Switcher Atem mini con cargador"
             ],
             [
               1,
-              "Interfaz akain con cargador"
+              "Interfaz Akai con cargador"
             ]
           ]
         },
@@ -29660,7 +29660,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -29702,7 +29702,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "retazos de tela color negro de 8 mts"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         }
@@ -29775,7 +29775,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AC11",
-          "value": "Atem mini con cargador "
+          "value": "Switcher Atem mini con cargador "
         },
         {
           "address": "AB12",
@@ -29783,7 +29783,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AC12",
-          "value": "Interfaz akain con cargador"
+          "value": "Interfaz Akai con cargador"
         },
         {
           "address": "AC13",
@@ -29859,7 +29859,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AC22",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "AC23",
@@ -29939,7 +29939,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AC33",
-          "value": "retazos de tela color negro de 8 mts"
+          "value": "Retazo de tela color negro de 8 mts."
         }
       ],
       "sourceNotes": [],
@@ -29975,11 +29975,11 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "Atem mini con cargador"
+              "Switcher Atem mini con cargador"
             ],
             [
               1,
-              "Interfaz akain con cargador"
+              "Interfaz Akai con cargador"
             ]
           ]
         },
@@ -30020,7 +30020,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -30066,7 +30066,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "retazos de tela color negro de 8 mts"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         }
@@ -30139,7 +30139,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AF11",
-          "value": "Atem mini con cargador "
+          "value": "Switcher Atem mini con cargador "
         },
         {
           "address": "AE12",
@@ -30147,7 +30147,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AF12",
-          "value": "Interfaz akain con cargador"
+          "value": "Interfaz Akai con cargador"
         },
         {
           "address": "AF13",
@@ -30223,7 +30223,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AF22",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "AF23",
@@ -30279,7 +30279,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AF30",
-          "value": "retazos de tela color negro de 8 mts"
+          "value": "Retazo de tela color negro de 8 mts."
         }
       ],
       "sourceNotes": [],
@@ -30315,11 +30315,11 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "Atem mini con cargador"
+              "Switcher Atem mini con cargador"
             ],
             [
               1,
-              "Interfaz akain con cargador"
+              "Interfaz Akai con cargador"
             ]
           ]
         },
@@ -30360,7 +30360,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -30394,7 +30394,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "retazos de tela color negro de 8 mts"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         }
@@ -30467,7 +30467,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AI11",
-          "value": "Atem mini con cargador "
+          "value": "Switcher Atem mini con cargador "
         },
         {
           "address": "AH12",
@@ -30475,7 +30475,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AI12",
-          "value": "Interfaz akain con cargador"
+          "value": "Interfaz Akai con cargador"
         },
         {
           "address": "AI13",
@@ -30551,7 +30551,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AI22",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         },
         {
           "address": "AI23",
@@ -30615,7 +30615,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AI31",
-          "value": "retazos de tela color negro de 8 mts"
+          "value": "Retazo de tela color negro de 8 mts."
         }
       ],
       "sourceNotes": [],
@@ -30651,11 +30651,11 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "Atem mini con cargador"
+              "Switcher Atem mini con cargador"
             ],
             [
               1,
-              "Interfaz akain con cargador"
+              "Interfaz Akai con cargador"
             ]
           ]
         },
@@ -30696,7 +30696,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         },
@@ -30734,7 +30734,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "retazos de tela color negro de 8 mts"
+              "Retazo de tela color negro de 8 mts."
             ]
           ]
         }
@@ -30851,7 +30851,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "AL17",
-          "value": "HDMI de 5mts"
+          "value": "Cable HDMI 5 mt"
         }
       ],
       "sourceNotes": [],
@@ -30912,7 +30912,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               1,
-              "HDMI de 5mts"
+              "Cable HDMI 5 mt"
             ]
           ]
         }
@@ -30981,11 +30981,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B8",
-          "value": "straps mediano"
-        },
-        {
-          "address": "C8",
-          "value": "strap pequeño o strap grande"
+          "value": "Strap mediano"
         },
         {
           "address": "A9",
@@ -31001,7 +30997,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B10",
-          "value": "slingas"
+          "value": "Eslingas"
         },
         {
           "address": "A11",
@@ -31009,7 +31005,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B11",
-          "value": "pines"
+          "value": "pin"
         },
         {
           "address": "A12",
@@ -31017,7 +31013,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B12",
-          "value": "chiches"
+          "value": "chiche"
         },
         {
           "address": "B13",
@@ -31029,7 +31025,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B14",
-          "value": "telas de 4 metros en color blanco"
+          "value": "Tela color blanco de 4 mts"
         },
         {
           "address": "A15",
@@ -31037,15 +31033,10 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B15",
-          "value": "telas de 4 metros en color negro"
+          "value": "Tela color negro de 4 mts"
         }
       ],
-      "sourceNotes": [
-        {
-          "address": "C8",
-          "value": "strap pequeño o strap grande"
-        }
-      ],
+      "sourceNotes": [],
       "unlabeledQuantities": [],
       "blankQuantityItems": [],
       "mainSections": [
@@ -31078,7 +31069,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "straps mediano"
+              "Strap mediano"
             ],
             [
               2,
@@ -31086,15 +31077,15 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "slingas"
+              "Eslingas"
             ],
             [
               120,
-              "pines"
+              "pin"
             ],
             [
               70,
-              "chiches"
+              "chiche"
             ]
           ]
         },
@@ -31103,11 +31094,11 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               2,
-              "telas de 4 metros en color blanco"
+              "Tela color blanco de 4 mts"
             ],
             [
               2,
-              "telas de 4 metros en color negro"
+              "Tela color negro de 4 mts"
             ]
           ]
         }
@@ -32692,7 +32683,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B4",
-          "value": "Truss de 2 mt"
+          "value": "Truss 2 mt"
         },
         {
           "address": "A5",
@@ -32700,7 +32691,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B5",
-          "value": "truss de 1 mt"
+          "value": "Truss 1 mt"
         },
         {
           "address": "A6",
@@ -32740,7 +32731,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B10",
-          "value": "Martillo"
+          "value": "Puntas saca pines"
         }
       ],
       "sourceNotes": [],
@@ -32752,11 +32743,11 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               18,
-              "Truss de 2 mt"
+              "Truss 2 mt"
             ],
             [
               8,
-              "truss de 1 mt"
+              "Truss 1 mt"
             ],
             [
               6,
@@ -32776,7 +32767,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               3,
-              "Martillo"
+              "Puntas saca pines"
             ]
           ]
         }
@@ -32801,7 +32792,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E4",
-          "value": "Truss de 2 mt"
+          "value": "Truss 2 mt"
         },
         {
           "address": "D5",
@@ -32809,7 +32800,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E5",
-          "value": "truss de 1 mt"
+          "value": "Truss 1 mt"
         },
         {
           "address": "D6",
@@ -32849,7 +32840,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E10",
-          "value": "Martillo"
+          "value": "Puntas saca pines"
         },
         {
           "address": "E11",
@@ -32861,7 +32852,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E12",
-          "value": "tela de 4mts color negro"
+          "value": "Tela color negro de 4 mts"
         },
         {
           "address": "D13",
@@ -32869,7 +32860,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E13",
-          "value": "tela de 2mts color negro"
+          "value": "Tela color negro de 2 mts"
         }
       ],
       "sourceNotes": [],
@@ -32881,11 +32872,11 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               12,
-              "Truss de 2 mt"
+              "Truss 2 mt"
             ],
             [
               12,
-              "truss de 1 mt"
+              "Truss 1 mt"
             ],
             [
               4,
@@ -32905,7 +32896,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Martillo"
+              "Puntas saca pines"
             ]
           ]
         },
@@ -32914,11 +32905,11 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               6,
-              "tela de 4mts color negro"
+              "Tela color negro de 4 mts"
             ],
             [
               4,
-              "tela de 2mts color negro"
+              "Tela color negro de 2 mts"
             ]
           ]
         }
@@ -32943,7 +32934,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H4",
-          "value": "Truss de 2 mt"
+          "value": "Truss 2 mt"
         },
         {
           "address": "G5",
@@ -32951,7 +32942,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H5",
-          "value": "truss de 1 mt"
+          "value": "Truss 1 mt"
         },
         {
           "address": "G6",
@@ -32991,7 +32982,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H10",
-          "value": "Martillo"
+          "value": "Puntas saca pines"
         },
         {
           "address": "H11",
@@ -33003,7 +32994,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "H12",
-          "value": "tela de 4mts color negro"
+          "value": "Tela color negro de 4 mts"
         }
       ],
       "sourceNotes": [],
@@ -33015,11 +33006,11 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               16,
-              "Truss de 2 mt"
+              "Truss 2 mt"
             ],
             [
               12,
-              "truss de 1 mt"
+              "Truss 1 mt"
             ],
             [
               4,
@@ -33039,7 +33030,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Martillo"
+              "Puntas saca pines"
             ]
           ]
         },
@@ -33048,7 +33039,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               12,
-              "tela de 4mts color negro"
+              "Tela color negro de 4 mts"
             ]
           ]
         }
@@ -33073,7 +33064,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "K4",
-          "value": "Truss de 2 mt"
+          "value": "Truss 2 mt"
         },
         {
           "address": "J5",
@@ -33081,7 +33072,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "K5",
-          "value": "truss de 1 mt"
+          "value": "Truss 1 mt"
         },
         {
           "address": "J6",
@@ -33121,7 +33112,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "K10",
-          "value": "Martillo"
+          "value": "Puntas saca pines"
         },
         {
           "address": "K11",
@@ -33133,7 +33124,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "K12",
-          "value": "tela de 4mts color negro"
+          "value": "Tela color negro de 4 mts"
         }
       ],
       "sourceNotes": [],
@@ -33145,11 +33136,11 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               16,
-              "Truss de 2 mt"
+              "Truss 2 mt"
             ],
             [
               16,
-              "truss de 1 mt"
+              "Truss 1 mt"
             ],
             [
               4,
@@ -33169,7 +33160,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Martillo"
+              "Puntas saca pines"
             ]
           ]
         },
@@ -33178,7 +33169,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               12,
-              "tela de 4mts color negro"
+              "Tela color negro de 4 mts"
             ]
           ]
         }
@@ -34048,7 +34039,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B15",
-          "value": "Bomper T4"
+          "value": "Boomper de T4 para pedestal"
         },
         {
           "address": "A16",
@@ -34312,7 +34303,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B55",
-          "value": "Truss 0.50 cm"
+          "value": "Truss 0.50 mt"
         },
         {
           "address": "A56",
@@ -34384,7 +34375,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "B65",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "A66",
@@ -34887,7 +34878,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               8,
-              "Truss 0.50 cm"
+              "Truss 0.50 mt"
             ],
             [
               6,
@@ -34929,7 +34920,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               5,
@@ -35221,7 +35212,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Bomper T4"
+              "Boomper de T4 para pedestal"
             ],
             [
               2,
@@ -35268,7 +35259,7 @@ window.requerimientoEquipoCatalog = {
             },
             {
               "address": "E6",
-              "value": "Bomper T4"
+              "value": "Boomper de T4 para pedestal"
             },
             {
               "address": "D7",
@@ -35678,7 +35669,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E50",
-          "value": "Distro de corriente"
+          "value": "Distro de corriente grande"
         },
         {
           "address": "D51",
@@ -36187,7 +36178,7 @@ window.requerimientoEquipoCatalog = {
           "items": [
             [
               1,
-              "Distro de corriente"
+              "Distro de corriente grande"
             ],
             [
               2,
@@ -36475,7 +36466,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Bomper T4"
+              "Boomper de T4 para pedestal"
             ],
             [
               2,
@@ -36522,7 +36513,7 @@ window.requerimientoEquipoCatalog = {
             },
             {
               "address": "E6",
-              "value": "Bomper T4"
+              "value": "Boomper de T4 para pedestal"
             },
             {
               "address": "D7",

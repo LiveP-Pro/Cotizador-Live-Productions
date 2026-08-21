@@ -1,11 +1,11 @@
 window.requerimientoEquipoInventory = {
-  "version": "20260818-01",
+  "version": "20260821-01",
   "source": {
     "spreadsheetId": "1AVOncyecjkDB2UfZmAqC__Te9XCkQTIU",
     "workbook": "EQUIPO-DE-AUDIO.xlsx",
     "sheet": "INVENTARIO",
-    "modifiedTime": "2026-08-18T16:45:19.942Z",
-    "range": "B2:C258",
+    "modifiedTime": "2026-08-21T15:12:29.267Z",
+    "range": "B2:C276",
     "titleCell": "B2"
   },
   "categories": [
@@ -236,7 +236,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "In ears Phenyx con su cargador y case",
+          "description": "In ears Phenyx con cargador y case",
           "value": 6,
           "numericValue": 6,
           "sourceQuantity": "6",
@@ -356,7 +356,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "BOOMPER DE QSC",
+          "description": "Boomper de QSC",
           "value": 4,
           "numericValue": 4,
           "sourceQuantity": "4",
@@ -368,10 +368,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Grabadora de audio",
-          "value": 4,
-          "numericValue": 4,
-          "sourceQuantity": "4",
+          "description": "Boomper de T4 para pedestal",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 34,
           "sourceCells": [
@@ -380,7 +380,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Snake de 18 canales",
+          "description": "Boomper de T4 para colgar",
           "value": 2,
           "numericValue": 2,
           "sourceQuantity": "2",
@@ -392,22 +392,57 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Computadora para prueba Macbookpro (Mochila con, Computador Mac, Cargador de Mac, Cable, Cable para Impresora, Cables de C a B, Cleaning Kit, Jet Dryer Blower Air Duster, Quick Charging portable, Juego de llaves combinadas con matraca, Uña para mic SM57 Alambrico y Estuche)",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Grabadora de audio",
+          "value": 4,
+          "numericValue": 4,
+          "sourceQuantity": "4",
           "quantityStatus": "valid",
           "sourceRow": 36,
           "sourceCells": [
             "B36",
             "C36"
           ]
+        },
+        {
+          "description": "Splitter de HDMI",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
+          "sourceRow": 37,
+          "sourceCells": [
+            "C37"
+          ]
+        },
+        {
+          "description": "Snake de 18 canales",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
+          "quantityStatus": "valid",
+          "sourceRow": 38,
+          "sourceCells": [
+            "B38",
+            "C38"
+          ]
+        },
+        {
+          "description": "Computadora para prueba Macbookpro (Mochila con, Computador Mac, Cargador de Mac, Cable, Cable para Impresora, Cables de C a B, Cleaning Kit, Jet Dryer Blower Air Duster, Quick Charging portable, Juego de llaves combinadas con matraca, Uña para mic SM57 Alambrico y Estuche)",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
+          "quantityStatus": "valid",
+          "sourceRow": 39,
+          "sourceCells": [
+            "B39",
+            "C39"
+          ]
         }
       ]
     },
     {
       "title": "TELEFONO",
-      "sourceCell": "B37",
+      "sourceCell": "B40",
       "items": [
         {
           "description": "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)",
@@ -415,17 +450,17 @@ window.requerimientoEquipoInventory = {
           "numericValue": 11,
           "sourceQuantity": "11",
           "quantityStatus": "valid",
-          "sourceRow": 38,
+          "sourceRow": 41,
           "sourceCells": [
-            "B38",
-            "C38"
+            "B41",
+            "C41"
           ]
         }
       ]
     },
     {
       "title": "PEDESTALES",
-      "sourceCell": "B39",
+      "sourceCell": "B42",
       "items": [
         {
           "description": "Pedestal de brazo",
@@ -433,10 +468,10 @@ window.requerimientoEquipoInventory = {
           "numericValue": 6,
           "sourceQuantity": "6",
           "quantityStatus": "valid",
-          "sourceRow": 40,
+          "sourceRow": 43,
           "sourceCells": [
-            "B40",
-            "C40"
+            "B43",
+            "C43"
           ]
         },
         {
@@ -445,10 +480,10 @@ window.requerimientoEquipoInventory = {
           "numericValue": 7,
           "sourceQuantity": "7",
           "quantityStatus": "valid",
-          "sourceRow": 41,
+          "sourceRow": 44,
           "sourceCells": [
-            "B41",
-            "C41"
+            "B44",
+            "C44"
           ]
         },
         {
@@ -457,59 +492,23 @@ window.requerimientoEquipoInventory = {
           "numericValue": 12,
           "sourceQuantity": "12",
           "quantityStatus": "valid",
-          "sourceRow": 42,
+          "sourceRow": 45,
           "sourceCells": [
-            "B42",
-            "C42"
+            "B45",
+            "C45"
           ]
         }
       ]
     },
     {
       "title": "MICROFONIA",
-      "sourceCell": "B43",
+      "sourceCell": "B46",
       "items": [
         {
           "description": "Mic. Sm 58 inalambrico",
           "value": 11,
           "numericValue": 11,
           "sourceQuantity": "11",
-          "quantityStatus": "valid",
-          "sourceRow": 44,
-          "sourceCells": [
-            "B44",
-            "C44"
-          ]
-        },
-        {
-          "description": "Mic. Sm 58 alambrico",
-          "value": 10,
-          "numericValue": 10,
-          "sourceQuantity": "10",
-          "quantityStatus": "valid",
-          "sourceRow": 45,
-          "sourceCells": [
-            "B45",
-            "C45"
-          ]
-        },
-        {
-          "description": "Mic. SM57 alambrico",
-          "value": 12,
-          "numericValue": 12,
-          "sourceQuantity": "12",
-          "quantityStatus": "valid",
-          "sourceRow": 46,
-          "sourceCells": [
-            "B46",
-            "C46"
-          ]
-        },
-        {
-          "description": "Mic. Beta 52A",
-          "value": 3,
-          "numericValue": 3,
-          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 47,
           "sourceCells": [
@@ -518,10 +517,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Mic. Pg81",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
+          "description": "Mic. Sm 58 alambrico",
+          "value": 10,
+          "numericValue": 10,
+          "sourceQuantity": "10",
           "quantityStatus": "valid",
           "sourceRow": 48,
           "sourceCells": [
@@ -530,10 +529,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Mic QLX-D2-J50",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Mic. SM57 alambrico",
+          "value": 12,
+          "numericValue": 12,
+          "sourceQuantity": "12",
           "quantityStatus": "valid",
           "sourceRow": 49,
           "sourceCells": [
@@ -542,10 +541,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Mic. BLX2 M15 con funda (rosado)",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Mic. Beta 52A",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 50,
           "sourceCells": [
@@ -554,10 +553,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Mic. inalambrico de saxo",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
+          "description": "Mic. Pg81",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
           "quantityStatus": "valid",
           "sourceRow": 51,
           "sourceCells": [
@@ -566,10 +565,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Mic. inalambrico de violin",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
+          "description": "Mic QLX-D2-J50",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 52,
           "sourceCells": [
@@ -578,7 +577,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Mic. de diadema SHURE color piel",
+          "description": "Mic. BLX2 M15 con funda (rosado)",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
@@ -590,10 +589,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "MIC SOLAPA SHURE",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Mic. inalambrico de saxo",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 54,
           "sourceCells": [
@@ -602,10 +601,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Clamp para microfono de metal",
-          "value": 8,
-          "numericValue": 8,
-          "sourceQuantity": "8",
+          "description": "Mic. inalambrico de violin",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 55,
           "sourceCells": [
@@ -614,10 +613,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "CLAMPS PARA MICROFONO PLASTICO",
-          "value": 3,
-          "numericValue": 3,
-          "sourceQuantity": "3",
+          "description": "Mic. de diadema SHURE color piel",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 56,
           "sourceCells": [
@@ -626,25 +625,31 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Caja directa",
-          "value": 8,
-          "numericValue": 8,
-          "sourceQuantity": "8",
+          "description": "MIC SOLAPA SHURE",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 57,
           "sourceCells": [
             "B57",
             "C57"
           ]
-        }
-      ]
-    },
-    {
-      "title": "ILUMINACION",
-      "sourceCell": "B58",
-      "items": [
+        },
         {
-          "description": "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)",
+          "description": "Clamp para microfono de metal",
+          "value": 8,
+          "numericValue": 8,
+          "sourceQuantity": "8",
+          "quantityStatus": "valid",
+          "sourceRow": 58,
+          "sourceCells": [
+            "B58",
+            "C58"
+          ]
+        },
+        {
+          "description": "CLAMPS PARA MICROFONO PLASTICO",
           "value": 3,
           "numericValue": 3,
           "sourceQuantity": "3",
@@ -656,34 +661,28 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "CONTROLADOR DMX",
-          "value": 5,
-          "numericValue": 5,
-          "sourceQuantity": "5",
+          "description": "Caja directa",
+          "value": 8,
+          "numericValue": 8,
+          "sourceQuantity": "8",
           "quantityStatus": "valid",
           "sourceRow": 60,
           "sourceCells": [
             "B60",
             "C60"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "title": "ILUMINACION",
+      "sourceCell": "B61",
+      "items": [
         {
-          "description": "Beam 260 con cable power spicon",
-          "value": 34,
-          "numericValue": 34,
-          "sourceQuantity": "34",
-          "quantityStatus": "valid",
-          "sourceRow": 61,
-          "sourceCells": [
-            "B61",
-            "C61"
-          ]
-        },
-        {
-          "description": "Wash con cable power spicon",
-          "value": 4,
-          "numericValue": 4,
-          "sourceQuantity": "4",
+          "description": "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 62,
           "sourceCells": [
@@ -692,10 +691,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Par LED RGB con cable ac",
-          "value": 25,
-          "numericValue": 25,
-          "sourceQuantity": "25",
+          "description": "Dmx 384 adj con cable ac",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 63,
           "sourceCells": [
@@ -704,10 +703,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Luz circular con cable power spicon",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
+          "description": "Beam 260 con cable power spicon",
+          "value": 34,
+          "numericValue": 34,
+          "sourceQuantity": "34",
           "quantityStatus": "valid",
           "sourceRow": 64,
           "sourceCells": [
@@ -716,7 +715,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "SEMAFORROS BARRAS GRNADES DE LUCES",
+          "description": "Wash con cable power spicon",
           "value": 4,
           "numericValue": 4,
           "sourceQuantity": "4",
@@ -728,10 +727,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "BLINDER CTO",
-          "value": 4,
-          "numericValue": 4,
-          "sourceQuantity": "4",
+          "description": "Par LED RGB con cable ac",
+          "value": 25,
+          "numericValue": 25,
+          "sourceQuantity": "25",
           "quantityStatus": "valid",
           "sourceRow": 66,
           "sourceCells": [
@@ -740,10 +739,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Blinder RGB con cable power spicon",
-          "value": 4,
-          "numericValue": 4,
-          "sourceQuantity": "4",
+          "description": "Luz circular con cable power spicon",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 67,
           "sourceCells": [
@@ -752,10 +751,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Laser con cable power spicon",
-          "value": 11,
-          "numericValue": 11,
-          "sourceQuantity": "11",
+          "description": "SEMAFORROS BARRAS GRNADES DE LUCES",
+          "value": 4,
+          "numericValue": 4,
+          "sourceQuantity": "4",
           "quantityStatus": "valid",
           "sourceRow": 68,
           "sourceCells": [
@@ -764,10 +763,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "BARRAS LASER PEQUENAS",
-          "value": 7,
-          "numericValue": 7,
-          "sourceQuantity": "7",
+          "description": "BLINDER CTO",
+          "value": 4,
+          "numericValue": 4,
+          "sourceQuantity": "4",
           "quantityStatus": "valid",
           "sourceRow": 69,
           "sourceCells": [
@@ -776,10 +775,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "BARRAS LASER GRANDES",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
+          "description": "Blinder RGB con cable power spicon",
+          "value": 4,
+          "numericValue": 4,
+          "sourceQuantity": "4",
           "quantityStatus": "valid",
           "sourceRow": 70,
           "sourceCells": [
@@ -788,14 +787,50 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
+          "description": "Laser con cable power spicon",
+          "value": 11,
+          "numericValue": 11,
+          "sourceQuantity": "11",
+          "quantityStatus": "valid",
+          "sourceRow": 71,
+          "sourceCells": [
+            "B71",
+            "C71"
+          ]
+        },
+        {
+          "description": "BARRAS LASER PEQUENAS",
+          "value": 7,
+          "numericValue": 7,
+          "sourceQuantity": "7",
+          "quantityStatus": "valid",
+          "sourceRow": 72,
+          "sourceCells": [
+            "B72",
+            "C72"
+          ]
+        },
+        {
+          "description": "BARRAS LASER GRANDES",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
+          "quantityStatus": "valid",
+          "sourceRow": 73,
+          "sourceCells": [
+            "B73",
+            "C73"
+          ]
+        },
+        {
           "description": "Spliter American DJ con cable ac",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
           "quantityStatus": "missing",
-          "sourceRow": 71,
+          "sourceRow": 74,
           "sourceCells": [
-            "C71"
+            "C74"
           ]
         },
         {
@@ -804,58 +839,23 @@ window.requerimientoEquipoInventory = {
           "numericValue": 3,
           "sourceQuantity": "3",
           "quantityStatus": "valid",
-          "sourceRow": 72,
+          "sourceRow": 75,
           "sourceCells": [
-            "B72",
-            "C72"
+            "B75",
+            "C75"
           ]
         }
       ]
     },
     {
       "title": "EFECTOS ESPECIALES",
-      "sourceCell": "B73",
+      "sourceCell": "B76",
       "items": [
         {
           "description": "Maquina de humo con control, cable ac y ventilador",
           "value": 8,
           "numericValue": 8,
           "sourceQuantity": "8",
-          "quantityStatus": "valid",
-          "sourceRow": 74,
-          "sourceCells": [
-            "B74",
-            "C74"
-          ]
-        },
-        {
-          "description": "Galon liquido de humo",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
-          "sourceRow": 75,
-          "sourceCells": [
-            "C75"
-          ]
-        },
-        {
-          "description": "CANON DE CONFETI",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
-          "quantityStatus": "valid",
-          "sourceRow": 76,
-          "sourceCells": [
-            "B76",
-            "C76"
-          ]
-        },
-        {
-          "description": "Maquina de pirotecnia fria",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 77,
           "sourceCells": [
@@ -864,22 +864,21 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Sobre para pirotecnia medium",
-          "value": 8,
-          "numericValue": 8,
-          "sourceQuantity": "8",
-          "quantityStatus": "valid",
+          "description": "Galon liquido de humo",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 78,
           "sourceCells": [
-            "B78",
             "C78"
           ]
         },
         {
-          "description": "MAQUINAS DE FUEGO",
-          "value": 4,
-          "numericValue": 4,
-          "sourceQuantity": "4",
+          "description": "CANON DE CONFETI",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 79,
           "sourceCells": [
@@ -888,10 +887,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cilindro CO2",
-          "value": 10,
-          "numericValue": 10,
-          "sourceQuantity": "10",
+          "description": "Maquina de pirotecnia fria",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 80,
           "sourceCells": [
@@ -900,10 +899,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cangrejo",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Sobre para pirotecnia medium",
+          "value": 8,
+          "numericValue": 8,
+          "sourceQuantity": "8",
           "quantityStatus": "valid",
           "sourceRow": 81,
           "sourceCells": [
@@ -912,10 +911,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Trocket",
-          "value": 3,
-          "numericValue": 3,
-          "sourceQuantity": "3",
+          "description": "MAQUINAS DE FUEGO",
+          "value": 4,
+          "numericValue": 4,
+          "sourceQuantity": "4",
           "quantityStatus": "valid",
           "sourceRow": 82,
           "sourceCells": [
@@ -924,10 +923,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Strap pequeño",
-          "value": 22,
-          "numericValue": 22,
-          "sourceQuantity": "22",
+          "description": "Cilindro CO2",
+          "value": 10,
+          "numericValue": 10,
+          "sourceQuantity": "10",
           "quantityStatus": "valid",
           "sourceRow": 83,
           "sourceCells": [
@@ -936,10 +935,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Strap mediano",
-          "value": 10,
-          "numericValue": 10,
-          "sourceQuantity": "10",
+          "description": "Cangrejo",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 84,
           "sourceCells": [
@@ -948,10 +947,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "DMX",
-          "value": 5,
-          "numericValue": 5,
-          "sourceQuantity": "5",
+          "description": "Trocket",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 85,
           "sourceCells": [
@@ -960,10 +959,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Pistola de CO2",
-          "value": 4,
-          "numericValue": 4,
-          "sourceQuantity": "4",
+          "description": "Strap pequeño",
+          "value": 22,
+          "numericValue": 22,
+          "sourceQuantity": "22",
           "quantityStatus": "valid",
           "sourceRow": 86,
           "sourceCells": [
@@ -972,28 +971,34 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Manguera de 10mts.",
-          "value": 3,
-          "numericValue": 3,
-          "sourceQuantity": "3",
+          "description": "Strap mediano",
+          "value": 10,
+          "numericValue": 10,
+          "sourceQuantity": "10",
           "quantityStatus": "valid",
           "sourceRow": 87,
           "sourceCells": [
             "B87",
             "C87"
           ]
-        }
-      ]
-    },
-    {
-      "title": "VIDEO",
-      "sourceCell": "B88",
-      "items": [
+        },
         {
-          "description": "Modulo de pantalla LED 1mts X 0.50cm",
-          "value": 100,
-          "numericValue": 100,
-          "sourceQuantity": "100",
+          "description": "DMX",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
+          "quantityStatus": "valid",
+          "sourceRow": 88,
+          "sourceCells": [
+            "B88",
+            "C88"
+          ]
+        },
+        {
+          "description": "Pistola de CO2",
+          "value": 4,
+          "numericValue": 4,
+          "sourceQuantity": "4",
           "quantityStatus": "valid",
           "sourceRow": 89,
           "sourceCells": [
@@ -1002,34 +1007,28 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Computadora de pantalla con su cargador, mouse",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
+          "description": "Manguera de 10mts.",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 90,
           "sourceCells": [
             "B90",
             "C90"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "title": "VIDEO",
+      "sourceCell": "B91",
+      "items": [
         {
-          "description": "Procesador de pantalla con su AC",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
-          "quantityStatus": "valid",
-          "sourceRow": 91,
-          "sourceCells": [
-            "B91",
-            "C91"
-          ]
-        },
-        {
-          "description": "Interfaz de audio volth 2",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Modulo de pantalla LED 1mts X 0.50cm",
+          "value": 100,
+          "numericValue": 100,
+          "sourceQuantity": "100",
           "quantityStatus": "valid",
           "sourceRow": 92,
           "sourceCells": [
@@ -1038,10 +1037,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Clickers completo",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Computadora de pantalla con su cargador, mouse",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 93,
           "sourceCells": [
@@ -1050,10 +1049,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Switcher Atem mini con cargador",
-          "value": 3,
-          "numericValue": 3,
-          "sourceQuantity": "3",
+          "description": "Procesador de pantalla con su AC",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 94,
           "sourceCells": [
@@ -1062,7 +1061,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Capturadora de video",
+          "description": "Interfaz de audio volth 2",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
@@ -1074,7 +1073,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Interfaz Akai con cargador",
+          "description": "Clickers completo",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
@@ -1086,25 +1085,31 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "TV LG Y TOSHIVA",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
+          "description": "Switcher Atem mini con cargador",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 97,
           "sourceCells": [
             "B97",
             "C97"
           ]
-        }
-      ]
-    },
-    {
-      "title": "INSTRUMENTOS",
-      "sourceCell": "B98",
-      "items": [
+        },
         {
-          "description": "Bombo DW con funda",
+          "description": "Capturadora de video",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
+          "quantityStatus": "valid",
+          "sourceRow": 98,
+          "sourceCells": [
+            "B98",
+            "C98"
+          ]
+        },
+        {
+          "description": "Interfaz Akai con cargador",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
@@ -1116,7 +1121,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Alfombra",
+          "description": "TV LG Y TOSHIVA",
           "value": 2,
           "numericValue": 2,
           "sourceQuantity": "2",
@@ -1126,24 +1131,18 @@ window.requerimientoEquipoInventory = {
             "B100",
             "C100"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "title": "INSTRUMENTOS",
+      "sourceCell": "B101",
+      "items": [
         {
-          "description": "Banquito DW",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
-          "quantityStatus": "valid",
-          "sourceRow": 101,
-          "sourceCells": [
-            "B101",
-            "C101"
-          ]
-        },
-        {
-          "description": "Par de baquetas con estuche",
-          "value": 4,
-          "numericValue": 4,
-          "sourceQuantity": "4",
+          "description": "Bombo DW con funda",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 102,
           "sourceCells": [
@@ -1152,10 +1151,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Caja DW con funda",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Alfombra",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 103,
           "sourceCells": [
@@ -1164,10 +1163,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Tom no.1 DW con funda",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Banquito DW",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 104,
           "sourceCells": [
@@ -1176,10 +1175,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Tom no.2 con funda",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
+          "description": "Par de baquetas con estuche",
+          "value": 4,
+          "numericValue": 4,
+          "sourceQuantity": "4",
           "quantityStatus": "valid",
           "sourceRow": 105,
           "sourceCells": [
@@ -1188,10 +1187,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Pedal de bombo",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
+          "description": "Caja DW con funda",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 106,
           "sourceCells": [
@@ -1200,7 +1199,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Floortom DW con funda",
+          "description": "Tom no.1 DW con funda",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
@@ -1212,10 +1211,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Hit hat zildjan con funda",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Tom no.2 con funda",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 108,
           "sourceCells": [
@@ -1224,10 +1223,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "China zildjan con funda",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Pedal de bombo",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 109,
           "sourceCells": [
@@ -1236,7 +1235,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Ride zildjan con funda",
+          "description": "Floortom DW con funda",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
@@ -1248,7 +1247,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Bombo Gretsch con funda",
+          "description": "Hit hat zildjan con funda",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
@@ -1260,7 +1259,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Caja Gretsch con funda",
+          "description": "China zildjan con funda",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
@@ -1272,7 +1271,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Tom no.1 Gretsch con funda",
+          "description": "Ride zildjan con funda",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
@@ -1284,7 +1283,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Floortom Gretsch con funda",
+          "description": "Bombo Gretsch con funda",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
@@ -1296,7 +1295,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Bateria electrica con cable de corriente",
+          "description": "Caja Gretsch con funda",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
@@ -1308,27 +1307,63 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "DRUMS 1 ACUSTICA BLACKLINE 1",
-          "value": 3,
-          "numericValue": 3,
-          "sourceQuantity": "3",
+          "description": "Tom no.1 Gretsch con funda",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 116,
           "sourceCells": [
             "B116",
             "C116"
           ]
+        },
+        {
+          "description": "Floortom Gretsch con funda",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
+          "quantityStatus": "valid",
+          "sourceRow": 117,
+          "sourceCells": [
+            "B117",
+            "C117"
+          ]
+        },
+        {
+          "description": "Bateria electrica con cable de corriente",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
+          "quantityStatus": "valid",
+          "sourceRow": 118,
+          "sourceCells": [
+            "B118",
+            "C118"
+          ]
+        },
+        {
+          "description": "DRUMS 1 ACUSTICA BLACKLINE 1",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
+          "quantityStatus": "valid",
+          "sourceRow": 119,
+          "sourceCells": [
+            "B119",
+            "C119"
+          ]
         }
       ]
     },
     {
       "title": "ESTRUCTURA",
-      "sourceCell": "B117",
+      "sourceCell": "B120",
       "items": []
     },
     {
       "title": "ESTRUCTURA DJ",
-      "sourceCell": "B118",
+      "sourceCell": "B121",
       "items": [
         {
           "description": "DJ booth",
@@ -1336,10 +1371,10 @@ window.requerimientoEquipoInventory = {
           "numericValue": 4,
           "sourceQuantity": "4",
           "quantityStatus": "valid",
-          "sourceRow": 119,
+          "sourceRow": 122,
           "sourceCells": [
-            "B119",
-            "C119"
+            "B122",
+            "C122"
           ]
         },
         {
@@ -1348,10 +1383,10 @@ window.requerimientoEquipoInventory = {
           "numericValue": 2,
           "sourceQuantity": "2",
           "quantityStatus": "valid",
-          "sourceRow": 120,
+          "sourceRow": 123,
           "sourceCells": [
-            "B120",
-            "C120"
+            "B123",
+            "C123"
           ]
         },
         {
@@ -1360,10 +1395,10 @@ window.requerimientoEquipoInventory = {
           "numericValue": 7,
           "sourceQuantity": "7",
           "quantityStatus": "valid",
-          "sourceRow": 121,
+          "sourceRow": 124,
           "sourceCells": [
-            "B121",
-            "C121"
+            "B124",
+            "C124"
           ]
         },
         {
@@ -1372,17 +1407,17 @@ window.requerimientoEquipoInventory = {
           "numericValue": 7,
           "sourceQuantity": "7",
           "quantityStatus": "valid",
-          "sourceRow": 122,
+          "sourceRow": 125,
           "sourceCells": [
-            "B122",
-            "C122"
+            "B125",
+            "C125"
           ]
         }
       ]
     },
     {
       "title": "ESTRUCTURA LUCES PEQUEÑA",
-      "sourceCell": "B123",
+      "sourceCell": "B126",
       "items": [
         {
           "description": "Estructura blanca pequeña con su funda",
@@ -1390,10 +1425,10 @@ window.requerimientoEquipoInventory = {
           "numericValue": 6,
           "sourceQuantity": "6",
           "quantityStatus": "valid",
-          "sourceRow": 124,
+          "sourceRow": 127,
           "sourceCells": [
-            "B124",
-            "C124"
+            "B127",
+            "C127"
           ]
         },
         {
@@ -1402,10 +1437,10 @@ window.requerimientoEquipoInventory = {
           "numericValue": 12,
           "sourceQuantity": "12",
           "quantityStatus": "valid",
-          "sourceRow": 125,
+          "sourceRow": 128,
           "sourceCells": [
-            "B125",
-            "C125"
+            "B128",
+            "C128"
           ]
         },
         {
@@ -1414,10 +1449,10 @@ window.requerimientoEquipoInventory = {
           "numericValue": 12,
           "sourceQuantity": "12",
           "quantityStatus": "valid",
-          "sourceRow": 126,
+          "sourceRow": 129,
           "sourceCells": [
-            "B126",
-            "C126"
+            "B129",
+            "C129"
           ]
         },
         {
@@ -1426,59 +1461,23 @@ window.requerimientoEquipoInventory = {
           "numericValue": 96,
           "sourceQuantity": "96",
           "quantityStatus": "valid",
-          "sourceRow": 127,
+          "sourceRow": 130,
           "sourceCells": [
-            "B127",
-            "C127"
+            "B130",
+            "C130"
           ]
         }
       ]
     },
     {
       "title": "ESTRUCTURA LUCES",
-      "sourceCell": "B128",
+      "sourceCell": "B131",
       "items": [
         {
           "description": "Truss 0.25 mt",
           "value": 4,
           "numericValue": 4,
           "sourceQuantity": "4",
-          "quantityStatus": "valid",
-          "sourceRow": 129,
-          "sourceCells": [
-            "B129",
-            "C129"
-          ]
-        },
-        {
-          "description": "Truss 0.50 mt",
-          "value": 30,
-          "numericValue": 30,
-          "sourceQuantity": "30",
-          "quantityStatus": "valid",
-          "sourceRow": 130,
-          "sourceCells": [
-            "B130",
-            "C130"
-          ]
-        },
-        {
-          "description": "Truss 1 mt",
-          "value": 14,
-          "numericValue": 14,
-          "sourceQuantity": "14",
-          "quantityStatus": "valid",
-          "sourceRow": 131,
-          "sourceCells": [
-            "B131",
-            "C131"
-          ]
-        },
-        {
-          "description": "Truss 2 mt",
-          "value": 40,
-          "numericValue": 40,
-          "sourceQuantity": "40",
           "quantityStatus": "valid",
           "sourceRow": 132,
           "sourceCells": [
@@ -1487,10 +1486,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Truss 3 mt",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
+          "description": "Truss 0.50 mt",
+          "value": 30,
+          "numericValue": 30,
+          "sourceQuantity": "30",
           "quantityStatus": "valid",
           "sourceRow": 133,
           "sourceCells": [
@@ -1499,10 +1498,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Platina grande",
-          "value": 44,
-          "numericValue": 44,
-          "sourceQuantity": "44",
+          "description": "Truss 1 mt",
+          "value": 14,
+          "numericValue": 14,
+          "sourceQuantity": "14",
           "quantityStatus": "valid",
           "sourceRow": 134,
           "sourceCells": [
@@ -1511,7 +1510,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Platina pequeña",
+          "description": "Truss 2 mt",
           "value": 40,
           "numericValue": 40,
           "sourceQuantity": "40",
@@ -1523,10 +1522,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Chiche",
-          "value": 353,
-          "numericValue": 353,
-          "sourceQuantity": "353",
+          "description": "Truss 3 mt",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 136,
           "sourceCells": [
@@ -1535,10 +1534,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Pin",
-          "value": 328,
-          "numericValue": 328,
-          "sourceQuantity": "328",
+          "description": "Platina grande",
+          "value": 44,
+          "numericValue": 44,
+          "sourceQuantity": "44",
           "quantityStatus": "valid",
           "sourceRow": 137,
           "sourceCells": [
@@ -1547,10 +1546,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Hamburguesa doble",
-          "value": 22,
-          "numericValue": 22,
-          "sourceQuantity": "22",
+          "description": "Platina pequeña",
+          "value": 40,
+          "numericValue": 40,
+          "sourceQuantity": "40",
           "quantityStatus": "valid",
           "sourceRow": 138,
           "sourceCells": [
@@ -1559,10 +1558,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Base de clamp",
-          "value": 65,
-          "numericValue": 65,
-          "sourceQuantity": "65",
+          "description": "Chiche",
+          "value": 353,
+          "numericValue": 353,
+          "sourceQuantity": "353",
           "quantityStatus": "valid",
           "sourceRow": 139,
           "sourceCells": [
@@ -1571,10 +1570,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Clamp para luces",
-          "value": 65,
-          "numericValue": 65,
-          "sourceQuantity": "65",
+          "description": "Pin",
+          "value": 328,
+          "numericValue": 328,
+          "sourceQuantity": "328",
           "quantityStatus": "valid",
           "sourceRow": 140,
           "sourceCells": [
@@ -1583,10 +1582,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Tubo galvanizado",
-          "value": 19,
-          "numericValue": 19,
-          "sourceQuantity": "19",
+          "description": "Hamburguesa doble",
+          "value": 22,
+          "numericValue": 22,
+          "sourceQuantity": "22",
           "quantityStatus": "valid",
           "sourceRow": 141,
           "sourceCells": [
@@ -1595,10 +1594,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Bompers originales",
-          "value": 12,
-          "numericValue": 12,
-          "sourceQuantity": "12",
+          "description": "Base de clamp",
+          "value": 65,
+          "numericValue": 65,
+          "sourceQuantity": "65",
           "quantityStatus": "valid",
           "sourceRow": 142,
           "sourceCells": [
@@ -1607,10 +1606,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Chaco",
-          "value": 12,
-          "numericValue": 12,
-          "sourceQuantity": "12",
+          "description": "Clamp para luces",
+          "value": 65,
+          "numericValue": 65,
+          "sourceQuantity": "65",
           "quantityStatus": "valid",
           "sourceRow": 143,
           "sourceCells": [
@@ -1619,10 +1618,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Contrapeso",
-          "value": 9,
-          "numericValue": 9,
-          "sourceQuantity": "9",
+          "description": "Tubo galvanizado",
+          "value": 19,
+          "numericValue": 19,
+          "sourceQuantity": "19",
           "quantityStatus": "valid",
           "sourceRow": 144,
           "sourceCells": [
@@ -1631,10 +1630,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cubo de elevación 0.40 cm",
-          "value": 4,
-          "numericValue": 4,
-          "sourceQuantity": "4",
+          "description": "Bompers originales",
+          "value": 12,
+          "numericValue": 12,
+          "sourceQuantity": "12",
           "quantityStatus": "valid",
           "sourceRow": 145,
           "sourceCells": [
@@ -1643,10 +1642,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cubo de elevación pequeños 028 cm x 030 cm",
-          "value": 3,
-          "numericValue": 3,
-          "sourceQuantity": "3",
+          "description": "Chaco",
+          "value": 12,
+          "numericValue": 12,
+          "sourceQuantity": "12",
           "quantityStatus": "valid",
           "sourceRow": 146,
           "sourceCells": [
@@ -1655,10 +1654,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cubo de diseño",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
+          "description": "Contrapeso",
+          "value": 9,
+          "numericValue": 9,
+          "sourceQuantity": "9",
           "quantityStatus": "valid",
           "sourceRow": 147,
           "sourceCells": [
@@ -1667,10 +1666,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Eslingas",
-          "value": 12,
-          "numericValue": 12,
-          "sourceQuantity": "12",
+          "description": "Cubo de elevación 0.40 cm",
+          "value": 4,
+          "numericValue": 4,
+          "sourceQuantity": "4",
           "quantityStatus": "valid",
           "sourceRow": 148,
           "sourceCells": [
@@ -1679,10 +1678,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Estacas",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
+          "description": "Cubo de elevación 0.30 cm",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 149,
           "sourceCells": [
@@ -1691,7 +1690,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Fulman protector de corriente",
+          "description": "Cubo de diseño",
           "value": 2,
           "numericValue": 2,
           "sourceQuantity": "2",
@@ -1703,10 +1702,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Patines",
-          "value": 4,
-          "numericValue": 4,
-          "sourceQuantity": "4",
+          "description": "Eslingas",
+          "value": 12,
+          "numericValue": 12,
+          "sourceQuantity": "12",
           "quantityStatus": "valid",
           "sourceRow": 151,
           "sourceCells": [
@@ -1715,10 +1714,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Polipastos",
-          "value": 8,
-          "numericValue": 8,
-          "sourceQuantity": "8",
+          "description": "Estacas",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 152,
           "sourceCells": [
@@ -1727,10 +1726,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Tensores",
-          "value": 7,
-          "numericValue": 7,
-          "sourceQuantity": "7",
+          "description": "Fulman protector de corriente",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 153,
           "sourceCells": [
@@ -1739,28 +1738,34 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Zapata",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
+          "description": "Patines",
+          "value": 4,
+          "numericValue": 4,
+          "sourceQuantity": "4",
           "quantityStatus": "valid",
           "sourceRow": 154,
           "sourceCells": [
             "B154",
             "C154"
           ]
-        }
-      ]
-    },
-    {
-      "title": "CABLEADO",
-      "sourceCell": "B155",
-      "items": [
+        },
         {
-          "description": "Distro de corriente",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
+          "description": "Polipastos",
+          "value": 8,
+          "numericValue": 8,
+          "sourceQuantity": "8",
+          "quantityStatus": "valid",
+          "sourceRow": 155,
+          "sourceCells": [
+            "B155",
+            "C155"
+          ]
+        },
+        {
+          "description": "Tensores",
+          "value": 7,
+          "numericValue": 7,
+          "sourceQuantity": "7",
           "quantityStatus": "valid",
           "sourceRow": 156,
           "sourceCells": [
@@ -1769,51 +1774,49 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cable de corriente",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
+          "description": "Zapata",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
+          "quantityStatus": "valid",
           "sourceRow": 157,
           "sourceCells": [
+            "B157",
             "C157"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "title": "CABLEADO",
+      "sourceCell": "B158",
+      "items": [
         {
-          "description": "Cable de señal",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
-          "sourceRow": 158,
-          "sourceCells": [
-            "C158"
-          ]
-        },
-        {
-          "description": "Cable de DVI A DVI",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
+          "description": "Distro de corriente grande",
+          "value": 4,
+          "numericValue": 4,
+          "sourceQuantity": "4",
+          "quantityStatus": "valid",
           "sourceRow": 159,
           "sourceCells": [
+            "B159",
             "C159"
           ]
         },
         {
-          "description": "Cable de HDMI A DVI",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
+          "description": "Distro de corriente pequeño",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
+          "quantityStatus": "valid",
           "sourceRow": 160,
           "sourceCells": [
+            "B160",
             "C160"
           ]
         },
         {
-          "description": "Cable de HDMI A HDMI",
+          "description": "Cable de corriente",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
@@ -1824,7 +1827,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cable de USB a datos",
+          "description": "Cable de señal",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
@@ -1835,7 +1838,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cat 5 de 50mts.",
+          "description": "Cable de DVI A DVI",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
@@ -1846,7 +1849,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cat 5 de 10mts.",
+          "description": "Cable HDMI 5 mt",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
@@ -1857,7 +1860,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "HDMI de 5mts",
+          "description": "Cable HDMI 15 mt",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
@@ -1868,43 +1871,40 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cable ac",
-          "value": 24,
-          "numericValue": 24,
-          "sourceQuantity": "24",
-          "quantityStatus": "valid",
+          "description": "Cable de HDMI A DVI",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 166,
           "sourceCells": [
-            "B166",
             "C166"
           ]
         },
         {
-          "description": "Cable power spicon",
-          "value": 81,
-          "numericValue": 81,
-          "sourceQuantity": "81",
-          "quantityStatus": "valid",
+          "description": "Cable de HDMI A HDMI",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 167,
           "sourceCells": [
-            "B167",
             "C167"
           ]
         },
         {
-          "description": "Cable de 1/4 a 1/4",
-          "value": 9,
-          "numericValue": 9,
-          "sourceQuantity": "9",
-          "quantityStatus": "valid",
+          "description": "Cable de USB a datos",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 168,
           "sourceCells": [
-            "B168",
             "C168"
           ]
         },
         {
-          "description": "Case de pulpos (6 grandes y 6 pequeños)",
+          "description": "Cat 5 de 50mts.",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
@@ -1915,33 +1915,33 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cable TCJ",
-          "value": 3,
-          "numericValue": 3,
-          "sourceQuantity": "3",
-          "quantityStatus": "valid",
-          "sourceRow": 170,
-          "sourceCells": [
-            "B170",
-            "C170"
-          ]
-        },
-        {
-          "description": "Cuadro de corriente",
+          "description": "Cat 5 de 10mts.",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
           "quantityStatus": "missing",
+          "sourceRow": 170,
+          "sourceCells": [
+            "C170"
+          ]
+        },
+        {
+          "description": "Cable ac",
+          "value": 24,
+          "numericValue": 24,
+          "sourceQuantity": "24",
+          "quantityStatus": "valid",
           "sourceRow": 171,
           "sourceCells": [
+            "B171",
             "C171"
           ]
         },
         {
-          "description": "Regleta",
-          "value": 51,
-          "numericValue": 51,
-          "sourceQuantity": "51",
+          "description": "Cable power spicon",
+          "value": 81,
+          "numericValue": 81,
+          "sourceQuantity": "81",
           "quantityStatus": "valid",
           "sourceRow": 172,
           "sourceCells": [
@@ -1950,10 +1950,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cable XLR",
-          "value": 291,
-          "numericValue": 291,
-          "sourceQuantity": "291",
+          "description": "Cable de 1/4 a 1/4",
+          "value": 9,
+          "numericValue": 9,
+          "sourceQuantity": "9",
           "quantityStatus": "valid",
           "sourceRow": 173,
           "sourceCells": [
@@ -1962,7 +1962,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cable XLR de 1/4\" a XLR macho",
+          "description": "Case de pulpos (6 grandes y 6 pequeños)",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
@@ -1973,10 +1973,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Extensión",
-          "value": 356,
-          "numericValue": 356,
-          "sourceQuantity": "356",
+          "description": "Cable TCJ",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 175,
           "sourceCells": [
@@ -1985,51 +1985,56 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Extension múltiple",
-          "value": 11,
-          "numericValue": 11,
-          "sourceQuantity": "11",
-          "quantityStatus": "valid",
-          "sourceRow": 176,
-          "sourceCells": [
-            "B176",
-            "C176"
-          ]
-        }
-      ]
-    },
-    {
-      "title": "ACCESORIOS DE EVENTO",
-      "sourceCell": "B177",
-      "items": [
-        {
-          "description": "Extintor",
+          "description": "Cuadro de corriente",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
           "quantityStatus": "missing",
+          "sourceRow": 176,
+          "sourceCells": [
+            "C176"
+          ]
+        },
+        {
+          "description": "Regleta",
+          "value": 51,
+          "numericValue": 51,
+          "sourceQuantity": "51",
+          "quantityStatus": "valid",
+          "sourceRow": 177,
+          "sourceCells": [
+            "B177",
+            "C177"
+          ]
+        },
+        {
+          "description": "Cable XLR",
+          "value": 291,
+          "numericValue": 291,
+          "sourceQuantity": "291",
+          "quantityStatus": "valid",
           "sourceRow": 178,
           "sourceCells": [
+            "B178",
             "C178"
           ]
         },
         {
-          "description": "Bolsa de agua pura",
-          "value": 25,
-          "numericValue": 25,
-          "sourceQuantity": "25",
-          "quantityStatus": "valid",
+          "description": "Cable XLR de 1/4\" a XLR macho",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 179,
           "sourceCells": [
-            "B179",
             "C179"
           ]
         },
         {
-          "description": "Mesa plegable",
-          "value": 7,
-          "numericValue": 7,
-          "sourceQuantity": "7",
+          "description": "Extensión",
+          "value": 356,
+          "numericValue": 356,
+          "sourceQuantity": "356",
           "quantityStatus": "valid",
           "sourceRow": 180,
           "sourceCells": [
@@ -2038,64 +2043,63 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Toldo 3x3 blanco",
-          "value": 3,
-          "numericValue": 3,
-          "sourceQuantity": "3",
+          "description": "Extension múltiple",
+          "value": 11,
+          "numericValue": 11,
+          "sourceQuantity": "11",
           "quantityStatus": "valid",
           "sourceRow": 181,
           "sourceCells": [
             "B181",
             "C181"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "title": "ACCESORIOS DE EVENTO",
+      "sourceCell": "B182",
+      "items": [
         {
-          "description": "Toldo 2x2 blanco",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
-          "quantityStatus": "valid",
-          "sourceRow": 182,
-          "sourceCells": [
-            "B182",
-            "C182"
-          ]
-        },
-        {
-          "description": "TOLDO 7X5 BLANCO",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
-          "quantityStatus": "valid",
+          "description": "Extintor",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 183,
           "sourceCells": [
-            "B183",
             "C183"
           ]
         },
         {
-          "description": "Case de Teclado (3 Boton de panico proco, 2 Sujetador Ipad, 2 Porta vaso, 1 Tripod, 1 Toalla, 1 Uña)",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Escalera",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 184,
           "sourceCells": [
             "B184",
             "C184"
           ]
-        }
-      ]
-    },
-    {
-      "title": "HERRAMIENTAS",
-      "sourceCell": "B185",
-      "items": [
+        },
         {
-          "description": "CAJA DE HERRAMIENTAS",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
+          "description": "Pisacable",
+          "value": 34,
+          "numericValue": 34,
+          "sourceQuantity": "34",
+          "quantityStatus": "valid",
+          "sourceRow": 185,
+          "sourceCells": [
+            "B185",
+            "C185"
+          ]
+        },
+        {
+          "description": "Bolsa de agua pura",
+          "value": 25,
+          "numericValue": 25,
+          "sourceQuantity": "25",
           "quantityStatus": "valid",
           "sourceRow": 186,
           "sourceCells": [
@@ -2104,10 +2108,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Macho",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
+          "description": "Mesa plegable",
+          "value": 7,
+          "numericValue": 7,
+          "sourceQuantity": "7",
           "quantityStatus": "valid",
           "sourceRow": 187,
           "sourceCells": [
@@ -2116,10 +2120,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Pata de Gallo",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
+          "description": "Toldo 3x3 blanco",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 188,
           "sourceCells": [
@@ -2128,10 +2132,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Flipon doble de 50 amp",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
+          "description": "Toldo 2x2 blanco",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
           "quantityStatus": "valid",
           "sourceRow": 189,
           "sourceCells": [
@@ -2140,10 +2144,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Desarmador de estrella",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
+          "description": "TOLDO 7X5 BLANCO",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 190,
           "sourceCells": [
@@ -2152,34 +2156,28 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Desarmador de castigaderas",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
+          "description": "Case de Teclado (3 Boton de panico proco, 2 Sujetador Ipad, 2 Porta vaso, 1 Tripod, 1 Toalla, 1 Uña)",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 191,
           "sourceCells": [
             "B191",
             "C191"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "title": "HERRAMIENTAS",
+      "sourceCell": "B192",
+      "items": [
         {
-          "description": "Cuchilla",
+          "description": "CAJA DE HERRAMIENTAS",
           "value": 6,
           "numericValue": 6,
           "sourceQuantity": "6",
-          "quantityStatus": "valid",
-          "sourceRow": 192,
-          "sourceCells": [
-            "B192",
-            "C192"
-          ]
-        },
-        {
-          "description": "Estuche llaves Allen (25 unidades)",
-          "value": 150,
-          "numericValue": 150,
-          "sourceQuantity": "150",
           "quantityStatus": "valid",
           "sourceRow": 193,
           "sourceCells": [
@@ -2188,7 +2186,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Alicate",
+          "description": "Macho",
           "value": 6,
           "numericValue": 6,
           "sourceQuantity": "6",
@@ -2200,7 +2198,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Tenaza",
+          "description": "Pata de Gallo",
           "value": 6,
           "numericValue": 6,
           "sourceQuantity": "6",
@@ -2212,7 +2210,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Pinza",
+          "description": "Flipon doble de 50 amp",
           "value": 6,
           "numericValue": 6,
           "sourceQuantity": "6",
@@ -2224,7 +2222,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Espiga tipo tester",
+          "description": "Desarmador de estrella",
           "value": 6,
           "numericValue": 6,
           "sourceQuantity": "6",
@@ -2236,10 +2234,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Multímetro Fluke con estuche",
-          "value": 7,
-          "numericValue": 7,
-          "sourceQuantity": "7",
+          "description": "Desarmador de castigaderas",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
           "quantityStatus": "valid",
           "sourceRow": 198,
           "sourceCells": [
@@ -2248,10 +2246,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Duc tape",
-          "value": 70,
-          "numericValue": 70,
-          "sourceQuantity": "70",
+          "description": "Cuchilla",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
           "quantityStatus": "valid",
           "sourceRow": 199,
           "sourceCells": [
@@ -2260,10 +2258,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Paquete de cinchos 0.35 cm",
-          "value": 228,
-          "numericValue": 228,
-          "sourceQuantity": "228",
+          "description": "Estuche llaves Allen (25 unidades)",
+          "value": 150,
+          "numericValue": 150,
+          "sourceQuantity": "150",
           "quantityStatus": "valid",
           "sourceRow": 200,
           "sourceCells": [
@@ -2272,115 +2270,121 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Cinta de aislar Electrica PVC",
-          "value": 45,
-          "numericValue": 45,
-          "sourceQuantity": "45",
+          "description": "Alicate",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
           "quantityStatus": "valid",
           "sourceRow": 201,
           "sourceCells": [
             "B201",
             "C201"
           ]
-        }
-      ]
-    },
-    {
-      "title": "LIMPIEZA",
-      "sourceCell": "B202",
-      "items": [
+        },
         {
-          "description": "Trapo",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
+          "description": "Tenaza",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
+          "quantityStatus": "valid",
+          "sourceRow": 202,
+          "sourceCells": [
+            "B202",
+            "C202"
+          ]
+        },
+        {
+          "description": "Pinza",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
+          "quantityStatus": "valid",
           "sourceRow": 203,
           "sourceCells": [
+            "B203",
             "C203"
           ]
         },
         {
-          "description": "Escoba",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
+          "description": "Espiga tipo tester",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
+          "quantityStatus": "valid",
           "sourceRow": 204,
           "sourceCells": [
+            "B204",
             "C204"
           ]
         },
         {
-          "description": "Pala",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
+          "description": "Multímetro Fluke con estuche",
+          "value": 7,
+          "numericValue": 7,
+          "sourceQuantity": "7",
+          "quantityStatus": "valid",
           "sourceRow": 205,
           "sourceCells": [
+            "B205",
             "C205"
           ]
         },
         {
-          "description": "Trapiador",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
+          "description": "Puntas saca pines",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
+          "quantityStatus": "valid",
           "sourceRow": 206,
           "sourceCells": [
+            "B206",
             "C206"
           ]
         },
         {
-          "description": "Atomizador con desinfectante",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
+          "description": "Duc tape",
+          "value": 70,
+          "numericValue": 70,
+          "sourceQuantity": "70",
+          "quantityStatus": "valid",
           "sourceRow": 207,
           "sourceCells": [
+            "B207",
             "C207"
           ]
         },
         {
-          "description": "Atomizador con silicón",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
+          "description": "Paquete de cinchos 0.35 cm",
+          "value": 228,
+          "numericValue": 228,
+          "sourceQuantity": "228",
+          "quantityStatus": "valid",
           "sourceRow": 208,
           "sourceCells": [
+            "B208",
             "C208"
           ]
         },
         {
-          "description": "Espuma limpiadora",
-          "value": 53,
-          "numericValue": 53,
-          "sourceQuantity": "53",
+          "description": "Cinta de aislar Electrica PVC",
+          "value": 45,
+          "numericValue": 45,
+          "sourceQuantity": "45",
           "quantityStatus": "valid",
           "sourceRow": 209,
           "sourceCells": [
             "B209",
             "C209"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "title": "LIMPIEZA",
+      "sourceCell": "B210",
+      "items": [
         {
-          "description": "Bolsa jardinera de tonel",
-          "value": 500,
-          "numericValue": 500,
-          "sourceQuantity": "500",
-          "quantityStatus": "valid",
-          "sourceRow": 210,
-          "sourceCells": [
-            "B210",
-            "C210"
-          ]
-        },
-        {
-          "description": "Retazo de nylon (para tapar equipo)",
+          "description": "Trapo",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
@@ -2389,15 +2393,20 @@ window.requerimientoEquipoInventory = {
           "sourceCells": [
             "C211"
           ]
-        }
-      ]
-    },
-    {
-      "title": "SEGURIDAD INDUSTRIAL",
-      "sourceCell": "B212",
-      "items": [
+        },
         {
-          "description": "Casco",
+          "description": "Escoba",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
+          "sourceRow": 212,
+          "sourceCells": [
+            "C212"
+          ]
+        },
+        {
+          "description": "Pala",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
@@ -2408,7 +2417,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Chaleco",
+          "description": "Trapiador",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
@@ -2419,19 +2428,18 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Par de botas",
-          "value": 0,
-          "numericValue": 0,
-          "sourceQuantity": "0",
-          "quantityStatus": "zero",
+          "description": "Atomizador con desinfectante",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 215,
           "sourceCells": [
-            "B215",
             "C215"
           ]
         },
         {
-          "description": "Par de guantes",
+          "description": "Atomizador con silicón",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
@@ -2442,76 +2450,74 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Arnes completo",
+          "description": "Espuma limpiadora",
+          "value": 53,
+          "numericValue": 53,
+          "sourceQuantity": "53",
+          "quantityStatus": "valid",
+          "sourceRow": 217,
+          "sourceCells": [
+            "B217",
+            "C217"
+          ]
+        },
+        {
+          "description": "Bolsa jardinera de tonel",
+          "value": 500,
+          "numericValue": 500,
+          "sourceQuantity": "500",
+          "quantityStatus": "valid",
+          "sourceRow": 218,
+          "sourceCells": [
+            "B218",
+            "C218"
+          ]
+        },
+        {
+          "description": "Retazo de nylon (para tapar equipo)",
           "value": "",
           "numericValue": null,
           "sourceQuantity": "",
           "quantityStatus": "missing",
-          "sourceRow": 217,
+          "sourceRow": 219,
           "sourceCells": [
-            "C217"
+            "C219"
           ]
         }
       ]
     },
     {
-      "title": "TARIMA Y PISTA",
-      "sourceCell": "B218",
+      "title": "SEGURIDAD INDUSTRIAL",
+      "sourceCell": "B220",
       "items": [
         {
-          "description": "Plancha de 1.22 x 1.22",
-          "value": 124,
-          "numericValue": 124,
-          "sourceQuantity": "124",
-          "quantityStatus": "valid",
-          "sourceRow": 219,
-          "sourceCells": [
-            "B219",
-            "C219"
-          ]
-        },
-        {
-          "description": "Grada de 0.50 cm.",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
-          "quantityStatus": "valid",
-          "sourceRow": 220,
-          "sourceCells": [
-            "B220",
-            "C220"
-          ]
-        },
-        {
-          "description": "Grada de 1 mt",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
-          "quantityStatus": "valid",
+          "description": "Casco",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 221,
           "sourceCells": [
-            "B221",
             "C221"
           ]
         },
         {
-          "description": "Andamio 0.30 cm",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
-          "quantityStatus": "valid",
+          "description": "Chaleco",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 222,
           "sourceCells": [
-            "B222",
             "C222"
           ]
         },
         {
-          "description": "Andamio 0.50 cm",
-          "value": 22,
-          "numericValue": 22,
-          "sourceQuantity": "22",
-          "quantityStatus": "valid",
+          "description": "Par de botas",
+          "value": 0,
+          "numericValue": 0,
+          "sourceQuantity": "0",
+          "quantityStatus": "zero",
           "sourceRow": 223,
           "sourceCells": [
             "B223",
@@ -2519,46 +2525,38 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Andamio 0.60 cm",
-          "value": 3,
-          "numericValue": 3,
-          "sourceQuantity": "3",
-          "quantityStatus": "valid",
+          "description": "Par de guantes",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 224,
           "sourceCells": [
-            "B224",
             "C224"
           ]
         },
         {
-          "description": "Andamio 0.80 cm",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
-          "quantityStatus": "valid",
+          "description": "Arnes completo",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 225,
           "sourceCells": [
-            "B225",
             "C225"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "title": "TARIMA Y PISTA",
+      "sourceCell": "B226",
+      "items": [
         {
-          "description": "Corona para pista",
-          "value": 93,
-          "numericValue": 93,
-          "sourceQuantity": "93",
-          "quantityStatus": "valid",
-          "sourceRow": 226,
-          "sourceCells": [
-            "B226",
-            "C226"
-          ]
-        },
-        {
-          "description": "Corona para tarima",
-          "value": 114,
-          "numericValue": 114,
-          "sourceQuantity": "114",
+          "description": "Plancha de 1.22 x 1.22",
+          "value": 124,
+          "numericValue": 124,
+          "sourceQuantity": "124",
           "quantityStatus": "valid",
           "sourceRow": 227,
           "sourceCells": [
@@ -2567,10 +2565,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Trabesaño",
-          "value": 36,
-          "numericValue": 36,
-          "sourceQuantity": "36",
+          "description": "Grada de 0.50 cm.",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 228,
           "sourceCells": [
@@ -2579,10 +2577,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Esquinero",
-          "value": 20,
-          "numericValue": 20,
-          "sourceQuantity": "20",
+          "description": "Grada de 1 mt",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 229,
           "sourceCells": [
@@ -2591,21 +2589,22 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Caja de Calzas",
-          "value": "",
-          "numericValue": null,
-          "sourceQuantity": "",
-          "quantityStatus": "missing",
+          "description": "Andamio 0.30 cm",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
+          "quantityStatus": "valid",
           "sourceRow": 230,
           "sourceCells": [
+            "B230",
             "C230"
           ]
         },
         {
-          "description": "Rollo de vinil color negro",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Andamio 0.50 cm",
+          "value": 22,
+          "numericValue": 22,
+          "sourceQuantity": "22",
           "quantityStatus": "valid",
           "sourceRow": 231,
           "sourceCells": [
@@ -2614,10 +2613,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Rollo de vinil color blanco",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Andamio 0.60 cm",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
           "quantityStatus": "valid",
           "sourceRow": 232,
           "sourceCells": [
@@ -2626,28 +2625,34 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Rollo de mounting tape",
-          "value": 13,
-          "numericValue": 13,
-          "sourceQuantity": "13",
+          "description": "Andamio 0.80 cm",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
           "quantityStatus": "valid",
           "sourceRow": 233,
           "sourceCells": [
             "B233",
             "C233"
           ]
-        }
-      ]
-    },
-    {
-      "title": "TELA",
-      "sourceCell": "B234",
-      "items": [
+        },
         {
-          "description": "Funda para truss color blanco de 1 mts",
-          "value": 5,
-          "numericValue": 5,
-          "sourceQuantity": "5",
+          "description": "Corona para pista",
+          "value": 93,
+          "numericValue": 93,
+          "sourceQuantity": "93",
+          "quantityStatus": "valid",
+          "sourceRow": 234,
+          "sourceCells": [
+            "B234",
+            "C234"
+          ]
+        },
+        {
+          "description": "Corona para tarima",
+          "value": 114,
+          "numericValue": 114,
+          "sourceQuantity": "114",
           "quantityStatus": "valid",
           "sourceRow": 235,
           "sourceCells": [
@@ -2656,10 +2661,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Funda para truss color blanco de 2 mts",
-          "value": 9,
-          "numericValue": 9,
-          "sourceQuantity": "9",
+          "description": "Trabesaño",
+          "value": 36,
+          "numericValue": 36,
+          "sourceQuantity": "36",
           "quantityStatus": "valid",
           "sourceRow": 236,
           "sourceCells": [
@@ -2668,10 +2673,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Funda para truss color blanco de 3 mts",
-          "value": 10,
-          "numericValue": 10,
-          "sourceQuantity": "10",
+          "description": "Esquinero",
+          "value": 20,
+          "numericValue": 20,
+          "sourceQuantity": "20",
           "quantityStatus": "valid",
           "sourceRow": 237,
           "sourceCells": [
@@ -2680,22 +2685,21 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Funda para truss color blanco de 4 mts",
-          "value": 14,
-          "numericValue": 14,
-          "sourceQuantity": "14",
-          "quantityStatus": "valid",
+          "description": "Caja de Calzas",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 238,
           "sourceCells": [
-            "B238",
             "C238"
           ]
         },
         {
-          "description": "Funda para truss color negro de 1 mts",
-          "value": 5,
-          "numericValue": 5,
-          "sourceQuantity": "5",
+          "description": "Rollo de vinil color negro",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 239,
           "sourceCells": [
@@ -2704,10 +2708,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Funda para truss color negro de 2 mts",
-          "value": 14,
-          "numericValue": 14,
-          "sourceQuantity": "14",
+          "description": "Rollo de vinil color blanco",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
           "quantityStatus": "valid",
           "sourceRow": 240,
           "sourceCells": [
@@ -2716,34 +2720,28 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Funda para truss color negro de 3 mts",
-          "value": 9,
-          "numericValue": 9,
-          "sourceQuantity": "9",
+          "description": "Rollo de mounting tape",
+          "value": 13,
+          "numericValue": 13,
+          "sourceQuantity": "13",
           "quantityStatus": "valid",
           "sourceRow": 241,
           "sourceCells": [
             "B241",
             "C241"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "title": "TELA",
+      "sourceCell": "B242",
+      "items": [
         {
-          "description": "Funda para truss color negro de 4 mts",
-          "value": 17,
-          "numericValue": 17,
-          "sourceQuantity": "17",
-          "quantityStatus": "valid",
-          "sourceRow": 242,
-          "sourceCells": [
-            "B242",
-            "C242"
-          ]
-        },
-        {
-          "description": "Tela pequeña para forrar DJ booth color negro (DJ)",
-          "value": 6,
-          "numericValue": 6,
-          "sourceQuantity": "6",
+          "description": "Funda para truss color blanco de 1 mts",
+          "value": 5,
+          "numericValue": 5,
+          "sourceQuantity": "5",
           "quantityStatus": "valid",
           "sourceRow": 243,
           "sourceCells": [
@@ -2752,10 +2750,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Tela grande para forrar DJ booth color negro (controles)",
-          "value": 7,
-          "numericValue": 7,
-          "sourceQuantity": "7",
+          "description": "Funda para truss color blanco de 2 mts",
+          "value": 9,
+          "numericValue": 9,
+          "sourceQuantity": "9",
           "quantityStatus": "valid",
           "sourceRow": 244,
           "sourceCells": [
@@ -2764,10 +2762,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Funda para cilindro CO2",
-          "value": 9,
-          "numericValue": 9,
-          "sourceQuantity": "9",
+          "description": "Funda para truss color blanco de 3 mts",
+          "value": 10,
+          "numericValue": 10,
+          "sourceQuantity": "10",
           "quantityStatus": "valid",
           "sourceRow": 245,
           "sourceCells": [
@@ -2776,10 +2774,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Faldon para tarima blanco 050 cm x 24 mt",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Funda para truss color blanco de 4 mts",
+          "value": 14,
+          "numericValue": 14,
+          "sourceQuantity": "14",
           "quantityStatus": "valid",
           "sourceRow": 246,
           "sourceCells": [
@@ -2788,10 +2786,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Faldon para tarima blanco 050 cm x 30 mt",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Funda para truss color negro de 1 mts",
+          "value": 5,
+          "numericValue": 5,
+          "sourceQuantity": "5",
           "quantityStatus": "valid",
           "sourceRow": 247,
           "sourceCells": [
@@ -2800,10 +2798,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Faldon para tarima blanco 060 cm x 6 mt",
-          "value": 3,
-          "numericValue": 3,
-          "sourceQuantity": "3",
+          "description": "Funda para truss color negro de 2 mts",
+          "value": 14,
+          "numericValue": 14,
+          "sourceQuantity": "14",
           "quantityStatus": "valid",
           "sourceRow": 248,
           "sourceCells": [
@@ -2812,10 +2810,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Faldon para tarima negro 050 cm x 26 mt",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Funda para truss color negro de 3 mts",
+          "value": 9,
+          "numericValue": 9,
+          "sourceQuantity": "9",
           "quantityStatus": "valid",
           "sourceRow": 249,
           "sourceCells": [
@@ -2824,10 +2822,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Faldon pata tarima negro 050 cm x 29 mt",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Funda para truss color negro de 4 mts",
+          "value": 17,
+          "numericValue": 17,
+          "sourceQuantity": "17",
           "quantityStatus": "valid",
           "sourceRow": 250,
           "sourceCells": [
@@ -2836,10 +2834,10 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Faldon para tarima negro 050 cm x 30 mt",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
+          "description": "Tela pequeña para forrar DJ booth color negro (DJ)",
+          "value": 6,
+          "numericValue": 6,
+          "sourceQuantity": "6",
           "quantityStatus": "valid",
           "sourceRow": 251,
           "sourceCells": [
@@ -2848,22 +2846,21 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Faldon para tarima negro 055 cm x 29 mt",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
-          "quantityStatus": "valid",
+          "description": "Tela pequeña para forrar DJ booth color blanco (DJ)",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 252,
           "sourceCells": [
-            "B252",
             "C252"
           ]
         },
         {
-          "description": "Faldon para tarima negro 060 cm x 23 mt",
-          "value": 2,
-          "numericValue": 2,
-          "sourceQuantity": "2",
+          "description": "Tela grande para forrar DJ booth color negro (controles)",
+          "value": 7,
+          "numericValue": 7,
+          "sourceQuantity": "7",
           "quantityStatus": "valid",
           "sourceRow": 253,
           "sourceCells": [
@@ -2872,69 +2869,274 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "Faldon para tarima negro 080 cm x 6 mt",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
-          "quantityStatus": "valid",
+          "description": "Tela color blanco de 4 mts",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 254,
           "sourceCells": [
-            "B254",
             "C254"
           ]
         },
         {
-          "description": "Faldon para tarima negro 085 cm x 7 mt",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
-          "quantityStatus": "valid",
+          "description": "Tela color negro de 4 mts",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 255,
           "sourceCells": [
-            "B255",
             "C255"
           ]
         },
         {
-          "description": "Faldon para tarima negro 1 mt x 8 mt",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
-          "quantityStatus": "valid",
+          "description": "Tela color blanco de 2 mts",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 256,
           "sourceCells": [
-            "B256",
             "C256"
           ]
         },
         {
-          "description": "Faldon para tarima negro Satin 075 cm x 6 mt",
-          "value": 1,
-          "numericValue": 1,
-          "sourceQuantity": "1",
-          "quantityStatus": "valid",
+          "description": "Tela color negro de 2 mts",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
           "sourceRow": 257,
           "sourceCells": [
-            "B257",
             "C257"
           ]
         },
         {
-          "description": "Faldon para tarima negro Satin 080 cm x 6 mt",
+          "description": "Pedazos de alfombra negra de 0.50 cm x 0.50 cm",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
+          "sourceRow": 258,
+          "sourceCells": [
+            "C258"
+          ]
+        },
+        {
+          "description": "Pedazo de alfombra (en pedacitos)",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
+          "sourceRow": 259,
+          "sourceCells": [
+            "C259"
+          ]
+        },
+        {
+          "description": "Funda para cilindro CO2",
+          "value": 9,
+          "numericValue": 9,
+          "sourceQuantity": "9",
+          "quantityStatus": "valid",
+          "sourceRow": 260,
+          "sourceCells": [
+            "B260",
+            "C260"
+          ]
+        },
+        {
+          "description": "Retazo de tela color negro de 8 mts.",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
+          "sourceRow": 261,
+          "sourceCells": [
+            "C261"
+          ]
+        },
+        {
+          "description": "Retazo de tela grande color negro",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
+          "sourceRow": 262,
+          "sourceCells": [
+            "C262"
+          ]
+        },
+        {
+          "description": "Faldon de 24mts color negro",
           "value": 1,
           "numericValue": 1,
           "sourceQuantity": "1",
           "quantityStatus": "valid",
-          "sourceRow": 258,
+          "sourceRow": 263,
           "sourceCells": [
-            "B258",
-            "C258"
+            "B263",
+            "C263"
+          ]
+        },
+        {
+          "description": "Faldon de 24mts color blanco",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
+          "sourceRow": 264,
+          "sourceCells": [
+            "C264"
+          ]
+        },
+        {
+          "description": "Faldon de 30mts color blanco",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
+          "quantityStatus": "valid",
+          "sourceRow": 265,
+          "sourceCells": [
+            "B265",
+            "C265"
+          ]
+        },
+        {
+          "description": "Faldon de 12mts color blanco",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
+          "sourceRow": 266,
+          "sourceCells": [
+            "C266"
+          ]
+        },
+        {
+          "description": "Faldon de 12mts color negro",
+          "value": "",
+          "numericValue": null,
+          "sourceQuantity": "",
+          "quantityStatus": "missing",
+          "sourceRow": 267,
+          "sourceCells": [
+            "C267"
+          ]
+        },
+        {
+          "description": "Faldon de 6mts color blanco",
+          "value": 3,
+          "numericValue": 3,
+          "sourceQuantity": "3",
+          "quantityStatus": "valid",
+          "sourceRow": 268,
+          "sourceCells": [
+            "B268",
+            "C268"
+          ]
+        },
+        {
+          "description": "Faldon de 26mts color negro",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
+          "quantityStatus": "valid",
+          "sourceRow": 269,
+          "sourceCells": [
+            "B269",
+            "C269"
+          ]
+        },
+        {
+          "description": "Faldon de 29mts color negro",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
+          "quantityStatus": "valid",
+          "sourceRow": 270,
+          "sourceCells": [
+            "B270",
+            "C270"
+          ]
+        },
+        {
+          "description": "Faldon de 30mts color negro",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
+          "quantityStatus": "valid",
+          "sourceRow": 271,
+          "sourceCells": [
+            "B271",
+            "C271"
+          ]
+        },
+        {
+          "description": "Faldon de 23mts color negro",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
+          "quantityStatus": "valid",
+          "sourceRow": 272,
+          "sourceCells": [
+            "B272",
+            "C272"
+          ]
+        },
+        {
+          "description": "Faldon de 6mts color negro",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
+          "quantityStatus": "valid",
+          "sourceRow": 273,
+          "sourceCells": [
+            "B273",
+            "C273"
+          ]
+        },
+        {
+          "description": "Faldon de 7mts color negro",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
+          "quantityStatus": "valid",
+          "sourceRow": 274,
+          "sourceCells": [
+            "B274",
+            "C274"
+          ]
+        },
+        {
+          "description": "Faldon de 8mts x 1mt color negro",
+          "value": 1,
+          "numericValue": 1,
+          "sourceQuantity": "1",
+          "quantityStatus": "valid",
+          "sourceRow": 275,
+          "sourceCells": [
+            "B275",
+            "C275"
+          ]
+        },
+        {
+          "description": "Faldon de 6mts satin color negro",
+          "value": 2,
+          "numericValue": 2,
+          "sourceQuantity": "2",
+          "quantityStatus": "valid",
+          "sourceRow": 276,
+          "sourceCells": [
+            "B276",
+            "C276"
           ]
         }
       ]
     }
   ],
-  "sourceCellCount": 466,
-  "sourceItemCount": 236,
-  "uniqueEquipmentCount": 236
+  "sourceCellCount": 488,
+  "sourceItemCount": 254,
+  "uniqueEquipmentCount": 254
 };
