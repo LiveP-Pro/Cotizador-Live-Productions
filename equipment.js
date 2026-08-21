@@ -1900,30 +1900,86 @@ function tableForEquipmentInventory(rows, editable = true) {
     </table>`;
 }
 
-function equipmentRentalRows() {
-  const events = activeEquipmentEvents();
-  return equipmentRowsSummary()
-    .filter((row) => row.type !== "category")
-    .map((row) => {
-      const inventory = inventoryValueFor(row);
-      const inventoryNumber = equipmentInventoryNumber(inventory);
-      const missing = Math.max(0, row.quantity - inventoryNumber);
+function consolidateEquipmentRentalRows(summaryRows, events) {
+  const groups = new Map();
+  (Array.isArray(summaryRows) ? summaryRows : []).forEach((row) => {
+    if (!row || row.type === "category") return;
+    const identity = equipmentInventoryCanonicalKey(row.inventorySourceItem?.description || row.description || row.key);
+    if (!identity) return;
+    let group = groups.get(identity);
+    if (!group) {
+      group = {
+        baseRow: row,
+        identity,
+        description: row.description,
+        descriptionFromInventory: Boolean(row.inventorySourceItem),
+        quantity: 0,
+        eventQuantities: new Map(),
+        inventoryEntries: new Map(),
+        observations: []
+      };
+      groups.set(identity, group);
+    } else if (row.inventorySourceItem && !group.descriptionFromInventory) {
+      group.baseRow = row;
+      group.description = row.description;
+      group.descriptionFromInventory = true;
+    }
+
+    group.quantity += Number(row.quantity) || 0;
+    row.eventQuantities?.forEach((quantity, eventId) => {
+      group.eventQuantities.set(
+        eventId,
+        (Number(group.eventQuantities.get(eventId)) || 0) + (Number(quantity) || 0)
+      );
+    });
+
+    const inventorySourceKey = row.inventorySourceItem ? row.key : `equipo-${identity}`;
+    if (!group.inventoryEntries.has(inventorySourceKey)) {
+      group.inventoryEntries.set(inventorySourceKey, inventoryValueFor(row));
+    }
+    const observation = String(equipmentState.observations.get(row.key) || "").trim();
+    if (observation && !group.observations.includes(observation)) group.observations.push(observation);
+  });
+
+  return [...groups.values()]
+    .map((group) => {
+      const inventoryEntries = [...group.inventoryEntries.values()];
+      const inventoryNumber = inventoryEntries.reduce(
+        (total, inventory) => total + equipmentInventoryNumber(inventory),
+        0
+      );
+      const inventory = inventoryEntries.length === 1
+        ? inventoryEntries[0]
+        : inventoryEntries.some((value) => String(value ?? "").trim() !== "")
+          ? inventoryNumber
+          : "";
+      const missing = Math.max(0, group.quantity - inventoryNumber);
       const eventDetails = events
         .map((event) => {
-          const quantity = Number(row.eventQuantities.get(event.id)) || 0;
+          const quantity = Number(group.eventQuantities.get(event.id)) || 0;
           return quantity > 0 ? `${eventColumnName(event)}: ${quantity}` : "";
         })
         .filter(Boolean)
         .join(" / ");
       return {
-        ...row,
+        ...group.baseRow,
+        key: `renta-${group.identity}`,
+        matchKey: group.identity,
+        description: group.description,
+        quantity: group.quantity,
+        eventQuantities: group.eventQuantities,
         inventory,
         missing,
         eventDetails,
-        observation: equipmentState.observations.get(row.key) || ""
+        observation: group.observations.join(" / ")
       };
     })
     .filter((row) => row.missing > 0);
+}
+
+function equipmentRentalRows() {
+  const events = activeEquipmentEvents();
+  return consolidateEquipmentRentalRows(equipmentRowsSummary(), events);
 }
 
 function tableForEquipmentRentalReport(rows) {
