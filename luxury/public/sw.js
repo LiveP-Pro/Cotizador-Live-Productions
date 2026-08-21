@@ -1,4 +1,4 @@
-const CACHE_NAME = "luxury-travel-v73";
+const CACHE_NAME = "luxury-travel-v74";
 const SCOPE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, "");
 const scopedPath = (pathname = "/") =>
   `${SCOPE_PATH}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;

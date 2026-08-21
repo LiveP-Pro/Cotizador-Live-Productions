@@ -98,7 +98,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "73";
+const APP_VERSION = "74";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -173,6 +173,13 @@ function formHasLuggage(form) {
     Boolean(String(form.elements.luggageDescription?.value || "").trim());
 }
 
+function sprinter311ConfigurationValue(form) {
+  const selected = form.elements.sprinter311Configuration?.value;
+  if (["bed", "luggage", "standard"].includes(selected)) return selected;
+  if (form.elements.hasBed?.checked) return "bed";
+  return formHasLuggage(form) ? "luggage" : "standard";
+}
+
 function vehicleCapacityWithOptions(vehicle, form) {
   if (vehicleIsSprinter316(vehicle)) {
     const configuration = form.elements.seatConfiguration?.value || "m1";
@@ -180,8 +187,9 @@ function vehicleCapacityWithOptions(vehicle, form) {
     if (configuration === "m3") return Math.max(1, Number(vehicle?.m3SeatCapacity || 11));
     return Math.max(1, Number(vehicle?.m1SeatCapacity || 14));
   }
-  if (form.elements.hasBed?.checked) return Math.max(1, Number(vehicle?.capacityWithBed || 8));
-  if (formHasLuggage(form)) {
+  const configuration = sprinter311ConfigurationValue(form);
+  if (configuration === "bed") return Math.max(1, Number(vehicle?.capacityWithBed || 8));
+  if (configuration === "luggage") {
     return Math.max(1, Number(vehicle?.capacityWithLuggage || 10));
   }
   return vehicleBaseCapacity(vehicle);
@@ -1587,16 +1595,32 @@ function serviceSelectionsWithDetailsFromForm(form) {
 function syncPrimaryServiceFields(form, selections) {
   const first = selections[0] || {};
   if (!selections.length) return;
-  const last = orderedQuoteServices({ serviceSelections: selections }).at(-1) || first;
+  const last = selections.at(-1) || first;
   const finalDate = latestQuoteServiceDate(selections) || first.returnDate || first.serviceDate;
   form.elements.serviceDate.value = first.serviceDate || form.elements.serviceDate.value || guatemalaDateValue();
   form.elements.returnDate.value = selections.length > 1
     ? finalDate || form.elements.returnDate.value || guatemalaDateValue()
     : first.returnDate || first.serviceDate || form.elements.returnDate.value || guatemalaDateValue();
-  form.elements.departureTime.value = first.departureTime || "";
-  form.elements.returnTime.value = selections.length > 1 ? last.returnTime || "" : first.returnTime || "";
   form.elements.serviceStartDate.value = form.elements.serviceDate.value;
   form.elements.serviceEndDate.value = form.elements.returnDate.value;
+  const syncSummaryTime = (fieldName, periodName, value, editedFlag) => {
+    if (!value || form.dataset[editedFlag] === "true") return;
+    const parts = time12Parts(value);
+    form.elements[fieldName].value = parts.time;
+    form.elements[periodName].value = parts.period;
+  };
+  syncSummaryTime(
+    "summaryDepartureTime12",
+    "summaryDeparturePeriod",
+    first.departureTime,
+    "summaryDepartureEdited",
+  );
+  syncSummaryTime(
+    "summaryReturnTime12",
+    "summaryReturnPeriod",
+    last.returnTime || (selections.length > 1 ? last.departureTime : first.returnTime),
+    "summaryReturnEdited",
+  );
 }
 
 function syncServiceSelections(form) {
@@ -1711,6 +1735,21 @@ function openQuoteModal(quote = {}) {
       ? "luxury"
       : "m1";
   const initialLuggageQuantity = Math.max(0, Number(quote.luggage || (quote.hasLuggage ? 1 : 0)));
+  const initialSprinter311Configuration = ["bed", "luggage", "standard"].includes(quote.sprinter311Configuration)
+    ? quote.sprinter311Configuration
+    : quote.hasBed
+      ? "bed"
+      : initialLuggageQuantity > 0 || String(quote.luggageDescription || "").trim()
+        ? "luggage"
+        : "standard";
+  const orderedInitialServices = orderedQuoteServices({ serviceSelections: initialServiceSelections });
+  const firstInitialService = orderedInitialServices[0] || {};
+  const lastInitialService = orderedInitialServices.at(-1) || firstInitialService;
+  const initialDepartureTime = quote.departureTime || firstInitialService.departureTime || "";
+  const initialReturnTime = quote.returnTime || lastInitialService.returnTime ||
+    (orderedInitialServices.length > 1 ? lastInitialService.departureTime : "") || "";
+  const initialDepartureParts = time12Parts(initialDepartureTime);
+  const initialReturnParts = time12Parts(initialReturnTime);
   openModal(
     isEdit ? `Editar ${quote.number}` : "Nueva cotización",
     `
@@ -1761,6 +1800,14 @@ function openQuoteModal(quote = {}) {
                     <label><input type="radio" name="seatConfiguration" value="m3" ${initialSeatConfiguration === "m3" ? "checked" : ""} /><span><b>Sillones M3</b><small>10 pasajeros atrás + 1 adelante. Máximo 11.</small></span></label>
                   </div>
                 </div>
+                <div class="seat-configuration full" data-sprinter311-configuration>
+                  <strong>Configuración Mercedes Benz Sprinter 311</strong>
+                  <div class="seat-configuration-options">
+                    <label><input type="radio" name="sprinter311Configuration" value="bed" ${initialSprinter311Configuration === "bed" ? "checked" : ""} /><span><b>Cama y equipaje</b><small>Máximo 8 pasajeros por unidad.</small></span></label>
+                    <label><input type="radio" name="sprinter311Configuration" value="luggage" ${initialSprinter311Configuration === "luggage" ? "checked" : ""} /><span><b>Con equipaje, sin cama</b><small>Máximo 10 pasajeros por unidad.</small></span></label>
+                    <label><input type="radio" name="sprinter311Configuration" value="standard" ${initialSprinter311Configuration === "standard" ? "checked" : ""} /><span><b>Sin equipaje</b><small>Máximo 15 pasajeros por unidad.</small></span></label>
+                  </div>
+                </div>
                 <div class="passenger-luggage-editor full">
                   <fieldset>
                     <legend>Pasajeros</legend>
@@ -1802,14 +1849,26 @@ function openQuoteModal(quote = {}) {
               </div>
             </section>
             <section class="form-section" data-quote-step="route-summary">
-              <h3>4. Lugar de salida y destino</h3>
-              <p class="form-note">Estos dos textos son los que aparecerán en la cotización principal.</p>
+              <h3>4. Hora de salida y hora de regreso</h3>
+              <p class="form-note">Estas horas aparecerán una sola vez en el encabezado de la cotización.</p>
               <div class="form-grid">
-                <label>Lugar de salida
-                  <input name="displayOrigin" value="${escapeHtml(quote.origin)}" placeholder="Ej. Hotel Camino Real, Zona 10" />
+                <label>Hora de salida
+                  <span class="time-12-editor">
+                    <input name="summaryDepartureTime12" value="${escapeHtml(initialDepartureParts.time)}" inputmode="numeric" placeholder="Ej. 07:00" aria-label="Hora de salida en formato de 12 horas" />
+                    <select name="summaryDeparturePeriod" aria-label="AM o PM">
+                      <option value="AM" ${initialDepartureParts.period === "AM" ? "selected" : ""}>AM</option>
+                      <option value="PM" ${initialDepartureParts.period === "PM" ? "selected" : ""}>PM</option>
+                    </select>
+                  </span>
                 </label>
-                <label>Destino
-                  <input name="displayDestination" value="${escapeHtml(quote.destination)}" placeholder="Ej. El Paredón, Escuintla" />
+                <label>Hora de regreso
+                  <span class="time-12-editor">
+                    <input name="summaryReturnTime12" value="${escapeHtml(initialReturnParts.time)}" inputmode="numeric" placeholder="Ej. 05:00" aria-label="Hora de regreso en formato de 12 horas" />
+                    <select name="summaryReturnPeriod" aria-label="AM o PM">
+                      <option value="AM" ${initialReturnParts.period === "AM" ? "selected" : ""}>AM</option>
+                      <option value="PM" ${initialReturnParts.period === "PM" ? "selected" : ""}>PM</option>
+                    </select>
+                  </span>
                 </label>
               </div>
             </section>
@@ -1892,8 +1951,8 @@ function openQuoteModal(quote = {}) {
         </div>
         <input type="hidden" name="serviceDate" value="${escapeHtml(serviceStartDate)}" />
         <input type="hidden" name="returnDate" value="${escapeHtml(serviceEndDate)}" />
-        <input type="hidden" name="departureTime" value="${escapeHtml(quote.departureTime || "")}" />
-        <input type="hidden" name="returnTime" value="${escapeHtml(quote.returnTime)}" />
+        <input type="hidden" name="displayOrigin" value="${escapeHtml(quote.origin)}" />
+        <input type="hidden" name="displayDestination" value="${escapeHtml(quote.destination)}" />
         <input type="hidden" name="hasLuggage" value="${initialLuggageQuantity > 0 ? "true" : "false"}" />
         <input type="hidden" name="clientId" value="${escapeHtml(quote.clientId)}" />
         <input type="hidden" name="clientNit" value="${escapeHtml(quote.clientNit)}" />
@@ -2034,7 +2093,24 @@ function openQuoteModal(quote = {}) {
   });
   form.elements.hasPlayStation5.addEventListener("change", () => syncQuoteCapacity(form));
   form.elements.hasTv.addEventListener("change", () => syncQuoteCapacity(form));
-  form.elements.hasBed.addEventListener("change", () => syncQuoteCapacity(form, true));
+  form.elements.hasBed.addEventListener("change", () => {
+    const targetValue = form.elements.hasBed.checked
+      ? "bed"
+      : formHasLuggage(form)
+        ? "luggage"
+        : "standard";
+    const target = $$('input[name="sprinter311Configuration"]', form)
+      .find((input) => input.value === targetValue);
+    if (target) target.checked = true;
+    syncQuoteCapacity(form, true);
+  });
+  $$('input[name="sprinter311Configuration"]', form).forEach((input) => {
+    input.addEventListener("change", () => {
+      if (!input.checked) return;
+      form.elements.hasBed.checked = input.value === "bed";
+      syncQuoteCapacity(form, true);
+    });
+  });
   $$('input[name="seatConfiguration"]', form).forEach((input) => {
     input.addEventListener("change", () => syncQuoteCapacity(form, true));
   });
@@ -2044,6 +2120,22 @@ function openQuoteModal(quote = {}) {
     delete form.dataset.capacityWarning;
     delete form.dataset.capacityWarningKey;
     syncQuoteCapacity(form, true);
+  });
+  ["summaryDepartureTime12", "summaryDeparturePeriod"].forEach((name) => {
+    form.elements[name].addEventListener("input", () => {
+      form.dataset.summaryDepartureEdited = "true";
+    });
+    form.elements[name].addEventListener("change", () => {
+      form.dataset.summaryDepartureEdited = "true";
+    });
+  });
+  ["summaryReturnTime12", "summaryReturnPeriod"].forEach((name) => {
+    form.elements[name].addEventListener("input", () => {
+      form.dataset.summaryReturnEdited = "true";
+    });
+    form.elements[name].addEventListener("change", () => {
+      form.dataset.summaryReturnEdited = "true";
+    });
   });
   form.elements.serviceDate.addEventListener("change", () => {
     form.elements.serviceStartDate.value = form.elements.serviceDate.value;
@@ -2088,9 +2180,10 @@ function capacityLimitMessage(form, vehicles, requestedPassengers, maximum) {
     const unitLabel = sprinter311Count === 1
       ? "La Sprinter 311"
       : `Cada una de las ${sprinter311Count} Sprinter 311`;
-    if (form.elements.hasBed.checked) {
+    const configuration = sprinter311ConfigurationValue(form);
+    if (configuration === "bed") {
       rules.push(`${unitLabel} con cama permite un máximo de 8 pasajeros`);
-    } else if (hasLuggage) {
+    } else if (configuration === "luggage") {
       rules.push(`${unitLabel} con equipaje permite un máximo de 10 pasajeros`);
     } else {
       rules.push(`${unitLabel} sin equipaje permite un máximo de 15 pasajeros`);
@@ -2120,6 +2213,11 @@ function syncQuoteCapacity(form, announce = false) {
   const hasSprinter311 = vehicles.some((vehicle) => !vehicleIsSprinter316(vehicle));
   const seatPanel = $(`[data-seat-configuration]`, form);
   if (seatPanel) seatPanel.hidden = !hasSprinter316;
+  const sprinter311Panel = $(`[data-sprinter311-configuration]`, form);
+  if (sprinter311Panel) sprinter311Panel.hidden = !hasSprinter311;
+  $$('input[name="sprinter311Configuration"]', form).forEach((input) => {
+    input.disabled = !hasSprinter311;
+  });
   form.elements.hasBed.disabled = !hasSprinter311;
   if (!hasSprinter311 && form.elements.hasBed.checked) {
     form.elements.hasBed.checked = false;
@@ -2129,22 +2227,51 @@ function syncQuoteCapacity(form, announce = false) {
   form.elements.luggage.value = String(luggageQuantity);
   const hasLuggage = formHasLuggage(form);
   form.elements.hasLuggage.value = hasLuggage ? "true" : "false";
+  let sprinter311Configuration = sprinter311ConfigurationValue(form);
+  if (hasSprinter311 && hasLuggage && sprinter311Configuration === "standard") {
+    sprinter311Configuration = "luggage";
+    const luggageOption = form.elements.sprinter311Configuration?.value === undefined
+      ? null
+      : $$('input[name="sprinter311Configuration"]', form).find((input) => input.value === "luggage");
+    if (luggageOption) luggageOption.checked = true;
+  }
   const manualCapacity = manualVehicleName
     ? Math.max(15, Math.round(Number(form.elements.passengers?.value || 1)))
     : 0;
+  const passengerInput = form.elements.passengers;
+  const requestedPassengers = Math.max(1, Math.round(Number(passengerInput.value || 1)));
+  if (hasSprinter311 && sprinter311Configuration === "bed") {
+    const bedMaximum = vehicles.reduce((sum, vehicle) => {
+      if (vehicleIsSprinter316(vehicle)) return sum + vehicleCapacityWithOptions(vehicle, form);
+      return sum + Math.max(1, Number(vehicle?.capacityWithBed || 8));
+    }, manualCapacity);
+    if (requestedPassengers > bedMaximum) {
+      const fallback = hasLuggage ? "luggage" : "standard";
+      const fallbackOption = $$('input[name="sprinter311Configuration"]', form)
+        .find((input) => input.value === fallback);
+      if (fallbackOption) fallbackOption.checked = true;
+      form.elements.hasBed.checked = false;
+      sprinter311Configuration = fallback;
+      const warning = `No se seleccionó la cama: ${requestedPassengers} pasajeros exceden el máximo de ${bedMaximum} permitido con cama. Reduzca la cantidad de pasajeros a ${bedMaximum} o menos para habilitarla.`;
+      form.dataset.capacityWarning = warning;
+      if (announce) toast(warning);
+    } else {
+      form.elements.hasBed.checked = true;
+    }
+  } else {
+    form.elements.hasBed.checked = false;
+  }
   const maximum = vehicles.length || manualVehicleName
     ? vehicles.reduce((sum, vehicle) => sum + vehicleCapacityWithOptions(vehicle, form), 0) + manualCapacity
     : 15;
-  const passengerInput = form.elements.passengers;
   passengerInput.max = String(maximum);
-  const requestedPassengers = Math.max(1, Math.round(Number(passengerInput.value || 1)));
   const configuration = form.elements.seatConfiguration?.value || "m1";
   const warningKey = [
     vehicles.map((vehicle) => vehicle.id).sort().join(","),
     manualVehicleName,
     maximum,
     hasLuggage ? "luggage" : "no-luggage",
-    form.elements.hasBed.checked ? "bed" : "no-bed",
+    sprinter311Configuration,
     configuration,
   ].join("|");
   if (form.dataset.capacityWarningKey && form.dataset.capacityWarningKey !== warningKey) {
@@ -2178,9 +2305,9 @@ function syncQuoteCapacity(form, announce = false) {
       : "Butacas M1 (13 atrás + 1 adelante)";
   const details = [];
   if (hasSprinter311) {
-    details.push(form.elements.hasBed.checked
+    details.push(sprinter311Configuration === "bed"
       ? "Mercedes 311: 8 pasajeros por unidad con cama y equipaje"
-      : hasLuggage
+      : sprinter311Configuration === "luggage"
         ? "Mercedes 311: 10 pasajeros por unidad con equipaje"
         : "Mercedes 311: 15 pasajeros por unidad sin equipaje");
   }
@@ -2214,10 +2341,17 @@ function quoteFormData(form) {
   body.serviceType = serviceSelectionsServiceLabel(serviceSelections);
   body.serviceDate = form.elements.serviceDate.value;
   body.returnDate = form.elements.returnDate.value;
-  body.origin = form.elements.displayOrigin.value.trim();
-  body.destination = form.elements.displayDestination.value.trim();
-  body.departureTime = form.elements.departureTime.value;
-  body.returnTime = form.elements.returnTime.value;
+  body.origin = form.elements.displayOrigin.value.trim() || firstService?.origin || "";
+  body.destination = form.elements.displayDestination.value.trim() ||
+    serviceSelections.at(-1)?.destinationAddress || serviceSelections.at(-1)?.destination || "";
+  body.departureTime = time12To24(
+    form.elements.summaryDepartureTime12.value,
+    form.elements.summaryDeparturePeriod.value,
+  );
+  body.returnTime = time12To24(
+    form.elements.summaryReturnTime12.value,
+    form.elements.summaryReturnPeriod.value,
+  );
   body.serviceStartDate = body.serviceDate;
   body.serviceEndDate = body.returnDate || body.serviceDate;
   body.passengerDescription = form.elements.passengerDescription.value.trim();
@@ -2230,6 +2364,9 @@ function quoteFormData(form) {
   body.vehicleManualName = String(form.elements.vehicleManualName.value || "").trim();
   body.vehicleCount = explicitVehicleCount(body);
   body.hasBed = form.elements.hasBed.checked;
+  body.sprinter311Configuration = selectedVehiclesFromForm(form).some((vehicle) => !vehicleIsSprinter316(vehicle))
+    ? sprinter311ConfigurationValue(form)
+    : "";
   body.hasPlayStation5 = form.elements.hasPlayStation5.checked;
   body.hasTv = form.elements.hasTv.checked;
   body.seatConfiguration = selectedVehiclesFromForm(form).some(vehicleIsSprinter316)
@@ -2375,8 +2512,8 @@ function quoteMissingInformation(body) {
     missing.push("Tipo de vehículo");
   }
   if (!Number(body.passengers || 0)) missing.push("Cantidad de pasajeros");
-  if (!String(body.origin || "").trim()) missing.push("Lugar de salida");
-  if (!String(body.destination || "").trim()) missing.push("Destino principal");
+  if (!String(body.departureTime || "").trim()) missing.push("Hora de salida del encabezado");
+  if (!String(body.returnTime || "").trim()) missing.push("Hora de regreso del encabezado");
   if (Number(body.luggage || 0) > 0 && !String(body.luggageDescription || "").trim()) {
     missing.push("Categorías y cantidades del equipaje");
   }
@@ -2630,8 +2767,14 @@ function formatLuggageDescription(value) {
 
 function quoteLuggageText(quote) {
   if (quote.hasLuggage === false) return "No";
-  if (quote.luggageDescription) return formatLuggageDescription(quote.luggageDescription);
-  if (Number(quote.luggage || 0) > 0) return `${quote.luggage} piezas`;
+  const quantity = Math.max(0, Math.round(Number(quote.luggage || 0)));
+  const description = formatLuggageDescription(quote.luggageDescription);
+  if (description) {
+    return quantity > 0 && !/^\s*\d+(?:[.,]\d+)?\b/u.test(description)
+      ? `${quantity} ${description}`
+      : description;
+  }
+  if (quantity > 0) return `${quantity} piezas`;
   return "Pendiente";
 }
 
@@ -2875,14 +3018,22 @@ function quotePosterPrimaryService(quote) {
     returnDate: finalDate || quoteEndDate(quote),
     origin: quote.origin || first.origin,
     destination: quote.destination || first.destinationAddress || first.destination,
-    departureTime: first.departureTime || quote.departureTime,
-    returnTime: selections.length > 1 ? last.returnTime || quote.returnTime : first.returnTime || quote.returnTime,
+    departureTime: quote.departureTime || first.departureTime,
+    returnTime: quote.returnTime || last.returnTime ||
+      (selections.length > 1 ? last.departureTime : first.returnTime),
     passengers: quote.passengers || first.passengers || 1,
     passengerDescription: quote.passengerDescription || "",
-    luggageDescription: first.hasLuggage === false
+    luggageDescription: quote.hasLuggage === false || first.hasLuggage === false
       ? "No"
-      : formatLuggageDescription(first.luggageDescription || quoteLuggageText(quote)),
+      : quoteLuggageText(quote) || formatLuggageDescription(first.luggageDescription),
   };
+}
+
+function posterLuggageDensity(value) {
+  const length = String(value || "").trim().length;
+  if (length > 42) return "poster-luggage-dense";
+  if (length > 24) return "poster-luggage-compact";
+  return "";
 }
 
 function posterCompactDate(value) {
@@ -2978,15 +3129,15 @@ function quotePosterNotesHtml(quote) {
   `;
 }
 
-function quotePosterContinuationHtml(quote) {
+function quotePosterContinuationHtml(quote, options = {}) {
   const selections = orderedQuoteServices(quote);
   const hasServiceNotes = selections.some((item) => item.notes);
-  if (selections.length < 2 && !hasServiceNotes && !quote.notes) return "";
+  if (!options.force && selections.length < 2 && !hasServiceNotes && !quote.notes) return "";
 
   return `
     <section class="poster-continuation" data-client-name="${escapeHtml(quote.clientName || "")}">
       <header class="poster-continuation-header">
-        <div><span>Luxury Travel Guatemala</span><h2>Detalle del recorrido</h2></div>
+        <div><span>Luxury Travel Guatemala</span><h2>Itinerario del recorrido</h2></div>
         <strong>${selections.length} traslado${selections.length === 1 ? "" : "s"}</strong>
       </header>
       <div class="poster-route-list">
@@ -3005,7 +3156,7 @@ function quotePosterContinuationHtml(quote) {
                   <div class="poster-route-meta">
                     <span><b>Fecha</b>${escapeHtml(formatDocumentDate(item.serviceDate))}</span>
                     ${item.departureTime ? `<span><b>Hora de salida</b>${escapeHtml(formatTime12(item.departureTime))}</span>` : ""}
-                    <span><b>Equipaje</b>${escapeHtml(item.hasLuggage === false ? "No" : formatLuggageDescription(item.luggageDescription || "Sí"))}</span>
+                    <span><b>Equipaje</b>${escapeHtml(item.hasLuggage === false ? "No" : quoteLuggageText(quote))}</span>
                   </div>
                   ${item.notes ? `<p><b>Notas:</b> ${escapeHtml(item.notes)}</p>` : ""}
                 </div>
@@ -3216,7 +3367,7 @@ function quotePosterPageHtml(quote) {
       <div class="poster-dynamic-value poster-end-date"><span>${escapeHtml(formatPosterDate(service.returnDate))}</span></div>
       <div class="poster-dynamic-value poster-return-time"><span>${escapeHtml(service.returnTime ? formatTime12(service.returnTime) : "Pendiente")}</span></div>
       <div class="poster-dynamic-value poster-passengers"><strong>${escapeHtml(`${service.passengers || 1} pasajeros`)}</strong>${passengerDescription ? `<small>(${escapeHtml(passengerDescription)})</small>` : ""}</div>
-      <div class="poster-dynamic-value poster-luggage"><span>Equipaje</span><strong>${escapeHtml(service.luggageDescription || "No")}</strong></div>
+      <div class="poster-dynamic-value poster-luggage ${posterLuggageDensity(service.luggageDescription)}"><span>Equipaje</span><strong>${escapeHtml(service.luggageDescription || "No")}</strong></div>
       <div class="poster-top-spacer" aria-hidden="true"></div>
       <section class="poster-adaptive-lower">
         ${quotePosterServicesHtml(quote)}
@@ -3269,7 +3420,15 @@ function downloadQuotePdf(id) {
   openPremiumDocument(
     quote.number,
     "quote",
-    `${quotePosterPageHtml(quote)}${quotePosterContinuationHtml(quote)}`,
+    quotePosterPageHtml(quote),
+  );
+}
+
+function openRouteItineraryDocument(quote) {
+  openPremiumDocument(
+    `${quote.number}-Itinerario-del-recorrido`,
+    "route",
+    quotePosterContinuationHtml(quote, { force: true }),
   );
 }
 
@@ -3283,21 +3442,36 @@ function openItineraryModal(quoteId) {
           <select name="type">
             <option value="cliente">Para cliente</option>
             <option value="piloto">Para piloto</option>
+            <option value="recorrido">Itinerario del recorrido</option>
           </select>
         </label>
-        <label class="full">Recorrido o instrucciones<textarea name="instructions" placeholder="Escriba una actividad por línea para crear el recorrido del piloto.">${escapeHtml(quote.notes)}</textarea></label>
-        <label class="full">Notas de contacto<textarea name="contactNotes" placeholder="Contacto alterno, indicaciones de acceso, letrero de bienvenida..."></textarea></label>
+        <label class="full" data-itinerary-manual-field>Recorrido o instrucciones<textarea name="instructions" placeholder="Escriba una actividad por línea para crear el recorrido del piloto.">${escapeHtml(quote.notes)}</textarea></label>
+        <label class="full" data-itinerary-manual-field>Notas de contacto<textarea name="contactNotes" placeholder="Contacto alterno, indicaciones de acceso, letrero de bienvenida..."></textarea></label>
       </div>
       <p class="form-error" data-form-error></p>
       <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit">Generar itinerario</button></div>
     </form>
   `);
   $("[data-close-form]").addEventListener("click", closeModal);
-  $("#itinerary-form").addEventListener("submit", async (event) => {
+  const itineraryForm = $("#itinerary-form");
+  const syncItineraryType = () => {
+    const isRoute = itineraryForm.elements.type.value === "recorrido";
+    $$('[data-itinerary-manual-field]', itineraryForm).forEach((field) => {
+      field.hidden = isRoute;
+    });
+  };
+  itineraryForm.elements.type.addEventListener("change", syncItineraryType);
+  syncItineraryType();
+  itineraryForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
     try {
       const body = Object.fromEntries(new FormData(form));
+      if (body.type === "recorrido") {
+        closeModal();
+        openRouteItineraryDocument(quote);
+        return;
+      }
       const item = await api(`/api/quotes/${quoteId}/itineraries`, {
         method: "POST",
         body: JSON.stringify(body),
@@ -3410,6 +3584,8 @@ function vehicleDocumentCard(item, features) {
 function quoteDocumentStyles() {
   return `
     .sheet.sheet-quote{position:relative;align-self:start;justify-self:center;width:1023px;height:max-content;min-height:1537px;background:#fff;color:#080d17;font-family:Arial,sans-serif;box-shadow:0 0 30px #777;overflow:hidden}
+    .sheet.sheet-route{position:relative;align-self:start;justify-self:center;width:1023px;height:max-content;min-height:720px;background:#f6f1e8;color:#080d17;font-family:Arial,sans-serif;box-shadow:0 0 30px #777;overflow:hidden}
+    .sheet-route .poster-continuation{min-height:720px}
     .quote-poster-content{position:relative;inset:auto;width:1023px;min-height:1537px;background:#fff;font-family:Arial,sans-serif}
     .quote-template-bg{position:absolute;inset:0;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
     .quote-poster-content>*:not(.quote-template-bg){z-index:2}
@@ -3421,7 +3597,7 @@ function quoteDocumentStyles() {
     .poster-start-date{left:104px;top:817px;width:156px;height:94px}.poster-start-time{left:104px;top:956px;width:156px;height:45px;align-items:center}
     .poster-origin{left:282px;top:852px;width:188px;height:97px}.poster-destination{left:493px;top:852px;width:155px;height:94px}
     .poster-end-date{left:696px;top:846px;width:138px;height:78px}.poster-end-date>span,.poster-return-time>span{display:inline-block;width:max-content;max-width:100%;border-bottom:2px solid #d9ad57;padding:0 5px 7px}.poster-return-time{left:696px;top:949px;width:138px;height:68px}
-    .poster-passengers{left:852px;top:842px;width:157px;height:76px;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}.poster-passengers strong,.poster-passengers small{font-size:18px;line-height:1.12}.poster-passengers strong{font-weight:800}.poster-passengers small{display:block;margin-top:5px;color:#111;font-weight:600}.poster-luggage{left:852px;top:920px;width:157px;min-height:82px;display:flex;flex-direction:column;align-items:center;border-top:2px solid #d9ad57;padding:6px 2px 0;text-align:center}.poster-luggage span,.poster-luggage strong{font-size:17px;line-height:1.05}.poster-luggage span{font-weight:800;letter-spacing:0;text-transform:uppercase}.poster-luggage strong{display:block;margin-top:3px;font-weight:600;text-wrap:balance}
+    .poster-passengers{left:852px;top:842px;width:157px;height:76px;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}.poster-passengers strong,.poster-passengers small{font-size:18px;line-height:1.12}.poster-passengers strong{font-weight:800}.poster-passengers small{display:block;margin-top:5px;color:#111;font-weight:600}.poster-luggage{left:852px;top:920px;width:157px;height:82px;display:flex;flex-direction:column;align-items:center;overflow:hidden;border-top:2px solid #d9ad57;padding:6px 3px 0;text-align:center}.poster-luggage span,.poster-luggage strong{font-size:16px;line-height:1.05}.poster-luggage span{flex:0 0 auto;font-weight:800;letter-spacing:0;text-transform:uppercase}.poster-luggage strong{display:block;max-width:100%;margin-top:3px;overflow-wrap:anywhere;font-weight:600;white-space:normal;text-wrap:balance}.poster-luggage-compact span{font-size:14px}.poster-luggage-compact strong{font-size:13px;line-height:1.02}.poster-luggage-dense span{font-size:12px}.poster-luggage-dense strong{font-size:10.5px;line-height:1}
     .poster-service-price-box{position:relative;width:calc(100% - 16px);min-height:274px;margin:0 8px;display:flex;flex-direction:column;border:2px solid #d1a044;border-radius:26px;background:linear-gradient(145deg,#02050c,#080d17);box-shadow:0 10px 25px rgba(0,0,0,.12);padding:18px 30px 16px;color:#fff;overflow:hidden}
     .poster-service-price-box>header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid rgba(213,166,72,.62);padding-bottom:10px;color:#dfb24e;text-transform:uppercase}.poster-service-price-box>header span,.poster-service-price-box>header small{font-size:18px;font-weight:900;letter-spacing:.1em}
     .poster-service-price-columns{display:grid;grid-template-columns:1fr;gap:26px;min-height:0;flex:1;padding:13px 0 11px}.poster-service-price-box-columns .poster-service-price-columns{grid-template-columns:repeat(2,minmax(0,1fr))}.poster-service-price-list{display:grid;align-content:center;gap:6px;min-width:0}.poster-service-price-box-columns .poster-service-price-list+ .poster-service-price-list{border-left:1px solid rgba(213,166,72,.38);padding-left:22px}
@@ -3459,22 +3635,26 @@ function openPremiumDocument(title, type, content) {
   const sheetHtml =
     type === "quote"
       ? `<main class="sheet sheet-quote">${content}</main>`
+      : type === "route"
+        ? `<main class="sheet sheet-route">${content}</main>`
       : `<main class="sheet sheet-${type}"><header class="hero"><img src="${origin}/assets/${hero}" alt=""></header><div class="document-content">${content}</div><footer class="document-footer">Viaja con <b>comodidad, exclusividad y seguridad.</b></footer></main>`;
   const documentHtml = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
     @page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;background:#d8d2c8;color:#0a101b;font-family:Arial,sans-serif}.sheet{width:210mm;min-height:297mm;margin:0 auto;background:#f8f3ea;overflow:hidden;box-shadow:0 0 30px #777}.hero{height:76mm;overflow:hidden;border-bottom:2mm solid #d3a63d}.hero img{display:block;width:100%;height:100%;object-fit:cover;object-position:center top}.document-content{padding:8mm 8mm 0}.document-title p{margin:0;color:#060b17;font-size:11mm;font-weight:800;letter-spacing:.02em;text-transform:uppercase}.document-title h1{margin:0;color:#a9761d;font-size:6.2mm;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.document-title>span,.itinerary-title>span{display:block;margin-top:2mm;color:#75664d;font-size:2.5mm;letter-spacing:.08em;text-transform:uppercase}.quote-facts{display:grid;grid-template-columns:1.1fr 1.2fr 1.2fr 1.2fr 1fr;gap:0;margin-top:6mm;border:1px solid #d3a63d;border-radius:5mm;background:#fff;overflow:hidden}.document-fact{min-height:31mm;padding:5mm 3.5mm;border-right:1px solid #dec58e}.document-fact:last-child{border:0}.document-fact span,.document-fact strong,.document-fact small{display:block}.document-fact span{color:#8b6827;font-size:2.4mm;font-weight:800;text-transform:uppercase}.document-fact strong{margin-top:2.2mm;font-size:3.3mm;line-height:1.35}.document-fact small{margin-top:1.5mm;color:#5f6466;font-size:2.7mm}.price-band{display:flex;align-items:center;justify-content:space-between;margin-top:5mm;border-radius:5mm;background:#030a19;color:white;padding:5mm 8mm}.price-band span{display:block;color:#d6aa4e;font-size:2.5mm;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.price-band strong{display:block;margin-top:1mm;color:#e0b454;font-family:Georgia,serif;font-size:8mm}.price-meta{display:flex;gap:6mm}.price-meta span{color:#fff;font-size:2.5mm;letter-spacing:0}.include-section{margin-top:5mm;border:1px solid #d3a63d;border-radius:5mm;background:#fff;padding:5mm}.include-section h2{width:42mm;margin:-8mm auto 4mm;border-radius:0 0 4mm 4mm;background:linear-gradient(90deg,#b67d1d,#efc96f,#b67d1d);padding:2mm;color:#111;text-align:center;font-size:4mm;letter-spacing:.12em;text-transform:uppercase}.amenity-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3mm}.amenity{min-height:17mm;border-right:1px dotted #d3a63d;text-align:center}.amenity:nth-child(5n){border:0}.amenity b{display:grid;place-items:center;width:8mm;height:8mm;margin:0 auto 2mm;border-radius:50%;background:#050c1a;color:#e0b454;font-size:2.4mm}.amenity span{font-size:2.4mm;font-weight:700;line-height:1.25;text-transform:uppercase}.document-notes{margin-top:4mm;border-left:1.5mm solid #d3a63d;background:#efe6d7;padding:3mm 4mm}.document-notes strong{color:#8b6827;font-size:2.5mm;text-transform:uppercase}.document-notes p{margin:1mm 0 0;font-size:2.5mm;line-height:1.4}.itinerary-title{margin-top:-1mm;text-align:center}.itinerary-title h1{margin:0;color:#8c641e;font-family:Georgia,serif;font-size:9mm;font-weight:500;letter-spacing:.07em;text-transform:uppercase}.itinerary-columns{display:grid;grid-template-columns:1.5fr .9fr;gap:7mm;margin-top:5mm}.detail-list{display:grid}.itinerary-detail{display:grid;grid-template-columns:8mm 1fr;gap:3mm;align-items:center;min-height:17mm;border-bottom:1px solid #caa45e;padding:2mm 0}.itinerary-detail i{display:block;width:7mm;height:7mm;border:1px solid #d3a63d;border-radius:50%;background:#050c1a;box-shadow:inset 0 0 0 2mm #050c1a}.itinerary-detail span,.itinerary-detail strong{display:block}.itinerary-detail span{color:#90691f;font-size:2.7mm;font-weight:800;text-transform:uppercase}.itinerary-detail strong{margin-top:1mm;font-size:3.4mm;font-weight:500;line-height:1.25}.vehicle-card{min-height:152mm;border:1px solid #d3a63d;border-radius:5mm;background:linear-gradient(145deg,#020814,#070d16);color:white;padding:6mm}.vehicle-card-label{display:block;color:#dcae45;font-size:2.7mm;text-align:center;text-transform:uppercase}.vehicle-card h2{margin:2mm 0;color:#dcae45;font-family:Georgia,serif;font-size:4.2mm;text-align:center;text-transform:uppercase}.vehicle-silhouette{display:grid;place-items:center;height:39mm;margin:3mm 0;border-bottom:1px solid #b98b32;color:#2b3036;font-size:8mm;font-weight:900;letter-spacing:.1em;text-align:center}.vehicle-features{display:grid}.vehicle-features div,.driver-timeline>div{display:grid;grid-template-columns:8mm 1fr;gap:2mm;align-items:start;border-bottom:1px solid #815f22;padding:2.6mm 0}.vehicle-features b,.driver-timeline b{color:#dcae45;font-size:2.7mm}.vehicle-features span{font-size:2.7mm;line-height:1.3}.driver-timeline{display:grid;align-content:start}.driver-timeline>div{min-height:14mm;border-bottom:1px solid #caa45e}.driver-timeline>div span{font-size:3.2mm;font-weight:700;line-height:1.35}.driver-timeline>.itinerary-detail{grid-template-columns:8mm 1fr}.document-footer{display:flex;align-items:center;justify-content:center;min-height:14mm;margin-top:5mm;background:#020814;color:white;font-size:3mm;letter-spacing:.19em;text-transform:uppercase}.document-footer b{color:#dcae45;margin:0 1.5mm}.sheet-quote{position:relative;width:1024px;min-height:1536px;background:#fff;box-shadow:0 0 30px #777}.quote-template-bg{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;object-fit:cover}.quote-poster-content{position:absolute;inset:0;z-index:1;font-family:Arial,sans-serif}.poster-client{position:absolute;left:50px;top:612px;display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:end;width:462px;border-radius:12px;background:rgba(255,255,255,.9);padding:5px 10px;color:#060b17;text-transform:uppercase}.poster-client span{font-size:18px;font-weight:900}.poster-client strong{overflow:hidden;color:#b27c23;font-size:28px;font-weight:950;line-height:1;letter-spacing:.04em;text-overflow:ellipsis;white-space:nowrap}.poster-client small{grid-column:1/-1;margin-top:2px;color:#111;font-size:12px;font-weight:900;letter-spacing:.02em}.poster-value{position:absolute;display:grid;align-content:center;min-height:34px;border-radius:8px;background:rgba(255,255,255,.96);padding:3px 7px;color:#111;font-size:20px;font-weight:500;line-height:1.15;text-align:left}.poster-start-date{left:118px;top:724px;width:128px}.poster-start-time{left:118px;top:840px;width:126px}.poster-origin{left:342px;top:739px;width:120px;text-align:center}.poster-destination{left:516px;top:739px;width:120px;text-align:center}.poster-end-date{left:722px;top:724px;width:112px}.poster-return-time{left:724px;top:840px;width:114px}.poster-passengers{left:892px;top:724px;width:88px;font-size:18px;text-align:center}.poster-luggage{left:890px;top:831px;width:96px;font-size:17px;line-height:1.2}.poster-service-note{position:absolute;left:48px;top:914px;max-width:928px;border-radius:999px;background:rgba(255,255,255,.92);padding:7px 18px;color:#111;font-size:16px;font-weight:850;text-align:center;text-transform:uppercase}.poster-price-band{position:absolute;left:28px;top:965px;width:968px;height:144px;display:grid;grid-template-columns:1fr 2px 1fr;align-items:center;border-radius:22px;background:#030917;color:#fff;overflow:hidden}.poster-price-band div{display:grid;align-content:center;height:100%;padding:0 66px}.poster-price-band div:last-child{text-align:center}.poster-price-band i{display:block;width:2px;height:98px;background:#c49a42}.poster-price-band span{color:#fff;font-size:25px;font-weight:900;letter-spacing:.04em;line-height:1.1;text-transform:uppercase}.poster-price-band strong{display:block;margin-top:10px;color:#dcae45;font-size:49px;font-weight:950;line-height:1}.poster-tax-badge{position:absolute;left:306px;top:1124px;width:396px;min-height:46px;display:grid;place-items:center;border:1px solid #d7aa56;border-radius:7px;background:rgba(255,255,255,.96);padding:6px 12px;color:#111;text-align:center;text-transform:uppercase}.poster-tax-badge span{font-size:20px;font-weight:900;line-height:1.1}.poster-tax-badge small{display:block;margin-top:4px;color:#343434;font-size:10px;font-weight:850;line-height:1.2}.poster-vehicle-number{position:absolute;left:214px;top:1271px;min-width:44px;border-radius:8px;background:rgba(255,255,255,.92);color:#b17c22;font-size:58px;font-weight:950;line-height:.95;text-align:center}.poster-vehicle-name{position:absolute;left:215px;top:1334px;width:150px;border-radius:8px;background:rgba(255,255,255,.95);padding:2px 4px;color:#111;font-size:16px;font-weight:950;line-height:1.05;text-transform:uppercase}.poster-vehicle-tags{position:absolute;left:415px;top:1342px;display:flex;flex-wrap:wrap;gap:7px;max-width:520px}.poster-vehicle-tags span{border:1px solid #d7aa56;border-radius:999px;background:rgba(255,255,255,.96);padding:5px 8px;color:#111;font-size:12px;font-weight:900;text-transform:uppercase}.screen-actions{position:fixed;right:20px;bottom:20px;display:flex;gap:8px}.screen-actions button{border:0;border-radius:10px;background:#050c1a;color:white;padding:12px 16px;font-weight:700;cursor:pointer}.screen-actions button:first-child{background:#c79538;color:#111}@media print{html,body{background:white}.sheet{box-shadow:none}.screen-actions{display:none}}
-    ${type === "quote" ? quoteDocumentStyles() : ""}
+    ${type === "quote" || type === "route" ? quoteDocumentStyles() : ""}
   </style></head><body>${sheetHtml}</body></html>`;
 
   const parsedDocument = new DOMParser().parseFromString(documentHtml, "text/html");
   const documentStyles = parsedDocument.querySelector("style").textContent;
   const sheetMarkup = parsedDocument.querySelector(".sheet").outerHTML;
-  const hasQuoteContinuation = type === "quote" && Boolean(parsedDocument.querySelector(".poster-continuation"));
   const quoteDownloadButtons =
     type === "quote"
       ? `
-          ${hasQuoteContinuation ? '<button class="button button-secondary" data-edit-journey>Hacer todo editable</button>' : ""}
           <button class="button button-gold" data-download-document-image="png" data-document-page=".quote-poster-content" data-file-suffix="01-Cotizacion">Descargar cotización PNG Full HD</button>
-          ${hasQuoteContinuation ? '<button class="button button-gold" data-download-document-image="png" data-document-page=".poster-continuation" data-file-suffix="02-Recorrido">Descargar recorrido PNG Full HD</button>' : ""}
+        `
+      : type === "route"
+        ? `
+          <button class="button button-secondary" data-edit-journey>Hacer todo editable</button>
+          <button class="button button-gold" data-download-document-image="png" data-document-page=".poster-continuation" data-file-suffix="Itinerario-del-recorrido">Descargar itinerario PNG Full HD</button>
         `
       : "";
 
@@ -3506,7 +3686,7 @@ function openPremiumDocument(title, type, content) {
     event.currentTarget.textContent = editing ? "Finalizar edición" : "Hacer todo editable";
     if (editing) {
       continuation.focus();
-      toast("El detalle del recorrido ya se puede editar directamente.");
+      toast("El itinerario del recorrido ya se puede editar directamente.");
     }
   });
   $$("[data-download-document-image]").forEach((button) => {
@@ -3517,11 +3697,11 @@ function openPremiumDocument(title, type, content) {
           const continuation = $(".document-preview-scroll .poster-continuation");
           const heading = $(".poster-continuation-header h2", continuation);
           const clientName = String(continuation?.dataset.clientName || "").trim();
-          const includeClientName = window.confirm("¿Desea agregar el nombre del cliente al detalle del recorrido?");
+          const includeClientName = window.confirm("¿Desea agregar el nombre del cliente al itinerario del recorrido?");
           if (heading) {
             heading.textContent = includeClientName && clientName
-              ? `DETALLES DEL RECORRIDO CLIENTE: ${clientName}`
-              : "DETALLES DEL RECORRIDO";
+              ? `ITINERARIO DEL RECORRIDO CLIENTE: ${clientName}`
+              : "ITINERARIO DEL RECORRIDO";
           }
         }
         await downloadDocumentImage(title, button.dataset.downloadDocumentImage, {
@@ -3589,21 +3769,42 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
   const pageSelector = options.pageSelector || ".sheet";
   const page = suppliedPage || (pageSelector === ".sheet" ? sheet : $(pageSelector, sheet));
   if (!page) return;
+  let measurementHost;
   try {
     const clone = page.cloneNode(true);
     await inlineImages(clone);
-    const width = Math.ceil(Math.max(page.offsetWidth, page.scrollWidth));
-    const height = Math.ceil(Math.max(page.offsetHeight, page.scrollHeight));
-    clone.style.width = `${width}px`;
-    clone.style.height = `${height}px`;
+    const canonicalWidth = page.matches(".quote-poster-content, .poster-continuation")
+      ? 1023
+      : Math.ceil(Math.max(page.offsetWidth, page.scrollWidth));
+    clone.style.width = `${canonicalWidth}px`;
+    clone.style.height = "auto";
+    clone.style.minHeight = page.matches(".quote-poster-content") ? "1537px" : "0";
+    clone.style.maxWidth = "none";
+    clone.style.maxHeight = "none";
+    clone.style.overflow = "visible";
     clone.style.zoom = "1";
+    clone.style.transform = "none";
     clone.style.margin = "0";
+    measurementHost = document.createElement("div");
+    measurementHost.setAttribute("aria-hidden", "true");
+    measurementHost.style.cssText = `position:fixed;left:-20000px;top:0;width:${canonicalWidth}px;visibility:hidden;pointer-events:none;z-index:-1;overflow:visible`;
+    const measurementStyle = document.createElement("style");
+    measurementStyle.textContent = `${style}.sheet,.quote-poster-content,.poster-continuation{margin:0!important;box-shadow:none!important}`;
+    measurementHost.append(measurementStyle, clone);
+    document.body.appendChild(measurementHost);
+    if (document.fonts?.ready) await document.fonts.ready;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const width = canonicalWidth;
+    const height = Math.ceil(Math.max(clone.offsetHeight, clone.scrollHeight, page.matches(".quote-poster-content") ? 1537 : 1));
+    clone.style.height = `${height}px`;
     const scale = 3;
     const serialized = new XMLSerializer().serializeToString(clone);
+    measurementHost.remove();
+    measurementHost = null;
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
         <foreignObject width="100%" height="100%">
-          <div xmlns="http://www.w3.org/1999/xhtml">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">
             <style>${style}.sheet,.quote-poster-content,.poster-continuation{margin:0!important;box-shadow:none!important}</style>
             ${serialized}
           </div>
@@ -3637,8 +3838,10 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
       link.click();
       if (blob) setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }
-    toast(`${options.fileSuffix === "02-Recorrido" ? "Recorrido" : "Cotización"} descargado en ${format.toUpperCase()} Full HD.`);
+    const documentLabel = options.fileSuffix === "Itinerario-del-recorrido" ? "Itinerario" : "Cotización";
+    toast(`${documentLabel} descargado en ${format.toUpperCase()} Full HD.`);
   } catch (error) {
+    measurementHost?.remove();
     if (error?.name === "AbortError") return;
     toast(error.message, "error");
   }

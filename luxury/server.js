@@ -369,6 +369,14 @@ function normalizeQuote(body, rates, existing = {}) {
   const seatConfiguration = ["luxury", "m1", "m3"].includes(requestedSeatConfiguration)
     ? requestedSeatConfiguration
     : "";
+  const requestedSprinter311Configuration = cleanString(
+    body.sprinter311Configuration || existing.sprinter311Configuration ||
+      (parseBoolean(body.hasBed) ? "bed" : parseBoolean(body.hasLuggage) ? "luggage" : "standard"),
+    20,
+  );
+  const sprinter311Configuration = ["bed", "luggage", "standard"].includes(requestedSprinter311Configuration)
+    ? requestedSprinter311Configuration
+    : "standard";
   const fixedFare = priceDisplayMode === "final"
     ? finalManualPrice || Math.max(0, cleanNumber(body.fixedFare, existing.fixedFare || 0))
     : selectedFare || Math.max(0, cleanNumber(body.fixedFare, existing.fixedFare || 0));
@@ -406,7 +414,8 @@ function normalizeQuote(body, rates, existing = {}) {
     vehicleIds: vehicleIds.length ? vehicleIds : vehicleId ? [vehicleId] : [],
     vehicleCount,
     vehicleManualName,
-    hasBed: parseBoolean(body.hasBed),
+    hasBed: sprinter311Configuration === "bed" || parseBoolean(body.hasBed),
+    sprinter311Configuration,
     hasPlayStation5: parseBoolean(body.hasPlayStation5),
     hasTv: parseBoolean(body.hasTv),
     seatConfiguration,
@@ -464,21 +473,25 @@ function validateQuoteCapacity(db, quote) {
       if (quote.seatConfiguration === "m3") return Math.max(1, Number(vehicle.m3SeatCapacity || 11));
       return Math.max(1, Number(vehicle.m1SeatCapacity || vehicle.capacity || 14));
     }
-    if (quote.hasBed) return Math.max(1, Number(vehicle.capacityWithBed || 8));
-    if (hasLuggage) return Math.max(1, Number(vehicle.capacityWithLuggage || 10));
+    if (quote.sprinter311Configuration === "bed" || quote.hasBed) {
+      return Math.max(1, Number(vehicle.capacityWithBed || 8));
+    }
+    if (quote.sprinter311Configuration === "luggage" || hasLuggage) {
+      return Math.max(1, Number(vehicle.capacityWithLuggage || 10));
+    }
     return Math.max(1, Number(vehicle.capacity || 15));
   };
   const manualCapacity = quote.vehicleManualName ? Math.max(15, Number(quote.passengers || 1)) : 0;
   const maximum = vehicles.length || quote.vehicleManualName
     ? vehicles.reduce((sum, vehicle) => sum + capacityForVehicle(vehicle), 0) + manualCapacity
-    : quote.hasBed
+    : quote.sprinter311Configuration === "bed" || quote.hasBed
       ? 8
-      : hasLuggage
+      : quote.sprinter311Configuration === "luggage" || hasLuggage
         ? 10
         : 15;
   quote.maxPassengers = maximum;
 
-  if (quote.hasBed && vehicles.length && !vehicles.some((vehicle) => !isSprinter316(vehicle))) {
+  if ((quote.sprinter311Configuration === "bed" || quote.hasBed) && vehicles.length && !vehicles.some((vehicle) => !isSprinter316(vehicle))) {
     const error = new Error("La cama solo aplica para las Mercedes Benz Sprinter 311.");
     error.statusCode = 400;
     throw error;
@@ -1082,6 +1095,7 @@ export async function createApp(options = {}) {
           vehicleManualName: quote.vehicleManualName,
           vehicleName: withNames(db, quote).vehicleName,
           hasBed: quote.hasBed,
+          sprinter311Configuration: quote.sprinter311Configuration,
           hasPlayStation5: quote.hasPlayStation5,
           hasTv: quote.hasTv,
           seatConfiguration: quote.seatConfiguration,
