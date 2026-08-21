@@ -60,6 +60,15 @@ function normalizeEquipmentKey(value) {
     .trim();
 }
 
+const equipmentInventoryAliases = {
+  "hdmi de 5mts": "cable hdmi 5 mt"
+};
+
+function equipmentInventoryCanonicalKey(value) {
+  const key = normalizeEquipmentKey(value);
+  return equipmentInventoryAliases[key] || key;
+}
+
 function cleanEquipmentFilePart(value, fallback) {
   const clean = String(value || fallback || "equipo")
     .replace(/[\\/:*?"<>|]/g, "")
@@ -936,7 +945,7 @@ function equipmentRowsSummary() {
         const key = normalizeEquipmentKey(description);
         if (!key) return;
         const perEventQuantity = Number(quantity) || 0;
-        const inventoryRows = inventoryRowsByEquipmentKey.get(key) || [];
+        const inventoryRows = inventoryRowsByEquipmentKey.get(equipmentInventoryCanonicalKey(description)) || [];
         if (inventoryRows.length) {
           let remainingQuantity = perEventQuantity;
           inventoryRows.forEach((inventoryRow) => {
@@ -1625,8 +1634,6 @@ function addManualEquipmentExtra() {
 
 const equipmentDefaultInventory = new Map();
 const equipmentDefaultInventoryLookup = new Map();
-const equipmentInventoryAliases = {};
-
 function equipmentInventoryLookupKey(value) {
   return normalizeEquipmentKey(value)
     .replace(/[.,;:]+$/g, "")

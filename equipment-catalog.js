@@ -1,9 +1,9 @@
 window.requerimientoEquipoCatalog = {
-  "version": "20260821-01",
+  "version": "20260821-04",
   "source": {
     "spreadsheetId": "1AVOncyecjkDB2UfZmAqC__Te9XCkQTIU",
     "workbook": "EQUIPO-DE-AUDIO.xlsx",
-    "modifiedTime": "2026-08-21T15:12:29.267Z",
+    "modifiedTime": "2026-08-21T15:13:51.707Z",
     "sheets": [
       "SUNDAY FUNDAY",
       "AUDIO",
@@ -10311,7 +10311,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "Q137",
-          "value": "Cable HDMI 5 mt"
+          "value": "HDMI de 5mts"
         },
         {
           "address": "Q138",
@@ -11369,7 +11369,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Cable HDMI 5 mt"
+              "HDMI de 5mts"
             ]
           ]
         },
@@ -27126,7 +27126,7 @@ window.requerimientoEquipoCatalog = {
         },
         {
           "address": "E18",
-          "value": "Cable HDMI 5 mt"
+          "value": "HDMI de 5mts"
         },
         {
           "address": "E19",
@@ -27284,7 +27284,7 @@ window.requerimientoEquipoCatalog = {
             ],
             [
               2,
-              "Cable HDMI 5 mt"
+              "HDMI de 5mts"
             ]
           ]
         },
