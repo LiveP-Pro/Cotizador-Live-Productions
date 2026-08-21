@@ -1153,6 +1153,127 @@ tr:last-child td {
   grid-column: 1 / -1;
 }
 
+.itinerary-linked-quote {
+  margin: 0 0 18px;
+}
+
+.itinerary-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.itinerary-type-option {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 154px;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: white;
+  padding: 20px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.itinerary-type-option > input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.itinerary-type-option.active {
+  border-color: var(--gold);
+  background: #fffaf0;
+  box-shadow: 0 0 0 3px rgba(189, 150, 80, 0.12);
+}
+
+.itinerary-type-badge {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+  background: var(--ink);
+  color: var(--gold);
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.itinerary-type-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.itinerary-type-copy small {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.itinerary-type-copy b {
+  color: var(--ink);
+  font-family: Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.itinerary-type-copy em {
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.itinerary-client-panel {
+  display: grid;
+  gap: 5px;
+  margin-top: 18px;
+  border-left: 4px solid var(--gold);
+  border-radius: 0 14px 14px 0;
+  background: var(--surface-soft);
+  padding: 17px 20px;
+}
+
+.itinerary-client-panel[hidden],
+.itinerary-pilot-fields[hidden] {
+  display: none !important;
+}
+
+.itinerary-client-panel span {
+  color: var(--gold);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.itinerary-client-panel strong {
+  color: var(--ink);
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.itinerary-client-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.itinerary-pilot-fields {
+  margin-top: 18px;
+}
+
 .discount-control {
   display: grid;
   gap: 10px;
@@ -2598,6 +2719,7 @@ tr:last-child td {
 
   .stats-grid,
   .form-grid,
+  .itinerary-type-grid,
   .destination-mode-grid,
   .price-mode-grid,
   .rate-options,

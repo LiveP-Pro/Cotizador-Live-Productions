@@ -98,7 +98,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "74";
+const APP_VERSION = "75";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -3425,8 +3425,11 @@ function downloadQuotePdf(id) {
 }
 
 function openRouteItineraryDocument(quote) {
+  const quoteReference = String(quote.number || "")
+    .match(/Coti-Luxury-\d{4}/i)?.[0] || quote.number || "Cotizacion";
+  const title = `Itinerario del Recorrido-${quote.clientName || "Cliente"}-${quoteReference}`;
   openPremiumDocument(
-    `${quote.number}-Itinerario-del-recorrido`,
+    title,
     "route",
     quotePosterContinuationHtml(quote, { force: true }),
   );
@@ -3434,40 +3437,66 @@ function openRouteItineraryDocument(quote) {
 
 function openItineraryModal(quoteId) {
   const quote = state.quotes.find((item) => item.id === quoteId);
+  if (!quote) return;
   openModal("Generar itinerarios", `
     <form id="itinerary-form">
-      <p class="muted">Se crearán documentos vinculados a <strong>${escapeHtml(quote.number)}</strong> para ${escapeHtml(quote.clientName)}.</p>
-      <div class="form-grid">
-        <label>Tipo de itinerario
-          <select name="type">
-            <option value="cliente">Para cliente</option>
-            <option value="piloto">Para piloto</option>
-            <option value="recorrido">Itinerario del recorrido</option>
-          </select>
+      <p class="muted itinerary-linked-quote">Documentos vinculados a <strong>${escapeHtml(quote.number)}</strong> para <strong>${escapeHtml(quote.clientName)}</strong>.</p>
+      <div class="itinerary-type-grid" role="radiogroup" aria-label="Tipo de itinerario">
+        <label class="itinerary-type-option active" data-itinerary-type-option>
+          <input type="radio" name="type" value="cliente" checked />
+          <span class="itinerary-type-badge">CL</span>
+          <span class="itinerary-type-copy">
+            <small>Cliente</small>
+            <b>Itinerario del recorrido</b>
+            <em>Usa automáticamente los traslados de la cotización y podrá editarse antes de guardarlo.</em>
+          </span>
         </label>
-        <label class="full" data-itinerary-manual-field>Recorrido o instrucciones<textarea name="instructions" placeholder="Escriba una actividad por línea para crear el recorrido del piloto.">${escapeHtml(quote.notes)}</textarea></label>
-        <label class="full" data-itinerary-manual-field>Notas de contacto<textarea name="contactNotes" placeholder="Contacto alterno, indicaciones de acceso, letrero de bienvenida..."></textarea></label>
+        <label class="itinerary-type-option" data-itinerary-type-option>
+          <input type="radio" name="type" value="piloto" />
+          <span class="itinerary-type-badge">PI</span>
+          <span class="itinerary-type-copy">
+            <small>Piloto</small>
+            <b>Itinerario para piloto</b>
+            <em>Permite agregar instrucciones operativas y datos de contacto para el piloto.</em>
+          </span>
+        </label>
+      </div>
+      <section class="itinerary-client-panel" data-itinerary-client-panel>
+        <span>Listo para generar</span>
+        <strong>Itinerario del recorrido</strong>
+        <p>Se abrirá con todos sus campos editables. Al guardarlo podrá elegir la carpeta de destino.</p>
+      </section>
+      <div class="form-grid itinerary-pilot-fields" data-itinerary-pilot-fields hidden>
+        <label class="full">Recorrido o instrucciones<textarea name="instructions" placeholder="Escriba una actividad por línea para crear el recorrido del piloto.">${escapeHtml(quote.notes)}</textarea></label>
+        <label class="full">Notas de contacto<textarea name="contactNotes" placeholder="Contacto alterno, indicaciones de acceso, letrero de bienvenida..."></textarea></label>
       </div>
       <p class="form-error" data-form-error></p>
-      <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit">Generar itinerario</button></div>
+      <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit" data-generate-itinerary>Abrir itinerario del recorrido</button></div>
     </form>
   `);
   $("[data-close-form]").addEventListener("click", closeModal);
   const itineraryForm = $("#itinerary-form");
   const syncItineraryType = () => {
-    const isRoute = itineraryForm.elements.type.value === "recorrido";
-    $$('[data-itinerary-manual-field]', itineraryForm).forEach((field) => {
-      field.hidden = isRoute;
+    const isClient = itineraryForm.elements.type.value === "cliente";
+    $$('[data-itinerary-type-option]', itineraryForm).forEach((option) => {
+      option.classList.toggle("active", option.querySelector("input").checked);
     });
+    $("[data-itinerary-client-panel]", itineraryForm).hidden = !isClient;
+    $("[data-itinerary-pilot-fields]", itineraryForm).hidden = isClient;
+    $("[data-generate-itinerary]", itineraryForm).textContent = isClient
+      ? "Abrir itinerario del recorrido"
+      : "Generar itinerario para piloto";
   };
-  itineraryForm.elements.type.addEventListener("change", syncItineraryType);
+  $$('input[name="type"]', itineraryForm).forEach((input) => {
+    input.addEventListener("change", syncItineraryType);
+  });
   syncItineraryType();
   itineraryForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
     try {
       const body = Object.fromEntries(new FormData(form));
-      if (body.type === "recorrido") {
+      if (body.type === "cliente") {
         closeModal();
         openRouteItineraryDocument(quote);
         return;
@@ -3478,7 +3507,7 @@ function openItineraryModal(quoteId) {
       });
       toast(`${item.number} generado.`);
       closeModal();
-      await navigate(item.type === "piloto" ? "driverItineraries" : "clientItineraries");
+      await navigate("driverItineraries");
     } catch (error) {
       $("[data-form-error]", form).textContent = error.message;
     }
@@ -3654,7 +3683,7 @@ function openPremiumDocument(title, type, content) {
       : type === "route"
         ? `
           <button class="button button-secondary" data-edit-journey>Hacer todo editable</button>
-          <button class="button button-gold" data-download-document-image="png" data-document-page=".poster-continuation" data-file-suffix="Itinerario-del-recorrido">Descargar itinerario PNG Full HD</button>
+          <button class="button button-gold" data-download-document-image="png" data-document-page=".poster-continuation" data-document-label="Itinerario">Guardar itinerario PNG Full HD</button>
         `
       : "";
 
@@ -3677,6 +3706,16 @@ function openPremiumDocument(title, type, content) {
     window.print();
     setTimeout(() => document.body.classList.remove("printing-document"), 200);
   });
+  if (type === "route") {
+    const continuation = $(".document-preview-scroll .poster-continuation");
+    const editButton = $("[data-edit-journey]");
+    if (continuation) {
+      continuation.contentEditable = "true";
+      continuation.spellcheck = false;
+      continuation.classList.add("is-editing");
+    }
+    if (editButton) editButton.textContent = "Finalizar edición";
+  }
   $("[data-edit-journey]")?.addEventListener("click", (event) => {
     const continuation = $(".document-preview-scroll .poster-continuation");
     if (!continuation) return;
@@ -3693,20 +3732,10 @@ function openPremiumDocument(title, type, content) {
     button.addEventListener("click", async () => {
       button.disabled = true;
       try {
-        if (button.dataset.documentPage === ".poster-continuation") {
-          const continuation = $(".document-preview-scroll .poster-continuation");
-          const heading = $(".poster-continuation-header h2", continuation);
-          const clientName = String(continuation?.dataset.clientName || "").trim();
-          const includeClientName = window.confirm("¿Desea agregar el nombre del cliente al itinerario del recorrido?");
-          if (heading) {
-            heading.textContent = includeClientName && clientName
-              ? `ITINERARIO DEL RECORRIDO CLIENTE: ${clientName}`
-              : "ITINERARIO DEL RECORRIDO";
-          }
-        }
         await downloadDocumentImage(title, button.dataset.downloadDocumentImage, {
           pageSelector: button.dataset.documentPage,
           fileSuffix: button.dataset.fileSuffix,
+          documentLabel: button.dataset.documentLabel,
         });
       } finally {
         button.disabled = false;
@@ -3772,6 +3801,9 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
   let measurementHost;
   try {
     const clone = page.cloneNode(true);
+    clone.classList.remove("is-editing");
+    clone.removeAttribute("contenteditable");
+    clone.removeAttribute("spellcheck");
     await inlineImages(clone);
     const canonicalWidth = page.matches(".quote-poster-content, .poster-continuation")
       ? 1023
@@ -3838,8 +3870,8 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
       link.click();
       if (blob) setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }
-    const documentLabel = options.fileSuffix === "Itinerario-del-recorrido" ? "Itinerario" : "Cotización";
-    toast(`${documentLabel} descargado en ${format.toUpperCase()} Full HD.`);
+    const documentLabel = options.documentLabel || (options.fileSuffix === "Itinerario-del-recorrido" ? "Itinerario" : "Cotización");
+    toast(`${documentLabel} guardado en ${format.toUpperCase()} Full HD.`);
   } catch (error) {
     measurementHost?.remove();
     if (error?.name === "AbortError") return;
