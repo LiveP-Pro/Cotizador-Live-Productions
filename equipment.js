@@ -145,73 +145,11 @@ function equipmentEventOutDateLabel(event) {
       : "Por definir";
 }
 
-function equipmentEventInterval(event) {
-  const start = event?.equipmentOutAt || (event?.date ? `${event.date}T00:00` : "");
-  const end = event?.equipmentInAt || (event?.date ? `${event.date}T23:59` : "");
-  if (!start || !end) return null;
-  return { start, end: end < start ? start : end };
-}
-
-function equipmentTransferDateKey(event) {
-  return event?.date
-    || equipmentDateKeyFromDateTime(event?.equipmentOutAt)
-    || equipmentDateKeyFromDateTime(event?.equipmentInAt)
-    || "";
-}
-
-function equipmentMaxConcurrentQuantityForEvents(row, events = []) {
-  const points = [];
-  let hasTimedEvent = false;
-  let simpleTotal = 0;
-  events.forEach((event) => {
-    const quantity = Number(row.eventQuantities.get(event.id)) || 0;
-    if (quantity <= 0) return;
-    simpleTotal += quantity;
-    const interval = equipmentEventInterval(event);
-    if (!interval) return;
-    hasTimedEvent = true;
-    points.push({ at: interval.start, type: "start", quantity });
-    points.push({ at: interval.end, type: "end", quantity });
-  });
-  if (!hasTimedEvent || !points.length) return simpleTotal;
-  points.sort((first, second) => {
-    const dateOrder = first.at.localeCompare(second.at);
-    if (dateOrder) return dateOrder;
-    if (first.type === second.type) return 0;
-    return first.type === "end" ? -1 : 1;
-  });
-  let current = 0;
-  let maximum = 0;
-  points.forEach((point) => {
-    if (point.type === "end") {
-      current = Math.max(0, current - point.quantity);
-      return;
-    }
-    current += point.quantity;
-    maximum = Math.max(maximum, current);
-  });
-  return maximum || simpleTotal;
-}
-
-function equipmentMaxConcurrentQuantity(row, events = activeEquipmentEvents()) {
-  const eventsByDate = new Map();
-  let undatedTotal = 0;
-  events.forEach((event) => {
-    const quantity = Number(row.eventQuantities.get(event.id)) || 0;
-    if (quantity <= 0) return;
-    const dateKey = equipmentTransferDateKey(event);
-    if (!dateKey) {
-      undatedTotal += quantity;
-      return;
-    }
-    if (!eventsByDate.has(dateKey)) eventsByDate.set(dateKey, []);
-    eventsByDate.get(dateKey).push(event);
-  });
-  const datedMaximum = Math.max(
+function equipmentTransferredRouteQuantity(row, events = []) {
+  return Math.max(
     0,
-    ...[...eventsByDate.values()].map((dateEvents) => equipmentMaxConcurrentQuantityForEvents(row, dateEvents))
+    ...events.map((event) => Number(row.eventQuantities.get(event.id)) || 0)
   );
-  return undatedTotal + datedMaximum || Number(row.quantity) || 0;
 }
 
 function createEquipmentSummaryTransferRoute(eventIds = [], routeId = "") {
@@ -289,7 +227,7 @@ function equipmentTransferAdjustedQuantity(row, events, transferRoutes) {
       adjustedQuantity += originalRouteQuantity;
       return;
     }
-    const routeQuantity = equipmentMaxConcurrentQuantity(row, rowTransferEvents);
+    const routeQuantity = equipmentTransferredRouteQuantity(row, rowTransferEvents);
     adjustedQuantity += routeQuantity;
     if (routeQuantity < originalRouteQuantity) appliedRouteCount += 1;
   });
@@ -1835,7 +1773,11 @@ function tableForEquipmentInventory(rows, editable = true) {
       const transferApplied = Boolean(row.transferApplied);
       const multipleTransfers = (Number(row.transferRouteCount) || 0) > 1;
       const transferLabel = multipleTransfers ? "TRASIEGO MÚLTIPLE" : "TRASIEGO";
-      const actionLabel = needsRent ? (transferApplied ? `RENTA + ${transferLabel}` : "RENTA") : transferApplied ? transferLabel : "";
+      const actionLabel = needsRent
+        ? (transferApplied ? `RENTA + ${transferLabel}` : "RENTA")
+        : transferApplied
+          ? "EQUIPO TRASEGADO NO GENERA RENTA"
+          : "";
       const actionClass = needsRent ? "equipment-action-rent" : transferApplied ? "equipment-action-transfer" : "equipment-action-empty";
       const observation = equipmentState.observations.get(row.key) || "";
       const eventCells = events
