@@ -1651,6 +1651,10 @@ function equipmentInventoryIsExplicitZero(value) {
   return Boolean(clean) && /^-?\d+(?:\.\d+)?$/.test(clean) && Number(clean) === 0;
 }
 
+function equipmentInventoryNeedsManualEntry(value) {
+  return String(value ?? "").trim() === "" || equipmentInventoryIsExplicitZero(value);
+}
+
 function equipmentInventoryRowKey(item) {
   const sourceRow = Number(item?.sourceRow) || "sin-fila";
   const descriptionKey = equipmentInventoryLookupKey(item?.description) || "equipo";
@@ -1819,7 +1823,7 @@ function tableForEquipmentInventory(rows, editable = true) {
       const required = Number(row.quantity) || 0;
       const shortage = inventoryNumber - required;
       const needsRent = shortage < 0;
-      const zeroInventory = equipmentInventoryIsExplicitZero(inventory);
+      const zeroInventory = equipmentInventoryNeedsManualEntry(inventory);
       const shortageClass = needsRent ? "equipment-shortage-cell" : "equipment-rest-ok";
       const transferApplied = Boolean(row.transferApplied);
       const multipleTransfers = (Number(row.transferRouteCount) || 0) > 1;
@@ -1956,7 +1960,7 @@ function bindEquipmentInventoryInputs() {
       const inventoryInput = row.querySelector(".equipment-inventory-input");
       inventoryInput?.addEventListener("input", (event) => {
         equipmentState.inventory.set(key, event.target.value);
-        row.classList.toggle("equipment-inventory-zero-row", equipmentInventoryIsExplicitZero(event.target.value));
+        row.classList.toggle("equipment-inventory-zero-row", equipmentInventoryNeedsManualEntry(event.target.value));
         renderEquipmentPdfPreview();
       });
       inventoryInput?.addEventListener("change", (event) => {

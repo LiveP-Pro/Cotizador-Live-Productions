@@ -1,10 +1,10 @@
 window.requerimientoEquipoInventory = {
-  "version": "20260821-01",
+  "version": "20260821-03",
   "source": {
     "spreadsheetId": "1AVOncyecjkDB2UfZmAqC__Te9XCkQTIU",
     "workbook": "EQUIPO-DE-AUDIO.xlsx",
     "sheet": "INVENTARIO",
-    "modifiedTime": "2026-08-21T15:12:29.267Z",
+    "modifiedTime": "2026-08-21T15:13:51.707Z",
     "range": "B2:C276",
     "titleCell": "B2"
   },
