@@ -98,7 +98,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "76";
+const APP_VERSION = "77";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -3613,6 +3613,7 @@ function vehicleDocumentCard(item, features) {
 
 function quoteDocumentStyles() {
   return `
+    *,*::before,*::after{box-sizing:border-box}
     .sheet.sheet-quote{position:relative;align-self:start;justify-self:center;width:1023px;height:max-content;min-height:1537px;background:#fff;color:#080d17;font-family:Arial,sans-serif;box-shadow:0 0 30px #777;overflow:hidden}
     .sheet.sheet-route{position:relative;align-self:start;justify-self:center;width:1023px;height:max-content;min-height:720px;background:#f6f1e8;color:#080d17;font-family:Arial,sans-serif;box-shadow:0 0 30px #777;overflow:hidden}
     .sheet-route .poster-continuation{min-height:720px}
