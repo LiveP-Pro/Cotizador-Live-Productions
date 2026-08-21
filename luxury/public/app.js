@@ -98,7 +98,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "75";
+const APP_VERSION = "76";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -3376,6 +3376,7 @@ function quotePosterPageHtml(quote) {
           <img class="quote-template-lower-bg" src="${templateImage}" alt="" aria-hidden="true">
           ${quotePosterVehicleHtml(quote)}
           ${quotePosterAmenitiesHtml(quote)}
+          <footer class="poster-quote-footer">Viaja con <b>comodidad, exclusividad y seguridad.</b></footer>
         </div>
       </section>
     </div>
@@ -3633,7 +3634,7 @@ function quoteDocumentStyles() {
     .poster-service-price-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;min-width:0;color:#f8f8f6;font-size:15px;line-height:1.2}.poster-service-price-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.poster-service-price-row strong{color:#e2b348;font-size:18px;font-weight:900;white-space:nowrap}.poster-service-price-box-columns .poster-service-price-row{gap:9px;font-size:12px}.poster-service-price-box-columns .poster-service-price-row strong{font-size:16px}.poster-service-price-box-dense .poster-service-price-list{gap:3px}.poster-service-price-box-dense .poster-service-price-row{font-size:10px;line-height:1.08}.poster-service-price-box-dense .poster-service-price-row strong{font-size:13px;line-height:1.08}
     .poster-service-tax-note{border-top:1px solid rgba(213,166,72,.42);padding:9px 4px 7px;color:#fff;font-size:12px;font-weight:900;letter-spacing:.06em}.poster-price-breakdown{display:grid;width:540px;max-width:100%;margin-left:auto;border-top:1px solid rgba(213,166,72,.62);text-transform:uppercase}.poster-price-summary-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:28px;min-height:38px;border-bottom:1px solid rgba(213,166,72,.32);padding:7px 4px 7px 20px}.poster-price-summary-row span{color:#f5f5f3;font-size:12px;font-weight:900;letter-spacing:.1em}.poster-price-summary-row strong{color:#e5b64c;font-family:Georgia,serif;font-size:22px;line-height:1;white-space:nowrap}.poster-price-discount strong{color:#f0d48e}.poster-price-total{min-height:51px;border-bottom:0;padding-top:10px;padding-bottom:10px}.poster-price-total span{font-size:14px}.poster-price-total strong{font-size:32px}
     .poster-quote-notes{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;margin:16px 48px;border-left:5px solid #c99532;background:#fff;padding:5px 0 5px 18px;color:#171717}.poster-quote-notes>strong{padding-top:2px;color:#9e6b1a;font-size:13px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}.poster-quote-notes>div{display:grid;gap:5px}.poster-quote-notes p{margin:0;font-size:13px;line-height:1.42}.poster-quote-notes b{color:#9e6b1a}
-    .poster-template-lower{position:relative;height:263px;overflow:hidden;background:#fff}.quote-template-lower-bg{position:absolute;left:0;top:-1274px;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
+    .poster-template-lower{position:relative;height:293px;overflow:hidden;background:#fff}.quote-template-lower-bg{position:absolute;left:0;top:-1274px;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
     .poster-manual-vehicle-mask{position:absolute;left:20px;top:14px;z-index:2;width:174px;height:135px;border-radius:0 0 0 20px;background:#fff}
     .poster-vehicle-value{position:absolute;left:197px;top:27px;z-index:3;height:119px;display:inline-grid;grid-template-columns:58px minmax(0,max-content);gap:10px;align-items:center;color:#111;text-transform:uppercase}
     .poster-vehicle-value>b{color:#bd8123;font-size:65px;line-height:1;text-align:center}.poster-vehicle-copy{max-width:132px;border-right:2px solid #d9ad57;padding-right:12px}.poster-vehicle-value strong,.poster-vehicle-value span{display:block}.poster-vehicle-value strong{font-size:16px;font-weight:900;line-height:1.04}.poster-vehicle-value span{margin-top:5px;font-size:13px;font-weight:800}
@@ -3646,6 +3647,7 @@ function quoteDocumentStyles() {
     .poster-vehicle-features.poster-feature-count-5 .poster-feature-icon,.poster-vehicle-features.poster-feature-count-6 .poster-feature-icon{width:36px;height:36px}.poster-vehicle-features.poster-feature-count-5 .poster-feature-item span,.poster-vehicle-features.poster-feature-count-6 .poster-feature-item span{font-size:8.5px}
     .poster-vehicle-features.poster-feature-count-7 .poster-feature-icon,.poster-vehicle-features.poster-feature-count-8 .poster-feature-icon{width:30px;height:30px;stroke-width:3}.poster-vehicle-features.poster-feature-count-7 .poster-feature-item span,.poster-vehicle-features.poster-feature-count-8 .poster-feature-item span{font-size:7.5px;line-height:1}
     .poster-included-features .poster-feature-icon{width:36px;height:36px}.poster-included-features .poster-feature-item span{font-size:10px}
+    .poster-quote-footer{position:absolute;left:0;top:245px;z-index:5;display:flex;width:1023px;height:48px;align-items:center;justify-content:center;border-bottom:3px solid #c99532;background:#020712;color:#fff;font-size:14px;font-weight:500;letter-spacing:.18em;text-align:center;text-transform:uppercase}.poster-quote-footer b{margin-left:7px;color:#dcae45}
     .poster-continuation{position:relative;z-index:4;display:grid;gap:24px;background:linear-gradient(180deg,#faf8f3,#f3eee4);padding:56px 54px 0;color:#111}
     .poster-continuation.is-editing{outline:4px solid #c99532;outline-offset:-4px}.poster-continuation.is-editing *{cursor:text}.poster-continuation.is-editing [contenteditable="true"]:focus{outline:2px dashed rgba(154,106,30,.7);outline-offset:3px}
     .poster-continuation-header{display:flex;align-items:end;justify-content:space-between;gap:24px;border-bottom:2px solid #c99532;padding-bottom:18px}.poster-continuation-header span{color:#ad7820;font-size:13px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}.poster-continuation-header h2{margin:7px 0 0;font-family:Georgia,serif;font-size:38px;font-weight:500}.poster-continuation-header>strong{border:1px solid #c99532;border-radius:999px;padding:9px 15px;color:#9a6716;font-size:14px;text-transform:uppercase}
@@ -3827,7 +3829,13 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
     if (document.fonts?.ready) await document.fonts.ready;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const width = canonicalWidth;
-    const height = Math.ceil(Math.max(clone.offsetHeight, clone.scrollHeight, page.matches(".quote-poster-content") ? 1537 : 1));
+    const minimumHeight = page.matches(".quote-poster-content") ? 1537 : 1;
+    const cloneTop = clone.getBoundingClientRect().top;
+    const descendantBottom = [...clone.querySelectorAll("*")].reduce((bottom, element) => {
+      const bounds = element.getBoundingClientRect();
+      return Math.max(bottom, bounds.bottom - cloneTop);
+    }, 0);
+    const height = Math.ceil(Math.max(clone.offsetHeight, clone.scrollHeight, descendantBottom, minimumHeight));
     clone.style.height = `${height}px`;
     const scale = 3;
     const serialized = new XMLSerializer().serializeToString(clone);
