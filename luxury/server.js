@@ -118,6 +118,22 @@ function guatemalaMonthValue(date = new Date()) {
 }
 
 const SERVICE_STATUSES = new Set(["aceptada", "confirmada", "completada"]);
+const SPRINTER_311_UNIT_CONFIGURATIONS = {
+  1: [
+    { id: "m1-forward-15", capacity: 15, hasBed: false },
+    { id: "m1-facing-bed-8", capacity: 8, hasBed: true },
+    { id: "m1-facing-row-12", capacity: 12, hasBed: false },
+    { id: "m1-three-rows-11", capacity: 11, hasBed: false },
+  ],
+  2: [
+    { id: "m2-forward-18", capacity: 18, hasBed: false },
+    { id: "m2-facing-bed-10", capacity: 10, hasBed: true },
+    { id: "m2-three-rows-14", capacity: 14, hasBed: false },
+  ],
+};
+const SPRINTER_311_CONFIGURATION_IDS = new Set(
+  Object.values(SPRINTER_311_UNIT_CONFIGURATIONS).flat().map((item) => item.id),
+);
 const PAYMENT_MIME_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
@@ -128,6 +144,39 @@ const PAYMENT_MIME_TYPES = new Set([
 function cleanIdList(value) {
   const raw = Array.isArray(value) ? value : value ? [value] : [];
   return [...new Set(raw.map((item) => cleanString(item, 80)).filter(Boolean))];
+}
+
+function cleanVehicleConfigurations(value) {
+  let raw = value;
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      raw = {};
+    }
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return Object.fromEntries(
+    Object.entries(raw)
+      .map(([vehicleId, configurationId]) => [
+        cleanString(vehicleId, 80),
+        cleanString(configurationId, 50),
+      ])
+      .filter(([vehicleId, configurationId]) =>
+        vehicleId && SPRINTER_311_CONFIGURATION_IDS.has(configurationId)),
+  );
+}
+
+function sprinter311UnitConfiguration(vehicle, configurationId) {
+  const unitNumber = Math.round(Number(vehicle?.unitNumber || 0));
+  return (SPRINTER_311_UNIT_CONFIGURATIONS[unitNumber] || [])
+    .find((item) => item.id === configurationId) || null;
+}
+
+function sprinter311ConfigurationById(configurationId) {
+  return Object.values(SPRINTER_311_UNIT_CONFIGURATIONS)
+    .flat()
+    .find((item) => item.id === configurationId) || null;
 }
 
 function cleanServiceSelections(value) {
@@ -347,6 +396,23 @@ function normalizeEntity(collection, body) {
 function normalizeQuote(body, rates, existing = {}) {
   const vehicleIds = cleanIdList(body.vehicleIds);
   const vehicleId = vehicleIds[0] || cleanString(body.vehicleId, 80);
+  const selectedVehicleIds = vehicleIds.length ? vehicleIds : vehicleId ? [vehicleId] : [];
+  const hasVehicleConfigurationsField =
+    Object.prototype.hasOwnProperty.call(body, "vehicleConfigurations") ||
+    Object.prototype.hasOwnProperty.call(body, "vehicleConfigurationsJson");
+  const requestedVehicleConfigurations = cleanVehicleConfigurations(
+    hasVehicleConfigurationsField
+      ? body.vehicleConfigurations ?? body.vehicleConfigurationsJson
+      : existing.vehicleConfigurations || {},
+  );
+  const vehicleConfigurations = Object.fromEntries(
+    Object.entries(requestedVehicleConfigurations)
+      .filter(([selectedVehicleId]) => selectedVehicleIds.includes(selectedVehicleId)),
+  );
+  const configuredUnitDefinitions = Object.values(vehicleConfigurations)
+    .map(sprinter311ConfigurationById)
+    .filter(Boolean);
+  const configuredHasBed = configuredUnitDefinitions.some((item) => item.hasBed);
   const vehicleManualName = cleanString(body.vehicleManualName, 140);
   const vehicleCount = vehicleIds.length
     ? vehicleIds.length
@@ -370,8 +436,14 @@ function normalizeQuote(body, rates, existing = {}) {
     ? requestedSeatConfiguration
     : "";
   const requestedSprinter311Configuration = cleanString(
-    body.sprinter311Configuration || existing.sprinter311Configuration ||
-      (parseBoolean(body.hasBed) ? "bed" : parseBoolean(body.hasLuggage) ? "luggage" : "standard"),
+    configuredUnitDefinitions.length
+      ? configuredHasBed
+        ? "bed"
+        : Object.values(vehicleConfigurations).every((configurationId) => configurationId === "m1-forward-15")
+          ? "standard"
+          : "luggage"
+      : body.sprinter311Configuration || existing.sprinter311Configuration ||
+        (parseBoolean(body.hasBed) ? "bed" : parseBoolean(body.hasLuggage) ? "luggage" : "standard"),
     20,
   );
   const sprinter311Configuration = ["bed", "luggage", "standard"].includes(requestedSprinter311Configuration)
@@ -411,10 +483,13 @@ function normalizeQuote(body, rates, existing = {}) {
     hasLuggage: body.hasLuggage === undefined ? Boolean(cleanString(body.luggageDescription, 500) || cleanNumber(body.luggage)) : parseBoolean(body.hasLuggage),
     luggageDescription: cleanString(body.luggageDescription, 500),
     vehicleId,
-    vehicleIds: vehicleIds.length ? vehicleIds : vehicleId ? [vehicleId] : [],
+    vehicleIds: selectedVehicleIds,
+    vehicleConfigurations,
     vehicleCount,
     vehicleManualName,
-    hasBed: sprinter311Configuration === "bed" || parseBoolean(body.hasBed),
+    hasBed: configuredUnitDefinitions.length
+      ? configuredHasBed
+      : sprinter311Configuration === "bed" || parseBoolean(body.hasBed),
     sprinter311Configuration,
     hasPlayStation5: parseBoolean(body.hasPlayStation5),
     hasTv: parseBoolean(body.hasTv),
@@ -465,6 +540,14 @@ function validateQuoteCapacity(db, quote) {
   const isSprinter316 = (vehicle) =>
     vehicle.brand === "Mercedes Benz" && vehicle.model === "Sprinter 316";
   const hasLuggage = Number(quote.luggage || 0) > 0 || quote.hasLuggage === true;
+  vehicles.forEach((vehicle) => {
+    const requestedConfiguration = quote.vehicleConfigurations?.[vehicle.id];
+    if (requestedConfiguration && !sprinter311UnitConfiguration(vehicle, requestedConfiguration)) {
+      const error = new Error("La configuración seleccionada no corresponde a esa unidad Mercedes.");
+      error.statusCode = 400;
+      throw error;
+    }
+  });
   const capacityForVehicle = (vehicle) => {
     if (isSprinter316(vehicle)) {
       if (quote.seatConfiguration === "luxury" || quote.hasSuperLuxurySeats) {
@@ -473,6 +556,11 @@ function validateQuoteCapacity(db, quote) {
       if (quote.seatConfiguration === "m3") return Math.max(1, Number(vehicle.m3SeatCapacity || 11));
       return Math.max(1, Number(vehicle.m1SeatCapacity || vehicle.capacity || 14));
     }
+    const unitConfiguration = sprinter311UnitConfiguration(
+      vehicle,
+      quote.vehicleConfigurations?.[vehicle.id],
+    );
+    if (unitConfiguration) return unitConfiguration.capacity;
     if (quote.sprinter311Configuration === "bed" || quote.hasBed) {
       return Math.max(1, Number(vehicle.capacityWithBed || 8));
     }
@@ -507,8 +595,11 @@ function validateQuoteCapacity(db, quote) {
     throw error;
   }
   if (quote.passengers > maximum) {
+    const hasUnitConfigurations = Object.keys(quote.vehicleConfigurations || {}).length > 0;
     const error = new Error(
-      quote.seatConfiguration === "luxury" || quote.hasSuperLuxurySeats
+      hasUnitConfigurations
+        ? `La configuración seleccionada permite un máximo total de ${maximum} pasajeros.`
+        : quote.seatConfiguration === "luxury" || quote.hasSuperLuxurySeats
         ? `Con Butacas de lujo la capacidad máxima total es de ${maximum} pasajeros.`
         : quote.seatConfiguration === "m3"
           ? `Con Sillones M3 la capacidad máxima total es de ${maximum} pasajeros.`
@@ -657,7 +748,9 @@ async function serveStatic(req, res, pathname) {
     res.writeHead(200, {
       "Content-Type": MIME_TYPES[extname(finalPath)] || "application/octet-stream",
       "Cache-Control":
-        finalPath.endsWith("index.html") || finalPath.endsWith("sw.js")
+        finalPath.endsWith("index.html") ||
+        finalPath.endsWith("sw.js") ||
+        finalPath.endsWith("manifest.webmanifest")
           ? "no-cache"
           : "public, max-age=3600",
       "X-Content-Type-Options": "nosniff",

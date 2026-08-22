@@ -87,6 +87,75 @@ const icons = {
 
 const serviceStatuses = new Set(["aceptada", "confirmada", "completada"]);
 const allowedVehicleModels = ["Mercedes Benz Sprinter 311", "Mercedes Benz Sprinter 316"];
+const sprinter311UnitConfigurations = {
+  1: [
+    {
+      id: "m1-forward-15",
+      title: "Todos hacia enfrente",
+      detail: "15 pasajeros · Artículo personal.",
+      layout: "Todos los asientos viendo hacia enfrente.",
+      capacity: 15,
+      hasBed: false,
+      allowsLuggage: false,
+    },
+    {
+      id: "m1-facing-bed-8",
+      title: "Sillones frente a frente + cama",
+      detail: "2 sillones de 3 y 2 pasajeros adelante · 8 pasajeros · Permite maletas.",
+      layout: "Dos sillones de 3 pasajeros viéndose de frente, cama y 2 pasajeros adelante.",
+      capacity: 8,
+      hasBed: true,
+      allowsLuggage: true,
+    },
+    {
+      id: "m1-facing-row-12",
+      title: "Sillones frente a frente + fila de 4",
+      detail: "2 sillones de 3, una fila de 4 y 2 adelante · 12 pasajeros · Permite maletas.",
+      layout: "Dos sillones de 3 viéndose de frente, una fila de 4 y 2 pasajeros adelante.",
+      capacity: 12,
+      hasBed: false,
+      allowsLuggage: true,
+    },
+    {
+      id: "m1-three-rows-11",
+      title: "Tres filas de 3",
+      detail: "3 filas de 3 y 2 pasajeros adelante · 11 pasajeros · Permite maletas.",
+      layout: "Tres filas de 3 pasajeros con espacio para maletas y 2 pasajeros adelante.",
+      capacity: 11,
+      hasBed: false,
+      allowsLuggage: true,
+    },
+  ],
+  2: [
+    {
+      id: "m2-forward-18",
+      title: "Todos hacia adelante",
+      detail: "4 filas de 4 y 2 pasajeros adelante · 18 pasajeros · Maletas de mano.",
+      layout: "Todos los asientos viendo hacia adelante.",
+      capacity: 18,
+      hasBed: false,
+      allowsLuggage: true,
+    },
+    {
+      id: "m2-facing-bed-10",
+      title: "Filas frente a frente + cama",
+      detail: "2 filas de 4 y 2 pasajeros adelante · 10 pasajeros · Permite maletas.",
+      layout: "Dos filas de 4 asientos viéndose de frente, cama y 2 pasajeros adelante.",
+      capacity: 10,
+      hasBed: true,
+      allowsLuggage: true,
+    },
+    {
+      id: "m2-three-rows-14",
+      title: "Tres filas hacia enfrente",
+      detail: "1 fila de 4, 2 filas de 3+1 y 2 adelante · 14 pasajeros · Permite maletas.",
+      layout: "Tres filas viendo al frente: una de 4, dos de 3+1 y 2 pasajeros adelante.",
+      capacity: 14,
+      hasBed: false,
+      allowsLuggage: true,
+    },
+  ],
+};
 const serviceRateTypes = {
   oneWay: { label: "Servicio de Ida", field: "oneWay" },
   roundTrip: { label: "Servicio de Ida y Vuelta", field: "roundTrip" },
@@ -98,7 +167,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "77";
+const APP_VERSION = "79";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -154,6 +223,11 @@ function vehicleUnitLabel(vehicle) {
   return `${vehicle?.brand || ""} ${vehicle?.model || ""}`.trim();
 }
 
+function vehicleOperationalName(vehicle) {
+  const unitNumber = Math.round(Number(vehicle?.unitNumber || 0));
+  return unitNumber >= 1 && unitNumber <= 3 ? `M${unitNumber}` : vehicleUnitLabel(vehicle);
+}
+
 function vehicleModelName(vehicle) {
   return `${vehicle?.brand || ""} ${vehicle?.model || ""}`.trim();
 }
@@ -173,7 +247,63 @@ function formHasLuggage(form) {
     Boolean(String(form.elements.luggageDescription?.value || "").trim());
 }
 
+function sprinter311ConfigurationsForVehicle(vehicle) {
+  if (!vehicle || vehicleIsSprinter316(vehicle)) return [];
+  const unitNumber = Math.round(Number(vehicle.unitNumber || 0));
+  return sprinter311UnitConfigurations[unitNumber] || [];
+}
+
+function quoteVehicleConfigurations(source = {}) {
+  let value = source.vehicleConfigurations ?? source.vehicleConfigurationsJson ?? {};
+  if (typeof value === "string" && value.trim()) {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      value = {};
+    }
+  }
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function selectedVehicleConfigurationMap(form) {
+  const selectedIds = new Set(
+    $$('input[name="vehicleIds"]:checked', form).map((input) => input.value),
+  );
+  return Object.fromEntries(
+    $$('input[data-vehicle-configuration]:checked', form)
+      .filter((input) => selectedIds.has(input.dataset.vehicleId))
+      .map((input) => [input.dataset.vehicleId, input.value]),
+  );
+}
+
+function selectedVehicleConfiguration(vehicle, form) {
+  const configurationId = selectedVehicleConfigurationMap(form)[vehicle?.id];
+  return sprinter311ConfigurationsForVehicle(vehicle).find((item) => item.id === configurationId) || null;
+}
+
+function defaultVehicleConfigurationId(vehicle, quote = {}) {
+  const configurations = sprinter311ConfigurationsForVehicle(vehicle);
+  const storedId = quoteVehicleConfigurations(quote)[vehicle?.id];
+  if (configurations.some((item) => item.id === storedId)) return storedId;
+  const legacyConfiguration = quote.sprinter311Configuration || (quote.hasBed ? "bed" : "");
+  if (legacyConfiguration === "bed") {
+    return configurations.find((item) => item.hasBed)?.id || configurations[0]?.id || "";
+  }
+  if (legacyConfiguration === "luggage") {
+    return configurations.find((item) => item.allowsLuggage && !item.hasBed)?.id || configurations[0]?.id || "";
+  }
+  return configurations[0]?.id || "";
+}
+
 function sprinter311ConfigurationValue(form) {
+  const configuredVehicles = selectedVehiclesFromForm(form)
+    .filter((vehicle) => !vehicleIsSprinter316(vehicle))
+    .map((vehicle) => selectedVehicleConfiguration(vehicle, form))
+    .filter(Boolean);
+  if (configuredVehicles.some((item) => item.hasBed)) return "bed";
+  if (configuredVehicles.length) {
+    return configuredVehicles.some((item) => item.allowsLuggage) ? "luggage" : "standard";
+  }
   const selected = form.elements.sprinter311Configuration?.value;
   if (["bed", "luggage", "standard"].includes(selected)) return selected;
   if (form.elements.hasBed?.checked) return "bed";
@@ -187,6 +317,8 @@ function vehicleCapacityWithOptions(vehicle, form) {
     if (configuration === "m3") return Math.max(1, Number(vehicle?.m3SeatCapacity || 11));
     return Math.max(1, Number(vehicle?.m1SeatCapacity || 14));
   }
+  const unitConfiguration = selectedVehicleConfiguration(vehicle, form);
+  if (unitConfiguration) return unitConfiguration.capacity;
   const configuration = sprinter311ConfigurationValue(form);
   if (configuration === "bed") return Math.max(1, Number(vehicle?.capacityWithBed || 8));
   if (configuration === "luggage") {
@@ -1646,7 +1778,66 @@ function syncServiceSelections(form) {
   updateQuoteSummary(form);
 }
 
-function renderVehicleUnitPanel(form, selectedIds = []) {
+function renderVehicleConfigurationPanels(form, quote = {}) {
+  const container = $("[data-sprinter311-configurations]", form);
+  if (!container) return;
+  const vehicles = luxuryVehicles().filter((vehicle) => sprinter311ConfigurationsForVehicle(vehicle).length);
+  container.innerHTML = vehicles
+    .map((vehicle) => {
+      const configurations = sprinter311ConfigurationsForVehicle(vehicle);
+      const selectedConfigurationId = defaultVehicleConfigurationId(vehicle, quote);
+      return `
+        <div class="seat-configuration unit-configuration-panel" data-vehicle-configuration-panel data-vehicle-id="${escapeHtml(vehicle.id)}">
+          <strong>Configuración ${escapeHtml(vehicleOperationalName(vehicle))}</strong>
+          <div class="seat-configuration-options unit-configuration-options">
+            ${configurations
+              .map(
+                (configuration) => `
+                  <label>
+                    <input
+                      type="radio"
+                      name="vehicleConfiguration-${escapeHtml(vehicle.id)}"
+                      value="${escapeHtml(configuration.id)}"
+                      data-vehicle-configuration
+                      data-vehicle-id="${escapeHtml(vehicle.id)}"
+                      ${configuration.id === selectedConfigurationId ? "checked" : ""}
+                    />
+                    <span>
+                      <b>${escapeHtml(configuration.title)}</b>
+                      <small>${escapeHtml(configuration.detail)}</small>
+                      <small class="configuration-layout">${escapeHtml(configuration.layout)}</small>
+                    </span>
+                  </label>
+                `,
+              )
+              .join("")}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function syncVehicleConfigurationPanels(form) {
+  const selectedIds = new Set(
+    $$('input[name="vehicleIds"]:checked', form).map((input) => input.value),
+  );
+  $$('[data-vehicle-configuration-panel]', form).forEach((panel) => {
+    const enabled = selectedIds.has(panel.dataset.vehicleId);
+    panel.hidden = !enabled;
+    const options = $$('input[data-vehicle-configuration]', panel);
+    options.forEach((input) => {
+      input.disabled = !enabled;
+    });
+    if (enabled && !options.some((input) => input.checked) && options[0]) options[0].checked = true;
+  });
+  const configurationField = form.elements.vehicleConfigurationsJson;
+  if (configurationField) {
+    configurationField.value = JSON.stringify(selectedVehicleConfigurationMap(form));
+  }
+}
+
+function renderVehicleUnitPanel(form, selectedIds = [], quote = {}) {
   const vehicles = luxuryVehicles();
   const selectedSet = new Set(selectedIds);
   const shouldSelectFirst = !selectedIds.length && !String(form.elements.vehicleManualName?.value || "").trim();
@@ -1657,13 +1848,14 @@ function renderVehicleUnitPanel(form, selectedIds = []) {
         ${vehicles
           .map((vehicle, index) => {
             const checked = selectedSet.has(vehicle.id) || (shouldSelectFirst && index === 0);
+            const configurationCount = sprinter311ConfigurationsForVehicle(vehicle).length;
             const capacityDetails = vehicleIsSprinter316(vehicle)
-              ? "Butacas de lujo: 9 atrás + 1 adelante · Butacas M1: 13 atrás + 1 adelante · Sillones M3: 10 atrás + 1 adelante"
-              : "8 con cama y equipaje · 10 con equipaje sin cama · 15 sin equipaje";
+              ? "Mercedes Benz Sprinter 316 · Butacas de lujo, Butacas M1 o Sillones M3"
+              : `${vehicleUnitLabel(vehicle)} · ${configurationCount} configuraciones disponibles`;
             return `
               <label class="vehicle-unit-option">
                 <input type="checkbox" name="vehicleIds" value="${vehicle.id}" ${checked ? "checked" : ""} />
-                <span><strong>${escapeHtml(vehicleUnitLabel(vehicle))}</strong><small>Unidad ${escapeHtml(vehicle.unitNumber || index + 1)} · ${escapeHtml(capacityDetails)}</small></span>
+                <span><strong>${escapeHtml(vehicleOperationalName(vehicle))}</strong><small>${escapeHtml(capacityDetails)}</small></span>
               </label>
             `;
           })
@@ -1671,7 +1863,9 @@ function renderVehicleUnitPanel(form, selectedIds = []) {
       </div>
     `
     : `<div class="rate-empty">No hay Sprinter disponibles.</div>`;
+  renderVehicleConfigurationPanels(form, quote);
   syncSelectedVehicleField(form);
+  syncVehicleConfigurationPanels(form);
 }
 
 function syncSelectedVehicleField(form) {
@@ -1735,13 +1929,6 @@ function openQuoteModal(quote = {}) {
       ? "luxury"
       : "m1";
   const initialLuggageQuantity = Math.max(0, Number(quote.luggage || (quote.hasLuggage ? 1 : 0)));
-  const initialSprinter311Configuration = ["bed", "luggage", "standard"].includes(quote.sprinter311Configuration)
-    ? quote.sprinter311Configuration
-    : quote.hasBed
-      ? "bed"
-      : initialLuggageQuantity > 0 || String(quote.luggageDescription || "").trim()
-        ? "luggage"
-        : "standard";
   const orderedInitialServices = orderedQuoteServices({ serviceSelections: initialServiceSelections });
   const firstInitialService = orderedInitialServices[0] || {};
   const lastInitialService = orderedInitialServices.at(-1) || firstInitialService;
@@ -1800,14 +1987,7 @@ function openQuoteModal(quote = {}) {
                     <label><input type="radio" name="seatConfiguration" value="m3" ${initialSeatConfiguration === "m3" ? "checked" : ""} /><span><b>Sillones M3</b><small>10 pasajeros atrás + 1 adelante. Máximo 11.</small></span></label>
                   </div>
                 </div>
-                <div class="seat-configuration full" data-sprinter311-configuration>
-                  <strong>Configuración Mercedes Benz Sprinter 311</strong>
-                  <div class="seat-configuration-options">
-                    <label><input type="radio" name="sprinter311Configuration" value="bed" ${initialSprinter311Configuration === "bed" ? "checked" : ""} /><span><b>Cama y equipaje</b><small>Máximo 8 pasajeros por unidad.</small></span></label>
-                    <label><input type="radio" name="sprinter311Configuration" value="luggage" ${initialSprinter311Configuration === "luggage" ? "checked" : ""} /><span><b>Con equipaje, sin cama</b><small>Máximo 10 pasajeros por unidad.</small></span></label>
-                    <label><input type="radio" name="sprinter311Configuration" value="standard" ${initialSprinter311Configuration === "standard" ? "checked" : ""} /><span><b>Sin equipaje</b><small>Máximo 15 pasajeros por unidad.</small></span></label>
-                  </div>
-                </div>
+                <div class="unit-configuration-panels full" data-sprinter311-configurations></div>
                 <div class="passenger-luggage-editor full">
                   <fieldset>
                     <legend>Pasajeros</legend>
@@ -1841,9 +2021,9 @@ function openQuoteModal(quote = {}) {
                     <span><strong>TV</strong><small>Mostrar TV en la imagen final.</small></span>
                   </label>
                   <label class="premium-option premium-option-full">
-                    <input type="checkbox" name="hasBed" ${quote.hasBed ? "checked" : ""} />
+                    <input type="checkbox" name="hasBed" ${quote.hasBed ? "checked" : ""} disabled />
                     <span class="premium-option-icon">CM</span>
-                    <span><strong>Cama</strong><small>Solo para las Mercedes 311. Capacidad por unidad: 8 pasajeros con equipaje.</small></span>
+                    <span><strong>Cama</strong><small>Se activa automáticamente al elegir una configuración M1 o M2 con cama.</small></span>
                   </label>
                 </div>
               </div>
@@ -1958,6 +2138,7 @@ function openQuoteModal(quote = {}) {
         <input type="hidden" name="clientNit" value="${escapeHtml(quote.clientNit)}" />
         <input type="hidden" name="clientEmail" value="${escapeHtml(quote.clientEmail)}" />
         <input type="hidden" name="vehicleId" value="${escapeHtml(quote.vehicleId)}" />
+        <input type="hidden" name="vehicleConfigurationsJson" value="${escapeHtml(JSON.stringify(quoteVehicleConfigurations(quote)))}" />
         <input type="hidden" name="driverId" value="${escapeHtml(quote.driverId)}" />
         <input type="hidden" name="driverManualName" value="${escapeHtml(quote.driverManualName)}" />
         <input type="hidden" name="destinationRateName" value="${escapeHtml(quote.destinationRateName)}" />
@@ -2075,7 +2256,7 @@ function openQuoteModal(quote = {}) {
     syncServiceSelections(form);
     if (!isEdit) saveQuoteDraft(form);
   });
-  renderVehicleUnitPanel(form, quoteVehicleIds(quote));
+  renderVehicleUnitPanel(form, quoteVehicleIds(quote), quote);
   syncQuoteCapacity(form);
   $("[data-vehicle-unit-panel]").addEventListener("change", (event) => {
     if (event.target.matches('input[name="vehicleIds"]') && event.target.checked) {
@@ -2093,23 +2274,11 @@ function openQuoteModal(quote = {}) {
   });
   form.elements.hasPlayStation5.addEventListener("change", () => syncQuoteCapacity(form));
   form.elements.hasTv.addEventListener("change", () => syncQuoteCapacity(form));
-  form.elements.hasBed.addEventListener("change", () => {
-    const targetValue = form.elements.hasBed.checked
-      ? "bed"
-      : formHasLuggage(form)
-        ? "luggage"
-        : "standard";
-    const target = $$('input[name="sprinter311Configuration"]', form)
-      .find((input) => input.value === targetValue);
-    if (target) target.checked = true;
+  $("[data-sprinter311-configurations]", form)?.addEventListener("change", (event) => {
+    if (!event.target.matches("input[data-vehicle-configuration]")) return;
+    delete form.dataset.capacityWarning;
+    delete form.dataset.capacityWarningKey;
     syncQuoteCapacity(form, true);
-  });
-  $$('input[name="sprinter311Configuration"]', form).forEach((input) => {
-    input.addEventListener("change", () => {
-      if (!input.checked) return;
-      form.elements.hasBed.checked = input.value === "bed";
-      syncQuoteCapacity(form, true);
-    });
   });
   $$('input[name="seatConfiguration"]', form).forEach((input) => {
     input.addEventListener("change", () => syncQuoteCapacity(form, true));
@@ -2172,95 +2341,51 @@ function openQuoteModal(quote = {}) {
 }
 
 function capacityLimitMessage(form, vehicles, requestedPassengers, maximum) {
-  const sprinter311Count = vehicles.filter((vehicle) => !vehicleIsSprinter316(vehicle)).length;
-  const sprinter316Count = vehicles.filter(vehicleIsSprinter316).length;
-  const hasLuggage = formHasLuggage(form);
-  const rules = [];
-  if (sprinter311Count) {
-    const unitLabel = sprinter311Count === 1
-      ? "La Sprinter 311"
-      : `Cada una de las ${sprinter311Count} Sprinter 311`;
-    const configuration = sprinter311ConfigurationValue(form);
-    if (configuration === "bed") {
-      rules.push(`${unitLabel} con cama permite un máximo de 8 pasajeros`);
-    } else if (configuration === "luggage") {
-      rules.push(`${unitLabel} con equipaje permite un máximo de 10 pasajeros`);
-    } else {
-      rules.push(`${unitLabel} sin equipaje permite un máximo de 15 pasajeros`);
+  const rules = vehicles.map((vehicle) => {
+    if (!vehicleIsSprinter316(vehicle)) {
+      const configuration = selectedVehicleConfiguration(vehicle, form);
+      if (configuration) {
+        return `${vehicleOperationalName(vehicle)} con “${configuration.title}” permite un máximo de ${configuration.capacity} pasajeros`;
+      }
+      return `${vehicleOperationalName(vehicle)} permite un máximo de ${vehicleCapacityWithOptions(vehicle, form)} pasajeros`;
     }
-  }
-  if (sprinter316Count) {
     const configuration = form.elements.seatConfiguration?.value || "m1";
     const configurationRule = configuration === "luxury"
       ? "butacas de lujo permite un máximo de 10 pasajeros"
       : configuration === "m3"
         ? "sillones M3 permite un máximo de 11 pasajeros"
         : "butacas M1 permite un máximo de 14 pasajeros";
-    const unitLabel = sprinter316Count === 1
-      ? "La Sprinter 316 con"
-      : `Cada una de las ${sprinter316Count} Sprinter 316 con`;
-    rules.push(`${unitLabel} ${configurationRule}`);
-  }
+    return `${vehicleOperationalName(vehicle)} con ${configurationRule}`;
+  });
   const ruleText = rules.length ? `${rules.join("; ")}. ` : "";
   return `Capacidad excedida: solicitó ${requestedPassengers} pasajeros. ${ruleText}Máximo total permitido: ${maximum}. La cantidad se ajustó automáticamente.`;
 }
 
 function syncQuoteCapacity(form, announce = false) {
   syncSelectedVehicleField(form);
+  syncVehicleConfigurationPanels(form);
   const vehicles = selectedVehiclesFromForm(form);
   const manualVehicleName = String(form.elements.vehicleManualName?.value || "").trim();
   const hasSprinter316 = vehicles.some(vehicleIsSprinter316);
   const hasSprinter311 = vehicles.some((vehicle) => !vehicleIsSprinter316(vehicle));
   const seatPanel = $(`[data-seat-configuration]`, form);
   if (seatPanel) seatPanel.hidden = !hasSprinter316;
-  const sprinter311Panel = $(`[data-sprinter311-configuration]`, form);
-  if (sprinter311Panel) sprinter311Panel.hidden = !hasSprinter311;
-  $$('input[name="sprinter311Configuration"]', form).forEach((input) => {
-    input.disabled = !hasSprinter311;
-  });
-  form.elements.hasBed.disabled = !hasSprinter311;
-  if (!hasSprinter311 && form.elements.hasBed.checked) {
-    form.elements.hasBed.checked = false;
-    if (announce) toast("La cama solo aplica para las Mercedes Benz Sprinter 311.");
-  }
+  const selectedUnitConfigurations = vehicles
+    .filter((vehicle) => !vehicleIsSprinter316(vehicle))
+    .map((vehicle) => selectedVehicleConfiguration(vehicle, form))
+    .filter(Boolean);
+  form.elements.hasBed.checked = selectedUnitConfigurations.some((item) => item.hasBed);
+  form.elements.hasBed.disabled = true;
   const luggageQuantity = Math.max(0, Math.round(Number(form.elements.luggage.value || 0)));
   form.elements.luggage.value = String(luggageQuantity);
   const hasLuggage = formHasLuggage(form);
   form.elements.hasLuggage.value = hasLuggage ? "true" : "false";
-  let sprinter311Configuration = sprinter311ConfigurationValue(form);
-  if (hasSprinter311 && hasLuggage && sprinter311Configuration === "standard") {
-    sprinter311Configuration = "luggage";
-    const luggageOption = form.elements.sprinter311Configuration?.value === undefined
-      ? null
-      : $$('input[name="sprinter311Configuration"]', form).find((input) => input.value === "luggage");
-    if (luggageOption) luggageOption.checked = true;
-  }
+  const sprinter311Configuration = sprinter311ConfigurationValue(form);
   const manualCapacity = manualVehicleName
     ? Math.max(15, Math.round(Number(form.elements.passengers?.value || 1)))
     : 0;
   const passengerInput = form.elements.passengers;
   const requestedPassengers = Math.max(1, Math.round(Number(passengerInput.value || 1)));
-  if (hasSprinter311 && sprinter311Configuration === "bed") {
-    const bedMaximum = vehicles.reduce((sum, vehicle) => {
-      if (vehicleIsSprinter316(vehicle)) return sum + vehicleCapacityWithOptions(vehicle, form);
-      return sum + Math.max(1, Number(vehicle?.capacityWithBed || 8));
-    }, manualCapacity);
-    if (requestedPassengers > bedMaximum) {
-      const fallback = hasLuggage ? "luggage" : "standard";
-      const fallbackOption = $$('input[name="sprinter311Configuration"]', form)
-        .find((input) => input.value === fallback);
-      if (fallbackOption) fallbackOption.checked = true;
-      form.elements.hasBed.checked = false;
-      sprinter311Configuration = fallback;
-      const warning = `No se seleccionó la cama: ${requestedPassengers} pasajeros exceden el máximo de ${bedMaximum} permitido con cama. Reduzca la cantidad de pasajeros a ${bedMaximum} o menos para habilitarla.`;
-      form.dataset.capacityWarning = warning;
-      if (announce) toast(warning);
-    } else {
-      form.elements.hasBed.checked = true;
-    }
-  } else {
-    form.elements.hasBed.checked = false;
-  }
   const maximum = vehicles.length || manualVehicleName
     ? vehicles.reduce((sum, vehicle) => sum + vehicleCapacityWithOptions(vehicle, form), 0) + manualCapacity
     : 15;
@@ -2272,6 +2397,7 @@ function syncQuoteCapacity(form, announce = false) {
     maximum,
     hasLuggage ? "luggage" : "no-luggage",
     sprinter311Configuration,
+    JSON.stringify(selectedVehicleConfigurationMap(form)),
     configuration,
   ].join("|");
   if (form.dataset.capacityWarningKey && form.dataset.capacityWarningKey !== warningKey) {
@@ -2290,7 +2416,10 @@ function syncQuoteCapacity(form, announce = false) {
     passengerInput.value = String(requestedPassengers);
   }
   if (Number(passengerInput.value) < 1) passengerInput.value = "1";
-  const vehicleNames = [...vehicles.map(vehicleDisplayName), manualVehicleName].filter(Boolean);
+  const vehicleNames = [
+    ...vehicles.map((vehicle) => `${vehicleOperationalName(vehicle)} (${vehicleUnitLabel(vehicle)})`),
+    manualVehicleName,
+  ].filter(Boolean);
   const vehicleText = vehicleNames.length
     ? vehicleNames.join(" + ")
     : "la Sprinter seleccionada";
@@ -2305,13 +2434,16 @@ function syncQuoteCapacity(form, announce = false) {
       : "Butacas M1 (13 atrás + 1 adelante)";
   const details = [];
   if (hasSprinter311) {
-    details.push(sprinter311Configuration === "bed"
-      ? "Mercedes 311: 8 pasajeros por unidad con cama y equipaje"
-      : sprinter311Configuration === "luggage"
-        ? "Mercedes 311: 10 pasajeros por unidad con equipaje"
-        : "Mercedes 311: 15 pasajeros por unidad sin equipaje");
+    vehicles
+      .filter((vehicle) => !vehicleIsSprinter316(vehicle))
+      .forEach((vehicle) => {
+        const unitConfiguration = selectedVehicleConfiguration(vehicle, form);
+        if (unitConfiguration) {
+          details.push(`${vehicleOperationalName(vehicle)}: ${unitConfiguration.title}, máximo ${unitConfiguration.capacity}`);
+        }
+      });
   }
-  if (hasSprinter316) details.push(`Mercedes 316: ${configurationLabel}`);
+  if (hasSprinter316) details.push(`M3: ${configurationLabel}`);
   const capacityNote = $("[data-capacity-note]", form);
   const warningMessage = form.dataset.capacityWarning || "";
   capacityNote.classList.toggle("is-warning", Boolean(warningMessage));
@@ -2363,7 +2495,12 @@ function quoteFormData(form) {
   body.vehicleId = body.vehicleIds[0] || form.elements.vehicleId.value;
   body.vehicleManualName = String(form.elements.vehicleManualName.value || "").trim();
   body.vehicleCount = explicitVehicleCount(body);
-  body.hasBed = form.elements.hasBed.checked;
+  body.vehicleConfigurations = selectedVehicleConfigurationMap(form);
+  body.vehicleConfigurationsJson = JSON.stringify(body.vehicleConfigurations);
+  form.elements.vehicleConfigurationsJson.value = body.vehicleConfigurationsJson;
+  body.hasBed = selectedVehiclesFromForm(form)
+    .filter((vehicle) => !vehicleIsSprinter316(vehicle))
+    .some((vehicle) => selectedVehicleConfiguration(vehicle, form)?.hasBed);
   body.sprinter311Configuration = selectedVehiclesFromForm(form).some((vehicle) => !vehicleIsSprinter316(vehicle))
     ? sprinter311ConfigurationValue(form)
     : "";
@@ -4027,12 +4164,91 @@ async function logout() {
   }
 }
 
+function isRunningAsInstalledApp() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: fullscreen)").matches ||
+    window.navigator.standalone === true
+  );
+}
+
+function installHelpContent() {
+  const userAgent = navigator.userAgent;
+  const isAppleMobile =
+    /iPhone|iPad|iPod/i.test(userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isMac = /Macintosh|Mac OS X/i.test(userAgent) && !isAppleMobile;
+  const isSafari =
+    /Safari/i.test(userAgent) && !/Chrome|CriOS|Chromium|Edg|OPR|FxiOS/i.test(userAgent);
+  const isAndroid = /Android/i.test(userAgent);
+
+  let browserTitle = "Chrome o Microsoft Edge";
+  let steps = [
+    "Abra el menú del navegador.",
+    "Seleccione Instalar Luxury Travel o Instalar aplicación.",
+    "Confirme la instalación. Luxury Travel aparecerá como una aplicación independiente.",
+  ];
+
+  if (isAppleMobile) {
+    browserTitle = "Safari en iPhone o iPad";
+    steps = [
+      "Abra Luxury Travel en Safari.",
+      "Toque el botón Compartir.",
+      "Seleccione Agregar a pantalla de inicio y confirme con Agregar.",
+    ];
+  } else if (isMac && isSafari) {
+    browserTitle = "Safari en Mac";
+    steps = [
+      "Abra el menú Archivo de Safari.",
+      "Seleccione Agregar al Dock.",
+      "Confirme con Agregar. La aplicación quedará disponible en el Dock y en Aplicaciones.",
+    ];
+  } else if (isAndroid) {
+    browserTitle = "Chrome en Android";
+    steps = [
+      "Abra el menú de tres puntos de Chrome.",
+      "Seleccione Instalar aplicación o Agregar a pantalla principal.",
+      "Confirme la instalación.",
+    ];
+  }
+
+  const securityNotice = window.isSecureContext
+    ? "La instalación está disponible de forma segura desde este sitio."
+    : "La instalación requiere abrir Luxury Travel mediante HTTPS.";
+
+  return `
+    <div class="install-guide">
+      <div class="install-guide-brand">
+        <img src="${appPath("/assets/pwa-icon-192.png")}" alt="" />
+        <div>
+          <p class="eyebrow">${escapeHtml(browserTitle)}</p>
+          <h3>Instalar Luxury Travel</h3>
+          <p>La aplicación abrirá los mismos módulos de Resumen y Cotizador, con los mismos usuarios y datos de la página.</p>
+        </div>
+      </div>
+      <ol class="install-steps">
+        ${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+      </ol>
+      <p class="install-security ${window.isSecureContext ? "" : "warning"}">${escapeHtml(securityNotice)}</p>
+      <p class="muted install-online-note">Para iniciar sesión, consultar clientes y guardar cotizaciones se necesita conexión a internet.</p>
+    </div>
+  `;
+}
+
 function setupPwa() {
+  const installButton = $("#install-button");
+  const displayMode = window.matchMedia("(display-mode: standalone)");
+  const updateInstallButton = () => {
+    installButton.hidden = false;
+  };
+
+  updateInstallButton();
+
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
       .register(appPath(`/sw.js?v=${APP_VERSION}`), { scope: appPath("/") })
       .then((registration) => registration.update())
-      .catch(() => {});
+      .catch((error) => console.error("No fue posible registrar la aplicación PWA.", error));
     let refreshing = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (refreshing) return;
@@ -4043,15 +4259,54 @@ function setupPwa() {
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     state.deferredInstall = event;
-    $("#install-button").hidden = false;
+    updateInstallButton();
   });
-  $("#install-button").addEventListener("click", async () => {
-    if (!state.deferredInstall) return;
-    state.deferredInstall.prompt();
-    await state.deferredInstall.userChoice;
+
+  window.addEventListener("appinstalled", () => {
     state.deferredInstall = null;
-    $("#install-button").hidden = true;
+    installButton.hidden = false;
+    toast("Luxury Travel se instaló correctamente.");
   });
+
+  displayMode.addEventListener?.("change", updateInstallButton);
+
+  installButton.addEventListener("click", async () => {
+    if (isRunningAsInstalledApp()) {
+      openModal(
+        "Aplicación instalada",
+        `
+          <div class="install-guide">
+            <div class="install-guide-brand">
+              <img src="${appPath("/assets/pwa-icon-192.png")}" alt="" />
+              <div>
+                <p class="eyebrow">Luxury Travel PWA</p>
+                <h3>La aplicación ya está instalada</h3>
+                <p>Está usando Luxury Travel como aplicación independiente. Resumen y Cotizador permanecen conectados a los mismos usuarios y datos.</p>
+              </div>
+            </div>
+          </div>
+        `,
+        { eyebrow: "Instalación" },
+      );
+      return;
+    }
+
+    if (!state.deferredInstall) {
+      openModal("Instalar aplicación", installHelpContent(), { eyebrow: "Luxury Travel PWA" });
+      return;
+    }
+
+    const installPrompt = state.deferredInstall;
+    state.deferredInstall = null;
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice.outcome === "accepted") {
+      installButton.hidden = false;
+    } else {
+      installButton.hidden = false;
+    }
+  });
+
   const updateOnlineState = () => {
     $("#offline-banner").hidden = navigator.onLine;
   };
