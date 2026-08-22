@@ -1,10 +1,10 @@
 window.requerimientoEquipoInventory = {
-  "version": "20260821-03",
+  "version": "20260822-01",
   "source": {
     "spreadsheetId": "1AVOncyecjkDB2UfZmAqC__Te9XCkQTIU",
     "workbook": "EQUIPO-DE-AUDIO.xlsx",
     "sheet": "INVENTARIO",
-    "modifiedTime": "2026-08-21T15:13:51.707Z",
+    "modifiedTime": "2026-08-22T16:00:02.578Z",
     "range": "B2:C276",
     "titleCell": "B2"
   },
@@ -751,7 +751,7 @@ window.requerimientoEquipoInventory = {
           ]
         },
         {
-          "description": "SEMAFORROS BARRAS GRNADES DE LUCES",
+          "description": "SEMAFORO BARRAS GRANDES DE LUCES",
           "value": 4,
           "numericValue": 4,
           "sourceQuantity": "4",
