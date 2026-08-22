@@ -6,11 +6,11 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260821-02" />
+    <link rel="stylesheet" href="styles.css?v=20260822-01" />
     <script src="app.js?v=20260814-01" defer></script>
     <script src="equipment-catalog.js?v=20260821-04" defer></script>
     <script src="equipment-inventory.js?v=20260822-01" defer></script>
-    <script src="equipment.js?v=20260821-06" defer></script>
+    <script src="equipment.js?v=20260822-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -292,7 +292,6 @@
             <button id="equipmentReviewWindowButton" type="button" class="is-active">Revisión de equipo</button>
             <button id="equipmentSummaryWindowButton" type="button">Resumen de Equipo</button>
             <button id="equipmentTransferWindowButton" type="button">Trasegar equipo</button>
-            <button id="equipmentAddWindowButton" type="button">Guardar cambios</button>
             <button id="equipmentRemoveWindowButton" type="button">Eliminar</button>
             <button id="equipmentClearAllButton" type="button">Limpiar todo 0</button>
             <button id="equipmentUndoDeleteButton" type="button" disabled>Regresar</button>
@@ -377,6 +376,7 @@
               </div>
               <p id="equipmentSummaryTransferNotice" class="equipment-summary-notice equipment-transfer-summary-notice is-hidden"></p>
               <div id="equipmentSummaryTransferSelector" class="equipment-summary-transfer-selector is-hidden"></div>
+              <div id="equipmentSummaryTransferUnused" class="equipment-transfer-unused-panel is-hidden"></div>
               <p id="equipmentSummaryDateNotice" class="equipment-summary-notice is-hidden"></p>
               <div id="equipmentInventoryTable" class="equipment-table-wrap"></div>
             </section>

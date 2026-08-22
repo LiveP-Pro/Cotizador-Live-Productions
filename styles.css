@@ -1068,6 +1068,116 @@ body {
   border-color: #d6a541;
 }
 
+.equipment-transfer-unused-panel {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 14px 0 0;
+  border-top: 3px solid #b88a2a;
+}
+
+.equipment-transfer-unused-panel.is-hidden {
+  display: none;
+}
+
+.equipment-transfer-unused-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.equipment-transfer-unused-heading strong {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.equipment-transfer-unused-heading span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.equipment-transfer-unused-list {
+  display: grid;
+  gap: 16px;
+}
+
+.equipment-transfer-unused-leg {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.42fr) minmax(320px, 1fr);
+  gap: 16px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.equipment-transfer-unused-leg-heading {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.equipment-transfer-unused-leg-heading > span,
+.equipment-transfer-unused-leg-heading > small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.equipment-transfer-unused-leg-heading > span {
+  text-transform: uppercase;
+}
+
+.equipment-transfer-unused-leg-heading > strong {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.equipment-transfer-unused-leg-heading > p {
+  margin: 4px 0 0;
+  color: #8a5b00;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.equipment-transfer-unused-items {
+  display: grid;
+  align-content: start;
+}
+
+.equipment-transfer-unused-item {
+  display: grid;
+  grid-template-columns: minmax(58px, 20%) minmax(0, 80%);
+  align-items: center;
+  min-height: 50px;
+  border-bottom: 1px solid var(--line);
+}
+
+.equipment-transfer-unused-item > strong {
+  color: #8a5b00;
+  font-size: 17px;
+  font-weight: 950;
+  text-align: center;
+}
+
+.equipment-transfer-unused-item > span {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.equipment-transfer-unused-item small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
 .equipment-summary-transfer-selector {
   display: grid;
   gap: 12px;
@@ -1366,6 +1476,48 @@ body {
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.equipment-service-table {
+  table-layout: fixed;
+}
+
+.equipment-service-table col.equipment-service-quantity-column {
+  width: 20%;
+}
+
+.equipment-service-table col.equipment-service-description-column {
+  width: 80%;
+}
+
+.equipment-service-table col.equipment-service-action-column {
+  width: 76px;
+}
+
+.equipment-service-table .equipment-service-quantity-heading,
+.equipment-service-table .equipment-service-quantity-cell {
+  text-align: center;
+}
+
+.equipment-service-table.equipment-table-compact td.equipment-service-quantity-cell {
+  width: 20%;
+}
+
+.equipment-service-table td.equipment-service-description-cell {
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.equipment-service-table.equipment-table-compact td.equipment-service-description-cell {
+  width: 80%;
+}
+
+.equipment-service-table:not(.equipment-table-compact) col.equipment-service-quantity-column {
+  width: 18.5%;
+}
+
+.equipment-service-table:not(.equipment-table-compact) col.equipment-service-description-column {
+  width: auto;
 }
 
 .equipment-table-wrap td:first-child {
@@ -5156,6 +5308,15 @@ body.pdf-export .additional-services-section {
   border-color: #d7aaa5;
 }
 
+.equipment-window-sidebar .equipment-event-card-actions .equipment-event-save-button {
+  width: 72px;
+  min-width: 72px;
+  color: #ffffff;
+  background: #17633a;
+  border-color: #17633a;
+  font-size: 11px;
+}
+
 @media (max-width: 900px) {
   .equipment-window-shell {
     grid-template-columns: 1fr;
@@ -5189,5 +5350,9 @@ body.pdf-export .additional-services-section {
 
   .equipment-transfer-card {
     grid-template-columns: 1fr;
+  }
+
+  .equipment-transfer-unused-leg {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

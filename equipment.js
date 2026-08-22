@@ -950,6 +950,120 @@ function equipmentRowsSummary() {
   }, ...group.rows] : []);
 }
 
+function equipmentTransferComparisonRows(rows = equipmentRowsSummary()) {
+  const groups = new Map();
+  rows.forEach((row) => {
+    if (!row || row.type === "category") return;
+    const identity = equipmentInventoryCanonicalKey(
+      row.inventorySourceItem?.description || row.description || row.key
+    );
+    if (!identity) return;
+    let group = groups.get(identity);
+    if (!group) {
+      group = {
+        identity,
+        description: row.description,
+        categoryTitle: row.categoryTitle || "Equipo",
+        descriptionFromInventory: Boolean(row.inventorySourceItem),
+        eventQuantities: new Map()
+      };
+      groups.set(identity, group);
+    } else if (row.inventorySourceItem && !group.descriptionFromInventory) {
+      group.description = row.description;
+      group.categoryTitle = row.categoryTitle || group.categoryTitle;
+      group.descriptionFromInventory = true;
+    }
+    row.eventQuantities?.forEach((quantity, eventId) => {
+      group.eventQuantities.set(
+        eventId,
+        (Number(group.eventQuantities.get(eventId)) || 0) + (Number(quantity) || 0)
+      );
+    });
+  });
+  return [...groups.values()];
+}
+
+function equipmentTransferUnusedByLeg() {
+  if (!equipmentState.summaryTransferEnabled) return [];
+  const events = activeEquipmentEvents();
+  const transferRoutes = equipmentSummaryTransferRoutesWithEvents(events, true);
+  if (!transferRoutes.length) return [];
+  const comparisonRows = equipmentTransferComparisonRows();
+  return transferRoutes.flatMap(({ events: routeEvents, index: routeIndex }) => {
+    return routeEvents.slice(0, -1).map((from, legIndex) => {
+      const to = routeEvents[legIndex + 1];
+      const items = comparisonRows
+        .map((row) => {
+          const fromQuantity = Number(row.eventQuantities.get(from.id)) || 0;
+          const toQuantity = Number(row.eventQuantities.get(to.id)) || 0;
+          return {
+            ...row,
+            fromQuantity,
+            toQuantity,
+            quantity: Math.max(0, fromQuantity - toQuantity)
+          };
+        })
+        .filter((item) => item.quantity > 0);
+      return { routeIndex, legIndex, from, to, items };
+    });
+  });
+}
+
+function renderEquipmentTransferUnusedPanel() {
+  const host = equipmentQuery("#equipmentSummaryTransferUnused");
+  if (!host) return;
+  const legs = equipmentTransferUnusedByLeg();
+  const hasConfiguredRoute = equipmentState.summaryTransferEnabled
+    && equipmentSummaryTransferRoutesWithEvents(activeEquipmentEvents(), true).length > 0;
+  host.classList.toggle("is-hidden", !hasConfiguredRoute);
+  if (!hasConfiguredRoute) {
+    host.innerHTML = "";
+    return;
+  }
+  const legsWithUnusedItems = legs.filter((leg) => leg.items.length);
+  if (!legsWithUnusedItems.length) {
+    host.innerHTML = `
+      <div class="equipment-transfer-unused-heading">
+        <strong>Equipo no requerido para evento</strong>
+        <span>Todo el equipo del origen también se utiliza en cada destino configurado.</span>
+      </div>`;
+    return;
+  }
+  host.innerHTML = `
+    <div class="equipment-transfer-unused-heading">
+      <strong>Equipo no requerido para evento</strong>
+      <span>Estas cantidades no deben continuar al siguiente destino y no se suman como equipo trasegado.</span>
+    </div>
+    <div class="equipment-transfer-unused-list">
+      ${legsWithUnusedItems.map(({ routeIndex, legIndex, from, to, items }) => {
+        const fromIndex = activeEquipmentEvents().indexOf(from);
+        const toIndex = activeEquipmentEvents().indexOf(to);
+        const fromTitle = equipmentEventCardTitle(from, fromIndex);
+        const toTitle = equipmentEventCardTitle(to, toIndex);
+        const destinationEventName = to?.name?.trim() || "Evento por definir";
+        return `
+          <section class="equipment-transfer-unused-leg" data-equipment-unused-leg="${escapeEquipmentHtml(`${from.id}:${to.id}`)}">
+            <div class="equipment-transfer-unused-leg-heading">
+              <span>${escapeEquipmentHtml(`Trasiego ${routeIndex + 1} · tramo ${legIndex + 1}`)}</span>
+              <strong>${escapeEquipmentHtml(toTitle)}</strong>
+              <small>${escapeEquipmentHtml(`Evento: ${destinationEventName} · Fecha: ${equipmentEventDateLabel(to)}`)}</small>
+              <p>${escapeEquipmentHtml(`Desde ${fromTitle}: no trasladar al destino las siguientes cantidades.`)}</p>
+            </div>
+            <div class="equipment-transfer-unused-items">
+              ${items.map((item) => `
+                <div class="equipment-transfer-unused-item" data-equipment-unused-key="${escapeEquipmentHtml(item.identity)}">
+                  <strong>${escapeEquipmentHtml(item.quantity)}</strong>
+                  <span>
+                    ${escapeEquipmentHtml(item.description)}
+                    <small>${escapeEquipmentHtml(item.categoryTitle)}</small>
+                  </span>
+                </div>`).join("")}
+            </div>
+          </section>`;
+      }).join("")}
+    </div>`;
+}
+
 function equipmentFilterSummaryRows(rows, searchTerm = equipmentState.summarySearchTerm) {
   const query = normalizeEquipmentKey(searchTerm);
   if (!query) return rows;
@@ -1163,10 +1277,10 @@ function tableForEquipmentSections(sections, compact = false) {
           if (!compact && item.editable && item.id) {
             return `
               <tr>
-                <td class="equipment-qty">
+                <td class="equipment-qty equipment-service-quantity-cell">
                   <input class="equipment-line-quantity" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="quantity" type="number" min="0" step="1" value="${escapeEquipmentHtml(item.quantity)}" />
                 </td>
-                <td>
+                <td class="equipment-service-description-cell">
                   <input class="equipment-line-description" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="description" type="text" value="${escapeEquipmentHtml(item.description)}" />
                 </td>
                 <td class="equipment-row-action">
@@ -1176,8 +1290,8 @@ function tableForEquipmentSections(sections, compact = false) {
           }
           return `
             <tr>
-              <td class="equipment-qty">${escapeEquipmentHtml(item.quantity)}</td>
-              <td>${escapeEquipmentHtml(item.description)}</td>
+              <td class="equipment-qty equipment-service-quantity-cell">${escapeEquipmentHtml(item.quantity)}</td>
+              <td class="equipment-service-description-cell">${escapeEquipmentHtml(item.description)}</td>
               ${compact ? "" : `<td class="equipment-row-action"></td>`}
             </tr>`;
         })
@@ -1196,11 +1310,16 @@ function tableForEquipmentSections(sections, compact = false) {
 
   return `
     <table class="equipment-base-table equipment-service-table${compact ? " equipment-table-compact" : ""}">
+      <colgroup>
+        <col class="equipment-service-quantity-column" />
+        <col class="equipment-service-description-column" />
+        ${compact ? "" : '<col class="equipment-service-action-column" />'}
+      </colgroup>
       <thead>
         <tr>
-          <th>Cantidad</th>
-          <th>Equipo</th>
-          ${compact ? "" : "<th>Acción</th>"}
+          <th class="equipment-service-quantity-heading">Cantidad</th>
+          <th class="equipment-service-description-heading">Equipo</th>
+          ${compact ? "" : '<th class="equipment-service-action-heading">Acción</th>'}
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -1244,6 +1363,7 @@ function renderEquipmentEvents() {
           <div class="equipment-event-card-actions">
             <button class="equipment-event-pdf-button" type="button" data-save-event="${escapeEquipmentHtml(event.id)}" aria-label="Guardar PDF de ${escapeEquipmentHtml(cardTitle)}">PDF</button>
             <button class="equipment-event-remove-button" type="button" data-remove-event="${escapeEquipmentHtml(event.id)}" aria-label="Eliminar ventana">X</button>
+            <button class="equipment-event-save-button" type="button" data-save-window="${escapeEquipmentHtml(event.id)}" aria-label="Guardar cambios de ${escapeEquipmentHtml(cardTitle)}">Guardar</button>
           </div>
         </article>`;
     })
@@ -1252,13 +1372,13 @@ function renderEquipmentEvents() {
     button.addEventListener("click", () => loadEquipmentEvent(button.dataset.openEvent));
   });
   host.querySelectorAll("[data-save-event]").forEach((button) => {
-    button.addEventListener("click", () => {
-      loadEquipmentEvent(button.dataset.saveEvent);
-      saveEquipmentPdf("full");
-    });
+    button.addEventListener("click", () => saveEquipmentEventPdf(button.dataset.saveEvent));
   });
   host.querySelectorAll("[data-remove-event]").forEach((button) => {
     button.addEventListener("click", () => removeEquipmentEventById(button.dataset.removeEvent));
+  });
+  host.querySelectorAll("[data-save-window]").forEach((button) => {
+    button.addEventListener("click", () => saveEquipmentWindowById(button.dataset.saveWindow));
   });
 }
 
@@ -1310,6 +1430,7 @@ function refreshEquipmentSummaryAndPreview() {
   renderEquipmentSummaryDateNotice();
   renderEquipmentSummaryTransferSelector();
   renderEquipmentSummaryTransferNotice();
+  renderEquipmentTransferUnusedPanel();
   renderEquipmentTransferPanel();
   bindEquipmentInventoryInputs();
   bindEquipmentSummaryTransferSelector();
@@ -2044,24 +2165,42 @@ function saveCurrentEquipmentWindow() {
   const draft = currentEquipmentEventDraft();
   if (!currentEquipmentService()) {
     if (status) status.textContent = "Seleccione el tipo de servicio antes de guardar la ventana.";
-    return;
+    return false;
   }
   if (!draft.place || draft.place === "Lugar por definir") {
     if (status) status.textContent = "Escriba el lugar del evento antes de guardar la ventana.";
-    return;
+    return false;
   }
   if (!draft.name || draft.name === "Evento por definir") {
     if (status) status.textContent = "Escriba el nombre del evento antes de guardar la ventana.";
-    return;
+    return false;
   }
   const event = selectedEquipmentEvent();
   if (!event) {
+    const previousEventCount = equipmentState.events.length;
     addEquipmentEvent();
-    return;
+    return equipmentState.events.length > previousEventCount;
   }
   updateEquipmentEventFromCurrent(event);
   if (status) status.textContent = `Ventana actualizada: ${event.place || event.name}`;
   renderEquipmentModule();
+  return true;
+}
+
+function saveEquipmentWindowById(eventId) {
+  const event = equipmentState.events.find((item) => item.id === eventId);
+  const status = equipmentQuery("#equipmentSaveStatus");
+  if (!event) {
+    if (status) status.textContent = "No se encontró la ventana que desea guardar.";
+    return false;
+  }
+  if (equipmentState.selectedEventId !== eventId) loadEquipmentEvent(eventId);
+  return saveCurrentEquipmentWindow();
+}
+
+async function saveEquipmentEventPdf(eventId) {
+  if (!saveEquipmentWindowById(eventId)) return;
+  await saveEquipmentPdf("full");
 }
 
 function removeEquipmentEventById(eventId) {
@@ -2188,6 +2327,7 @@ function renderEquipmentModule() {
   bindEquipmentInventoryInputs();
   bindEquipmentSummaryTransferSelector();
   renderEquipmentSummaryTransferNotice();
+  renderEquipmentTransferUnusedPanel();
   renderEquipmentTransferPanel();
   renderEquipmentPdfPreview();
   renderEquipmentWindowState();
@@ -2739,7 +2879,6 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentReviewWindowButton")?.addEventListener("click", () => switchEquipmentWindow("review"));
   equipmentQuery("#equipmentSummaryWindowButton")?.addEventListener("click", () => switchEquipmentWindow("summary"));
   equipmentQuery("#equipmentTransferWindowButton")?.addEventListener("click", () => switchEquipmentWindow("transfer"));
-  equipmentQuery("#equipmentAddWindowButton")?.addEventListener("click", saveCurrentEquipmentWindow);
   equipmentQuery("#equipmentRemoveWindowButton")?.addEventListener("click", removeEquipmentActiveWindow);
   equipmentQuery("#equipmentClearAllButton")?.addEventListener("click", clearEquipmentWorkingArea);
   equipmentQuery("#equipmentUndoDeleteButton")?.addEventListener("click", restoreLastDeletedEquipment);
