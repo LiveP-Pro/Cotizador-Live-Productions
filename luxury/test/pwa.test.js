@@ -55,6 +55,8 @@ test("el service worker elimina solo cachés anteriores de Luxury Travel", async
         "luxury-travel-runtime-v78",
         "luxury-travel-shell-v79",
         "luxury-travel-runtime-v79",
+        "luxury-travel-shell-v80",
+        "luxury-travel-runtime-v80",
       ],
       delete: async (key) => {
         deleted.push(key);
@@ -94,6 +96,8 @@ test("el service worker elimina solo cachés anteriores de Luxury Travel", async
     "luxury-travel-shell-v77",
     "luxury-travel-shell-v78",
     "luxury-travel-runtime-v78",
+    "luxury-travel-shell-v79",
+    "luxury-travel-runtime-v79",
   ]);
   assert.equal(navigationPreloadEnabled, true);
   assert.equal(clientsClaimed, true);

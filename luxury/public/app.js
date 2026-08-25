@@ -167,7 +167,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "79";
+const APP_VERSION = "80";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -1935,6 +1935,10 @@ function openQuoteModal(quote = {}) {
   const initialDepartureTime = quote.departureTime || firstInitialService.departureTime || "";
   const initialReturnTime = quote.returnTime || lastInitialService.returnTime ||
     (orderedInitialServices.length > 1 ? lastInitialService.departureTime : "") || "";
+  const initialDisplayOrigin = String(quote.origin || firstInitialService.origin || "").trim();
+  const initialDisplayDestination = String(
+    quote.destination || lastInitialService.destinationAddress || lastInitialService.destination || "",
+  ).trim();
   const initialDepartureParts = time12Parts(initialDepartureTime);
   const initialReturnParts = time12Parts(initialReturnTime);
   openModal(
@@ -2029,9 +2033,15 @@ function openQuoteModal(quote = {}) {
               </div>
             </section>
             <section class="form-section" data-quote-step="route-summary">
-              <h3>4. Hora de salida y hora de regreso</h3>
-              <p class="form-note">Estas horas aparecerán una sola vez en el encabezado de la cotización.</p>
+              <h3>4. Lugar de salida, destino y horarios</h3>
+              <p class="form-note">Estos datos aparecerán una sola vez en el encabezado de la cotización.</p>
               <div class="form-grid">
+                <label>Lugar de salida
+                  <input name="displayOrigin" value="${escapeHtml(initialDisplayOrigin)}" placeholder="Ej. Neo Apartamentos, zona 10" />
+                </label>
+                <label>Destino
+                  <input name="displayDestination" value="${escapeHtml(initialDisplayDestination)}" placeholder="Ej. Petén, Tikal" />
+                </label>
                 <label>Hora de salida
                   <span class="time-12-editor">
                     <input name="summaryDepartureTime12" value="${escapeHtml(initialDepartureParts.time)}" inputmode="numeric" placeholder="Ej. 07:00" aria-label="Hora de salida en formato de 12 horas" />
@@ -2131,8 +2141,6 @@ function openQuoteModal(quote = {}) {
         </div>
         <input type="hidden" name="serviceDate" value="${escapeHtml(serviceStartDate)}" />
         <input type="hidden" name="returnDate" value="${escapeHtml(serviceEndDate)}" />
-        <input type="hidden" name="displayOrigin" value="${escapeHtml(quote.origin)}" />
-        <input type="hidden" name="displayDestination" value="${escapeHtml(quote.destination)}" />
         <input type="hidden" name="hasLuggage" value="${initialLuggageQuantity > 0 ? "true" : "false"}" />
         <input type="hidden" name="clientId" value="${escapeHtml(quote.clientId)}" />
         <input type="hidden" name="clientNit" value="${escapeHtml(quote.clientNit)}" />
@@ -2473,9 +2481,8 @@ function quoteFormData(form) {
   body.serviceType = serviceSelectionsServiceLabel(serviceSelections);
   body.serviceDate = form.elements.serviceDate.value;
   body.returnDate = form.elements.returnDate.value;
-  body.origin = form.elements.displayOrigin.value.trim() || firstService?.origin || "";
-  body.destination = form.elements.displayDestination.value.trim() ||
-    serviceSelections.at(-1)?.destinationAddress || serviceSelections.at(-1)?.destination || "";
+  body.origin = form.elements.displayOrigin.value.trim();
+  body.destination = form.elements.displayDestination.value.trim();
   body.departureTime = time12To24(
     form.elements.summaryDepartureTime12.value,
     form.elements.summaryDeparturePeriod.value,
@@ -2649,6 +2656,8 @@ function quoteMissingInformation(body) {
     missing.push("Tipo de vehículo");
   }
   if (!Number(body.passengers || 0)) missing.push("Cantidad de pasajeros");
+  if (!String(body.origin || "").trim()) missing.push("Lugar de salida del encabezado");
+  if (!String(body.destination || "").trim()) missing.push("Destino del encabezado");
   if (!String(body.departureTime || "").trim()) missing.push("Hora de salida del encabezado");
   if (!String(body.returnTime || "").trim()) missing.push("Hora de regreso del encabezado");
   if (Number(body.luggage || 0) > 0 && !String(body.luggageDescription || "").trim()) {
