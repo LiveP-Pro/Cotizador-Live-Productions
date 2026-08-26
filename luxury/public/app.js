@@ -167,7 +167,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "80";
+const APP_VERSION = "81";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -346,6 +346,11 @@ function selectedVehiclesFromForm(form) {
   if (selected.length) return selected;
   const fallback = state.vehicles.find((vehicle) => vehicle.id === form.elements.vehicleId?.value);
   return fallback ? [fallback] : [];
+}
+
+function formUsesFleetTelevision(form) {
+  const manualVehicleName = String(form.elements.vehicleManualName?.value || "").trim();
+  return !manualVehicleName && $$('input[name="vehicleIds"]:checked', form).length > 0;
 }
 
 function explicitVehicleCount(source = {}) {
@@ -2014,20 +2019,10 @@ function openQuoteModal(quote = {}) {
                 </div>
                 <div class="capacity-note full" data-capacity-note role="status" aria-live="polite">Capacidad disponible.</div>
                 <div class="premium-options full">
-                  <label class="premium-option">
+                  <label class="premium-option premium-option-full">
                     <input type="checkbox" name="hasPlayStation5" ${quote.hasPlayStation5 ? "checked" : ""} />
                     <span class="premium-option-icon">PS</span>
                     <span><strong>PlayStation 5</strong><small>Mostrar esta comodidad en la cotización final.</small></span>
-                  </label>
-                  <label class="premium-option">
-                    <input type="checkbox" name="hasTv" ${quote.hasTv ? "checked" : ""} />
-                    <span class="premium-option-icon">TV</span>
-                    <span><strong>TV</strong><small>Mostrar TV en la imagen final.</small></span>
-                  </label>
-                  <label class="premium-option premium-option-full">
-                    <input type="checkbox" name="hasBed" ${quote.hasBed ? "checked" : ""} disabled />
-                    <span class="premium-option-icon">CM</span>
-                    <span><strong>Cama</strong><small>Se activa automáticamente al elegir una configuración M1 o M2 con cama.</small></span>
                   </label>
                 </div>
               </div>
@@ -2281,7 +2276,6 @@ function openQuoteModal(quote = {}) {
     syncQuoteCapacity(form);
   });
   form.elements.hasPlayStation5.addEventListener("change", () => syncQuoteCapacity(form));
-  form.elements.hasTv.addEventListener("change", () => syncQuoteCapacity(form));
   $("[data-sprinter311-configurations]", form)?.addEventListener("change", (event) => {
     if (!event.target.matches("input[data-vehicle-configuration]")) return;
     delete form.dataset.capacityWarning;
@@ -2378,12 +2372,6 @@ function syncQuoteCapacity(form, announce = false) {
   const hasSprinter311 = vehicles.some((vehicle) => !vehicleIsSprinter316(vehicle));
   const seatPanel = $(`[data-seat-configuration]`, form);
   if (seatPanel) seatPanel.hidden = !hasSprinter316;
-  const selectedUnitConfigurations = vehicles
-    .filter((vehicle) => !vehicleIsSprinter316(vehicle))
-    .map((vehicle) => selectedVehicleConfiguration(vehicle, form))
-    .filter(Boolean);
-  form.elements.hasBed.checked = selectedUnitConfigurations.some((item) => item.hasBed);
-  form.elements.hasBed.disabled = true;
   const luggageQuantity = Math.max(0, Math.round(Number(form.elements.luggage.value || 0)));
   form.elements.luggage.value = String(luggageQuantity);
   const hasLuggage = formHasLuggage(form);
@@ -2433,7 +2421,7 @@ function syncQuoteCapacity(form, announce = false) {
     : "la Sprinter seleccionada";
   const amenities = [
     form.elements.hasPlayStation5.checked ? "PlayStation 5" : "",
-    form.elements.hasTv.checked ? "TV" : "",
+    formUsesFleetTelevision(form) ? "TV" : "",
   ].filter(Boolean).join(" · ");
   const configurationLabel = configuration === "luxury"
     ? "Butacas de lujo (9 atrás + 1 adelante)"
@@ -2512,7 +2500,7 @@ function quoteFormData(form) {
     ? sprinter311ConfigurationValue(form)
     : "";
   body.hasPlayStation5 = form.elements.hasPlayStation5.checked;
-  body.hasTv = form.elements.hasTv.checked;
+  body.hasTv = formUsesFleetTelevision(form);
   body.seatConfiguration = selectedVehiclesFromForm(form).some(vehicleIsSprinter316)
     ? form.elements.seatConfiguration.value
     : "";
@@ -4213,11 +4201,11 @@ function installHelpContent() {
       "Confirme con Agregar. La aplicación quedará disponible en el Dock y en Aplicaciones.",
     ];
   } else if (isAndroid) {
-    browserTitle = "Chrome en Android";
+    browserTitle = "Android";
     steps = [
-      "Abra el menú de tres puntos de Chrome.",
-      "Seleccione Instalar aplicación o Agregar a pantalla principal.",
-      "Confirme la instalación.",
+      "Toque Instalar aplicación en la parte superior de Luxury Travel.",
+      "Si su navegador muestra la ventana de instalación, confírmela.",
+      "Si no aparece, abra esta página en Chrome y seleccione Instalar aplicación o Agregar a pantalla principal en el menú de tres puntos.",
     ];
   }
 

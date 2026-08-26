@@ -14,7 +14,13 @@ function pngSize(buffer) {
 }
 
 test("el manifiesto PWA instala Luxury con accesos a Resumen y Cotizador", async () => {
-  const manifest = JSON.parse(await readFile(path.join(PUBLIC, "manifest.webmanifest"), "utf8"));
+  const [manifestSource, indexSource, appSource, stylesSource] = await Promise.all([
+    readFile(path.join(PUBLIC, "manifest.webmanifest"), "utf8"),
+    readFile(path.join(PUBLIC, "index.html"), "utf8"),
+    readFile(path.join(PUBLIC, "app.js"), "utf8"),
+    readFile(path.join(PUBLIC, "styles.css"), "utf8"),
+  ]);
+  const manifest = JSON.parse(manifestSource);
 
   assert.equal(manifest.id, "./");
   assert.equal(manifest.scope, "./");
@@ -34,6 +40,12 @@ test("el manifiesto PWA instala Luxury con accesos a Resumen y Cotizador", async
     const icon = await readFile(path.join(PUBLIC, relativePath));
     assert.deepEqual(pngSize(icon), expectedSize);
   }
+
+  assert.match(indexSource, /id="install-button"/);
+  assert.match(stylesSource, /\.topbar-actions \.button \{\s*display: inline-flex;/);
+  assert.match(appSource, /body\.hasTv = formUsesFleetTelevision\(form\);/);
+  assert.doesNotMatch(appSource, /name="hasTv"/);
+  assert.doesNotMatch(appSource, /name="hasBed"/);
 });
 
 test("el service worker elimina solo cachés anteriores de Luxury Travel", async () => {
@@ -98,6 +110,8 @@ test("el service worker elimina solo cachés anteriores de Luxury Travel", async
     "luxury-travel-runtime-v78",
     "luxury-travel-shell-v79",
     "luxury-travel-runtime-v79",
+    "luxury-travel-shell-v80",
+    "luxury-travel-runtime-v80",
   ]);
   assert.equal(navigationPreloadEnabled, true);
   assert.equal(clientsClaimed, true);

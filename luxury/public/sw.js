@@ -1,4 +1,4 @@
-const VERSION = "80";
+const VERSION = "81";
 const CACHE_PREFIX = "luxury-travel-";
 const SHELL_CACHE = `${CACHE_PREFIX}shell-v${VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}runtime-v${VERSION}`;
