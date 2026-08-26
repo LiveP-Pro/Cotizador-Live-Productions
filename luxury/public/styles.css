@@ -1850,6 +1850,25 @@ tr:last-child td {
   gap: 9px;
 }
 
+.unit-configuration-panels {
+  display: grid;
+  gap: 12px;
+}
+
+.unit-configuration-options {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.unit-configuration-options label {
+  min-height: 132px;
+}
+
+.unit-configuration-options .configuration-layout {
+  margin-top: 5px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .seat-configuration-options label {
   position: relative;
   min-height: 82px;
@@ -1914,7 +1933,7 @@ tr:last-child td {
 }
 
 .transfer-detail-grid {
-  grid-template-columns: minmax(135px, 0.75fr) minmax(260px, 1.7fr) minmax(155px, 0.85fr) minmax(135px, 0.7fr);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
 .time-12-editor {
@@ -2217,6 +2236,88 @@ tr:last-child td {
 
 .modal-body {
   padding: 24px;
+}
+
+.install-guide {
+  display: grid;
+  gap: 22px;
+}
+
+.install-guide-brand {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+
+.install-guide-brand img {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  box-shadow: 0 10px 24px rgba(16, 24, 27, 0.16);
+}
+
+.install-guide-brand h3 {
+  margin: 4px 0 7px;
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.install-guide-brand p:last-child,
+.install-online-note {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.install-steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: install-step;
+}
+
+.install-steps li {
+  position: relative;
+  min-height: 42px;
+  padding: 10px 12px 10px 54px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  line-height: 1.45;
+  counter-increment: install-step;
+}
+
+.install-steps li::before {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--gold-light);
+  content: counter(install-step);
+  font-weight: 800;
+}
+
+.install-security {
+  margin: 0;
+  border-left: 4px solid var(--success);
+  border-radius: 8px;
+  background: #f2faf7;
+  padding: 11px 13px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.install-security.warning {
+  border-color: var(--warning);
+  background: #fff8ed;
 }
 
 .quote-layout {
@@ -2553,11 +2654,7 @@ tr:last-child td {
   }
 }
 
-@media (max-width: 1100px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
+@media (max-width: 1450px) {
   .quote-layout {
     grid-template-columns: 1fr;
   }
@@ -2573,7 +2670,13 @@ tr:last-child td {
   }
 }
 
-@media (min-width: 1101px) and (max-width: 1600px) {
+@media (max-width: 1100px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1451px) and (max-width: 1750px) {
   .quote-layout {
     grid-template-columns: minmax(0, 1fr) 620px;
   }
@@ -2679,6 +2782,7 @@ tr:last-child td {
 @media (max-width: 760px) {
   .vehicle-unit-options,
   .seat-configuration-options,
+  .unit-configuration-options,
   .passenger-luggage-editor,
   .transfer-detail-grid {
     grid-template-columns: 1fr;
@@ -2695,6 +2799,21 @@ tr:last-child td {
 }
 
 @media (max-width: 620px) {
+  .install-guide-brand {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .install-guide-brand img {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+  }
+
+  .install-guide-brand h3 {
+    font-size: 21px;
+  }
+
   .login-panel {
     align-items: start;
     padding: 38px 22px;
@@ -2725,6 +2844,7 @@ tr:last-child td {
   .rate-options,
   .vehicle-unit-options,
   .seat-configuration-options,
+  .unit-configuration-options,
   .passenger-luggage-editor,
   .payment-proof-meta {
     grid-template-columns: 1fr;
@@ -2792,7 +2912,11 @@ tr:last-child td {
   }
 
   .topbar-actions .button {
-    display: none;
+    display: inline-flex;
+    min-height: 34px;
+    padding: 6px 9px;
+    font-size: 9px;
+    white-space: nowrap;
   }
 }
 

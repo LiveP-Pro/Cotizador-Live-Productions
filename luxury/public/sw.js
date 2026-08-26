@@ -1,54 +1,117 @@
-const CACHE_NAME = "luxury-travel-v77";
+const VERSION = "81";
+const CACHE_PREFIX = "luxury-travel-";
+const SHELL_CACHE = `${CACHE_PREFIX}shell-v${VERSION}`;
+const RUNTIME_CACHE = `${CACHE_PREFIX}runtime-v${VERSION}`;
 const SCOPE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, "");
+
 const scopedPath = (pathname = "/") =>
   `${SCOPE_PATH}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
-const APP_SHELL = [
+
+const INDEX_URL = scopedPath("/index.html");
+const API_PATH = scopedPath("/api/");
+const CORE_ASSETS = [
   scopedPath("/"),
-  scopedPath("/index.html"),
-  scopedPath("/styles.css"),
-  scopedPath("/app.js"),
+  INDEX_URL,
+  scopedPath(`/styles.css?v=${VERSION}`),
+  scopedPath(`/app.js?v=${VERSION}`),
   scopedPath("/manifest.webmanifest"),
   scopedPath("/assets/mark.svg"),
   scopedPath("/assets/logo-luxury-travel.png"),
-  scopedPath("/assets/quote-template-hero.jpeg"),
-  scopedPath("/assets/quote-template-full.png"),
-  scopedPath("/assets/quote-template-permanent.png"),
-  scopedPath("/assets/quote-template-master.png"),
-  scopedPath("/assets/quote-template-master-2x.png"),
-  scopedPath("/assets/quote-hero.png"),
-  scopedPath("/assets/client-itinerary-hero.png"),
-  scopedPath("/assets/driver-itinerary-hero.png"),
+  scopedPath("/assets/pwa-icon-192.png"),
+  scopedPath("/assets/pwa-icon-512.png"),
+  scopedPath("/assets/pwa-maskable-512.png"),
+  scopedPath("/assets/apple-touch-icon.png"),
 ];
 
+function isWithinLuxuryScope(pathname) {
+  if (!SCOPE_PATH) return true;
+  return pathname === SCOPE_PATH || pathname.startsWith(`${SCOPE_PATH}/`);
+}
+
+function offlineApiResponse() {
+  return new Response(
+    JSON.stringify({ error: "Sin conexión. Conéctese a internet para consultar o guardar datos." }),
+    {
+      status: 503,
+      statusText: "Offline",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    },
+  );
+}
+
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    return new Response("Recurso no disponible sin conexión.", {
+      status: 503,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+}
+
+async function navigationResponse(event) {
+  try {
+    const preload = await event.preloadResponse;
+    if (preload) return preload;
+    return await fetch(event.request);
+  } catch {
+    return (await caches.match(INDEX_URL)) || (await caches.match(scopedPath("/")));
+  }
+}
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(CORE_ASSETS)));
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))),
-      ),
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter(
+            (key) =>
+              key.startsWith(CACHE_PREFIX) && key !== SHELL_CACHE && key !== RUNTIME_CACHE,
+          )
+          .map((key) => caches.delete(key)),
+      );
+      if (self.registration.navigationPreload) {
+        await self.registration.navigationPreload.enable();
+      }
+      await self.clients.claim();
+    })(),
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
-  if (event.request.method !== "GET" || url.pathname.startsWith(scopedPath("/api/"))) return;
+  const request = event.request;
+  const url = new URL(request.url);
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        return response;
-      })
-      .catch(() =>
-        caches.match(event.request).then((cached) => cached || caches.match(scopedPath("/"))),
-      ),
-  );
+  if (url.origin !== self.location.origin || !isWithinLuxuryScope(url.pathname)) return;
+
+  if (url.pathname.startsWith(API_PATH)) {
+    event.respondWith(fetch(request).catch(offlineApiResponse));
+    return;
+  }
+
+  if (request.method !== "GET") return;
+
+  if (request.mode === "navigate") {
+    event.respondWith(navigationResponse(event));
+    return;
+  }
+
+  event.respondWith(networkFirst(request));
 });

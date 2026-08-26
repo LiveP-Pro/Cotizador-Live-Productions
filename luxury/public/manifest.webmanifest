@@ -1,19 +1,63 @@
 {
-  "name": "Luxury Travel Manager",
+  "id": "./",
+  "name": "Luxury Travel - Resumen y Cotizador",
   "short_name": "Luxury Travel",
-  "description": "Cotizaciones, itinerarios y operación de Luxury Travel Guatemala.",
-  "start_url": "./",
+  "description": "Resumen comercial y cotizador profesional de Luxury Travel Guatemala.",
+  "start_url": "./?module=dashboard&source=pwa",
   "scope": "./",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#f4f2ed",
   "theme_color": "#10181b",
   "lang": "es-GT",
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "assets/logo-luxury-travel.png",
-      "sizes": "any",
+      "src": "assets/pwa-icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "assets/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/pwa-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Resumen",
+      "short_name": "Resumen",
+      "description": "Abrir el resumen comercial de Luxury Travel.",
+      "url": "./?module=dashboard&source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "assets/pwa-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Cotizador",
+      "short_name": "Cotizador",
+      "description": "Abrir el cotizador de Luxury Travel.",
+      "url": "./?module=quotes&source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "assets/pwa-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
