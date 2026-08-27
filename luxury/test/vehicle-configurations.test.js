@@ -81,3 +81,47 @@ test("M2 permite 18 pasajeros únicamente en su configuración hacia adelante", 
   assert.equal(invalidResponse.status, 400);
   assert.match((await invalidResponse.json()).error, /máximo total de 14 pasajeros/i);
 });
+
+test("M3 aplica sus cinco configuraciones y sus límites", async (context) => {
+  const app = await authenticatedApp(context);
+  const m3 = app.vehicles.find((vehicle) => Number(vehicle.unitNumber) === 3);
+  const createM3Quote = (seatConfiguration, passengers, luggageDescription = "") => fetch(`${app.baseUrl}/api/quotes`, {
+    method: "POST",
+    headers: { Cookie: app.cookie, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      clientName: "Prueba M3",
+      serviceDate: "2026-08-22",
+      origin: "Ciudad de Guatemala",
+      destination: "Antigua",
+      serviceType: "Servicio de Ida",
+      passengers,
+      luggageDescription,
+      vehicleId: m3.id,
+      vehicleIds: [m3.id],
+      seatConfiguration,
+      fixedFare: 1500,
+      fixedFareIncludesTax: false,
+      includeTax: false,
+    }),
+  });
+
+  const validResponse = await createM3Quote("m3-luxury-m1-10", 10, "4 maletas");
+  assert.equal(validResponse.status, 201);
+  const quote = await validResponse.json();
+  assert.equal(quote.maxPassengers, 10);
+  assert.equal(quote.seatConfiguration, "m3-luxury-m1-10");
+
+  const m3SeatsResponse = await createM3Quote("m3-seats-11", 11, "6 maletas");
+  assert.equal(m3SeatsResponse.status, 201);
+  const m3SeatsQuote = await m3SeatsResponse.json();
+  assert.equal(m3SeatsQuote.maxPassengers, 11);
+  assert.equal(m3SeatsQuote.seatConfiguration, "m3-seats-11");
+
+  const overCapacityResponse = await createM3Quote("m3-luxury-m3-full-13", 14);
+  assert.equal(overCapacityResponse.status, 400);
+  assert.match((await overCapacityResponse.json()).error, /máxima total es de 13 pasajeros/i);
+
+  const luggageResponse = await createM3Quote("m3-luxury-m1-full-13", 13, "2 maletas");
+  assert.equal(luggageResponse.status, 400);
+  assert.match((await luggageResponse.json()).error, /no permite equipaje/i);
+});

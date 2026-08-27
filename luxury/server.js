@@ -120,16 +120,28 @@ function guatemalaMonthValue(date = new Date()) {
 const SERVICE_STATUSES = new Set(["aceptada", "confirmada", "completada"]);
 const SPRINTER_311_UNIT_CONFIGURATIONS = {
   1: [
-    { id: "m1-forward-15", capacity: 15, hasBed: false },
-    { id: "m1-facing-bed-8", capacity: 8, hasBed: true },
-    { id: "m1-facing-row-12", capacity: 12, hasBed: false },
-    { id: "m1-three-rows-11", capacity: 11, hasBed: false },
+    { id: "m1-forward-15", capacity: 15, hasBed: false, allowsLuggage: false },
+    { id: "m1-facing-bed-8", capacity: 8, hasBed: true, allowsLuggage: true },
+    { id: "m1-facing-row-12", capacity: 12, hasBed: false, allowsLuggage: true },
+    { id: "m1-three-rows-11", capacity: 11, hasBed: false, allowsLuggage: true },
   ],
   2: [
-    { id: "m2-forward-18", capacity: 18, hasBed: false },
-    { id: "m2-facing-bed-10", capacity: 10, hasBed: true },
-    { id: "m2-three-rows-14", capacity: 14, hasBed: false },
+    { id: "m2-forward-18", capacity: 18, hasBed: false, allowsLuggage: true },
+    { id: "m2-facing-bed-10", capacity: 10, hasBed: true, allowsLuggage: true },
+    { id: "m2-three-rows-14", capacity: 14, hasBed: false, allowsLuggage: true },
   ],
+};
+const SPRINTER_316_CONFIGURATIONS = [
+  { id: "m3-luxury-m1-10", title: "Butacas de lujo + butacas M1", capacity: 10, allowsLuggage: true },
+  { id: "m3-luxury-m1-full-13", title: "Butacas de lujo + butacas M1 full", capacity: 13, allowsLuggage: false },
+  { id: "m3-luxury-m3-10", title: "Butacas de lujo + sillones M3", capacity: 10, allowsLuggage: true },
+  { id: "m3-luxury-m3-full-13", title: "Butacas de lujo + sillones M3 full", capacity: 13, allowsLuggage: false },
+  { id: "m3-seats-11", title: "Sillones M3", capacity: 11, allowsLuggage: true },
+];
+const LEGACY_SPRINTER_316_CONFIGURATION_IDS = {
+  luxury: "m3-luxury-m1-10",
+  m3: "m3-seats-11",
+  m1: "m3-luxury-m1-full-13",
 };
 const SPRINTER_311_CONFIGURATION_IDS = new Set(
   Object.values(SPRINTER_311_UNIT_CONFIGURATIONS).flat().map((item) => item.id),
@@ -177,6 +189,16 @@ function sprinter311ConfigurationById(configurationId) {
   return Object.values(SPRINTER_311_UNIT_CONFIGURATIONS)
     .flat()
     .find((item) => item.id === configurationId) || null;
+}
+
+function sprinter316ConfigurationById(configurationId, hasSuperLuxurySeats = false) {
+  const normalizedId = SPRINTER_316_CONFIGURATIONS.some((item) => item.id === configurationId)
+    ? configurationId
+    : LEGACY_SPRINTER_316_CONFIGURATION_IDS[configurationId] ||
+      (hasSuperLuxurySeats
+        ? LEGACY_SPRINTER_316_CONFIGURATION_IDS.luxury
+        : SPRINTER_316_CONFIGURATIONS[0].id);
+  return SPRINTER_316_CONFIGURATIONS.find((item) => item.id === normalizedId) || SPRINTER_316_CONFIGURATIONS[0];
 }
 
 function cleanServiceSelections(value) {
@@ -430,10 +452,10 @@ function normalizeQuote(body, rates, existing = {}) {
     hasSeatConfigurationField
       ? body.seatConfiguration
       : existing.seatConfiguration || (parseBoolean(body.hasSuperLuxurySeats) ? "luxury" : ""),
-    20,
+    50,
   );
-  const seatConfiguration = ["luxury", "m1", "m3"].includes(requestedSeatConfiguration)
-    ? requestedSeatConfiguration
+  const seatConfiguration = requestedSeatConfiguration || parseBoolean(body.hasSuperLuxurySeats)
+    ? sprinter316ConfigurationById(requestedSeatConfiguration, parseBoolean(body.hasSuperLuxurySeats)).id
     : "";
   const requestedSprinter311Configuration = cleanString(
     configuredUnitDefinitions.length
@@ -495,7 +517,7 @@ function normalizeQuote(body, rates, existing = {}) {
     hasTv: parseBoolean(body.hasTv),
     seatConfiguration,
     hasSuperLuxurySeats: seatConfiguration
-      ? seatConfiguration === "luxury"
+      ? true
       : parseBoolean(body.hasSuperLuxurySeats),
     driverId: cleanString(body.driverId, 80),
     driverUserId: cleanString(body.driverUserId, 80),
@@ -547,14 +569,25 @@ function validateQuoteCapacity(db, quote) {
       error.statusCode = 400;
       throw error;
     }
+    const unitConfiguration = sprinter311UnitConfiguration(vehicle, requestedConfiguration);
+    if (hasLuggage && unitConfiguration?.allowsLuggage === false) {
+      const error = new Error("La configuración seleccionada para esta unidad no permite equipaje.");
+      error.statusCode = 400;
+      throw error;
+    }
   });
+  const sprinter316Configuration = sprinter316ConfigurationById(
+    quote.seatConfiguration,
+    quote.hasSuperLuxurySeats,
+  );
+  if (hasLuggage && vehicles.some(isSprinter316) && sprinter316Configuration.allowsLuggage === false) {
+    const error = new Error(`La configuración “${sprinter316Configuration.title}” no permite equipaje.`);
+    error.statusCode = 400;
+    throw error;
+  }
   const capacityForVehicle = (vehicle) => {
     if (isSprinter316(vehicle)) {
-      if (quote.seatConfiguration === "luxury" || quote.hasSuperLuxurySeats) {
-        return Math.max(1, Number(vehicle.luxurySeatCapacity || vehicle.superLuxuryCapacity || 10));
-      }
-      if (quote.seatConfiguration === "m3") return Math.max(1, Number(vehicle.m3SeatCapacity || 11));
-      return Math.max(1, Number(vehicle.m1SeatCapacity || vehicle.capacity || 14));
+      return sprinter316Configuration.capacity;
     }
     const unitConfiguration = sprinter311UnitConfiguration(
       vehicle,
@@ -599,10 +632,8 @@ function validateQuoteCapacity(db, quote) {
     const error = new Error(
       hasUnitConfigurations
         ? `La configuración seleccionada permite un máximo total de ${maximum} pasajeros.`
-        : quote.seatConfiguration === "luxury" || quote.hasSuperLuxurySeats
-        ? `Con Butacas de lujo la capacidad máxima total es de ${maximum} pasajeros.`
-        : quote.seatConfiguration === "m3"
-          ? `Con Sillones M3 la capacidad máxima total es de ${maximum} pasajeros.`
+        : quote.seatConfiguration || quote.hasSuperLuxurySeats
+          ? `Con ${sprinter316Configuration.title} la capacidad máxima total es de ${maximum} pasajeros.`
           : quote.hasBed
             ? `Con cama seleccionada la capacidad máxima total es de ${maximum} pasajeros.`
             : `La capacidad máxima del vehículo es de ${maximum} pasajeros.`,

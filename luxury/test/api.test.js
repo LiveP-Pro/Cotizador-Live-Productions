@@ -271,7 +271,7 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
   assert.equal(superLuxuryResponse.status, 201);
   const superLuxuryQuote = await superLuxuryResponse.json();
   assert.equal(superLuxuryQuote.maxPassengers, 10);
-  assert.equal(superLuxuryQuote.seatConfiguration, "luxury");
+  assert.equal(superLuxuryQuote.seatConfiguration, "m3-luxury-m1-10");
   assert.equal(superLuxuryQuote.hasSuperLuxurySeats, true);
 
   const superLuxuryOverCapacityResponse = await request(app.baseUrl, cookie, "/api/quotes", {

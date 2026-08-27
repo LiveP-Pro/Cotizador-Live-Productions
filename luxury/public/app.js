@@ -92,8 +92,8 @@ const sprinter311UnitConfigurations = {
     {
       id: "m1-forward-15",
       title: "Todos hacia enfrente",
-      detail: "15 pasajeros · Artículo personal.",
-      layout: "Todos los asientos viendo hacia enfrente.",
+      detail: "3 filas de 3 + 1 fila de 4 sin equipaje · 13 pasajeros atrás + 2 adelante · 15 pasajeros.",
+      layout: "3 filas de 3 + 1 fila de 4 sin equipaje, 13 pasajeros atrás + 2 adelante.",
       capacity: 15,
       hasBed: false,
       allowsLuggage: false,
@@ -130,7 +130,7 @@ const sprinter311UnitConfigurations = {
     {
       id: "m2-forward-18",
       title: "Todos hacia adelante",
-      detail: "4 filas de 4 y 2 pasajeros adelante · 18 pasajeros · Maletas de mano.",
+      detail: "4 filas de 4 y 2 pasajeros adelante · 18 pasajeros · Artículo personal.",
       layout: "Todos los asientos viendo hacia adelante.",
       capacity: 18,
       hasBed: false,
@@ -156,6 +156,53 @@ const sprinter311UnitConfigurations = {
     },
   ],
 };
+const sprinter316Configurations = [
+  {
+    id: "m3-luxury-m1-10",
+    title: "Butacas de lujo + butacas M1",
+    detail: "2 butacas de lujo + 1 fila de 3 + 1 fila de 4 · 9 pasajeros atrás + 1 adelante con equipaje · 10 pasajeros.",
+    layout: "2 butacas de lujo + 1 fila de 3 + 1 fila de 4, 9 pasajeros atrás + 1 adelante con equipaje.",
+    capacity: 10,
+    allowsLuggage: true,
+  },
+  {
+    id: "m3-luxury-m1-full-13",
+    title: "Butacas de lujo + butacas M1 full",
+    detail: "2 butacas de lujo + 2 filas de 3 + 1 fila de 4 · 12 pasajeros atrás + 1 adelante · 13 pasajeros · Artículo personal.",
+    layout: "2 butacas de lujo + 2 filas de 3 + 1 fila de 4, 12 pasajeros atrás + 1 adelante, artículo personal.",
+    capacity: 13,
+    allowsLuggage: false,
+  },
+  {
+    id: "m3-luxury-m3-10",
+    title: "Butacas de lujo + sillones M3",
+    detail: "2 butacas de lujo + 1 fila de 3 + 1 fila de 4 con equipaje · 9 pasajeros atrás + 1 adelante · 10 pasajeros.",
+    layout: "2 butacas de lujo + 1 fila de 3 + 1 fila de 4 con equipaje, 9 pasajeros atrás + 1 adelante.",
+    capacity: 10,
+    allowsLuggage: true,
+  },
+  {
+    id: "m3-luxury-m3-full-13",
+    title: "Butacas de lujo + sillones M3 full",
+    detail: "2 butacas de lujo + 2 filas de 3 + 1 fila de 4 · 12 pasajeros atrás + 1 adelante · 13 pasajeros · Artículo personal.",
+    layout: "2 butacas de lujo + 2 filas de 3 + 1 fila de 4, 12 pasajeros atrás + 1 adelante, artículo personal.",
+    capacity: 13,
+    allowsLuggage: false,
+  },
+  {
+    id: "m3-seats-11",
+    title: "Sillones M3",
+    detail: "2 filas de 3 + 1 fila de 4 · 10 pasajeros atrás + 1 adelante · 11 pasajeros · Con equipaje.",
+    layout: "2 filas de 3 + 1 fila de 4, 10 pasajeros atrás + 1 adelante, con equipaje.",
+    capacity: 11,
+    allowsLuggage: true,
+  },
+];
+const legacySprinter316ConfigurationIds = {
+  luxury: "m3-luxury-m1-10",
+  m3: "m3-seats-11",
+  m1: "m3-luxury-m1-full-13",
+};
 const serviceRateTypes = {
   oneWay: { label: "Servicio de Ida", field: "oneWay" },
   roundTrip: { label: "Servicio de Ida y Vuelta", field: "roundTrip" },
@@ -167,7 +214,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "81";
+const APP_VERSION = "83";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -312,10 +359,7 @@ function sprinter311ConfigurationValue(form) {
 
 function vehicleCapacityWithOptions(vehicle, form) {
   if (vehicleIsSprinter316(vehicle)) {
-    const configuration = form.elements.seatConfiguration?.value || "m1";
-    if (configuration === "luxury") return Math.max(1, Number(vehicle?.luxurySeatCapacity || 10));
-    if (configuration === "m3") return Math.max(1, Number(vehicle?.m3SeatCapacity || 11));
-    return Math.max(1, Number(vehicle?.m1SeatCapacity || 14));
+    return sprinter316ConfigurationForForm(form).capacity;
   }
   const unitConfiguration = selectedVehicleConfiguration(vehicle, form);
   if (unitConfiguration) return unitConfiguration.capacity;
@@ -325,6 +369,22 @@ function vehicleCapacityWithOptions(vehicle, form) {
     return Math.max(1, Number(vehicle?.capacityWithLuggage || 10));
   }
   return vehicleBaseCapacity(vehicle);
+}
+
+function sprinter316ConfigurationById(configurationId, hasSuperLuxurySeats = false) {
+  const normalizedId = sprinter316Configurations.some((item) => item.id === configurationId)
+    ? configurationId
+    : legacySprinter316ConfigurationIds[configurationId] ||
+      (hasSuperLuxurySeats ? legacySprinter316ConfigurationIds.luxury : sprinter316Configurations[0].id);
+  return sprinter316Configurations.find((item) => item.id === normalizedId) || sprinter316Configurations[0];
+}
+
+function sprinter316ConfigurationForForm(form) {
+  return sprinter316ConfigurationById(form.elements.seatConfiguration?.value);
+}
+
+function sprinter316ConfigurationForQuote(quote = {}) {
+  return sprinter316ConfigurationById(quote.seatConfiguration, quote.hasSuperLuxurySeats);
 }
 
 function luxuryVehicles() {
@@ -363,13 +423,9 @@ function explicitVehicleCount(source = {}) {
 }
 
 function quoteAmenityLabels(item = {}) {
-  const seatLabel = item.seatConfiguration === "luxury" || item.hasSuperLuxurySeats
-    ? "Butacas de lujo"
-    : item.seatConfiguration === "m1"
-      ? "Butacas M1"
-      : item.seatConfiguration === "m3"
-        ? "Sillones M3"
-        : "";
+  const seatLabel = item.seatConfiguration || item.hasSuperLuxurySeats
+    ? sprinter316ConfigurationForQuote(item).title
+    : "";
   return [
     item.hasPlayStation5 ? "PlayStation 5" : "",
     item.hasTv ? "TV" : "",
@@ -510,13 +566,20 @@ function clearQuoteDraft() {
 }
 
 async function api(path, options = {}) {
-  const response = await fetch(appPath(path), {
-    ...options,
-    headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
-    },
-  });
+  let response;
+  try {
+    response = await fetch(appPath(path), {
+      ...options,
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: {
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...options.headers,
+      },
+    });
+  } catch {
+    throw new Error("No fue posible conectar con Luxury Travel. El borrador continúa guardado; revise la conexión y vuelva a intentarlo.");
+  }
   const contentType = response.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await response.json() : await response.text();
   if (!response.ok) {
@@ -1855,7 +1918,7 @@ function renderVehicleUnitPanel(form, selectedIds = [], quote = {}) {
             const checked = selectedSet.has(vehicle.id) || (shouldSelectFirst && index === 0);
             const configurationCount = sprinter311ConfigurationsForVehicle(vehicle).length;
             const capacityDetails = vehicleIsSprinter316(vehicle)
-              ? "Mercedes Benz Sprinter 316 · Butacas de lujo, Butacas M1 o Sillones M3"
+              ? `M3 · ${sprinter316Configurations.length} configuraciones disponibles`
               : `${vehicleUnitLabel(vehicle)} · ${configurationCount} configuraciones disponibles`;
             return `
               <label class="vehicle-unit-option">
@@ -1928,11 +1991,7 @@ function openQuoteModal(quote = {}) {
   const initialDestinationCount = Math.max(2, Math.min(20, Math.round(Number(quote.destinationCount || initialServiceSelections.length || 2))));
   const initialPriceDisplayMode = quote.priceDisplayMode === "final" ? "final" : "detailed";
   const initialDiscountAmount = Math.max(0, Number(quote.discountAmount || quote.totals?.discountAmount || quote.totals?.discount || 0));
-  const initialSeatConfiguration = ["luxury", "m1", "m3"].includes(quote.seatConfiguration)
-    ? quote.seatConfiguration
-    : quote.hasSuperLuxurySeats
-      ? "luxury"
-      : "m1";
+  const initialSeatConfiguration = sprinter316ConfigurationForQuote(quote).id;
   const initialLuggageQuantity = Math.max(0, Number(quote.luggage || (quote.hasLuggage ? 1 : 0)));
   const orderedInitialServices = orderedQuoteServices({ serviceSelections: initialServiceSelections });
   const firstInitialService = orderedInitialServices[0] || {};
@@ -1991,9 +2050,12 @@ function openQuoteModal(quote = {}) {
                 <div class="seat-configuration full" data-seat-configuration>
                   <strong>Configuración Mercedes Benz Sprinter 316</strong>
                   <div class="seat-configuration-options">
-                    <label><input type="radio" name="seatConfiguration" value="luxury" ${initialSeatConfiguration === "luxury" ? "checked" : ""} /><span><b>Butacas de lujo</b><small>9 pasajeros atrás + 1 adelante con equipaje. Máximo 10.</small></span></label>
-                    <label><input type="radio" name="seatConfiguration" value="m1" ${initialSeatConfiguration === "m1" ? "checked" : ""} /><span><b>Butacas M1</b><small>13 pasajeros atrás + 1 adelante con equipaje. Máximo 14.</small></span></label>
-                    <label><input type="radio" name="seatConfiguration" value="m3" ${initialSeatConfiguration === "m3" ? "checked" : ""} /><span><b>Sillones M3</b><small>10 pasajeros atrás + 1 adelante. Máximo 11.</small></span></label>
+                    ${sprinter316Configurations.map((configuration) => `
+                      <label>
+                        <input type="radio" name="seatConfiguration" value="${escapeHtml(configuration.id)}" ${initialSeatConfiguration === configuration.id ? "checked" : ""} />
+                        <span><b>${escapeHtml(configuration.title)}</b><small>${escapeHtml(configuration.detail)}</small><small class="configuration-layout">${escapeHtml(configuration.layout)}</small></span>
+                      </label>
+                    `).join("")}
                   </div>
                 </div>
                 <div class="unit-configuration-panels full" data-sprinter311-configurations></div>
@@ -2351,13 +2413,8 @@ function capacityLimitMessage(form, vehicles, requestedPassengers, maximum) {
       }
       return `${vehicleOperationalName(vehicle)} permite un máximo de ${vehicleCapacityWithOptions(vehicle, form)} pasajeros`;
     }
-    const configuration = form.elements.seatConfiguration?.value || "m1";
-    const configurationRule = configuration === "luxury"
-      ? "butacas de lujo permite un máximo de 10 pasajeros"
-      : configuration === "m3"
-        ? "sillones M3 permite un máximo de 11 pasajeros"
-        : "butacas M1 permite un máximo de 14 pasajeros";
-    return `${vehicleOperationalName(vehicle)} con ${configurationRule}`;
+    const configuration = sprinter316ConfigurationForForm(form);
+    return `${vehicleOperationalName(vehicle)} con “${configuration.title}” permite un máximo de ${configuration.capacity} pasajeros`;
   });
   const ruleText = rules.length ? `${rules.join("; ")}. ` : "";
   return `Capacidad excedida: solicitó ${requestedPassengers} pasajeros. ${ruleText}Máximo total permitido: ${maximum}. La cantidad se ajustó automáticamente.`;
@@ -2386,7 +2443,7 @@ function syncQuoteCapacity(form, announce = false) {
     ? vehicles.reduce((sum, vehicle) => sum + vehicleCapacityWithOptions(vehicle, form), 0) + manualCapacity
     : 15;
   passengerInput.max = String(maximum);
-  const configuration = form.elements.seatConfiguration?.value || "m1";
+  const configuration = sprinter316ConfigurationForForm(form);
   const warningKey = [
     vehicles.map((vehicle) => vehicle.id).sort().join(","),
     manualVehicleName,
@@ -2394,7 +2451,7 @@ function syncQuoteCapacity(form, announce = false) {
     hasLuggage ? "luggage" : "no-luggage",
     sprinter311Configuration,
     JSON.stringify(selectedVehicleConfigurationMap(form)),
-    configuration,
+    configuration.id,
   ].join("|");
   if (form.dataset.capacityWarningKey && form.dataset.capacityWarningKey !== warningKey) {
     delete form.dataset.capacityWarning;
@@ -2423,11 +2480,7 @@ function syncQuoteCapacity(form, announce = false) {
     form.elements.hasPlayStation5.checked ? "PlayStation 5" : "",
     formUsesFleetTelevision(form) ? "TV" : "",
   ].filter(Boolean).join(" · ");
-  const configurationLabel = configuration === "luxury"
-    ? "Butacas de lujo (9 atrás + 1 adelante)"
-    : configuration === "m3"
-      ? "Sillones M3 (10 atrás + 1 adelante)"
-      : "Butacas M1 (13 atrás + 1 adelante)";
+  const configurationLabel = `${configuration.title} (${configuration.capacity} pasajeros)`;
   const details = [];
   if (hasSprinter311) {
     vehicles
@@ -2504,7 +2557,7 @@ function quoteFormData(form) {
   body.seatConfiguration = selectedVehiclesFromForm(form).some(vehicleIsSprinter316)
     ? form.elements.seatConfiguration.value
     : "";
-  body.hasSuperLuxurySeats = body.seatConfiguration === "luxury";
+  body.hasSuperLuxurySeats = Boolean(body.seatConfiguration);
   body.applyNightSurcharge = form.elements.applyNightSurcharge.checked;
   body.applyAirportSurcharge = form.elements.applyAirportSurcharge.checked;
   body.includeTax = form.elements.includeTax.checked;
@@ -2738,13 +2791,12 @@ async function saveQuote(event, id) {
   }
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => resolve(reader.result));
-    reader.addEventListener("error", () => reject(new Error("No fue posible leer el comprobante.")));
-    reader.readAsDataURL(file);
-  });
+async function readFileAsDataUrl(file) {
+  try {
+    return await blobToDataUrl(file);
+  } catch {
+    throw new Error("No fue posible leer el comprobante.");
+  }
 }
 
 function openAcceptQuoteModal(id) {
@@ -3352,9 +3404,9 @@ function quotePosterAmenitiesHtml(quote) {
   if (quote.hasPlayStation5) vehicleItems.push(["playstation", "PlayStation 5"]);
   if (quote.hasTv) vehicleItems.push(["tv", "TV"]);
   if (quote.hasBed) vehicleItems.push(["bed", "Cama"]);
-  if (quote.seatConfiguration === "luxury" || quote.hasSuperLuxurySeats) vehicleItems.push(["luxury", "Butacas de lujo"]);
-  if (quote.seatConfiguration === "m1") vehicleItems.push(["luxury", "Butacas M1"]);
-  if (quote.seatConfiguration === "m3") vehicleItems.push(["luxury", "Sillones M3"]);
+  if (quote.seatConfiguration || quote.hasSuperLuxurySeats) {
+    vehicleItems.push(["luxury", sprinter316ConfigurationForQuote(quote).title]);
+  }
 
   const includedItems = [
     ["driver", "Piloto profesional"],
@@ -3677,13 +3729,9 @@ function printItinerary(id) {
     "Aire acondicionado",
     "WiFi",
     "Combustible",
-    item.seatConfiguration === "luxury" || item.hasSuperLuxurySeats
-      ? "Butacas de lujo"
-      : item.seatConfiguration === "m1"
-        ? "Butacas M1"
-        : item.seatConfiguration === "m3"
-          ? "Sillones M3"
-          : "Butacas cómodas",
+    item.seatConfiguration || item.hasSuperLuxurySeats
+      ? sprinter316ConfigurationForQuote(item).title
+      : "Butacas cómodas",
     item.hasBed ? "Cama instalada" : "",
     item.hasPlayStation5 ? "PlayStation 5" : "",
     item.hasTv ? "TV" : "",
@@ -3898,24 +3946,73 @@ function safeFileName(value, extension) {
   return `${base || "Luxury-Travel"}.${extension}`;
 }
 
-function blobToDataUrl(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => resolve(reader.result));
-    reader.addEventListener("error", () => reject(new Error("No fue posible preparar la imagen.")));
-    reader.readAsDataURL(blob);
-  });
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
 }
 
-async function inlineImages(root) {
+async function blobToDataUrl(blob) {
+  let buffer;
+  if (typeof blob?.arrayBuffer === "function") {
+    buffer = await blob.arrayBuffer();
+  } else if (typeof Response !== "undefined") {
+    buffer = await new Response(blob).arrayBuffer();
+  } else {
+    throw new Error("Este navegador no puede preparar archivos para descargar.");
+  }
+  const mimeType = blob?.type || "application/octet-stream";
+  return `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
+}
+
+function renderedImageToDataUrl(image) {
+  if (!image?.complete || !image.naturalWidth || !image.naturalHeight) return "";
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    canvas.getContext("2d").drawImage(image, 0, 0);
+    return canvas.toDataURL("image/png");
+  } catch {
+    return "";
+  }
+}
+
+async function inlineImages(root, sourceRoot) {
   const images = [...root.querySelectorAll("img")];
-  await Promise.all(
-    images.map(async (image) => {
-      const response = await fetch(image.src);
-      const blob = await response.blob();
-      image.src = await blobToDataUrl(blob);
-    }),
-  );
+  const sourceImages = [...(sourceRoot?.querySelectorAll("img") || [])];
+  const convertedSources = new Map();
+
+  for (const [index, image] of images.entries()) {
+    const source = image.currentSrc || image.getAttribute("src") || image.src;
+    if (!source || source.startsWith("data:")) continue;
+    if (convertedSources.has(source)) {
+      image.src = convertedSources.get(source);
+      continue;
+    }
+    try {
+      const response = await fetch(source, { cache: "force-cache", credentials: "same-origin" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const dataUrl = await blobToDataUrl(await response.blob());
+      convertedSources.set(source, dataUrl);
+      image.src = dataUrl;
+    } catch {
+      const sourceImage = sourceImages.find((candidate) => {
+        const candidateSource = candidate.currentSrc || candidate.getAttribute("src") || candidate.src;
+        return candidateSource === source;
+      }) || sourceImages[index];
+      const dataUrl = renderedImageToDataUrl(sourceImage);
+      if (!dataUrl) {
+        throw new Error("No fue posible cargar los recursos visuales de la cotización. Recargue la página e inténtelo nuevamente.");
+      }
+      convertedSources.set(source, dataUrl);
+      image.src = dataUrl;
+    }
+  }
 }
 
 function loadImage(src) {
@@ -3935,13 +4032,28 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
   const pageSelector = options.pageSelector || ".sheet";
   const page = suppliedPage || (pageSelector === ".sheet" ? sheet : $(pageSelector, sheet));
   if (!page) return;
+  const extension = format === "jpeg" ? "jpg" : "png";
+  const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
+  const fileName = safeFileName(options.fileSuffix ? `${title}-${options.fileSuffix}` : title, extension);
+  let saveHandle = null;
+  if (typeof window.showSaveFilePicker === "function" && window.isSecureContext) {
+    try {
+      saveHandle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: "Imagen", accept: { [mimeType]: [`.${extension}`] } }],
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") return;
+      // A partial implementation must not prevent the standard browser download.
+    }
+  }
   let measurementHost;
   try {
     const clone = page.cloneNode(true);
     clone.classList.remove("is-editing");
     clone.removeAttribute("contenteditable");
     clone.removeAttribute("spellcheck");
-    await inlineImages(clone);
+    await inlineImages(clone, page);
     const canonicalWidth = page.matches(".quote-poster-content, .poster-continuation")
       ? 1023
       : Math.ceil(Math.max(page.offsetWidth, page.scrollWidth));
@@ -3972,7 +4084,10 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
     }, 0);
     const height = Math.ceil(Math.max(clone.offsetHeight, clone.scrollHeight, descendantBottom, minimumHeight));
     clone.style.height = `${height}px`;
-    const scale = 3;
+    const requestedScale = 3;
+    const isWebKit = /AppleWebKit/i.test(navigator.userAgent) && !/(Chrome|CriOS|Edg|OPR|Android)/i.test(navigator.userAgent);
+    const maximumPixels = isWebKit ? 16_000_000 : Number.POSITIVE_INFINITY;
+    const scale = Math.min(requestedScale, Math.sqrt(maximumPixels / (width * height)));
     const serialized = new XMLSerializer().serializeToString(clone);
     measurementHost.remove();
     measurementHost = null;
@@ -3986,31 +4101,35 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
         </foreignObject>
       </svg>
     `;
-    const image = await loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
+    const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+    let image;
+    try {
+      image = await loadImage(svgUrl);
+    } finally {
+      URL.revokeObjectURL(svgUrl);
+    }
     const canvas = document.createElement("canvas");
-    canvas.width = width * scale;
-    canvas.height = height * scale;
+    canvas.width = Math.max(1, Math.floor(width * scale));
+    canvas.height = Math.max(1, Math.floor(height * scale));
     const context = canvas.getContext("2d");
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const extension = format === "jpeg" ? "jpg" : "png";
-    const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
-    const fileName = safeFileName(options.fileSuffix ? `${title}-${options.fileSuffix}` : title, extension);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, mimeType, 0.94));
-    if (window.showSaveFilePicker && blob) {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: fileName,
-        types: [{ description: "Imagen PNG", accept: { [mimeType]: [`.${extension}`] } }],
-      });
-      const writable = await handle.createWritable();
+    const blob = typeof canvas.toBlob === "function"
+      ? await new Promise((resolve) => canvas.toBlob(resolve, mimeType, 0.94))
+      : null;
+    if (saveHandle && blob) {
+      const writable = await saveHandle.createWritable();
       await writable.write(blob);
       await writable.close();
     } else {
       const link = document.createElement("a");
       link.download = fileName;
       link.href = blob ? URL.createObjectURL(blob) : canvas.toDataURL(mimeType, 0.94);
+      link.style.display = "none";
+      document.body.appendChild(link);
       link.click();
+      link.remove();
       if (blob) setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }
     const documentLabel = options.documentLabel || (options.fileSuffix === "Itinerario-del-recorrido" ? "Itinerario" : "Cotización");
