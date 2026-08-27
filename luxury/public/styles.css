@@ -1028,13 +1028,13 @@ tr:last-child td {
   overflow-wrap: anywhere;
 }
 
-.quote-table th:nth-child(1) { width: 22%; }
+.quote-table th:nth-child(1) { width: 21%; }
 .quote-table th:nth-child(2) { width: 11%; }
 .quote-table th:nth-child(3) { width: 12%; }
-.quote-table th:nth-child(4) { width: 20%; }
+.quote-table th:nth-child(4) { width: 19%; }
 .quote-table th:nth-child(5) { width: 9%; }
 .quote-table th:nth-child(6) { width: 10%; }
-.quote-table th:nth-child(7) { width: 16%; }
+.quote-table th:nth-child(7) { width: 18%; }
 
 .quote-table .quote-actions-heading,
 .quote-table .quote-actions-cell {
@@ -1046,7 +1046,7 @@ tr:last-child td {
 .quote-table .table-actions {
   flex-wrap: nowrap;
   justify-content: flex-start;
-  gap: 3px;
+  gap: 2px;
 }
 
 .quote-table .table-actions .icon-button {
