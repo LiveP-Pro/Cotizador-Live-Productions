@@ -214,7 +214,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "87";
+const APP_VERSION = "88";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -3833,10 +3833,22 @@ function openPremiumDocument(title, type, content) {
       </section>
     </div>
   `;
-  $("[data-print-document]").addEventListener("click", () => {
-    document.body.classList.add("printing-document");
-    window.print();
-    setTimeout(() => document.body.classList.remove("printing-document"), 200);
+  $("[data-print-document]").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    const pageSelector = type === "quote"
+      ? ".quote-poster-content"
+      : type === "route"
+        ? ".poster-continuation"
+        : ".sheet";
+    const sheet = $(".document-preview-scroll .sheet");
+    const pageElement = pageSelector === ".sheet" ? sheet : $(pageSelector, sheet);
+    const printWindow = openPrintPreviewWindow(title);
+    button.disabled = true;
+    try {
+      await printDocumentFromCanvas(title, { pageElement, style: documentStyles }, printWindow);
+    } finally {
+      button.disabled = false;
+    }
   });
   if (type === "route") {
     const continuation = $(".document-preview-scroll .poster-continuation");
@@ -3962,18 +3974,30 @@ async function inlineImages(root, sourceRoot) {
   }
 }
 
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.addEventListener("load", () => resolve(image));
-    image.addEventListener("error", () => reject(new Error("No fue posible renderizar la cotización.")));
-    image.src = src;
-  });
-}
-
 function isAppleWebKitBrowser() {
   const userAgent = navigator.userAgent || "";
   return /AppleWebKit/i.test(userAgent) && !/(Chrome|Chromium|Edg|OPR|Android)/i.test(userAgent);
+}
+
+async function waitForRenderedImages(root) {
+  await Promise.all([...root.querySelectorAll("img")].map(async (image) => {
+    if (!image.complete) {
+      await new Promise((resolve, reject) => {
+        image.addEventListener("load", resolve, { once: true });
+        image.addEventListener("error", () => reject(new Error("No fue posible cargar una imagen de la cotización.")), { once: true });
+      });
+    }
+    if (!image.naturalWidth || !image.naturalHeight) {
+      throw new Error("Una imagen de la cotización no terminó de cargar. Recargue la página e inténtelo nuevamente.");
+    }
+    if (typeof image.decode === "function") {
+      try {
+        await image.decode();
+      } catch {
+        // The load event and natural dimensions already confirm that it is usable.
+      }
+    }
+  }));
 }
 
 async function renderCloneWithHtml2Canvas(clone, width, height, scale) {
@@ -3998,35 +4022,6 @@ async function renderCloneWithHtml2Canvas(clone, width, height, scale) {
   });
 }
 
-async function renderCloneWithForeignObject(clone, style, width, height, scale) {
-  const serialized = new XMLSerializer().serializeToString(clone);
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-      <foreignObject width="100%" height="100%">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">
-          <style>${style}.sheet,.quote-poster-content,.poster-continuation{margin:0!important;box-shadow:none!important}</style>
-          ${serialized}
-        </div>
-      </foreignObject>
-    </svg>
-  `;
-  const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
-  let image;
-  try {
-    image = await loadImage(svgUrl);
-  } finally {
-    URL.revokeObjectURL(svgUrl);
-  }
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.floor(width * scale));
-  canvas.height = Math.max(1, Math.floor(height * scale));
-  const context = canvas.getContext("2d");
-  context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  return canvas;
-}
-
 function canUseNativeSavePicker() {
   return !isAppleWebKitBrowser()
     && window.isSecureContext
@@ -4048,30 +4043,20 @@ function triggerBrowserDownload(blob, dataUrl, fileName) {
   if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }
 
-async function downloadDocumentImage(title, format = "png", options = {}) {
-  const suppliedPage = options.pageElement || null;
-  const sheet = suppliedPage?.closest(".sheet") || $(".document-preview-scroll .sheet");
-  const style = options.style || $("[data-premium-document-styles]")?.textContent || "";
-  if (!sheet && !suppliedPage) return;
+function resolveDocumentPage(options = {}) {
+  if (options.pageElement) return options.pageElement;
+  const sheet = $(".document-preview-scroll .sheet");
+  if (!sheet) return null;
   const pageSelector = options.pageSelector || ".sheet";
-  const page = suppliedPage || (pageSelector === ".sheet" ? sheet : $(pageSelector, sheet));
-  if (!page) return;
-  const extension = format === "jpeg" ? "jpg" : "png";
-  const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
-  const fileName = safeFileName(options.fileSuffix ? `${title}-${options.fileSuffix}` : title, extension);
-  let saveHandle = null;
-  if (canUseNativeSavePicker()) {
-    try {
-      saveHandle = await window.showSaveFilePicker({
-        suggestedName: fileName,
-        types: [{ description: "Imagen", accept: { [mimeType]: [`.${extension}`] } }],
-      });
-    } catch (error) {
-      if (error?.name === "AbortError") return;
-      // A partial implementation must not prevent the standard browser download.
-    }
-  }
+  return pageSelector === ".sheet" ? sheet : $(pageSelector, sheet);
+}
+
+async function renderDocumentCanvas(options = {}) {
+  const page = resolveDocumentPage(options);
+  if (!page) throw new Error("No se encontró el documento que se desea guardar.");
+  const style = options.style || $("[data-premium-document-styles]")?.textContent || "";
   let measurementHost;
+
   try {
     const clone = page.cloneNode(true);
     clone.classList.remove("is-editing");
@@ -4097,6 +4082,7 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
     measurementStyle.textContent = `${style}.sheet,.quote-poster-content,.poster-continuation{margin:0!important;box-shadow:none!important}`;
     measurementHost.append(measurementStyle, clone);
     document.body.appendChild(measurementHost);
+    await waitForRenderedImages(clone);
     if (document.fonts?.ready) await document.fonts.ready;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const width = canonicalWidth;
@@ -4108,28 +4094,55 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
     }, 0);
     const height = Math.ceil(Math.max(clone.offsetHeight, clone.scrollHeight, descendantBottom, minimumHeight));
     clone.style.height = `${height}px`;
-    const requestedScale = 3;
-    const useWebKitRenderer = isAppleWebKitBrowser();
-    const maximumPixels = useWebKitRenderer ? 16_000_000 : Number.POSITIVE_INFINITY;
+    const requestedScale = Number(options.scale) || 3;
+    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+    const maximumPixels = isAppleWebKitBrowser() || isMobileDevice ? 16_000_000 : 32_000_000;
     const scale = Math.min(requestedScale, Math.sqrt(maximumPixels / (width * height)));
-    let canvas;
-    if (useWebKitRenderer) {
-      canvas = await renderCloneWithHtml2Canvas(clone, width, height, scale);
-    } else {
-      try {
-        canvas = await renderCloneWithForeignObject(clone, style, width, height, scale);
-      } catch (error) {
-        if (typeof window.html2canvas !== "function") throw error;
-        canvas = await renderCloneWithHtml2Canvas(clone, width, height, scale);
-      }
+    return await renderCloneWithHtml2Canvas(clone, width, height, scale);
+  } finally {
+    measurementHost?.remove();
+  }
+}
+
+async function canvasToBlob(canvas, mimeType, quality = 0.94) {
+  if (typeof canvas.toBlob !== "function") {
+    return fetch(canvas.toDataURL(mimeType, quality)).then((response) => response.blob());
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("El navegador no pudo terminar la imagen. Inténtelo nuevamente."));
+      }, mimeType, quality);
+    } catch (error) {
+      reject(error);
     }
-    measurementHost.remove();
-    measurementHost = null;
-    const blob = typeof canvas.toBlob === "function"
-      ? await new Promise((resolve) => canvas.toBlob(resolve, mimeType, 0.94))
-      : null;
+  });
+}
+
+async function downloadDocumentImage(title, format = "png", options = {}) {
+  const page = resolveDocumentPage(options);
+  if (!page) return;
+  const extension = format === "jpeg" ? "jpg" : "png";
+  const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
+  const fileName = safeFileName(options.fileSuffix ? `${title}-${options.fileSuffix}` : title, extension);
+  let saveHandle = null;
+  if (canUseNativeSavePicker()) {
+    try {
+      saveHandle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: "Imagen", accept: { [mimeType]: [`.${extension}`] } }],
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") return;
+      // A partial implementation must not prevent the standard browser download.
+    }
+  }
+  try {
+    const canvas = await renderDocumentCanvas({ ...options, pageElement: page });
+    const blob = await canvasToBlob(canvas, mimeType, 0.94);
     let savedWithPicker = false;
-    if (saveHandle && blob) {
+    if (saveHandle) {
       try {
         const writable = await saveHandle.createWritable();
         await writable.write(blob);
@@ -4142,16 +4155,52 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
       }
     }
     if (!savedWithPicker) {
-      triggerBrowserDownload(blob, blob ? "" : canvas.toDataURL(mimeType, 0.94), fileName);
+      triggerBrowserDownload(blob, "", fileName);
     }
     const documentLabel = options.documentLabel || (options.fileSuffix === "Itinerario-del-recorrido" ? "Itinerario" : "Cotización");
     toast(savedWithPicker
       ? `${documentLabel} guardado en ${format.toUpperCase()} Full HD.`
       : `${documentLabel} descargado en ${format.toUpperCase()} Full HD. Revise Descargas/Downloads.`);
   } catch (error) {
-    measurementHost?.remove();
     if (error?.name === "AbortError") return;
-    toast(error.message, "error");
+    toast(error?.message || "No fue posible guardar la imagen completa.", "error");
+  }
+}
+
+function openPrintPreviewWindow(title) {
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return null;
+  printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{margin:0;display:grid;min-height:100vh;place-items:center;background:#f4f1eb;font-family:Arial,sans-serif;color:#10181b}</style></head><body><strong>Preparando el documento completo...</strong></body></html>`);
+  printWindow.document.close();
+  return printWindow;
+}
+
+async function printDocumentFromCanvas(title, options, printWindow) {
+  if (!printWindow) {
+    toast("El navegador bloqueó la ventana de impresión. Permita ventanas emergentes para este sitio.", "error");
+    return;
+  }
+  try {
+    const canvas = await renderDocumentCanvas({ ...options, scale: 2.25 });
+    const imageDataUrl = canvas.toDataURL("image/png");
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}html,body{width:210mm;height:297mm;margin:0;overflow:hidden;background:#fff}.print-page{display:grid;width:210mm;height:297mm;place-items:center;overflow:hidden}.print-page img{display:block;max-width:210mm;max-height:297mm;width:auto;height:auto;margin:0}</style></head><body><section class="print-page"><img src="${imageDataUrl}" alt=""></section></body></html>`);
+    printWindow.document.close();
+    await Promise.all(Array.from(printWindow.document.images, (image) => {
+      if (typeof image.decode === "function") {
+        return image.decode().catch(() => undefined);
+      }
+      if (image.complete) return Promise.resolve();
+      return new Promise((resolve) => {
+        image.onload = resolve;
+        image.onerror = resolve;
+      });
+    }));
+    printWindow.focus();
+    printWindow.print();
+  } catch (error) {
+    printWindow.close();
+    toast(error?.message || "No fue posible preparar el documento completo para impresión.", "error");
   }
 }
 
