@@ -1,4 +1,4 @@
-const VERSION = "86";
+const VERSION = "87";
 const CACHE_PREFIX = "luxury-travel-";
 const SHELL_CACHE = `${CACHE_PREFIX}shell-v${VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}runtime-v${VERSION}`;
@@ -14,6 +14,7 @@ const CORE_ASSETS = [
   INDEX_URL,
   scopedPath(`/styles.css?v=${VERSION}`),
   scopedPath(`/app.js?v=${VERSION}`),
+  scopedPath("/vendor/html2canvas.min.js?v=1.4.1"),
   scopedPath("/manifest.webmanifest"),
   scopedPath("/assets/mark.svg"),
   scopedPath("/assets/logo-luxury-travel.png"),

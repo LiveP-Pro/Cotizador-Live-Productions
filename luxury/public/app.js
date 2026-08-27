@@ -214,7 +214,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "86";
+const APP_VERSION = "87";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -3971,6 +3971,83 @@ function loadImage(src) {
   });
 }
 
+function isAppleWebKitBrowser() {
+  const userAgent = navigator.userAgent || "";
+  return /AppleWebKit/i.test(userAgent) && !/(Chrome|Chromium|Edg|OPR|Android)/i.test(userAgent);
+}
+
+async function renderCloneWithHtml2Canvas(clone, width, height, scale) {
+  if (typeof window.html2canvas !== "function") {
+    throw new Error("El generador compatible de imágenes no está disponible. Recargue la página e inténtelo nuevamente.");
+  }
+  return window.html2canvas(clone, {
+    backgroundColor: "#ffffff",
+    scale,
+    width,
+    height,
+    windowWidth: width,
+    windowHeight: height,
+    scrollX: 0,
+    scrollY: 0,
+    useCORS: true,
+    allowTaint: false,
+    foreignObjectRendering: false,
+    imageTimeout: 20_000,
+    logging: false,
+    removeContainer: true,
+  });
+}
+
+async function renderCloneWithForeignObject(clone, style, width, height, scale) {
+  const serialized = new XMLSerializer().serializeToString(clone);
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <foreignObject width="100%" height="100%">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">
+          <style>${style}.sheet,.quote-poster-content,.poster-continuation{margin:0!important;box-shadow:none!important}</style>
+          ${serialized}
+        </div>
+      </foreignObject>
+    </svg>
+  `;
+  const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+  let image;
+  try {
+    image = await loadImage(svgUrl);
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.floor(width * scale));
+  canvas.height = Math.max(1, Math.floor(height * scale));
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+function canUseNativeSavePicker() {
+  return !isAppleWebKitBrowser()
+    && window.isSecureContext
+    && typeof window.showSaveFilePicker === "function";
+}
+
+function triggerBrowserDownload(blob, dataUrl, fileName) {
+  const objectUrl = blob ? URL.createObjectURL(blob) : "";
+  const link = document.createElement("a");
+  link.download = fileName;
+  link.href = objectUrl || dataUrl;
+  link.rel = "noopener";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  // Safari and mobile browsers may finish consuming the URL after the click task.
+  if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+}
+
 async function downloadDocumentImage(title, format = "png", options = {}) {
   const suppliedPage = options.pageElement || null;
   const sheet = suppliedPage?.closest(".sheet") || $(".document-preview-scroll .sheet");
@@ -3983,7 +4060,7 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
   const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
   const fileName = safeFileName(options.fileSuffix ? `${title}-${options.fileSuffix}` : title, extension);
   let saveHandle = null;
-  if (typeof window.showSaveFilePicker === "function" && window.isSecureContext) {
+  if (canUseNativeSavePicker()) {
     try {
       saveHandle = await window.showSaveFilePicker({
         suggestedName: fileName,
@@ -4015,7 +4092,7 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
     clone.style.margin = "0";
     measurementHost = document.createElement("div");
     measurementHost.setAttribute("aria-hidden", "true");
-    measurementHost.style.cssText = `position:fixed;left:-20000px;top:0;width:${canonicalWidth}px;visibility:hidden;pointer-events:none;z-index:-1;overflow:visible`;
+    measurementHost.style.cssText = `position:fixed;left:-20000px;top:0;width:${canonicalWidth}px;pointer-events:none;z-index:-1;overflow:visible`;
     const measurementStyle = document.createElement("style");
     measurementStyle.textContent = `${style}.sheet,.quote-poster-content,.poster-continuation{margin:0!important;box-shadow:none!important}`;
     measurementHost.append(measurementStyle, clone);
@@ -4032,55 +4109,45 @@ async function downloadDocumentImage(title, format = "png", options = {}) {
     const height = Math.ceil(Math.max(clone.offsetHeight, clone.scrollHeight, descendantBottom, minimumHeight));
     clone.style.height = `${height}px`;
     const requestedScale = 3;
-    const isWebKit = /AppleWebKit/i.test(navigator.userAgent) && !/(Chrome|CriOS|Edg|OPR|Android)/i.test(navigator.userAgent);
-    const maximumPixels = isWebKit ? 16_000_000 : Number.POSITIVE_INFINITY;
+    const useWebKitRenderer = isAppleWebKitBrowser();
+    const maximumPixels = useWebKitRenderer ? 16_000_000 : Number.POSITIVE_INFINITY;
     const scale = Math.min(requestedScale, Math.sqrt(maximumPixels / (width * height)));
-    const serialized = new XMLSerializer().serializeToString(clone);
+    let canvas;
+    if (useWebKitRenderer) {
+      canvas = await renderCloneWithHtml2Canvas(clone, width, height, scale);
+    } else {
+      try {
+        canvas = await renderCloneWithForeignObject(clone, style, width, height, scale);
+      } catch (error) {
+        if (typeof window.html2canvas !== "function") throw error;
+        canvas = await renderCloneWithHtml2Canvas(clone, width, height, scale);
+      }
+    }
     measurementHost.remove();
     measurementHost = null;
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-        <foreignObject width="100%" height="100%">
-          <div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">
-            <style>${style}.sheet,.quote-poster-content,.poster-continuation{margin:0!important;box-shadow:none!important}</style>
-            ${serialized}
-          </div>
-        </foreignObject>
-      </svg>
-    `;
-    const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
-    let image;
-    try {
-      image = await loadImage(svgUrl);
-    } finally {
-      URL.revokeObjectURL(svgUrl);
-    }
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.floor(width * scale));
-    canvas.height = Math.max(1, Math.floor(height * scale));
-    const context = canvas.getContext("2d");
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
     const blob = typeof canvas.toBlob === "function"
       ? await new Promise((resolve) => canvas.toBlob(resolve, mimeType, 0.94))
       : null;
+    let savedWithPicker = false;
     if (saveHandle && blob) {
-      const writable = await saveHandle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-    } else {
-      const link = document.createElement("a");
-      link.download = fileName;
-      link.href = blob ? URL.createObjectURL(blob) : canvas.toDataURL(mimeType, 0.94);
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      if (blob) setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      try {
+        const writable = await saveHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        savedWithPicker = true;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+        // Safari and partial implementations can expose the API but reject writes.
+        saveHandle = null;
+      }
+    }
+    if (!savedWithPicker) {
+      triggerBrowserDownload(blob, blob ? "" : canvas.toDataURL(mimeType, 0.94), fileName);
     }
     const documentLabel = options.documentLabel || (options.fileSuffix === "Itinerario-del-recorrido" ? "Itinerario" : "Cotización");
-    toast(`${documentLabel} guardado en ${format.toUpperCase()} Full HD.`);
+    toast(savedWithPicker
+      ? `${documentLabel} guardado en ${format.toUpperCase()} Full HD.`
+      : `${documentLabel} descargado en ${format.toUpperCase()} Full HD. Revise Descargas/Downloads.`);
   } catch (error) {
     measurementHost?.remove();
     if (error?.name === "AbortError") return;
