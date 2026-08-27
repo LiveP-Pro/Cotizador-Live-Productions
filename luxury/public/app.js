@@ -214,7 +214,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "83";
+const APP_VERSION = "84";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -3625,79 +3625,24 @@ function openRouteItineraryDocument(quote) {
 function openItineraryModal(quoteId) {
   const quote = state.quotes.find((item) => item.id === quoteId);
   if (!quote) return;
-  openModal("Generar itinerarios", `
+  openModal("Generar itinerario para cliente", `
     <form id="itinerary-form">
-      <p class="muted itinerary-linked-quote">Documentos vinculados a <strong>${escapeHtml(quote.number)}</strong> para <strong>${escapeHtml(quote.clientName)}</strong>.</p>
-      <div class="itinerary-type-grid" role="radiogroup" aria-label="Tipo de itinerario">
-        <label class="itinerary-type-option active" data-itinerary-type-option>
-          <input type="radio" name="type" value="cliente" checked />
-          <span class="itinerary-type-badge">CL</span>
-          <span class="itinerary-type-copy">
-            <small>Cliente</small>
-            <b>Itinerario del recorrido</b>
-            <em>Usa automáticamente los traslados de la cotización y podrá editarse antes de guardarlo.</em>
-          </span>
-        </label>
-        <label class="itinerary-type-option" data-itinerary-type-option>
-          <input type="radio" name="type" value="piloto" />
-          <span class="itinerary-type-badge">PI</span>
-          <span class="itinerary-type-copy">
-            <small>Piloto</small>
-            <b>Itinerario para piloto</b>
-            <em>Permite agregar instrucciones operativas y datos de contacto para el piloto.</em>
-          </span>
-        </label>
-      </div>
-      <section class="itinerary-client-panel" data-itinerary-client-panel>
-        <span>Listo para generar</span>
+      <p class="muted itinerary-linked-quote">Itinerario vinculado a <strong>${escapeHtml(quote.number)}</strong> para <strong>${escapeHtml(quote.clientName)}</strong>.</p>
+      <section class="itinerary-client-panel">
+        <span>Cliente</span>
         <strong>Itinerario del recorrido</strong>
-        <p>Se abrirá con todos sus campos editables. Al guardarlo podrá elegir la carpeta de destino.</p>
+        <p>Usará automáticamente los traslados de la cotización. Podrá editar todos los campos y elegir la carpeta al guardar la imagen.</p>
       </section>
-      <div class="form-grid itinerary-pilot-fields" data-itinerary-pilot-fields hidden>
-        <label class="full">Recorrido o instrucciones<textarea name="instructions" placeholder="Escriba una actividad por línea para crear el recorrido del piloto.">${escapeHtml(quote.notes)}</textarea></label>
-        <label class="full">Notas de contacto<textarea name="contactNotes" placeholder="Contacto alterno, indicaciones de acceso, letrero de bienvenida..."></textarea></label>
-      </div>
       <p class="form-error" data-form-error></p>
-      <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit" data-generate-itinerary>Abrir itinerario del recorrido</button></div>
+      <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit">Abrir itinerario del recorrido</button></div>
     </form>
   `);
   $("[data-close-form]").addEventListener("click", closeModal);
   const itineraryForm = $("#itinerary-form");
-  const syncItineraryType = () => {
-    const isClient = itineraryForm.elements.type.value === "cliente";
-    $$('[data-itinerary-type-option]', itineraryForm).forEach((option) => {
-      option.classList.toggle("active", option.querySelector("input").checked);
-    });
-    $("[data-itinerary-client-panel]", itineraryForm).hidden = !isClient;
-    $("[data-itinerary-pilot-fields]", itineraryForm).hidden = isClient;
-    $("[data-generate-itinerary]", itineraryForm).textContent = isClient
-      ? "Abrir itinerario del recorrido"
-      : "Generar itinerario para piloto";
-  };
-  $$('input[name="type"]', itineraryForm).forEach((input) => {
-    input.addEventListener("change", syncItineraryType);
-  });
-  syncItineraryType();
-  itineraryForm.addEventListener("submit", async (event) => {
+  itineraryForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    const form = event.currentTarget;
-    try {
-      const body = Object.fromEntries(new FormData(form));
-      if (body.type === "cliente") {
-        closeModal();
-        openRouteItineraryDocument(quote);
-        return;
-      }
-      const item = await api(`/api/quotes/${quoteId}/itineraries`, {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
-      toast(`${item.number} generado.`);
-      closeModal();
-      await navigate("driverItineraries");
-    } catch (error) {
-      $("[data-form-error]", form).textContent = error.message;
-    }
+    closeModal();
+    openRouteItineraryDocument(quote);
   });
 }
 
