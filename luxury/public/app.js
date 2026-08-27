@@ -214,7 +214,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "84";
+const APP_VERSION = "85";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -786,9 +786,11 @@ function renderQuotes() {
 }
 
 function quoteTable(quotes, options = {}) {
+  const responsiveHistoryClass = options.compact ? "" : " quote-table-wrap";
+  const responsiveTableClass = options.compact ? "" : ' class="quote-table"';
   return `
-    <div class="table-wrap">
-      <table>
+    <div class="table-wrap${responsiveHistoryClass}">
+      <table${responsiveTableClass}>
         <thead>
           <tr>
             <th>Cotización</th>
@@ -805,17 +807,17 @@ function quoteTable(quotes, options = {}) {
             .map(
               (quote) => `
                 <tr class="interactive-row" data-row-action="edit-quote" data-id="${quote.id}" data-search-row="${escapeHtml(`${quote.number} ${quote.clientName} ${quote.clientPhone} ${quote.origin} ${quote.destination}`.toLowerCase())}">
-                  <td><span class="cell-primary">${escapeHtml(quote.number)}</span><span class="cell-secondary">${formatDate(quote.createdAt, { short: true })}</span></td>
-                  <td><span class="cell-primary">${escapeHtml(quote.clientName)}</span><span class="cell-secondary">${escapeHtml([quote.clientNit ? `NIT ${quote.clientNit}` : "", quote.clientPhone].filter(Boolean).join(" · "))}</span></td>
-                  <td><span class="cell-primary">${formatDate(quote.serviceDate, { short: true })}</span><span class="cell-secondary">${escapeHtml(quote.departureTime)} · ${escapeHtml(quote.serviceType)}</span></td>
-                  <td><span class="cell-primary">${escapeHtml(quote.origin)}</span><span class="cell-secondary">a ${escapeHtml(quote.destination)} · ${quote.kilometers || 0} km</span></td>
-                  <td><span class="cell-primary">${money(quote.amountPaid || quoteTaxBreakdown(quote).total)}</span><span class="cell-secondary">${quote.amountPaid ? "Monto pagado" : `IVA ${quoteTaxBreakdown(quote).taxPercent || 0}%`}</span></td>
-                  <td>${statusBadge(quote.status)}</td>
+                  <td data-label="Cotización"><span class="cell-primary">${escapeHtml(quote.number)}</span><span class="cell-secondary">${formatDate(quote.createdAt, { short: true })}</span></td>
+                  <td data-label="Cliente"><span class="cell-primary">${escapeHtml(quote.clientName)}</span><span class="cell-secondary">${escapeHtml([quote.clientNit ? `NIT ${quote.clientNit}` : "", quote.clientPhone].filter(Boolean).join(" · "))}</span></td>
+                  <td data-label="Servicio"><span class="cell-primary">${formatDate(quote.serviceDate, { short: true })}</span><span class="cell-secondary">${escapeHtml(quote.departureTime)} · ${escapeHtml(quote.serviceType)}</span></td>
+                  <td data-label="Ruta"><span class="cell-primary">${escapeHtml(quote.origin)}</span><span class="cell-secondary">a ${escapeHtml(quote.destination)} · ${quote.kilometers || 0} km</span></td>
+                  <td data-label="Total"><span class="cell-primary">${money(quote.amountPaid || quoteTaxBreakdown(quote).total)}</span><span class="cell-secondary">${quote.amountPaid ? "Monto pagado" : `IVA ${quoteTaxBreakdown(quote).taxPercent || 0}%`}</span></td>
+                  <td data-label="Estado">${statusBadge(quote.status)}</td>
                   ${
                     options.compact
                       ? ""
                       : `
-                    <td class="quote-actions-cell">
+                    <td class="quote-actions-cell" data-label="Acciones">
                       <div class="table-actions">
                         ${
                           isServiceQuote(quote)
