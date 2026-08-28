@@ -89,6 +89,10 @@ function cleanNumber(value, fallback = 0) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+function roundMoney(value) {
+  return Math.round(Math.max(0, cleanNumber(value)) * 100) / 100;
+}
+
 function parseBoolean(value) {
   return value === true || value === "true" || value === 1 || value === "1";
 }
@@ -269,8 +273,7 @@ function nextQuoteSequence(db) {
   );
 }
 
-function normalizePaymentProof(body, actorId) {
-  const proof = body.paymentProof || {};
+function normalizePaymentProofEntry(proof, actorId, defaults = {}) {
   const fileName = cleanString(proof.fileName, 180);
   const mimeType = cleanString(proof.mimeType, 80).toLowerCase();
   const dataUrl = cleanString(proof.dataUrl, 12_000_000);
@@ -294,9 +297,93 @@ function normalizePaymentProof(body, actorId) {
     mimeType,
     size: Math.max(0, Math.round(cleanNumber(proof.size))),
     dataUrl,
+    amount: roundMoney(proof.amount ?? defaults.amount),
+    reference: cleanString(proof.reference ?? defaults.reference, 120),
+    notes: cleanString(proof.notes ?? defaults.notes, 1000),
     uploadedAt: new Date().toISOString(),
     uploadedBy: actorId,
   };
+}
+
+function normalizePaymentProof(body, actorId) {
+  return normalizePaymentProofEntry(body.paymentProof || {}, actorId, {
+    amount: body.amountPaid,
+    reference: body.paymentReference,
+    notes: body.paymentNotes,
+  });
+}
+
+function normalizePaymentProofs(body, actorId) {
+  const rawProofs = Array.isArray(body.paymentProofs)
+    ? body.paymentProofs
+    : body.paymentProof
+      ? [body.paymentProof]
+      : [];
+  if (!rawProofs.length) {
+    const error = new Error("Suba la boleta de pago o depósito en imagen o PDF.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const proofs = rawProofs.map((proof) => normalizePaymentProofEntry(proof, actorId, {
+    amount: body.amountPaid,
+    reference: body.paymentReference,
+    notes: body.paymentNotes,
+  }));
+  if (proofs.some((proof) => !proof.amount)) {
+    const error = new Error("Ingrese el monto pagado de cada boleta.");
+    error.statusCode = 400;
+    throw error;
+  }
+  return proofs;
+}
+
+function quotePaymentProofs(quote = {}) {
+  const proofs = Array.isArray(quote.paymentProofs) ? quote.paymentProofs.filter(Boolean) : [];
+  if (proofs.length) return proofs;
+  if (!quote.paymentProof) return [];
+  return [{
+    ...quote.paymentProof,
+    amount: roundMoney(quote.amountPaid || quote.totals?.total || 0),
+    reference: quote.paymentReference || "",
+    notes: quote.paymentNotes || "",
+  }];
+}
+
+function quoteAmountPaid(quote = {}) {
+  const proofTotal = quotePaymentProofs(quote)
+    .reduce((sum, proof) => sum + roundMoney(proof.amount), 0);
+  return roundMoney(proofTotal || quote.amountPaid || 0);
+}
+
+function quotePaymentSummary(quote = {}) {
+  const total = roundMoney(quote.totals?.total || 0);
+  const amountPaid = quoteAmountPaid(quote);
+  const balance = roundMoney(Math.max(0, total - amountPaid));
+  return {
+    amountPaid,
+    balance,
+    paymentTotal: total,
+    paymentComplete: total > 0 ? amountPaid >= total : amountPaid > 0,
+  };
+}
+
+function quoteHasPayment(quote = {}) {
+  return quoteAmountPaid(quote) > 0 || quotePaymentProofs(quote).length > 0;
+}
+
+function isServiceQuote(quote = {}) {
+  return SERVICE_STATUSES.has(quote.status) && quoteHasPayment(quote);
+}
+
+function quoteUpcomingServiceCount(quote = {}, today = guatemalaDateValue()) {
+  if (!isServiceQuote(quote)) return 0;
+  const services = Array.isArray(quote.serviceSelections) && quote.serviceSelections.length
+    ? quote.serviceSelections
+    : [null];
+  return services.filter((service) => {
+    const serviceDate = cleanString(service?.serviceDate || quote.serviceDate || quote.serviceStartDate, 20);
+    return serviceDate && serviceDate >= today;
+  }).length;
 }
 
 async function syncClientForQuote(db, quote, actorId) {
@@ -740,8 +827,14 @@ function withNames(db, quote) {
     })
     .filter(Boolean);
   if (quote.vehicleManualName) vehicleNames.push(quote.vehicleManualName);
+  const payment = quotePaymentSummary(quote);
   return {
     ...quote,
+    amountPaid: payment.amountPaid,
+    paymentTotal: payment.paymentTotal,
+    paymentBalance: payment.balance,
+    paymentComplete: payment.paymentComplete,
+    paymentProofs: quotePaymentProofs(quote),
     vehicleName: vehicleNames.join(" + "),
     driverName: quote.driverManualName || (quote.driverId ? db.find("drivers", quote.driverId)?.name || "" : ""),
     creatorName: db.find("users", quote.createdBy)?.name || "Usuario",
@@ -1032,19 +1125,19 @@ export async function createApp(options = {}) {
       requirePermission(user, "dashboard");
       const quotes = db.list("quotes");
       const currentMonth = guatemalaMonthValue();
-      const monthQuotes = quotes.filter((item) => String(item.acceptedAt || "").startsWith(currentMonth));
+      const monthQuotes = quotes.filter(
+        (item) => String(item.acceptedAt || "").startsWith(currentMonth) && isServiceQuote(item),
+      );
+      const today = guatemalaDateValue();
       json(res, 200, {
         quotes: quotes.length,
         clients: db.list("clients").length,
-        upcomingServices: quotes.filter(
-          (item) =>
-            item.serviceDate >= guatemalaDateValue() &&
-            SERVICE_STATUSES.has(item.status) &&
-            item.paymentProof,
-        ).length,
+        upcomingServices: quotes.reduce(
+          (total, item) => total + quoteUpcomingServiceCount(item, today),
+          0,
+        ),
         monthSales: monthQuotes
-          .filter((item) => SERVICE_STATUSES.has(item.status))
-          .reduce((total, item) => total + Number(item.amountPaid || item.totals?.total || 0), 0),
+          .reduce((total, item) => total + quoteAmountPaid(item), 0),
       });
       return;
     }
@@ -1146,23 +1239,33 @@ export async function createApp(options = {}) {
         return;
       }
       const body = await readJson(req);
-      const paymentProof = normalizePaymentProof(body, user.id);
-      const amountPaid = Math.max(0, cleanNumber(body.amountPaid, quote.totals?.total || 0));
+      const newPaymentProofs = normalizePaymentProofs(body, user.id);
+      const paymentProofs = [...quotePaymentProofs(quote), ...newPaymentProofs];
+      if (paymentProofs.length > 10) {
+        json(res, 400, { error: "Puede registrar hasta 10 boletas de pago por servicio." });
+        return;
+      }
+      const amountPaid = paymentProofs.reduce((sum, proof) => sum + roundMoney(proof.amount), 0);
       if (!amountPaid) {
         json(res, 400, { error: "Ingrese el monto pagado por el cliente." });
         return;
       }
-      const acceptedAt = new Date().toISOString();
+      const acceptedAt = quote.acceptedAt || new Date().toISOString();
+      const paymentReference = paymentProofs
+        .map((proof) => cleanString(proof.reference, 120))
+        .filter(Boolean)
+        .join(" / ");
       const updated = await db.update(
         "quotes",
         quote.id,
         {
           status: "aceptada",
-          amountPaid,
+          amountPaid: roundMoney(amountPaid),
           acceptedAt,
-          paymentReference: cleanString(body.paymentReference, 120),
+          paymentReference,
           paymentNotes: cleanString(body.paymentNotes, 1000),
-          paymentProof,
+          paymentProof: paymentProofs[0],
+          paymentProofs,
         },
         user.id,
       );
@@ -1288,7 +1391,7 @@ export async function createApp(options = {}) {
           validateQuoteVehicle(patch);
           validateQuoteCapacity(db, patch);
         }
-        if (SERVICE_STATUSES.has(patch.status) && !current.paymentProof) {
+        if (SERVICE_STATUSES.has(patch.status) && !quoteHasPayment(current)) {
           const error = new Error("Para aceptar una cotización debe subir la boleta de pago o depósito.");
           error.statusCode = 400;
           throw error;

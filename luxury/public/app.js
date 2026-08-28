@@ -197,6 +197,14 @@ const sprinter316Configurations = [
     capacity: 11,
     allowsLuggage: true,
   },
+  {
+    id: "m3-m1-14",
+    title: "Butacas M1",
+    detail: "3 filas de 3 + 1 fila de 4 · 13 pasajeros atrás + 1 adelante · 14 pasajeros · Con equipaje.",
+    layout: "3 filas de 3 + 1 fila de 4, 13 pasajeros atrás + 1 adelante, con equipaje.",
+    capacity: 14,
+    allowsLuggage: true,
+  },
 ];
 const legacySprinter316ConfigurationIds = {
   luxury: "m3-luxury-m1-10",
@@ -214,7 +222,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "88";
+const APP_VERSION = "90";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -536,8 +544,95 @@ function statusBadge(status) {
   return `<span class="badge badge-${style}">${escapeHtml(value)}</span>`;
 }
 
+function roundMoney(value) {
+  return Math.round(Math.max(0, Number(value || 0)) * 100) / 100;
+}
+
+function quotePaymentProofs(quote = {}) {
+  const proofs = Array.isArray(quote.paymentProofs) ? quote.paymentProofs.filter(Boolean) : [];
+  if (proofs.length) return proofs;
+  if (!quote.paymentProof) return [];
+  return [{
+    ...quote.paymentProof,
+    amount: roundMoney(quote.amountPaid || quote.totals?.total || 0),
+    reference: quote.paymentReference || "",
+    notes: quote.paymentNotes || "",
+  }];
+}
+
+function quoteAmountPaid(quote = {}) {
+  const proofTotal = quotePaymentProofs(quote)
+    .reduce((sum, proof) => sum + roundMoney(proof.amount), 0);
+  return roundMoney(proofTotal || quote.amountPaid || 0);
+}
+
+function quotePaymentSummary(quote = {}) {
+  const total = roundMoney(quote.paymentTotal || quoteTaxBreakdown(quote).total || quote.totals?.total || 0);
+  const amountPaid = roundMoney(quote.amountPaid || quoteAmountPaid(quote));
+  const balance = roundMoney(Math.max(0, total - amountPaid));
+  return {
+    total,
+    amountPaid,
+    balance: quote.paymentBalance !== undefined ? roundMoney(quote.paymentBalance) : balance,
+    isPaid: quote.paymentComplete !== undefined
+      ? quote.paymentComplete === true || quote.paymentComplete === "true"
+      : total > 0 && amountPaid >= total,
+    hasPayments: amountPaid > 0 || quotePaymentProofs(quote).length > 0,
+  };
+}
+
 function isServiceQuote(quote) {
-  return serviceStatuses.has(quote.status) && Boolean(quote.paymentProof);
+  return serviceStatuses.has(quote.status) && quotePaymentSummary(quote).hasPayments;
+}
+
+function quotePaymentLine(quote, summary = quotePaymentSummary(quote)) {
+  if (!summary.hasPayments) {
+    return `<span class="cell-secondary">IVA ${quoteTaxBreakdown(quote).taxPercent || 0}%</span>`;
+  }
+  if (summary.isPaid) {
+    return `<span class="payment-status is-paid">Pagado ${money(summary.amountPaid)}</span>`;
+  }
+  return `
+    <span class="payment-status is-due">Debe ${money(summary.balance)}</span>
+    <span class="cell-secondary">Abonado ${money(summary.amountPaid)}</span>
+  `;
+}
+
+function quotePaymentBadge(quote, summary = quotePaymentSummary(quote)) {
+  if (!isServiceQuote(quote)) return statusBadge(quote.status);
+  return summary.isPaid
+    ? '<span class="badge badge-success">Pagado</span>'
+    : `<span class="badge badge-danger">Debe ${money(summary.balance)}</span>`;
+}
+
+function quotePaymentReferences(quote = {}) {
+  const references = quotePaymentProofs(quote)
+    .map((proof) => proof.reference)
+    .filter(Boolean);
+  if (references.length) return references.join(" / ");
+  return quote.paymentReference || "Sin referencia";
+}
+
+function quoteServiceEntriesForDashboard(quotes, today = guatemalaDateValue()) {
+  return quotes
+    .filter(isServiceQuote)
+    .flatMap((quote) => {
+      const services = quoteServiceSelections(quote);
+      const entries = services.length ? services : [null];
+      return entries.map((service, index) => ({
+        ...quote,
+        serviceDate: service?.serviceDate || quote.serviceDate || quote.serviceStartDate || "",
+        returnDate: service?.returnDate || quote.returnDate || quote.serviceEndDate || "",
+        departureTime: service?.departureTime || quote.departureTime || "",
+        origin: service?.origin || quote.origin || "",
+        destination: service?.destinationAddress || service?.destination || quote.destination || "",
+        serviceType: service?.label || quote.serviceType || "Servicio",
+        dashboardServiceNumber: index + 1,
+        dashboardServiceCount: entries.length,
+      }));
+    })
+    .filter((entry) => entry.serviceDate && entry.serviceDate >= today)
+    .sort((a, b) => a.serviceDate.localeCompare(b.serviceDate) || String(a.departureTime).localeCompare(String(b.departureTime)));
 }
 
 function loadQuoteDraft() {
@@ -695,16 +790,12 @@ async function navigate(moduleId) {
 function renderDashboard() {
   const accepted = state.quotes.filter(isServiceQuote);
   const currentMonth = guatemalaMonthValue();
-  const monthSales = accepted
-    .filter((quote) => String(quote.acceptedAt || "").startsWith(currentMonth))
-    .reduce((sum, quote) => sum + Number(quote.amountPaid || quote.totals?.total || 0), 0);
   const monthSalesQuotes = accepted
     .filter((quote) => String(quote.acceptedAt || "").startsWith(currentMonth))
     .sort((a, b) => String(b.acceptedAt).localeCompare(String(a.acceptedAt)));
-  const upcoming = [...state.quotes]
-    .filter((quote) => quote.serviceDate >= guatemalaDateValue() && isServiceQuote(quote))
-    .sort((a, b) => a.serviceDate.localeCompare(b.serviceDate))
-    .slice(0, 6);
+  const monthSales = monthSalesQuotes.reduce((sum, quote) => sum + quoteAmountPaid(quote), 0);
+  const allUpcoming = quoteServiceEntriesForDashboard(state.quotes);
+  const upcoming = allUpcoming.slice(0, 6);
 
   $("#app-content").innerHTML = `
     <div class="page-actions">
@@ -719,7 +810,7 @@ function renderDashboard() {
         "users",
         state.permissions.includes("clients") ? "clients" : "",
       )}
-      ${statCard("Próximos servicios", upcoming.length, "route")}
+      ${statCard("Próximos servicios", allUpcoming.length, "route")}
       ${statCard("Ventas del mes", money(monthSales), "tag", "quotes")}
     </section>
     <section class="dashboard-grid">
@@ -804,15 +895,19 @@ function quoteTable(quotes, options = {}) {
         </thead>
         <tbody>
           ${quotes
-            .map(
-              (quote) => `
+            .map((quote) => {
+              const payment = quotePaymentSummary(quote);
+              const quoteDateLabel = quote.dashboardServiceCount > 1
+                ? `Servicio ${quote.dashboardServiceNumber} de ${quote.dashboardServiceCount}`
+                : formatDate(quote.createdAt, { short: true });
+              return `
                 <tr class="interactive-row" data-row-action="edit-quote" data-id="${quote.id}" data-search-row="${escapeHtml(`${quote.number} ${quote.clientName} ${quote.clientPhone} ${quote.origin} ${quote.destination}`.toLowerCase())}">
-                  <td data-label="Cotización"><span class="cell-primary">${escapeHtml(quote.number)}</span><span class="cell-secondary">${formatDate(quote.createdAt, { short: true })}</span></td>
+                  <td data-label="Cotización"><span class="cell-primary">${escapeHtml(quote.number)}</span><span class="cell-secondary">${escapeHtml(quoteDateLabel)}</span></td>
                   <td data-label="Cliente"><span class="cell-primary">${escapeHtml(quote.clientName)}</span><span class="cell-secondary">${escapeHtml([quote.clientNit ? `NIT ${quote.clientNit}` : "", quote.clientPhone].filter(Boolean).join(" · "))}</span></td>
                   <td data-label="Servicio"><span class="cell-primary">${formatDate(quote.serviceDate, { short: true })}</span><span class="cell-secondary">${escapeHtml(quote.departureTime)} · ${escapeHtml(quote.serviceType)}</span></td>
                   <td data-label="Ruta"><span class="cell-primary">${escapeHtml(quote.origin)}</span><span class="cell-secondary">a ${escapeHtml(quote.destination)} · ${quote.kilometers || 0} km</span></td>
-                  <td data-label="Total"><span class="cell-primary">${money(quote.amountPaid || quoteTaxBreakdown(quote).total)}</span><span class="cell-secondary">${quote.amountPaid ? "Monto pagado" : `IVA ${quoteTaxBreakdown(quote).taxPercent || 0}%`}</span></td>
-                  <td data-label="Estado">${statusBadge(quote.status)}</td>
+                  <td data-label="Total"><span class="cell-primary">${money(payment.total)}</span>${quotePaymentLine(quote, payment)}</td>
+                  <td data-label="Estado">${quotePaymentBadge(quote, payment)}</td>
                   ${
                     options.compact
                       ? ""
@@ -821,7 +916,7 @@ function quoteTable(quotes, options = {}) {
                       <div class="table-actions">
                         ${
                           isServiceQuote(quote)
-                            ? `<button class="icon-button" title="Ver comprobante" aria-label="Ver comprobante" data-action="view-payment-proof" data-id="${quote.id}">${icons.tag}</button>`
+                            ? `<button class="icon-button" title="Ver comprobantes" aria-label="Ver comprobantes" data-action="view-payment-proof" data-id="${quote.id}">${icons.tag}</button>`
                             : `<button class="icon-button" title="Aceptar servicio y subir comprobante" aria-label="Aceptar servicio" data-action="accept-quote" data-id="${quote.id}">${icons.tag}</button>`
                         }
                         <button class="icon-button" title="Descargar cotización" aria-label="Descargar cotización" data-action="quote-pdf" data-id="${quote.id}">${icons.download}</button>
@@ -832,8 +927,8 @@ function quoteTable(quotes, options = {}) {
                     </td>`
                   }
                 </tr>
-              `,
-            )
+              `;
+            })
             .join("")}
         </tbody>
       </table>
@@ -848,17 +943,18 @@ function salesTable(quotes) {
         <thead><tr><th>Cotización</th><th>Cliente</th><th>Pago</th><th>Servicio</th><th>Comprobante</th></tr></thead>
         <tbody>
           ${quotes
-            .map(
-              (quote) => `
+            .map((quote) => {
+              const payment = quotePaymentSummary(quote);
+              return `
                 <tr class="interactive-row" data-row-action="edit-quote" data-id="${quote.id}">
                   <td><span class="cell-primary">${escapeHtml(quote.number)}</span><span class="cell-secondary">${formatDate(quote.acceptedAt, { short: true, time: true })}</span></td>
                   <td><span class="cell-primary">${escapeHtml(quote.clientName)}</span><span class="cell-secondary">${escapeHtml(quote.clientPhone || "")}</span></td>
-                  <td><span class="cell-primary">${money(quote.amountPaid || quote.totals?.total)}</span><span class="cell-secondary">${escapeHtml(quote.paymentReference || "Sin referencia")}</span></td>
+                  <td><span class="cell-primary">${money(payment.amountPaid)}</span>${quotePaymentLine(quote, payment)}<span class="cell-secondary">${escapeHtml(quotePaymentReferences(quote))}</span></td>
                   <td><span class="cell-primary">${formatDate(quote.serviceDate, { short: true })}</span><span class="cell-secondary">${escapeHtml(quote.serviceType)}</span></td>
                   <td><button class="button button-secondary button-small" data-action="view-payment-proof" data-id="${quote.id}">Ver comprobante</button></td>
                 </tr>
-              `,
-            )
+              `;
+            })
             .join("")}
         </tbody>
       </table>
@@ -1644,7 +1740,7 @@ function createRouteSelection(index, form, previous = {}) {
     destinationAddress: "",
     departureTime: "",
     returnTime: "",
-    passengers: Number(form.elements.passengers?.value || 1),
+    passengers: Number(form.elements.passengers?.value || 0),
     hasLuggage: Number(form.elements.luggage?.value || 0) > 0,
     luggageDescription: form.elements.luggageDescription?.value || "",
     notes: "",
@@ -1785,7 +1881,7 @@ function serviceSelectionsWithDetailsFromForm(form) {
         ? time12To24(get("departureTime12").value, get("departurePeriod")?.value)
         : selection.departureTime || "",
       returnTime: "",
-      passengers: Number(form.elements.passengers.value || selection.passengers || 1),
+      passengers: Number(form.elements.passengers.value || selection.passengers || 0),
       hasLuggage,
       luggageDescription: hasLuggage ? luggageDescription : "",
       notes: get("notes") ? get("notes").value.trim() : selection.notes || "",
@@ -2065,7 +2161,7 @@ function openQuoteModal(quote = {}) {
                   <fieldset>
                     <legend>Pasajeros</legend>
                     <label>Cantidad
-                      <input type="number" name="passengers" value="${Math.max(1, Number(quote.passengers || 1))}" min="1" max="${Math.max(1, Number(quote.maxPassengers || 15))}" step="1" inputmode="numeric" />
+                      <input type="number" name="passengers" value="${Math.max(0, Number(quote.passengers || 0))}" min="0" max="${Math.max(1, Number(quote.maxPassengers || 15))}" step="1" inputmode="numeric" />
                     </label>
                     <label>Descripción
                       <input name="passengerDescription" value="${escapeHtml(quote.passengerDescription || "")}" placeholder="Ej. 9 atrás y 1 adelante" />
@@ -2437,10 +2533,10 @@ function syncQuoteCapacity(form, announce = false) {
   form.elements.hasLuggage.value = hasLuggage ? "true" : "false";
   const sprinter311Configuration = sprinter311ConfigurationValue(form);
   const manualCapacity = manualVehicleName
-    ? Math.max(15, Math.round(Number(form.elements.passengers?.value || 1)))
+    ? Math.max(15, Math.round(Number(form.elements.passengers?.value || 0)))
     : 0;
   const passengerInput = form.elements.passengers;
-  const requestedPassengers = Math.max(1, Math.round(Number(passengerInput.value || 1)));
+  const requestedPassengers = Math.max(0, Math.round(Number(passengerInput.value || 0)));
   const maximum = vehicles.length || manualVehicleName
     ? vehicles.reduce((sum, vehicle) => sum + vehicleCapacityWithOptions(vehicle, form), 0) + manualCapacity
     : 15;
@@ -2470,7 +2566,7 @@ function syncQuoteCapacity(form, announce = false) {
   } else {
     passengerInput.value = String(requestedPassengers);
   }
-  if (Number(passengerInput.value) < 1) passengerInput.value = "1";
+  if (Number(passengerInput.value) < 0) passengerInput.value = "0";
   const vehicleNames = [
     ...vehicles.map((vehicle) => `${vehicleOperationalName(vehicle)} (${vehicleUnitLabel(vehicle)})`),
     manualVehicleName,
@@ -2650,7 +2746,7 @@ function updateQuoteSummary(form) {
         : '<div class="summary-line summary-tax-message"><span>Esta cotización no incluye IVA</span></div>'}
       <div class="summary-line"><span>Fecha inicio</span><strong>${escapeHtml(formatDate(sortedServices[0]?.serviceDate || body.serviceDate, { short: true }))}</strong></div>
       <div class="summary-line"><span>Fecha final</span><strong>${escapeHtml(formatDate(sortedServices.at(-1)?.returnDate || body.returnDate, { short: true }))}</strong></div>
-      <div class="summary-line"><span>Pasajeros</span><strong>${escapeHtml(`${body.passengers || 1}${body.passengerDescription ? ` · ${body.passengerDescription}` : ""}`)}</strong></div>
+      <div class="summary-line"><span>Pasajeros</span><strong>${escapeHtml(`${body.passengers || 0}${body.passengerDescription ? ` · ${body.passengerDescription}` : ""}`)}</strong></div>
       <div class="summary-line"><span>Equipaje</span><strong>${escapeHtml(body.hasLuggage ? body.luggageDescription || `${body.luggage} piezas` : "Sin equipaje")}</strong></div>
       <div class="summary-line"><span>Comodidades</span><strong>${escapeHtml(quoteAmenityLabels(body).join(" · ") || "Estándar")}</strong></div>
       <div class="summary-line summary-total"><span>Total</span><strong>${money(totals.total)}</strong></div>
@@ -2801,50 +2897,104 @@ async function readFileAsDataUrl(file) {
   }
 }
 
+function paymentEntryFields(index, amount = "", reference = "") {
+  const amountValue = Number(amount) > 0 ? roundMoney(amount) : "";
+  return `
+    <div class="payment-entry" data-payment-entry>
+      <label>Monto de boleta
+        <input type="number" name="paymentAmount" value="${escapeHtml(amountValue)}" min="0" step="0.01" required />
+      </label>
+      <label>Referencia
+        <input name="paymentReference" value="${escapeHtml(reference)}" placeholder="No. boleta, banco o transferencia" />
+      </label>
+      <label class="full">Archivo
+        <input type="file" name="paymentFile" accept="application/pdf,image/png,image/jpeg,image/webp" required />
+      </label>
+      ${index > 0 ? '<button type="button" class="button button-secondary button-small payment-entry-remove" data-remove-payment-entry>Quitar boleta</button>' : ""}
+    </div>
+  `;
+}
+
+async function paymentEntriesFromForm(form) {
+  const rows = $$("[data-payment-entry]", form);
+  const payments = [];
+  for (const [index, row] of rows.entries()) {
+    const amount = roundMoney($('input[name="paymentAmount"]', row).value);
+    const reference = $('input[name="paymentReference"]', row).value;
+    const file = $('input[name="paymentFile"]', row).files[0];
+    if (!amount && !file && !reference.trim()) continue;
+    if (!amount) throw new Error(`Ingrese el monto de la boleta ${index + 1}.`);
+    if (!file) throw new Error(`Suba el archivo de la boleta ${index + 1}.`);
+    const dataUrl = await readFileAsDataUrl(file);
+    payments.push({
+      amount,
+      reference,
+      fileName: file.name,
+      mimeType: file.type,
+      size: file.size,
+      dataUrl,
+    });
+  }
+  if (!payments.length) throw new Error("Suba al menos una boleta de pago o depósito.");
+  return payments;
+}
+
 function openAcceptQuoteModal(id) {
   const quote = state.quotes.find((item) => item.id === id);
   if (!quote) return;
-  openModal("Aceptar servicio", `
+  const payment = quotePaymentSummary(quote);
+  const alreadyAccepted = isServiceQuote(quote);
+  const pendingAmount = payment.balance > 0 ? payment.balance : payment.total;
+  openModal(alreadyAccepted ? "Agregar pago" : "Aceptar servicio", `
     <form id="accept-quote-form">
-      <p class="muted">Para convertir <strong>${escapeHtml(quote.number)}</strong> en servicio, suba la boleta de pago o depósito del cliente.</p>
+      <p class="muted">Registre las boletas de <strong>${escapeHtml(quote.number)}</strong>. El sistema sumará los abonos y marcará el saldo pendiente.</p>
+      <div class="payment-balance-summary">
+        <span>Total del servicio<strong>${money(payment.total)}</strong></span>
+        <span>Abonado<strong>${money(payment.amountPaid)}</strong></span>
+        <span class="${payment.isPaid ? "is-paid" : "is-due"}">${payment.isPaid ? "Pago completo" : "Saldo pendiente"}<strong>${payment.isPaid ? money(payment.amountPaid) : money(payment.balance || payment.total)}</strong></span>
+      </div>
       <div class="form-grid">
-        <label>Monto pagado<input type="number" name="amountPaid" value="${quote.amountPaid || quote.totals?.total || 0}" min="0" step="0.01" required /></label>
-        <label>Referencia / depósito<input name="paymentReference" value="${escapeHtml(quote.paymentReference)}" placeholder="No. boleta, banco o transferencia" /></label>
-        <label class="full">Boleta de pago o depósito<input type="file" name="paymentFile" accept="application/pdf,image/png,image/jpeg,image/webp" required /></label>
+        <div class="payment-entry-list full" data-payment-entry-list>
+          ${paymentEntryFields(0, pendingAmount, "")}
+        </div>
+        <div class="full"><button type="button" class="button button-secondary button-small" data-add-payment-entry>${icons.plus} Agregar otra boleta</button></div>
         <label class="full">Notas de pago<textarea name="paymentNotes" placeholder="Observaciones del depósito o saldo pendiente">${escapeHtml(quote.paymentNotes)}</textarea></label>
       </div>
       <p class="form-error" data-form-error></p>
-      <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit">Aceptar y pasar a servicio</button></div>
+      <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit">${alreadyAccepted ? "Guardar pago" : "Aceptar y registrar pago"}</button></div>
     </form>
   `);
+  const form = $("#accept-quote-form");
   $("[data-close-form]").addEventListener("click", closeModal);
-  $("#accept-quote-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const file = form.elements.paymentFile.files[0];
-    if (!file) {
-      $("[data-form-error]", form).textContent = "Suba la boleta de pago o depósito.";
+  $("[data-add-payment-entry]", form).addEventListener("click", () => {
+    const list = $("[data-payment-entry-list]", form);
+    const count = $$("[data-payment-entry]", form).length;
+    if (quotePaymentProofs(quote).length + count >= 10) {
+      toast("Puede registrar hasta 10 boletas por servicio.", "error");
       return;
     }
+    list.insertAdjacentHTML("beforeend", paymentEntryFields(count));
+  });
+  form.addEventListener("click", (event) => {
+    const removeButton = event.target.closest("[data-remove-payment-entry]");
+    if (!removeButton) return;
+    removeButton.closest("[data-payment-entry]")?.remove();
+  });
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
     const button = $('button[type="submit"]', form);
     button.disabled = true;
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const paymentProofs = await paymentEntriesFromForm(form);
       await api(`/api/quotes/${id}/accept`, {
         method: "POST",
         body: JSON.stringify({
-          amountPaid: form.elements.amountPaid.value,
-          paymentReference: form.elements.paymentReference.value,
           paymentNotes: form.elements.paymentNotes.value,
-          paymentProof: {
-            fileName: file.name,
-            mimeType: file.type,
-            size: file.size,
-            dataUrl,
-          },
+          paymentProofs,
         }),
       });
-      toast("Servicio aceptado y venta registrada.");
+      toast(alreadyAccepted ? "Pago registrado." : "Servicio aceptado y pago registrado.");
       closeModal();
       await navigate("dashboard");
     } catch (error) {
@@ -2857,29 +3007,53 @@ function openAcceptQuoteModal(id) {
 
 function openPaymentProofModal(id) {
   const quote = state.quotes.find((item) => item.id === id);
-  const proof = quote?.paymentProof;
-  if (!proof) {
+  const proofs = quotePaymentProofs(quote);
+  if (!proofs.length) {
     toast("Esta cotización aún no tiene comprobante.", "error");
     return;
   }
-  const preview = proof.mimeType?.startsWith("image/")
-    ? `<img class="payment-proof-preview" src="${proof.dataUrl}" alt="Comprobante de pago" />`
-    : `<iframe class="payment-proof-frame" src="${proof.dataUrl}" title="Comprobante PDF"></iframe>`;
+  const payment = quotePaymentSummary(quote);
   openModal(`Comprobante ${quote.number}`, `
     <div class="payment-proof-modal">
       <div class="payment-proof-meta">
-        <span>Monto pagado</span><strong>${money(quote.amountPaid || quote.totals?.total)}</strong>
-        <span>Referencia</span><strong>${escapeHtml(quote.paymentReference || "Sin referencia")}</strong>
-        <span>Archivo</span><strong>${escapeHtml(proof.fileName)}</strong>
+        <span>Total servicio</span><strong>${money(payment.total)}</strong>
+        <span>Abonado</span><strong>${money(payment.amountPaid)}</strong>
+        <span>Saldo</span><strong class="${payment.isPaid ? "payment-paid-text" : "payment-due-text"}">${payment.isPaid ? "Pagado" : money(payment.balance)}</strong>
       </div>
-      ${preview}
+      <div class="payment-proof-list">
+        ${proofs
+          .map((proof, index) => {
+            const proofAmount = roundMoney(proof.amount || (proofs.length === 1 ? payment.amountPaid : 0));
+            const preview = proof.mimeType?.startsWith("image/")
+              ? `<img class="payment-proof-preview" src="${proof.dataUrl}" alt="Comprobante de pago ${index + 1}" />`
+              : `<iframe class="payment-proof-frame" src="${proof.dataUrl}" title="Comprobante PDF ${index + 1}"></iframe>`;
+            return `
+              <article class="payment-proof-item">
+                <div class="payment-proof-item-header">
+                  <div>
+                    <strong>Boleta ${index + 1}</strong>
+                    <span>${escapeHtml(proof.fileName)}</span>
+                  </div>
+                  <div>
+                    <strong>${money(proofAmount)}</strong>
+                    <span>${escapeHtml(proof.reference || "Sin referencia")}</span>
+                  </div>
+                </div>
+                ${preview}
+                <a class="button button-secondary button-small" href="${proof.dataUrl}" download="${escapeHtml(proof.fileName)}">Descargar comprobante</a>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
       <div class="form-footer">
-        <a class="button button-secondary" href="${proof.dataUrl}" download="${escapeHtml(proof.fileName)}">Descargar comprobante</a>
+        ${payment.isPaid ? "" : `<button class="button button-secondary" data-add-service-payment="${escapeHtml(id)}">Agregar pago</button>`}
         <button class="button button-primary" data-close-form>Cerrar</button>
       </div>
     </div>
   `, { wide: true, eyebrow: "Ventas" });
   $("[data-close-form]").addEventListener("click", closeModal);
+  $("[data-add-service-payment]")?.addEventListener("click", () => openAcceptQuoteModal(id));
 }
 
 function pending(value) {
@@ -3209,7 +3383,7 @@ function quotePosterPrimaryService(quote) {
     departureTime: quote.departureTime || first.departureTime,
     returnTime: quote.returnTime || last.returnTime ||
       (selections.length > 1 ? last.departureTime : first.returnTime),
-    passengers: quote.passengers || first.passengers || 1,
+    passengers: quote.passengers || first.passengers || 0,
     passengerDescription: quote.passengerDescription || "",
     luggageDescription: quote.hasLuggage === false || first.hasLuggage === false
       ? "No"
@@ -3354,7 +3528,7 @@ function quotePosterContinuationHtml(quote, options = {}) {
           .join("")}
       </div>
       ${quote.notes ? `<aside class="poster-general-notes"><strong>Notas generales</strong><p>${escapeHtml(quote.notes)}</p></aside>` : ""}
-      <footer>Viaja con <b>comodidad, exclusividad y seguridad.</b></footer>
+      <footer data-document-export-end>Viaja con <b>comodidad, exclusividad y seguridad.</b></footer>
     </section>
   `;
 }
@@ -3554,7 +3728,7 @@ function quotePosterPageHtml(quote) {
       <div class="poster-dynamic-value poster-destination">${escapeHtml(service.destination || "Pendiente")}</div>
       <div class="poster-dynamic-value poster-end-date"><span>${escapeHtml(formatPosterDate(service.returnDate))}</span></div>
       <div class="poster-dynamic-value poster-return-time"><span>${escapeHtml(service.returnTime ? formatTime12(service.returnTime) : "Pendiente")}</span></div>
-      <div class="poster-dynamic-value poster-passengers"><strong>${escapeHtml(`${service.passengers || 1} pasajeros`)}</strong>${passengerDescription ? `<small>(${escapeHtml(passengerDescription)})</small>` : ""}</div>
+      <div class="poster-dynamic-value poster-passengers"><strong>${escapeHtml(`${service.passengers || 0} pasajeros`)}</strong>${passengerDescription ? `<small>(${escapeHtml(passengerDescription)})</small>` : ""}</div>
       <div class="poster-dynamic-value poster-luggage ${posterLuggageDensity(service.luggageDescription)}"><span>Equipaje</span><strong>${escapeHtml(service.luggageDescription || "No")}</strong></div>
       <div class="poster-top-spacer" aria-hidden="true"></div>
       <section class="poster-adaptive-lower">
@@ -3564,7 +3738,7 @@ function quotePosterPageHtml(quote) {
           <img class="quote-template-lower-bg" src="${templateImage}" alt="" aria-hidden="true">
           ${quotePosterVehicleHtml(quote)}
           ${quotePosterAmenitiesHtml(quote)}
-          <footer class="poster-quote-footer">Viaja con <b>comodidad, exclusividad y seguridad.</b></footer>
+          <footer class="poster-quote-footer" data-document-export-end>Viaja con <b>comodidad, exclusividad y seguridad.</b></footer>
         </div>
       </section>
     </div>
@@ -4068,7 +4242,7 @@ async function renderDocumentCanvas(options = {}) {
       : Math.ceil(Math.max(page.offsetWidth, page.scrollWidth));
     clone.style.width = `${canonicalWidth}px`;
     clone.style.height = "auto";
-    clone.style.minHeight = page.matches(".quote-poster-content") ? "1537px" : "0";
+    clone.style.minHeight = "0";
     clone.style.maxWidth = "none";
     clone.style.maxHeight = "none";
     clone.style.overflow = "visible";
@@ -4079,20 +4253,26 @@ async function renderDocumentCanvas(options = {}) {
     measurementHost.setAttribute("aria-hidden", "true");
     measurementHost.style.cssText = `position:fixed;left:-20000px;top:0;width:${canonicalWidth}px;pointer-events:none;z-index:-1;overflow:visible`;
     const measurementStyle = document.createElement("style");
-    measurementStyle.textContent = `${style}.sheet,.quote-poster-content,.poster-continuation{margin:0!important;box-shadow:none!important}`;
+    measurementStyle.textContent = `${style}.sheet,.quote-poster-content,.poster-continuation{margin:0!important;box-shadow:none!important}.quote-poster-content{height:auto!important;min-height:0!important}`;
     measurementHost.append(measurementStyle, clone);
     document.body.appendChild(measurementHost);
     await waitForRenderedImages(clone);
     if (document.fonts?.ready) await document.fonts.ready;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const width = canonicalWidth;
-    const minimumHeight = page.matches(".quote-poster-content") ? 1537 : 1;
     const cloneTop = clone.getBoundingClientRect().top;
+    const exportEnd = clone.querySelector("[data-document-export-end]");
+    const exportEndBottom = exportEnd
+      ? exportEnd.getBoundingClientRect().bottom - cloneTop
+      : 0;
     const descendantBottom = [...clone.querySelectorAll("*")].reduce((bottom, element) => {
       const bounds = element.getBoundingClientRect();
       return Math.max(bottom, bounds.bottom - cloneTop);
     }, 0);
-    const height = Math.ceil(Math.max(clone.offsetHeight, clone.scrollHeight, descendantBottom, minimumHeight));
+    const measuredHeight = exportEndBottom > 0
+      ? exportEndBottom
+      : Math.max(clone.offsetHeight, clone.scrollHeight, descendantBottom, 1);
+    const height = Math.ceil(measuredHeight);
     clone.style.height = `${height}px`;
     const requestedScale = Number(options.scale) || 3;
     const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
@@ -4180,25 +4360,44 @@ async function printDocumentFromCanvas(title, options, printWindow) {
     toast("El navegador bloqueó la ventana de impresión. Permita ventanas emergentes para este sitio.", "error");
     return;
   }
+  let imageObjectUrl = "";
   try {
     const canvas = await renderDocumentCanvas({ ...options, scale: 2.25 });
-    const imageDataUrl = canvas.toDataURL("image/png");
+    const blob = await canvasToBlob(canvas, "image/png");
+    imageObjectUrl = URL.createObjectURL(blob);
     printWindow.document.open();
-    printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}html,body{width:210mm;height:297mm;margin:0;overflow:hidden;background:#fff}.print-page{display:grid;width:210mm;height:297mm;place-items:center;overflow:hidden}.print-page img{display:block;max-width:210mm;max-height:297mm;width:auto;height:auto;margin:0}</style></head><body><section class="print-page"><img src="${imageDataUrl}" alt=""></section></body></html>`);
+    printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}html,body{width:210mm;height:295mm;margin:0;overflow:hidden;background:#fff}.print-page{display:grid;width:210mm;height:295mm;place-items:center;overflow:hidden;break-inside:avoid;page-break-inside:avoid;page-break-after:avoid}.print-page img{display:block;max-width:210mm;max-height:295mm;width:auto;height:auto;margin:0;object-fit:contain}</style></head><body><section class="print-page"><img src="${escapeHtml(imageObjectUrl)}" alt=""></section></body></html>`);
     printWindow.document.close();
-    await Promise.all(Array.from(printWindow.document.images, (image) => {
-      if (typeof image.decode === "function") {
-        return image.decode().catch(() => undefined);
+    const image = printWindow.document.querySelector(".print-page img");
+    await new Promise((resolve, reject) => {
+      if (image?.complete && image.naturalWidth > 0) {
+        resolve();
+        return;
       }
-      if (image.complete) return Promise.resolve();
-      return new Promise((resolve) => {
-        image.onload = resolve;
-        image.onerror = resolve;
-      });
-    }));
+      const timeout = setTimeout(() => reject(new Error("La imagen tardó demasiado en prepararse para impresión.")), 20_000);
+      const finish = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+      const fail = () => {
+        clearTimeout(timeout);
+        reject(new Error("El navegador no pudo cargar la imagen completa para impresión."));
+      };
+      image?.addEventListener("load", finish, { once: true });
+      image?.addEventListener("error", fail, { once: true });
+    });
+    await new Promise((resolve) => printWindow.requestAnimationFrame(() => printWindow.requestAnimationFrame(resolve)));
     printWindow.focus();
     printWindow.print();
+    const releaseObjectUrl = () => {
+      if (!imageObjectUrl) return;
+      URL.revokeObjectURL(imageObjectUrl);
+      imageObjectUrl = "";
+    };
+    printWindow.addEventListener("afterprint", releaseObjectUrl, { once: true });
+    setTimeout(releaseObjectUrl, 60_000);
   } catch (error) {
+    if (imageObjectUrl) URL.revokeObjectURL(imageObjectUrl);
     printWindow.close();
     toast(error?.message || "No fue posible preparar el documento completo para impresión.", "error");
   }

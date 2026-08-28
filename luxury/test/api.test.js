@@ -467,16 +467,121 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
   assert.equal(acceptedQuote.status, "aceptada");
   assert.equal(acceptedQuote.amountPaid, quote.totals.total);
   assert.equal(acceptedQuote.paymentProof.fileName, "deposito.pdf");
+  assert.equal(acceptedQuote.paymentProofs.length, 1);
+  assert.equal(acceptedQuote.paymentBalance, 0);
+  assert.equal(acceptedQuote.paymentComplete, true);
+
+  const futureServicesResponse = await request(app.baseUrl, cookie, "/api/quotes", {
+    method: "POST",
+    body: JSON.stringify({
+      clientName: "Cliente de prueba",
+      clientNit: "1234567-8",
+      clientPhone: "5555-1212",
+      quoteDate: "2099-01-01",
+      serviceDate: "2099-01-10",
+      departureTime: "08:00",
+      origin: "Hotel",
+      destination: "Servicios futuros",
+      passengers: 4,
+      vehicleId,
+      priceDisplayMode: "detailed",
+      serviceSelections: [
+        {
+          destination: "Antigua",
+          type: "oneWay",
+          label: "Servicio de Ida",
+          amount: 2000,
+          serviceDate: "2099-01-10",
+          origin: "Hotel",
+          destinationAddress: "Antigua",
+          departureTime: "08:00",
+          legNumber: 1,
+        },
+        {
+          destination: "Aeropuerto",
+          type: "oneWay",
+          label: "Servicio de Ida",
+          amount: 2000,
+          serviceDate: "2099-01-11",
+          origin: "Antigua",
+          destinationAddress: "Aeropuerto",
+          departureTime: "06:00",
+          legNumber: 2,
+        },
+      ],
+      includeTax: false,
+      status: "borrador",
+      pdfTemplate: "noir",
+    }),
+  });
+  assert.equal(futureServicesResponse.status, 201);
+  const futureServicesQuote = await futureServicesResponse.json();
+  assert.equal(futureServicesQuote.totals.total, 4000);
+
+  const partialPaymentResponse = await request(
+    app.baseUrl,
+    cookie,
+    `/api/quotes/${futureServicesQuote.id}/accept`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        paymentProofs: [
+          {
+            amount: 2000,
+            reference: "ABONO-001",
+            fileName: "abono-001.pdf",
+            mimeType: "application/pdf",
+            size: 14,
+            dataUrl: "data:application/pdf;base64,JVBERi0xLjQK",
+          },
+        ],
+      }),
+    },
+  );
+  assert.equal(partialPaymentResponse.status, 200);
+  const partialPaymentQuote = await partialPaymentResponse.json();
+  assert.equal(partialPaymentQuote.amountPaid, 2000);
+  assert.equal(partialPaymentQuote.paymentProofs.length, 1);
+  assert.equal(partialPaymentQuote.paymentBalance, 2000);
+  assert.equal(partialPaymentQuote.paymentComplete, false);
 
   const dashboardResponse = await request(app.baseUrl, cookie, "/api/dashboard");
   assert.equal(dashboardResponse.status, 200);
   const dashboard = await dashboardResponse.json();
-  assert.equal(dashboard.monthSales, quote.totals.total);
+  assert.equal(dashboard.monthSales, quote.totals.total + 2000);
+  assert.equal(dashboard.upcomingServices, 2);
+
+  const finalPaymentResponse = await request(
+    app.baseUrl,
+    cookie,
+    `/api/quotes/${futureServicesQuote.id}/accept`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        paymentProofs: [
+          {
+            amount: 2000,
+            reference: "ABONO-002",
+            fileName: "abono-002.pdf",
+            mimeType: "application/pdf",
+            size: 14,
+            dataUrl: "data:application/pdf;base64,JVBERi0xLjQK",
+          },
+        ],
+      }),
+    },
+  );
+  assert.equal(finalPaymentResponse.status, 200);
+  const finalPaymentQuote = await finalPaymentResponse.json();
+  assert.equal(finalPaymentQuote.amountPaid, 4000);
+  assert.equal(finalPaymentQuote.paymentProofs.length, 2);
+  assert.equal(finalPaymentQuote.paymentBalance, 0);
+  assert.equal(finalPaymentQuote.paymentComplete, true);
 
   const bootstrapResponse = await request(app.baseUrl, cookie, "/api/bootstrap");
   assert.equal(bootstrapResponse.status, 200);
   const bootstrap = await bootstrapResponse.json();
-  assert.equal(bootstrap.quotes.length, 9);
+  assert.equal(bootstrap.quotes.length, 10);
   assert.equal(bootstrap.clients.length, 7);
   assert.equal(bootstrap.clients.find((client) => client.name === "Cliente de prueba").nit, "1234567-8");
   assert.equal(bootstrap.itineraries.length, 1);

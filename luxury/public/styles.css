@@ -937,6 +937,23 @@ tr:last-child td {
   font-size: 10px;
 }
 
+.payment-status {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.payment-status.is-paid,
+.payment-paid-text {
+  color: var(--success);
+}
+
+.payment-status.is-due,
+.payment-due-text {
+  color: var(--danger);
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -2613,6 +2630,62 @@ tr:last-child td {
   font-size: 10px;
 }
 
+.payment-balance-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0 18px;
+}
+
+.payment-balance-summary span {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 12px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.payment-balance-summary strong {
+  color: var(--ink);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.payment-balance-summary .is-paid strong {
+  color: var(--success);
+}
+
+.payment-balance-summary .is-due strong {
+  color: var(--danger);
+}
+
+.payment-entry-list {
+  display: grid;
+  gap: 12px;
+}
+
+.payment-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 14px;
+}
+
+.payment-entry .full,
+.payment-entry-remove {
+  grid-column: 1 / -1;
+}
+
 .payment-proof-modal {
   display: grid;
   gap: 16px;
@@ -2640,6 +2713,38 @@ tr:last-child td {
 .payment-proof-meta strong {
   margin-top: 4px;
   font-size: 12px;
+}
+
+.payment-proof-list {
+  display: grid;
+  gap: 18px;
+}
+
+.payment-proof-item {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  padding: 14px;
+}
+
+.payment-proof-item-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 0.35fr);
+  gap: 12px;
+}
+
+.payment-proof-item-header strong,
+.payment-proof-item-header span {
+  display: block;
+}
+
+.payment-proof-item-header span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
 }
 
 .payment-proof-preview,
@@ -2883,6 +2988,12 @@ tr:last-child td {
   .dashboard-grid,
   .settings-grid,
   .itinerary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-balance-summary,
+  .payment-entry,
+  .payment-proof-item-header {
     grid-template-columns: 1fr;
   }
 

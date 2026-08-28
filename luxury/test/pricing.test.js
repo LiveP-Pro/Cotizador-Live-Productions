@@ -36,3 +36,37 @@ test("el precio final manual representa toda la cotización y no se multiplica",
   assert.equal(totals.tax, 900);
   assert.equal(totals.total, 8400);
 });
+
+test("el descuento se resta antes de calcular el IVA", () => {
+  const totals = calculateQuote(
+    {
+      fixedFare: 21300,
+      fixedFareIsTotal: true,
+      discountAmount: 1300,
+      includeTax: true,
+    },
+    rates,
+  );
+  assert.equal(totals.subtotalBeforeDiscount, 21300);
+  assert.equal(totals.discount, 1300);
+  assert.equal(totals.subtotal, 20000);
+  assert.equal(totals.tax, 2400);
+  assert.equal(totals.total, 22400);
+});
+
+test("sin IVA el total conserva únicamente el viaje menos el descuento", () => {
+  const totals = calculateQuote(
+    {
+      fixedFare: 21300,
+      fixedFareIsTotal: true,
+      discountAmount: 1300,
+      includeTax: false,
+    },
+    rates,
+  );
+  assert.equal(totals.subtotalBeforeDiscount, 21300);
+  assert.equal(totals.discount, 1300);
+  assert.equal(totals.taxPercent, 0);
+  assert.equal(totals.tax, 0);
+  assert.equal(totals.total, 20000);
+});

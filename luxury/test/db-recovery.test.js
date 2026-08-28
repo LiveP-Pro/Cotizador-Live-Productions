@@ -99,7 +99,7 @@ test("repara totales duplicados de cotizaciones existentes", async (context) => 
 
   const repaired = await openDatabase(files).init();
   const quote = repaired.data.quotes.find((item) => item.id === "cotizacion-total-duplicado");
-  assert.equal(repaired.data.schemaVersion, 12);
+  assert.equal(repaired.data.schemaVersion, 13);
   assert.equal(quote.vehicleCount, 1);
   assert.equal(quote.fixedFare, 24800);
   assert.equal(quote.discountAmount, 4600);
@@ -155,4 +155,37 @@ test("consolida clientes repetidos y conserva sus cotizaciones y contacto", asyn
   assert.equal(repaired.data.clients[0].phone, "30903172");
   assert.equal(repaired.data.clients[0].email, "jorge@example.com");
   assert.equal(repaired.data.quotes[0].clientId, "jorge-original");
+});
+
+test("migra comprobantes antiguos a abonos con saldo calculable", async (context) => {
+  const files = await temporaryDatabase();
+  context.after(files.close);
+
+  const original = await openDatabase(files).init();
+  original.data.schemaVersion = 12;
+  original.data.quotes.push({
+    id: "cotizacion-abono-antiguo",
+    status: "aceptada",
+    amountPaid: 2000,
+    paymentReference: "DEP-ANTIGUO",
+    acceptedAt: "2026-08-20T12:00:00.000Z",
+    totals: {
+      total: 4000,
+    },
+    paymentProof: {
+      fileName: "deposito-antiguo.pdf",
+      mimeType: "application/pdf",
+      size: 14,
+      dataUrl: "data:application/pdf;base64,JVBERi0xLjQK",
+    },
+  });
+  await original.persist();
+
+  const repaired = await openDatabase(files).init();
+  const quote = repaired.data.quotes.find((item) => item.id === "cotizacion-abono-antiguo");
+  assert.equal(repaired.data.schemaVersion, 13);
+  assert.equal(quote.amountPaid, 2000);
+  assert.equal(quote.paymentProofs.length, 1);
+  assert.equal(quote.paymentProofs[0].amount, 2000);
+  assert.equal(quote.paymentProofs[0].reference, "DEP-ANTIGUO");
 });

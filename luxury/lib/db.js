@@ -21,6 +21,52 @@ function cleanClientValue(value) {
   return String(value ?? "").trim();
 }
 
+function roundMoney(value) {
+  const number = Number(value);
+  return Math.round(Math.max(0, Number.isFinite(number) ? number : 0) * 100) / 100;
+}
+
+function cleanPaymentProofForMigration(proof = {}, quote = {}, index = 0) {
+  const fileName = cleanClientValue(proof.fileName).slice(0, 180);
+  const mimeType = cleanClientValue(proof.mimeType).toLowerCase().slice(0, 80);
+  const dataUrl = cleanClientValue(proof.dataUrl).slice(0, 12_000_000);
+  if (!fileName || !mimeType || !dataUrl) return null;
+  return {
+    ...proof,
+    fileName,
+    mimeType,
+    size: Math.max(0, Math.round(Number(proof.size || 0))),
+    dataUrl,
+    amount: roundMoney(proof.amount ?? (index === 0 ? quote.amountPaid || quote.totals?.total || 0 : 0)),
+    reference: cleanClientValue(proof.reference || quote.paymentReference).slice(0, 120),
+    notes: cleanClientValue(proof.notes || quote.paymentNotes).slice(0, 1000),
+    uploadedAt: proof.uploadedAt || quote.acceptedAt || quote.updatedAt || now(),
+    uploadedBy: proof.uploadedBy || quote.updatedBy || quote.createdBy || "system",
+  };
+}
+
+function migrateQuotePayments(quote = {}) {
+  const rawProofs = Array.isArray(quote.paymentProofs) && quote.paymentProofs.length
+    ? quote.paymentProofs
+    : quote.paymentProof
+      ? [quote.paymentProof]
+      : [];
+  const paymentProofs = rawProofs
+    .map((proof, index) => cleanPaymentProofForMigration(proof, quote, index))
+    .filter(Boolean)
+    .slice(0, 10);
+  const proofTotal = roundMoney(paymentProofs.reduce((sum, proof) => sum + roundMoney(proof.amount), 0));
+  const amountPaid = proofTotal || roundMoney(quote.amountPaid || 0);
+  return {
+    ...quote,
+    amountPaid,
+    paymentReference: quote.paymentReference || paymentProofs.map((proof) => proof.reference).filter(Boolean).join(" / "),
+    paymentNotes: quote.paymentNotes || "",
+    paymentProof: quote.paymentProof || paymentProofs[0] || null,
+    paymentProofs,
+  };
+}
+
 function clientNameQuality(value) {
   const name = cleanClientValue(value);
   if (!name) return 0;
@@ -257,7 +303,7 @@ function seedDatabase() {
   const driverId = randomUUID();
 
   return {
-    schemaVersion: 12,
+    schemaVersion: 13,
     users: [
       {
         id: adminId,
@@ -575,6 +621,11 @@ export class JsonDatabase {
     if (clientConsolidation.changed) changed = true;
     if (Number(this.data.schemaVersion || 1) < 12) {
       this.data.schemaVersion = 12;
+      changed = true;
+    }
+    if (Number(this.data.schemaVersion || 1) < 13) {
+      this.data.quotes = this.data.quotes.map(migrateQuotePayments);
+      this.data.schemaVersion = 13;
       changed = true;
     }
     if (changed) await this.persist();

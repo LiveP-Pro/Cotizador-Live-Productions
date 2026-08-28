@@ -8,14 +8,20 @@ const serviceWorkerSource = await readFile(new URL("../public/sw.js", import.met
 
 test("la descarga de cotizaciones conserva compatibilidad entre navegadores", () => {
   assert.doesNotMatch(appSource, /\bFileReader\b/);
+  assert.doesNotMatch(appSource, /renderCloneWithForeignObject/);
+  assert.doesNotMatch(appSource, /<foreignObject/);
   assert.match(appSource, /blob\?\.arrayBuffer/);
   assert.match(appSource, /new Response\(blob\)\.arrayBuffer/);
   assert.match(appSource, /window\.showSaveFilePicker/);
   assert.match(appSource, /function canUseNativeSavePicker\(\)/);
   assert.match(appSource, /function isAppleWebKitBrowser\(\)/);
   assert.match(appSource, /function renderCloneWithHtml2Canvas\(clone, width, height, scale\)/);
+  assert.match(appSource, /async function renderDocumentCanvas\(options = \{\}\)/);
+  assert.match(appSource, /await waitForRenderedImages\(clone\)/);
   assert.match(appSource, /window\.html2canvas\(clone/);
-  assert.match(appSource, /if \(useWebKitRenderer\)/);
+  assert.match(appSource, /foreignObjectRendering: false/);
+  assert.match(appSource, /allowTaint: false/);
+  assert.match(appSource, /async function canvasToBlob\(canvas, mimeType/);
   assert.match(appSource, /function triggerBrowserDownload\(blob, dataUrl, fileName\)/);
   assert.match(appSource, /link\.download = fileName/);
   assert.match(appSource, /URL\.revokeObjectURL\(objectUrl\), 60_000/);
@@ -26,8 +32,23 @@ test("la descarga de cotizaciones conserva compatibilidad entre navegadores", ()
   assert.match(appSource, /El borrador continúa guardado/);
   assert.match(appSource, /Guardar imagen de cotización/);
   assert.match(appSource, /Descargar cotización PNG Full HD/);
+  assert.match(appSource, /async function printDocumentFromCanvas/);
+  assert.match(appSource, /data-document-export-end/);
+  assert.match(appSource, /const exportEnd = clone\.querySelector/);
+  assert.match(appSource, /exportEndBottom > 0/);
+  assert.match(appSource, /max-width:210mm;max-height:295mm/);
+  assert.match(appSource, /const blob = await canvasToBlob\(canvas, "image\/png"\)/);
+  assert.match(appSource, /imageObjectUrl = URL\.createObjectURL\(blob\)/);
+  assert.match(appSource, /<section class="print-page"><img src="\$\{escapeHtml\(imageObjectUrl\)\}"/);
+  assert.match(appSource, /id: "m3-m1-14"/);
+  assert.match(appSource, /title: "Butacas M1"/);
+  assert.match(appSource, /name="passengers" value="\$\{Math\.max\(0,/);
+  assert.doesNotMatch(appSource, /printablePageHeight/);
   assert.match(indexSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
   assert.match(serviceWorkerSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
+  assert.match(appSource, /APP_VERSION = "90"/);
+  assert.match(indexSource, /app\.js\?v=90/);
+  assert.match(serviceWorkerSource, /VERSION = "90"/);
 });
 
 test("el generador de itinerarios ofrece únicamente la versión para cliente", () => {
