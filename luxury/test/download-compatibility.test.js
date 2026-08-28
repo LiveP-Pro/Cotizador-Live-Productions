@@ -15,6 +15,7 @@ test("la descarga de cotizaciones conserva compatibilidad entre navegadores", ()
   assert.match(appSource, /window\.showSaveFilePicker/);
   assert.match(appSource, /function canUseNativeSavePicker\(\)/);
   assert.match(appSource, /function isAppleWebKitBrowser\(\)/);
+  assert.match(appSource, /function isChromiumDesktopBrowser\(\)/);
   assert.match(appSource, /function renderCloneWithHtml2Canvas\(clone, width, height, scale\)/);
   assert.match(appSource, /async function renderDocumentCanvas\(options = \{\}\)/);
   assert.match(appSource, /await waitForRenderedImages\(clone\)/);
@@ -33,6 +34,10 @@ test("la descarga de cotizaciones conserva compatibilidad entre navegadores", ()
   assert.match(appSource, /Guardar imagen de cotización/);
   assert.match(appSource, /Descargar cotización PNG Full HD/);
   assert.match(appSource, /async function printDocumentFromCanvas/);
+  assert.match(appSource, /isChromiumDesktopBrowser\(\) \? null : openPrintPreviewWindow\(title\)/);
+  assert.match(appSource, /printFrame = document\.createElement\("iframe"\)/);
+  assert.match(appSource, /printTargetWindow\.print\(\)/);
+  assert.match(appSource, /printTargetWindow\.addEventListener\("afterprint", releasePrintResources/);
   assert.match(appSource, /data-document-export-end/);
   assert.match(appSource, /const exportEnd = clone\.querySelector/);
   assert.match(appSource, /exportEndBottom > 0/);
@@ -46,9 +51,9 @@ test("la descarga de cotizaciones conserva compatibilidad entre navegadores", ()
   assert.doesNotMatch(appSource, /printablePageHeight/);
   assert.match(indexSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
   assert.match(serviceWorkerSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
-  assert.match(appSource, /APP_VERSION = "90"/);
-  assert.match(indexSource, /app\.js\?v=90/);
-  assert.match(serviceWorkerSource, /VERSION = "90"/);
+  assert.match(appSource, /APP_VERSION = "91"/);
+  assert.match(indexSource, /app\.js\?v=91/);
+  assert.match(serviceWorkerSource, /VERSION = "91"/);
 });
 
 test("el generador de itinerarios ofrece únicamente la versión para cliente", () => {

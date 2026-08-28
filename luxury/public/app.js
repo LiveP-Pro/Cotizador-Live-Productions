@@ -222,7 +222,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "90";
+const APP_VERSION = "91";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -4016,7 +4016,7 @@ function openPremiumDocument(title, type, content) {
         : ".sheet";
     const sheet = $(".document-preview-scroll .sheet");
     const pageElement = pageSelector === ".sheet" ? sheet : $(pageSelector, sheet);
-    const printWindow = openPrintPreviewWindow(title);
+    const printWindow = isChromiumDesktopBrowser() ? null : openPrintPreviewWindow(title);
     button.disabled = true;
     try {
       await printDocumentFromCanvas(title, { pageElement, style: documentStyles }, printWindow);
@@ -4151,6 +4151,12 @@ async function inlineImages(root, sourceRoot) {
 function isAppleWebKitBrowser() {
   const userAgent = navigator.userAgent || "";
   return /AppleWebKit/i.test(userAgent) && !/(Chrome|Chromium|Edg|OPR|Android)/i.test(userAgent);
+}
+
+function isChromiumDesktopBrowser() {
+  const userAgent = navigator.userAgent || "";
+  return /(Chrome|Chromium|Edg|OPR)/i.test(userAgent)
+    && !/(Android|iPhone|iPad|iPod)/i.test(userAgent);
 }
 
 async function waitForRenderedImages(root) {
@@ -4356,19 +4362,41 @@ function openPrintPreviewWindow(title) {
 }
 
 async function printDocumentFromCanvas(title, options, printWindow) {
-  if (!printWindow) {
+  const useEmbeddedPrintFrame = isChromiumDesktopBrowser();
+  if (!useEmbeddedPrintFrame && !printWindow) {
     toast("El navegador bloqueó la ventana de impresión. Permita ventanas emergentes para este sitio.", "error");
     return;
   }
   let imageObjectUrl = "";
+  let printFrame = null;
+  let printTargetWindow = printWindow;
+  const releasePrintResources = () => {
+    if (imageObjectUrl) {
+      URL.revokeObjectURL(imageObjectUrl);
+      imageObjectUrl = "";
+    }
+    printFrame?.remove();
+    printFrame = null;
+  };
   try {
     const canvas = await renderDocumentCanvas({ ...options, scale: 2.25 });
     const blob = await canvasToBlob(canvas, "image/png");
     imageObjectUrl = URL.createObjectURL(blob);
-    printWindow.document.open();
-    printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}html,body{width:210mm;height:295mm;margin:0;overflow:hidden;background:#fff}.print-page{display:grid;width:210mm;height:295mm;place-items:center;overflow:hidden;break-inside:avoid;page-break-inside:avoid;page-break-after:avoid}.print-page img{display:block;max-width:210mm;max-height:295mm;width:auto;height:auto;margin:0;object-fit:contain}</style></head><body><section class="print-page"><img src="${escapeHtml(imageObjectUrl)}" alt=""></section></body></html>`);
-    printWindow.document.close();
-    const image = printWindow.document.querySelector(".print-page img");
+    if (useEmbeddedPrintFrame) {
+      printFrame = document.createElement("iframe");
+      printFrame.title = `Impresión de ${title}`;
+      printFrame.setAttribute("aria-hidden", "true");
+      printFrame.style.cssText = "position:fixed;left:-10000px;top:0;width:1px;height:1px;border:0;pointer-events:none";
+      document.body.appendChild(printFrame);
+      printTargetWindow = printFrame.contentWindow;
+    }
+    if (!printTargetWindow) {
+      throw new Error("No fue posible abrir la interfaz de impresión.");
+    }
+    printTargetWindow.document.open();
+    printTargetWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}html,body{width:210mm;height:295mm;margin:0;overflow:hidden;background:#fff}.print-page{display:grid;width:210mm;height:295mm;place-items:center;overflow:hidden;break-inside:avoid;page-break-inside:avoid;page-break-after:avoid}.print-page img{display:block;max-width:210mm;max-height:295mm;width:auto;height:auto;margin:0;object-fit:contain}</style></head><body><section class="print-page"><img src="${escapeHtml(imageObjectUrl)}" alt=""></section></body></html>`);
+    printTargetWindow.document.close();
+    const image = printTargetWindow.document.querySelector(".print-page img");
     await new Promise((resolve, reject) => {
       if (image?.complete && image.naturalWidth > 0) {
         resolve();
@@ -4386,19 +4414,14 @@ async function printDocumentFromCanvas(title, options, printWindow) {
       image?.addEventListener("load", finish, { once: true });
       image?.addEventListener("error", fail, { once: true });
     });
-    await new Promise((resolve) => printWindow.requestAnimationFrame(() => printWindow.requestAnimationFrame(resolve)));
-    printWindow.focus();
-    printWindow.print();
-    const releaseObjectUrl = () => {
-      if (!imageObjectUrl) return;
-      URL.revokeObjectURL(imageObjectUrl);
-      imageObjectUrl = "";
-    };
-    printWindow.addEventListener("afterprint", releaseObjectUrl, { once: true });
-    setTimeout(releaseObjectUrl, 60_000);
+    await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+    printTargetWindow.addEventListener("afterprint", releasePrintResources, { once: true });
+    printTargetWindow.focus();
+    printTargetWindow.print();
+    setTimeout(releasePrintResources, 60_000);
   } catch (error) {
-    if (imageObjectUrl) URL.revokeObjectURL(imageObjectUrl);
-    printWindow.close();
+    releasePrintResources();
+    if (printWindow && !printWindow.closed) printWindow.close();
     toast(error?.message || "No fue posible preparar el documento completo para impresión.", "error");
   }
 }
