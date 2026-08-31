@@ -48,12 +48,17 @@ test("la descarga de cotizaciones conserva compatibilidad entre navegadores", ()
   assert.match(appSource, /id: "m3-m1-14"/);
   assert.match(appSource, /title: "Butacas M1"/);
   assert.match(appSource, /name="passengers" value="\$\{Math\.max\(0,/);
+  assert.match(appSource, /<table class="poster-service-price-list"><tbody>/);
+  assert.match(appSource, /<td class="poster-service-price-label">/);
+  assert.match(appSource, /<td class="poster-service-price-amount">/);
+  assert.match(appSource, /\.poster-service-price-list\{width:100%;min-width:0;border-collapse:separate/);
+  assert.doesNotMatch(appSource, /\.poster-service-price-row\{display:grid/);
   assert.doesNotMatch(appSource, /printablePageHeight/);
   assert.match(indexSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
   assert.match(serviceWorkerSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
-  assert.match(appSource, /APP_VERSION = "91"/);
-  assert.match(indexSource, /app\.js\?v=91/);
-  assert.match(serviceWorkerSource, /VERSION = "91"/);
+  assert.match(appSource, /APP_VERSION = "92"/);
+  assert.match(indexSource, /app\.js\?v=92/);
+  assert.match(serviceWorkerSource, /VERSION = "92"/);
 });
 
 test("el generador de itinerarios ofrece únicamente la versión para cliente", () => {

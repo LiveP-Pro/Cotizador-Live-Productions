@@ -222,7 +222,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "91";
+const APP_VERSION = "92";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -3435,10 +3435,10 @@ function quotePosterServicesHtml(quote) {
   const midpoint = Math.ceil(lines.length / 2);
   const columns = useColumns ? [lines.slice(0, midpoint), lines.slice(midpoint)] : [lines];
   const row = (item) => `
-    <div class="poster-service-price-row">
-      <span>${escapeHtml(item.label)}</span>
-      ${item.amount === null ? "" : `<strong>${escapeHtml(posterMoney(item.amount))}</strong>`}
-    </div>
+    <tr class="poster-service-price-row">
+      <td class="poster-service-price-label">${escapeHtml(item.label)}</td>
+      ${item.amount === null ? "" : `<td class="poster-service-price-amount">${escapeHtml(posterMoney(item.amount))}</td>`}
+    </tr>
   `;
   return `
     <section class="poster-service-price-box ${useColumns ? "poster-service-price-box-columns" : ""} ${lines.length > 12 ? "poster-service-price-box-dense" : ""}">
@@ -3447,7 +3447,7 @@ function quotePosterServicesHtml(quote) {
         <small>${lines.length} traslado${lines.length === 1 ? "" : "s"}</small>
       </header>
       <div class="poster-service-price-columns">
-        ${columns.map((column) => `<div class="poster-service-price-list">${column.map(row).join("")}</div>`).join("")}
+        ${columns.map((column) => `<table class="poster-service-price-list"><tbody>${column.map(row).join("")}</tbody></table>`).join("")}
       </div>
       ${totals.includesTax ? "" : '<div class="poster-service-tax-note">NOTA: Esta cotización no incluye IVA</div>'}
       <footer class="poster-price-breakdown">
@@ -3934,8 +3934,8 @@ function quoteDocumentStyles() {
     .poster-passengers{left:852px;top:842px;width:157px;height:76px;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}.poster-passengers strong,.poster-passengers small{font-size:18px;line-height:1.12}.poster-passengers strong{font-weight:800}.poster-passengers small{display:block;margin-top:5px;color:#111;font-weight:600}.poster-luggage{left:852px;top:920px;width:157px;height:82px;display:flex;flex-direction:column;align-items:center;overflow:hidden;border-top:2px solid #d9ad57;padding:6px 3px 0;text-align:center}.poster-luggage span,.poster-luggage strong{font-size:16px;line-height:1.05}.poster-luggage span{flex:0 0 auto;font-weight:800;letter-spacing:0;text-transform:uppercase}.poster-luggage strong{display:block;max-width:100%;margin-top:3px;overflow-wrap:anywhere;font-weight:600;white-space:normal;text-wrap:balance}.poster-luggage-compact span{font-size:14px}.poster-luggage-compact strong{font-size:13px;line-height:1.02}.poster-luggage-dense span{font-size:12px}.poster-luggage-dense strong{font-size:10.5px;line-height:1}
     .poster-service-price-box{position:relative;width:calc(100% - 16px);min-height:274px;margin:0 8px;display:flex;flex-direction:column;border:2px solid #d1a044;border-radius:26px;background:linear-gradient(145deg,#02050c,#080d17);box-shadow:0 10px 25px rgba(0,0,0,.12);padding:18px 30px 16px;color:#fff;overflow:hidden}
     .poster-service-price-box>header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid rgba(213,166,72,.62);padding-bottom:10px;color:#dfb24e;text-transform:uppercase}.poster-service-price-box>header span,.poster-service-price-box>header small{font-size:18px;font-weight:900;letter-spacing:.1em}
-    .poster-service-price-columns{display:grid;grid-template-columns:1fr;gap:26px;min-height:0;flex:1;padding:13px 0 11px}.poster-service-price-box-columns .poster-service-price-columns{grid-template-columns:repeat(2,minmax(0,1fr))}.poster-service-price-list{display:grid;align-content:center;gap:6px;min-width:0}.poster-service-price-box-columns .poster-service-price-list+ .poster-service-price-list{border-left:1px solid rgba(213,166,72,.38);padding-left:22px}
-    .poster-service-price-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;min-width:0;color:#f8f8f6;font-size:15px;line-height:1.2}.poster-service-price-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.poster-service-price-row strong{color:#e2b348;font-size:18px;font-weight:900;white-space:nowrap}.poster-service-price-box-columns .poster-service-price-row{gap:9px;font-size:12px}.poster-service-price-box-columns .poster-service-price-row strong{font-size:16px}.poster-service-price-box-dense .poster-service-price-list{gap:3px}.poster-service-price-box-dense .poster-service-price-row{font-size:10px;line-height:1.08}.poster-service-price-box-dense .poster-service-price-row strong{font-size:13px;line-height:1.08}
+    .poster-service-price-columns{display:block;min-height:0;flex:1;padding:13px 0 11px}.poster-service-price-box-columns .poster-service-price-columns{display:flex;align-items:center;gap:26px}.poster-service-price-list{width:100%;min-width:0;border-collapse:separate;border-spacing:0 6px;table-layout:fixed}.poster-service-price-box-columns .poster-service-price-list{width:calc(50% - 13px)}.poster-service-price-box-columns .poster-service-price-list+ .poster-service-price-list{border-left:1px solid rgba(213,166,72,.38)}
+    .poster-service-price-row{color:#f8f8f6;font-size:15px;line-height:1.2}.poster-service-price-row td{padding:0;vertical-align:middle}.poster-service-price-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.poster-service-price-amount{width:1%;padding-left:16px!important;color:#e2b348;font-size:18px;font-weight:900;text-align:right;white-space:nowrap}.poster-service-price-box-columns .poster-service-price-row{font-size:12px}.poster-service-price-box-columns .poster-service-price-label{padding-left:22px}.poster-service-price-box-columns .poster-service-price-list:first-child .poster-service-price-label{padding-left:0}.poster-service-price-box-columns .poster-service-price-amount{padding-left:9px!important;font-size:16px}.poster-service-price-box-dense .poster-service-price-list{border-spacing:0 3px}.poster-service-price-box-dense .poster-service-price-row{font-size:10px;line-height:1.08}.poster-service-price-box-dense .poster-service-price-amount{font-size:13px;line-height:1.08}
     .poster-service-tax-note{border-top:1px solid rgba(213,166,72,.42);padding:9px 4px 7px;color:#fff;font-size:12px;font-weight:900;letter-spacing:.06em}.poster-price-breakdown{display:grid;width:540px;max-width:100%;margin-left:auto;border-top:1px solid rgba(213,166,72,.62);text-transform:uppercase}.poster-price-summary-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:28px;min-height:38px;border-bottom:1px solid rgba(213,166,72,.32);padding:7px 4px 7px 20px}.poster-price-summary-row span{color:#f5f5f3;font-size:12px;font-weight:900;letter-spacing:.1em}.poster-price-summary-row strong{color:#e5b64c;font-family:Georgia,serif;font-size:22px;line-height:1;white-space:nowrap}.poster-price-discount strong{color:#f0d48e}.poster-price-total{min-height:51px;border-bottom:0;padding-top:10px;padding-bottom:10px}.poster-price-total span{font-size:14px}.poster-price-total strong{font-size:32px}
     .poster-quote-notes{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;margin:16px 48px;border-left:5px solid #c99532;background:#fff;padding:5px 0 5px 18px;color:#171717}.poster-quote-notes>strong{padding-top:2px;color:#9e6b1a;font-size:13px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}.poster-quote-notes>div{display:grid;gap:5px}.poster-quote-notes p{margin:0;font-size:13px;line-height:1.42}.poster-quote-notes b{color:#9e6b1a}
     .poster-template-lower{position:relative;height:293px;overflow:hidden;background:#fff}.quote-template-lower-bg{position:absolute;left:0;top:-1274px;z-index:0;display:block;width:1023px;height:1537px;object-fit:fill}
