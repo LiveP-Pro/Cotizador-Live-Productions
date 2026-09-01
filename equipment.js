@@ -6,6 +6,16 @@ const equipmentInventorySourceCategories = Array.isArray(equipmentInventoryCatal
   ? equipmentInventoryCatalog.categories
   : [];
 
+const equipmentWarehouseInventoryState = {
+  loaded: false,
+  fingerprint: "",
+  records: [],
+  recordsById: new Map(),
+  recordsByLookupKey: new Map(),
+  refreshPromise: null,
+  refreshTimer: null
+};
+
 const equipmentState = {
   selectedServiceId: "",
   selectedServiceIds: new Set(),
@@ -850,11 +860,11 @@ function equipmentRowsSummary() {
     return group;
   };
 
-  equipmentInventorySourceCategories.forEach((category) => {
+  equipmentInventorySummaryCategories().forEach((category) => {
     const group = ensureGroup(category?.title, true);
     (Array.isArray(category?.items) ? category.items : []).forEach((item) => {
       const description = String(item?.description || "").trim();
-      const matchKey = normalizeEquipmentKey(description);
+      const matchKey = equipmentInventoryCanonicalKey(description);
       if (!matchKey) return;
       const row = {
         type: "item",
@@ -867,8 +877,13 @@ function equipmentRowsSummary() {
         categoryTitle: group.title,
         inventorySourceItem: item
       };
-      if (!inventoryRowsByEquipmentKey.has(matchKey)) inventoryRowsByEquipmentKey.set(matchKey, []);
-      inventoryRowsByEquipmentKey.get(matchKey).push(row);
+      const lookupKeys = [description, item?.legacyDescription]
+        .map(equipmentInventoryCanonicalKey)
+        .filter(Boolean);
+      [...new Set(lookupKeys)].forEach((lookupKey) => {
+        if (!inventoryRowsByEquipmentKey.has(lookupKey)) inventoryRowsByEquipmentKey.set(lookupKey, []);
+        inventoryRowsByEquipmentKey.get(lookupKey).push(row);
+      });
       itemRows.push(row);
       group.rows.push(row);
     });
@@ -889,7 +904,7 @@ function equipmentRowsSummary() {
           inventoryRows.forEach((inventoryRow) => {
             if (remainingQuantity <= 0) return;
             const currentEventQuantity = Number(inventoryRow.eventQuantities.get(event.id)) || 0;
-            const sourceCapacity = Math.max(0, equipmentInventoryNumber(inventoryValueFor(inventoryRow)));
+            const sourceCapacity = Math.max(0, equipmentInventoryAvailableValueFor(inventoryRow));
             const availableCapacity = Math.max(0, sourceCapacity - currentEventQuantity);
             const allocatedQuantity = Math.min(remainingQuantity, availableCapacity);
             if (allocatedQuantity <= 0) return;
@@ -1693,6 +1708,8 @@ function addManualEquipmentExtra() {
 
 const equipmentDefaultInventory = new Map();
 const equipmentDefaultInventoryLookup = new Map();
+const equipmentInventoryStaticItemsByWarehouseId = new Map();
+const equipmentInventoryWarehouseIdByRowKey = new Map();
 function equipmentInventoryLookupKey(value) {
   return normalizeEquipmentKey(value)
     .replace(/[.,;:]+$/g, "")
@@ -1722,18 +1739,26 @@ function equipmentInventoryNeedsManualEntry(value) {
 }
 
 function equipmentInventoryRowKey(item) {
+  if (item?.warehouseInventoryId) {
+    return `inventario-bodega-${String(item.warehouseInventoryId).replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+  }
   const sourceRow = Number(item?.sourceRow) || "sin-fila";
   const descriptionKey = equipmentInventoryLookupKey(item?.description) || "equipo";
   return `inventario-${sourceRow}-${descriptionKey}`;
 }
 
 const equipmentInventoryItemsByLookupKey = new Map();
+let equipmentInventoryStaticItemIndex = 0;
 equipmentInventorySourceCategories.forEach((category) => {
   (Array.isArray(category?.items) ? category.items : []).forEach((item) => {
     const rowKey = equipmentInventoryRowKey(item);
+    equipmentInventoryStaticItemIndex += 1;
+    const warehouseId = `item-${String(equipmentInventoryStaticItemIndex).padStart(4, "0")}`;
     const lookupKey = equipmentInventoryLookupKey(item?.description);
     const sourceValue = equipmentInventorySourceValue(item);
     equipmentDefaultInventory.set(rowKey, sourceValue);
+    equipmentInventoryStaticItemsByWarehouseId.set(warehouseId, item);
+    equipmentInventoryWarehouseIdByRowKey.set(rowKey, warehouseId);
     if (!lookupKey) return;
     if (!equipmentInventoryItemsByLookupKey.has(lookupKey)) equipmentInventoryItemsByLookupKey.set(lookupKey, []);
     equipmentInventoryItemsByLookupKey.get(lookupKey).push(item);
@@ -1742,6 +1767,200 @@ equipmentInventorySourceCategories.forEach((category) => {
 equipmentInventoryItemsByLookupKey.forEach((items, lookupKey) => {
   if (items.length === 1) equipmentDefaultInventoryLookup.set(lookupKey, equipmentInventorySourceValue(items[0]));
 });
+
+function equipmentWarehouseNumber(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, number);
+}
+
+function equipmentWarehouseMovementDate(movement) {
+  return String(movement?.dateTime || movement?.date || movement?.createdAt || "").slice(0, 10);
+}
+
+function equipmentWarehouseDateLabel(value) {
+  const [year, month, day] = String(value || "").slice(0, 10).split("-");
+  if (!year || !month || !day) return "";
+  return `${day}/${month}`;
+}
+
+function equipmentWarehouseMovementStats(itemId, movements) {
+  const stats = { out: 0, workshop: 0, rented: 0, lost: 0, workshopLots: [] };
+  const entries = (Array.isArray(movements) ? movements : [])
+    .filter((movement) => String(movement?.itemId || "") === String(itemId || ""))
+    .slice()
+    .sort((first, second) => {
+      const firstKey = `${first?.dateTime || first?.date || ""}|${first?.createdAt || ""}`;
+      const secondKey = `${second?.dateTime || second?.date || ""}|${second?.createdAt || ""}`;
+      return firstKey.localeCompare(secondKey);
+    });
+
+  const removeWorkshopQuantity = (quantity) => {
+    let remaining = quantity;
+    for (const lot of stats.workshopLots) {
+      if (remaining <= 0) break;
+      const returned = Math.min(lot.quantity, remaining);
+      lot.quantity -= returned;
+      remaining -= returned;
+    }
+  };
+
+  entries.forEach((movement) => {
+    const quantity = equipmentWarehouseNumber(movement?.quantity);
+    if (!quantity) return;
+    if (movement.type === "salida") stats.out += quantity;
+    if (movement.type === "ingreso_evento") stats.out -= quantity;
+    if (movement.type === "taller") {
+      stats.workshop += quantity;
+      stats.workshopLots.push({ quantity, date: equipmentWarehouseMovementDate(movement) });
+    }
+    if (movement.type === "devolucion_taller") {
+      stats.workshop -= quantity;
+      removeWorkshopQuantity(quantity);
+    }
+    if (movement.type === "renta") stats.rented += quantity;
+    if (movement.type === "devolucion_renta") stats.rented -= quantity;
+    if (movement.type === "perdido") stats.lost += quantity;
+    if (movement.type === "recuperado") stats.lost -= quantity;
+  });
+
+  stats.out = Math.max(0, stats.out);
+  stats.workshop = Math.max(0, stats.workshop);
+  stats.rented = Math.max(0, stats.rented);
+  stats.lost = Math.max(0, stats.lost);
+  stats.workshopLots = stats.workshopLots.filter((lot) => lot.quantity > 0);
+  stats.reserved = stats.out + stats.workshop + stats.rented + stats.lost;
+  return stats;
+}
+
+function equipmentWarehouseAutomaticObservation(stats) {
+  const notes = [];
+  if (stats.workshop > 0) {
+    const dates = [...new Set(stats.workshopLots.map((lot) => equipmentWarehouseDateLabel(lot.date)).filter(Boolean))];
+    const dateText = dates.length ? ` desde ${dates.join(", ")}` : "";
+    notes.push(`${stats.workshop} ${stats.workshop === 1 ? "unidad está" : "unidades están"} en taller${dateText}`);
+  }
+  if (stats.out > 0) notes.push(`${stats.out} ${stats.out === 1 ? "unidad está" : "unidades están"} fuera por evento`);
+  if (stats.rented > 0) notes.push(`${stats.rented} ${stats.rented === 1 ? "unidad está" : "unidades están"} en renta`);
+  if (stats.lost > 0) notes.push(`${stats.lost} ${stats.lost === 1 ? "unidad está reportada" : "unidades están reportadas"} como pérdida`);
+  return notes.join(" · ");
+}
+
+function equipmentWarehousePayloadFingerprint(payload) {
+  const state = payload?.state || payload || {};
+  return String(payload?.savedAt || state?.updatedAt || JSON.stringify({
+    items: state?.items,
+    movements: state?.movements
+  }));
+}
+
+function applyEquipmentWarehouseInventoryPayload(payload) {
+  const state = payload?.state || payload;
+  if (!state || !Array.isArray(state.items)) return false;
+  const fingerprint = equipmentWarehousePayloadFingerprint(payload);
+  if (equipmentWarehouseInventoryState.loaded && fingerprint === equipmentWarehouseInventoryState.fingerprint) {
+    return false;
+  }
+
+  const movements = Array.isArray(state.movements) ? state.movements : [];
+  const records = state.items
+    .filter((item) => item && !item.archived)
+    .map((item) => {
+      const stats = equipmentWarehouseMovementStats(item.id, movements);
+      const physical = equipmentWarehouseNumber(item.quantity);
+      const staticItem = equipmentInventoryStaticItemsByWarehouseId.get(String(item.id || "")) || null;
+      return {
+        id: String(item.id || ""),
+        item,
+        physical,
+        available: Math.max(0, physical - stats.reserved),
+        stats,
+        staticItem,
+        automaticObservation: equipmentWarehouseAutomaticObservation(stats)
+      };
+    });
+
+  const recordsById = new Map();
+  const recordsByLookupKey = new Map();
+  records.forEach((record) => {
+    if (record.id) recordsById.set(record.id, record);
+    [record.item?.name, record.staticItem?.description]
+      .map(equipmentInventoryCanonicalKey)
+      .filter(Boolean)
+      .forEach((lookupKey) => {
+        if (!recordsByLookupKey.has(lookupKey)) recordsByLookupKey.set(lookupKey, []);
+        const matches = recordsByLookupKey.get(lookupKey);
+        if (!matches.includes(record)) matches.push(record);
+      });
+  });
+
+  equipmentWarehouseInventoryState.loaded = true;
+  equipmentWarehouseInventoryState.fingerprint = fingerprint;
+  equipmentWarehouseInventoryState.records = records;
+  equipmentWarehouseInventoryState.recordsById = recordsById;
+  equipmentWarehouseInventoryState.recordsByLookupKey = recordsByLookupKey;
+  return true;
+}
+
+function equipmentInventorySummaryCategories() {
+  if (!equipmentWarehouseInventoryState.loaded) return equipmentInventorySourceCategories;
+  const categories = [];
+  const categoriesByKey = new Map();
+  equipmentWarehouseInventoryState.records.forEach((record) => {
+    const title = String(record.item?.category || "Equipo sin categoria").trim() || "Equipo sin categoria";
+    const categoryKey = normalizeEquipmentKey(title);
+    let category = categoriesByKey.get(categoryKey);
+    if (!category) {
+      category = { title, items: [] };
+      categoriesByKey.set(categoryKey, category);
+      categories.push(category);
+    }
+    category.items.push({
+      description: String(record.item?.name || "Equipo sin nombre"),
+      legacyDescription: record.staticItem?.description || "",
+      value: record.physical,
+      sourceQuantity: String(record.physical),
+      warehouseInventoryId: record.id,
+      warehouseRecord: record
+    });
+  });
+  return categories;
+}
+
+function equipmentWarehouseInventoryRecordFor(row) {
+  const directId = row?.inventorySourceItem?.warehouseInventoryId
+    || equipmentInventoryWarehouseIdByRowKey.get(row?.key);
+  if (directId && equipmentWarehouseInventoryState.recordsById.has(String(directId))) {
+    return equipmentWarehouseInventoryState.recordsById.get(String(directId));
+  }
+  const lookupKeys = [
+    row?.inventorySourceItem?.description,
+    row?.inventorySourceItem?.legacyDescription,
+    row?.description,
+    row?.key
+  ].map(equipmentInventoryCanonicalKey).filter(Boolean);
+  for (const lookupKey of lookupKeys) {
+    const matches = equipmentWarehouseInventoryState.recordsByLookupKey.get(lookupKey) || [];
+    if (matches.length === 1) return matches[0];
+  }
+  return null;
+}
+
+function equipmentInventoryAvailableValueFor(row) {
+  const record = equipmentWarehouseInventoryRecordFor(row);
+  if (record) return record.available;
+  return equipmentInventoryNumber(inventoryValueFor(row));
+}
+
+function equipmentInventoryAutomaticObservationFor(row) {
+  return equipmentWarehouseInventoryRecordFor(row)?.automaticObservation || "";
+}
+
+function equipmentInventoryCombinedObservationFor(row) {
+  const automatic = equipmentInventoryAutomaticObservationFor(row);
+  const manual = String(equipmentState.observations.get(row?.key) || "").trim();
+  return [automatic, manual].filter(Boolean).join(" · ");
+}
 
 function defaultInventoryValueFor(row) {
   if (equipmentDefaultInventory.has(row?.key)) return equipmentDefaultInventory.get(row.key);
@@ -1764,6 +1983,9 @@ function defaultInventoryValueFor(row) {
 }
 
 function inventoryValueFor(row) {
+  const warehouseRecord = equipmentWarehouseInventoryRecordFor(row);
+  if (warehouseRecord) return warehouseRecord.physical;
+  if (equipmentWarehouseInventoryState.loaded) return 0;
   if (equipmentState.inventory.has(row.key)) return equipmentState.inventory.get(row.key);
   return defaultInventoryValueFor(row);
 }
@@ -1885,12 +2107,13 @@ function tableForEquipmentInventory(rows, editable = true) {
           </tr>`;
       }
       const inventory = inventoryValueFor(row);
-      const inventoryNumber = equipmentInventoryNumber(inventory);
+      const availableInventory = equipmentInventoryAvailableValueFor(row);
       const required = Number(row.quantity) || 0;
-      const shortage = inventoryNumber - required;
-      const needsRent = shortage < 0;
+      const availableAfterRequirement = availableInventory - required;
+      const needsRent = availableAfterRequirement < 0;
       const zeroInventory = equipmentInventoryNeedsManualEntry(inventory);
       const shortageClass = needsRent ? "equipment-shortage-cell" : "equipment-rest-ok";
+      const warehouseRecord = equipmentWarehouseInventoryRecordFor(row);
       const transferApplied = Boolean(row.transferApplied);
       const multipleTransfers = (Number(row.transferRouteCount) || 0) > 1;
       const transferLabel = multipleTransfers ? "TRASIEGO MÚLTIPLE" : "TRASIEGO";
@@ -1901,6 +2124,8 @@ function tableForEquipmentInventory(rows, editable = true) {
           : "";
       const actionClass = needsRent ? "equipment-action-rent" : transferApplied ? "equipment-action-transfer" : "equipment-action-empty";
       const observation = equipmentState.observations.get(row.key) || "";
+      const automaticObservation = equipmentInventoryAutomaticObservationFor(row);
+      const combinedObservation = equipmentInventoryCombinedObservationFor(row);
       const eventCells = events
         .map((event) => `<td class="equipment-qty equipment-event-column">${escapeEquipmentHtml(row.eventQuantities.get(event.id) || 0)}</td>`)
         .join("");
@@ -1915,17 +2140,17 @@ function tableForEquipmentInventory(rows, editable = true) {
           <td>
             ${
               editable
-                ? `<input class="equipment-inventory-input" type="text" inputmode="decimal" value="${escapeEquipmentHtml(inventory)}" aria-label="Inventario físico de ${escapeEquipmentHtml(row.description)}" />`
+                ? `<input class="equipment-inventory-input" type="text" inputmode="decimal" value="${escapeEquipmentHtml(inventory)}" aria-label="Inventario físico de ${escapeEquipmentHtml(row.description)}" ${warehouseRecord ? 'readonly aria-readonly="true" title="Sincronizado con Contabilidad de Inventario"' : ""} />`
                 : escapeEquipmentHtml(inventory)
             }
           </td>
-          <td class="equipment-qty ${shortageClass}">${escapeEquipmentHtml(shortage)}</td>
+          <td class="equipment-qty ${shortageClass}">${escapeEquipmentHtml(availableAfterRequirement)}</td>
           <td class="${actionClass}">${escapeEquipmentHtml(actionLabel)}</td>
           <td>
             ${
               editable
-                ? `<input class="equipment-observation-input" type="text" value="${escapeEquipmentHtml(observation)}" placeholder="Observaciones" />`
-                : escapeEquipmentHtml(observation)
+                ? `${automaticObservation ? `<small class="equipment-inventory-auto-observation">${escapeEquipmentHtml(automaticObservation)}</small>` : ""}<input class="equipment-observation-input" type="text" value="${escapeEquipmentHtml(observation)}" placeholder="Observaciones" />`
+                : escapeEquipmentHtml(combinedObservation)
             }
           </td>
         </tr>`;
@@ -1940,7 +2165,7 @@ function tableForEquipmentInventory(rows, editable = true) {
           ${eventDateHeaders}
           <th class="equipment-total-column" rowspan="3">EQUIPO REQUERIDO</th>
           <th class="equipment-inventory-column" rowspan="3">INVENTARIO FISICO BODEGA PP</th>
-          <th class="equipment-shortage-column" rowspan="3">FALTANTE DE EQUIPO PARA RENTA</th>
+          <th class="equipment-shortage-column" rowspan="3">INVENTARIO DISPONIBLE</th>
           <th class="equipment-action-column" rowspan="3">ACCION</th>
           <th class="equipment-observation-column" rowspan="3">OBSERVACIONES</th>
         </tr>
@@ -1998,9 +2223,9 @@ function consolidateEquipmentRentalRows(summaryRows, events) {
 
     const inventorySourceKey = row.inventorySourceItem ? row.key : `equipo-${identity}`;
     if (!group.inventoryEntries.has(inventorySourceKey)) {
-      group.inventoryEntries.set(inventorySourceKey, inventoryValueFor(row));
+      group.inventoryEntries.set(inventorySourceKey, equipmentInventoryAvailableValueFor(row));
     }
-    const observation = String(equipmentState.observations.get(row.key) || "").trim();
+    const observation = equipmentInventoryCombinedObservationFor(row);
     if (observation && !group.observations.includes(observation)) group.observations.push(observation);
   });
 
@@ -2069,7 +2294,7 @@ function tableForEquipmentRentalReport(rows) {
           <th>Equipo</th>
           <th>Eventos</th>
           <th>Total requerido</th>
-          <th>Inventario</th>
+          <th>Inventario disponible</th>
           <th>Equipo para renta</th>
           <th>Observaciones</th>
         </tr>
@@ -2098,6 +2323,66 @@ function bindEquipmentInventoryInputs() {
         renderEquipmentPdfPreview();
       });
     });
+}
+
+function waitForEquipmentAuthenticatedApp() {
+  const siteApp = equipmentQuery("#siteApp");
+  if (!siteApp || !siteApp.classList.contains("is-hidden")) return Promise.resolve();
+  return new Promise((resolve) => {
+    const observer = new MutationObserver(() => {
+      if (siteApp.classList.contains("is-hidden")) return;
+      observer.disconnect();
+      resolve();
+    });
+    observer.observe(siteApp, { attributes: true, attributeFilter: ["class"] });
+  });
+}
+
+async function refreshEquipmentWarehouseInventory() {
+  if (equipmentWarehouseInventoryState.refreshPromise) return equipmentWarehouseInventoryState.refreshPromise;
+  if (!/^https?:$/.test(window.location.protocol)) return false;
+  equipmentWarehouseInventoryState.refreshPromise = fetch("/api/inventario-bodega", {
+    credentials: "same-origin",
+    cache: "no-store"
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error("Inventario de Contabilidad no disponible");
+      return response.json();
+    })
+    .then((payload) => {
+      const changed = applyEquipmentWarehouseInventoryPayload(payload);
+      if (changed) renderEquipmentModule();
+      return changed;
+    })
+    .catch(() => false)
+    .finally(() => {
+      equipmentWarehouseInventoryState.refreshPromise = null;
+    });
+  return equipmentWarehouseInventoryState.refreshPromise;
+}
+
+async function initEquipmentWarehouseInventorySync() {
+  await waitForEquipmentAuthenticatedApp();
+  await refreshEquipmentWarehouseInventory();
+  const requirementPage = equipmentQuery("#requerimientoEquipoPage");
+  if (requirementPage && typeof MutationObserver === "function") {
+    const observer = new MutationObserver(() => {
+      if (!requirementPage.classList.contains("is-active")) return;
+      refreshEquipmentWarehouseInventory();
+      window.setTimeout(refreshEquipmentWarehouseInventory, 900);
+    });
+    observer.observe(requirementPage, { attributes: true, attributeFilter: ["class"] });
+  }
+  window.addEventListener("focus", () => {
+    if (!requirementPage || requirementPage.classList.contains("is-active")) {
+      refreshEquipmentWarehouseInventory();
+    }
+  });
+  equipmentWarehouseInventoryState.refreshTimer = window.setInterval(() => {
+    if (!requirementPage || requirementPage.classList.contains("is-active")) {
+      refreshEquipmentWarehouseInventory();
+    }
+  }, 5000);
 }
 
 function renderEquipmentWindowState() {
@@ -2888,6 +3173,7 @@ function initEquipmentModule() {
   } else {
     window.setTimeout(renderEquipmentModule, 0);
   }
+  initEquipmentWarehouseInventorySync();
 }
 
 document.addEventListener("DOMContentLoaded", initEquipmentModule);
