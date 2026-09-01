@@ -222,7 +222,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "93";
+const APP_VERSION = "94";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -2908,11 +2908,21 @@ function paymentEntryFields(index, amount = "", reference = "") {
         <input name="paymentReference" value="${escapeHtml(reference)}" placeholder="No. boleta, banco o transferencia" />
       </label>
       <label class="full">Archivo
-        <input type="file" name="paymentFile" accept="application/pdf,image/png,image/jpeg,image/webp" required />
+        <span class="payment-file-control">
+          <input class="payment-file-input" type="file" name="paymentFile" accept="application/pdf,image/png,image/jpeg,image/webp" data-payment-file-input required />
+          <button type="button" class="payment-file-clear" data-clear-payment-file title="Quitar archivo seleccionado" aria-label="Quitar archivo seleccionado" hidden>X</button>
+        </span>
       </label>
       ${index > 0 ? '<button type="button" class="button button-secondary button-small payment-entry-remove" data-remove-payment-entry>Quitar boleta</button>' : ""}
     </div>
   `;
+}
+
+function syncPaymentFileControl(row) {
+  const input = $("[data-payment-file-input]", row);
+  const clearButton = $("[data-clear-payment-file]", row);
+  if (!input || !clearButton) return;
+  clearButton.hidden = !input.files?.length;
 }
 
 async function paymentEntriesFromForm(form) {
@@ -2966,6 +2976,7 @@ function openAcceptQuoteModal(id) {
   `);
   const form = $("#accept-quote-form");
   $("[data-close-form]").addEventListener("click", closeModal);
+  $$("[data-payment-entry]", form).forEach(syncPaymentFileControl);
   $("[data-add-payment-entry]", form).addEventListener("click", () => {
     const list = $("[data-payment-entry-list]", form);
     const count = $$("[data-payment-entry]", form).length;
@@ -2974,8 +2985,22 @@ function openAcceptQuoteModal(id) {
       return;
     }
     list.insertAdjacentHTML("beforeend", paymentEntryFields(count));
+    syncPaymentFileControl($$("[data-payment-entry]", form).at(-1));
+  });
+  form.addEventListener("change", (event) => {
+    const input = event.target.closest("[data-payment-file-input]");
+    if (!input) return;
+    syncPaymentFileControl(input.closest("[data-payment-entry]"));
   });
   form.addEventListener("click", (event) => {
+    const clearFileButton = event.target.closest("[data-clear-payment-file]");
+    if (clearFileButton) {
+      const row = clearFileButton.closest("[data-payment-entry]");
+      const input = $("[data-payment-file-input]", row);
+      if (input) input.value = "";
+      syncPaymentFileControl(row);
+      return;
+    }
     const removeButton = event.target.closest("[data-remove-payment-entry]");
     if (!removeButton) return;
     removeButton.closest("[data-payment-entry]")?.remove();

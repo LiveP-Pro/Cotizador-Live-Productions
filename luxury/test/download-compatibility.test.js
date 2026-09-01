@@ -59,9 +59,12 @@ test("la descarga de cotizaciones conserva compatibilidad entre navegadores", ()
   assert.doesNotMatch(appSource, /printablePageHeight/);
   assert.match(indexSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
   assert.match(serviceWorkerSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
-  assert.match(appSource, /APP_VERSION = "93"/);
-  assert.match(indexSource, /app\.js\?v=93/);
-  assert.match(serviceWorkerSource, /VERSION = "93"/);
+  assert.match(appSource, /APP_VERSION = "94"/);
+  assert.match(indexSource, /app\.js\?v=94/);
+  assert.match(serviceWorkerSource, /VERSION = "94"/);
+  assert.match(appSource, /data-clear-payment-file/);
+  assert.match(appSource, /function syncPaymentFileControl/);
+  assert.match(appSource, /input\.value = ""/);
 });
 
 test("el generador de itinerarios ofrece únicamente la versión para cliente", () => {

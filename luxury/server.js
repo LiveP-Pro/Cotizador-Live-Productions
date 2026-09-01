@@ -121,6 +121,14 @@ function guatemalaMonthValue(date = new Date()) {
   return `${parts.year}-${parts.month}`;
 }
 
+function guatemalaMonthFromValue(value) {
+  const raw = cleanString(value, 40);
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}(?:-\d{2})?$/.test(raw)) return raw.slice(0, 7);
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? raw.slice(0, 7) : guatemalaMonthValue(date);
+}
+
 const SERVICE_STATUSES = new Set(["aceptada", "confirmada", "completada"]);
 const SPRINTER_311_UNIT_CONFIGURATIONS = {
   1: [
@@ -1126,7 +1134,7 @@ export async function createApp(options = {}) {
       const quotes = db.list("quotes");
       const currentMonth = guatemalaMonthValue();
       const monthQuotes = quotes.filter(
-        (item) => String(item.acceptedAt || "").startsWith(currentMonth) && isServiceQuote(item),
+        (item) => guatemalaMonthFromValue(item.acceptedAt) === currentMonth && isServiceQuote(item),
       );
       const today = guatemalaDateValue();
       json(res, 200, {
