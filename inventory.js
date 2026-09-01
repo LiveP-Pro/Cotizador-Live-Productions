@@ -441,9 +441,7 @@
   }
 
   function categories() {
-    return [...new Set([...(state.subtitles || []), ...activeItems().map((item) => categoryLabel(item.category))])].sort((a, b) =>
-      a.localeCompare(b, "es")
-    );
+    return [...new Set([...(state.subtitles || []), ...activeItems().map((item) => categoryLabel(item.category))])];
   }
 
   function renderCategoryFilter() {
@@ -481,8 +479,7 @@
       .filter((item) => {
         if (!term) return true;
         return `${item.name} ${item.category} ${item.notes}`.toLowerCase().includes(term);
-      })
-      .sort((a, b) => `${a.category} ${a.name}`.localeCompare(`${b.category} ${b.name}`, "es"));
+      });
   }
 
   function latestMovementFor(itemId, types) {
