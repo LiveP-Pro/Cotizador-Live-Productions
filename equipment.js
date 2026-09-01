@@ -9,6 +9,7 @@ const equipmentInventorySourceCategories = Array.isArray(equipmentInventoryCatal
 const equipmentWarehouseInventoryState = {
   loaded: false,
   fingerprint: "",
+  freshness: 0,
   records: [],
   recordsById: new Map(),
   recordsByLookupKey: new Map(),
@@ -1774,18 +1775,12 @@ function equipmentWarehouseNumber(value) {
   return Math.max(0, number);
 }
 
-function equipmentWarehouseMovementDate(movement) {
-  return String(movement?.dateTime || movement?.date || movement?.createdAt || "").slice(0, 10);
-}
-
-function equipmentWarehouseDateLabel(value) {
-  const [year, month, day] = String(value || "").slice(0, 10).split("-");
-  if (!year || !month || !day) return "";
-  return `${day}/${month}`;
+function equipmentWarehouseMovementDateTime(movement) {
+  return String(movement?.dateTime || movement?.date || movement?.createdAt || "");
 }
 
 function equipmentWarehouseMovementStats(itemId, movements) {
-  const stats = { out: 0, workshop: 0, rented: 0, lost: 0, workshopLots: [] };
+  const stats = { out: 0, workshop: 0, rented: 0, lost: 0, workshopLots: [], rentalLots: [] };
   const entries = (Array.isArray(movements) ? movements : [])
     .filter((movement) => String(movement?.itemId || "") === String(itemId || ""))
     .slice()
@@ -1795,9 +1790,11 @@ function equipmentWarehouseMovementStats(itemId, movements) {
       return firstKey.localeCompare(secondKey);
     });
 
-  const removeWorkshopQuantity = (quantity) => {
+  const removeLotQuantity = (lots, quantity, relatedMovementId = "") => {
     let remaining = quantity;
-    for (const lot of stats.workshopLots) {
+    const target = lots.find((lot) => lot.movementId === relatedMovementId);
+    const candidates = [...(target ? [target] : []), ...lots.filter((lot) => lot !== target)];
+    for (const lot of candidates) {
       if (remaining <= 0) break;
       const returned = Math.min(lot.quantity, remaining);
       lot.quantity -= returned;
@@ -1812,14 +1809,31 @@ function equipmentWarehouseMovementStats(itemId, movements) {
     if (movement.type === "ingreso_evento") stats.out -= quantity;
     if (movement.type === "taller") {
       stats.workshop += quantity;
-      stats.workshopLots.push({ quantity, date: equipmentWarehouseMovementDate(movement) });
+      stats.workshopLots.push({
+        movementId: movement.id,
+        quantity,
+        dateTime: equipmentWarehouseMovementDateTime(movement),
+        repair: movement.repair,
+        sparePart: movement.sparePart
+      });
     }
     if (movement.type === "devolucion_taller") {
       stats.workshop -= quantity;
-      removeWorkshopQuantity(quantity);
+      removeLotQuantity(stats.workshopLots, quantity, movement.relatedMovementId);
     }
-    if (movement.type === "renta") stats.rented += quantity;
-    if (movement.type === "devolucion_renta") stats.rented -= quantity;
+    if (movement.type === "renta") {
+      stats.rented += quantity;
+      stats.rentalLots.push({
+        movementId: movement.id,
+        quantity,
+        dateTime: equipmentWarehouseMovementDateTime(movement),
+        reference: movement.reference
+      });
+    }
+    if (movement.type === "devolucion_renta") {
+      stats.rented -= quantity;
+      removeLotQuantity(stats.rentalLots, quantity, movement.relatedMovementId);
+    }
     if (movement.type === "perdido") stats.lost += quantity;
     if (movement.type === "recuperado") stats.lost -= quantity;
   });
@@ -1829,6 +1843,7 @@ function equipmentWarehouseMovementStats(itemId, movements) {
   stats.rented = Math.max(0, stats.rented);
   stats.lost = Math.max(0, stats.lost);
   stats.workshopLots = stats.workshopLots.filter((lot) => lot.quantity > 0);
+  stats.rentalLots = stats.rentalLots.filter((lot) => lot.quantity > 0);
   stats.reserved = stats.out + stats.workshop + stats.rented + stats.lost;
   return stats;
 }
@@ -1836,27 +1851,59 @@ function equipmentWarehouseMovementStats(itemId, movements) {
 function equipmentWarehouseAutomaticObservation(stats) {
   const notes = [];
   if (stats.workshop > 0) {
-    const dates = [...new Set(stats.workshopLots.map((lot) => equipmentWarehouseDateLabel(lot.date)).filter(Boolean))];
-    const dateText = dates.length ? ` desde ${dates.join(", ")}` : "";
-    notes.push(`${stats.workshop} ${stats.workshop === 1 ? "unidad está" : "unidades están"} en taller${dateText}`);
+    const dates = [...new Set(stats.workshopLots.map((lot) => formatEquipmentDateTime(lot.dateTime, "")).filter(Boolean))];
+    const repairs = [...new Set(stats.workshopLots.map((lot) => String(lot.repair || "").trim()).filter(Boolean))];
+    const spareParts = [...new Set(stats.workshopLots.map((lot) => String(lot.sparePart || "").trim()).filter(Boolean))];
+    const detail = [
+      dates.length ? `Salió de bodega: ${dates.join(", ")}` : "",
+      repairs.length ? `Falla: ${repairs.join(" / ")}` : "",
+      spareParts.length ? `Repuesto: ${spareParts.join(" / ")}` : ""
+    ].filter(Boolean).join(". ");
+    notes.push(`En taller: ${stats.workshop}${detail ? `. ${detail}` : ""}`);
   }
   if (stats.out > 0) notes.push(`${stats.out} ${stats.out === 1 ? "unidad está" : "unidades están"} fuera por evento`);
-  if (stats.rented > 0) notes.push(`${stats.rented} ${stats.rented === 1 ? "unidad está" : "unidades están"} en renta`);
+  if (stats.rented > 0) {
+    const dates = [...new Set(stats.rentalLots.map((lot) => formatEquipmentDateTime(lot.dateTime, "")).filter(Boolean))];
+    const clients = [...new Set(stats.rentalLots.map((lot) => String(lot.reference || "").trim()).filter(Boolean))];
+    const detail = [
+      dates.length ? `Salió de bodega: ${dates.join(", ")}` : "",
+      clients.length ? `Cliente: ${clients.join(" / ")}` : ""
+    ].filter(Boolean).join(". ");
+    notes.push(`En renta: ${stats.rented}${detail ? `. ${detail}` : ""}`);
+  }
   if (stats.lost > 0) notes.push(`${stats.lost} ${stats.lost === 1 ? "unidad está reportada" : "unidades están reportadas"} como pérdida`);
   return notes.join(" · ");
 }
 
 function equipmentWarehousePayloadFingerprint(payload) {
   const state = payload?.state || payload || {};
-  return String(payload?.savedAt || state?.updatedAt || JSON.stringify({
-    items: state?.items,
-    movements: state?.movements
-  }));
+  const movements = Array.isArray(state?.movements) ? state.movements : [];
+  return JSON.stringify({
+    savedAt: payload?.savedAt || "",
+    updatedAt: state?.updatedAt || "",
+    items: (Array.isArray(state?.items) ? state.items : []).map((item) => [
+      item?.id,
+      item?.name,
+      item?.category,
+      item?.quantity,
+      item?.updatedAt
+    ]),
+    movementCount: movements.length,
+    lastMovementId: movements.at(-1)?.id || ""
+  });
 }
 
 function applyEquipmentWarehouseInventoryPayload(payload) {
   const state = payload?.state || payload;
   if (!state || !Array.isArray(state.items)) return false;
+  const freshness = Date.parse(payload?.savedAt || state?.updatedAt || "") || 0;
+  if (
+    equipmentWarehouseInventoryState.loaded &&
+    freshness > 0 &&
+    equipmentWarehouseInventoryState.freshness > freshness
+  ) {
+    return false;
+  }
   const fingerprint = equipmentWarehousePayloadFingerprint(payload);
   if (equipmentWarehouseInventoryState.loaded && fingerprint === equipmentWarehouseInventoryState.fingerprint) {
     return false;
@@ -1896,6 +1943,7 @@ function applyEquipmentWarehouseInventoryPayload(payload) {
 
   equipmentWarehouseInventoryState.loaded = true;
   equipmentWarehouseInventoryState.fingerprint = fingerprint;
+  equipmentWarehouseInventoryState.freshness = Math.max(equipmentWarehouseInventoryState.freshness, freshness);
   equipmentWarehouseInventoryState.records = records;
   equipmentWarehouseInventoryState.recordsById = recordsById;
   equipmentWarehouseInventoryState.recordsByLookupKey = recordsByLookupKey;
@@ -1984,9 +2032,9 @@ function defaultInventoryValueFor(row) {
 
 function inventoryValueFor(row) {
   const warehouseRecord = equipmentWarehouseInventoryRecordFor(row);
-  if (warehouseRecord) return warehouseRecord.physical;
-  if (equipmentWarehouseInventoryState.loaded) return 0;
+  if (warehouseRecord) return warehouseRecord.available;
   if (equipmentState.inventory.has(row.key)) return equipmentState.inventory.get(row.key);
+  if (equipmentWarehouseInventoryState.loaded) return 0;
   return defaultInventoryValueFor(row);
 }
 
@@ -2111,9 +2159,9 @@ function tableForEquipmentInventory(rows, editable = true) {
       const required = Number(row.quantity) || 0;
       const availableAfterRequirement = availableInventory - required;
       const needsRent = availableAfterRequirement < 0;
-      const zeroInventory = equipmentInventoryNeedsManualEntry(inventory);
-      const shortageClass = needsRent ? "equipment-shortage-cell" : "equipment-rest-ok";
       const warehouseRecord = equipmentWarehouseInventoryRecordFor(row);
+      const zeroInventory = !warehouseRecord && equipmentInventoryNeedsManualEntry(inventory);
+      const shortageClass = needsRent ? "equipment-shortage-cell" : "equipment-rest-ok";
       const transferApplied = Boolean(row.transferApplied);
       const multipleTransfers = (Number(row.transferRouteCount) || 0) > 1;
       const transferLabel = multipleTransfers ? "TRASIEGO MÚLTIPLE" : "TRASIEGO";
@@ -2140,7 +2188,7 @@ function tableForEquipmentInventory(rows, editable = true) {
           <td>
             ${
               editable
-                ? `<input class="equipment-inventory-input" type="text" inputmode="decimal" value="${escapeEquipmentHtml(inventory)}" aria-label="Inventario físico de ${escapeEquipmentHtml(row.description)}" ${warehouseRecord ? 'readonly aria-readonly="true" title="Sincronizado con Contabilidad de Inventario"' : ""} />`
+                ? `<input class="equipment-inventory-input${warehouseRecord ? " is-warehouse-synced" : ""}" type="text" inputmode="decimal" value="${escapeEquipmentHtml(inventory)}" aria-label="Inventario físico de ${escapeEquipmentHtml(row.description)}" ${warehouseRecord ? 'readonly aria-readonly="true" title="Sincronizado con Contabilidad de equipo"' : ""} />`
                 : escapeEquipmentHtml(inventory)
             }
           </td>
@@ -2165,7 +2213,7 @@ function tableForEquipmentInventory(rows, editable = true) {
           ${eventDateHeaders}
           <th class="equipment-total-column" rowspan="3">EQUIPO REQUERIDO</th>
           <th class="equipment-inventory-column" rowspan="3">INVENTARIO FISICO BODEGA PP</th>
-          <th class="equipment-shortage-column" rowspan="3">INVENTARIO DISPONIBLE</th>
+          <th class="equipment-shortage-column" rowspan="3">DISPONIBLE DESPUÉS DEL REQUERIMIENTO</th>
           <th class="equipment-action-column" rowspan="3">ACCION</th>
           <th class="equipment-observation-column" rowspan="3">OBSERVACIONES</th>
         </tr>
@@ -2309,15 +2357,17 @@ function bindEquipmentInventoryInputs() {
     .forEach((row) => {
       const key = row.dataset.equipmentKey;
       const inventoryInput = row.querySelector(".equipment-inventory-input");
-      inventoryInput?.addEventListener("input", (event) => {
-        equipmentState.inventory.set(key, event.target.value);
-        row.classList.toggle("equipment-inventory-zero-row", equipmentInventoryNeedsManualEntry(event.target.value));
-        renderEquipmentPdfPreview();
-      });
-      inventoryInput?.addEventListener("change", (event) => {
-        equipmentState.inventory.set(key, event.target.value);
-        renderEquipmentModule();
-      });
+      if (inventoryInput && !inventoryInput.readOnly) {
+        inventoryInput.addEventListener("input", (event) => {
+          equipmentState.inventory.set(key, event.target.value);
+          row.classList.toggle("equipment-inventory-zero-row", equipmentInventoryNeedsManualEntry(event.target.value));
+          renderEquipmentPdfPreview();
+        });
+        inventoryInput.addEventListener("change", (event) => {
+          equipmentState.inventory.set(key, event.target.value);
+          renderEquipmentModule();
+        });
+      }
       row.querySelector(".equipment-observation-input")?.addEventListener("change", (event) => {
         equipmentState.observations.set(key, event.target.value);
         renderEquipmentPdfPreview();
@@ -3176,4 +3226,10 @@ function initEquipmentModule() {
   initEquipmentWarehouseInventorySync();
 }
 
+document.addEventListener("live:warehouse-inventory-updated", (event) => {
+  if (applyEquipmentWarehouseInventoryPayload(event.detail)) renderEquipmentModule();
+});
+if (window.LIVE_WAREHOUSE_AVAILABILITY) {
+  applyEquipmentWarehouseInventoryPayload(window.LIVE_WAREHOUSE_AVAILABILITY);
+}
 document.addEventListener("DOMContentLoaded", initEquipmentModule);

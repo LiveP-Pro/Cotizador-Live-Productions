@@ -1693,6 +1693,14 @@ body {
   font: inherit;
 }
 
+.equipment-inventory-input.is-warehouse-synced,
+.equipment-observation-input.is-warehouse-synced {
+  color: #174c31;
+  background: #eef7f1;
+  border-color: #afd0bb;
+  cursor: default;
+}
+
 .equipment-inventory-table th {
   min-width: 120px;
   white-space: normal;

@@ -3,7 +3,7 @@
   const PREVIOUS_STORAGE_KEY = "liveWarehouseInventoryStateV2";
   const LEGACY_STORAGE_KEY = "liveWarehouseInventoryStateV1";
   const API_PATH = "/api/inventario-bodega";
-  const MODULE_PATH = "/warehouse-module.html?v=20260901-01";
+  const MODULE_PATH = "/warehouse-module.html?v=20260901-02";
   const movementLabels = {
     salida: "Salida de bodega",
     ingreso_evento: "Ingreso de evento",
@@ -35,7 +35,17 @@
 
   function displayDateTime(movement) {
     const value = movement?.dateTime || movement?.date || "";
-    return value.replace("T", " ");
+    return formatWarehouseDateTime(value);
+  }
+
+  function formatWarehouseDateTime(value) {
+    const clean = normalizeText(value).replace(" ", "T");
+    if (!clean) return "Sin fecha";
+    const [datePart, timePart = ""] = clean.split("T");
+    const [year, month, day] = datePart.split("-");
+    const dateLabel = year && month && day ? `${day}/${month}/${year}` : datePart;
+    const timeLabel = timePart ? ` ${timePart.slice(0, 5)}` : "";
+    return `${dateLabel}${timeLabel}`;
   }
 
   function uid(prefix) {
@@ -51,6 +61,37 @@
 
   function normalizeText(value) {
     return String(value || "").trim();
+  }
+
+  function warehouseCanonicalKey(value) {
+    return normalizeText(value)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[“”"']/g, "")
+      .replace(/\bno\.\s*/g, "no ")
+      .replace(/[.,;:]+$/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  const warehouseCatalogItems = (Array.isArray(window.requerimientoEquipoInventory?.categories)
+    ? window.requerimientoEquipoInventory.categories
+    : [])
+    .flatMap((category) => (Array.isArray(category?.items) ? category.items : []));
+  const warehouseCatalogKeys = new Set(
+    warehouseCatalogItems.map((item) => warehouseCanonicalKey(item?.description)).filter(Boolean)
+  );
+
+  function inventorySourceKey(item, index) {
+    const savedKey = warehouseCanonicalKey(item?.sourceKey);
+    if (savedKey) return savedKey;
+    const nameKey = warehouseCanonicalKey(item?.name);
+    if (warehouseCatalogKeys.has(nameKey)) return nameKey;
+    const idMatch = /^item-(\d+)$/.exec(normalizeText(item?.id));
+    const sourceIndex = idMatch ? Number(idMatch[1]) - 1 : index;
+    const sourceItem = warehouseCatalogItems[sourceIndex];
+    return warehouseCanonicalKey(sourceItem?.description) || nameKey;
   }
 
   function escapeHtml(value) {
@@ -132,6 +173,7 @@
       id: normalizeText(item?.id) || `item-${String(index + 1).padStart(4, "0")}`,
       category: categoryLabel(item?.category),
       name: normalizeText(item?.name) || "Equipo sin nombre",
+      sourceKey: inventorySourceKey(item, index),
       quantity: normalizeNumber(item?.quantity),
       notes: normalizeText(item?.notes),
       archived: Boolean(item?.archived),
@@ -168,8 +210,10 @@
       repair: normalizeText(movement?.repair),
       sparePart: normalizeText(movement?.sparePart),
       description: normalizeText(movement?.description),
+      rentalDays: Math.max(1, normalizeNumber(movement?.rentalDays) || 1),
       notes: normalizeText(movement?.notes),
       batchId: normalizeText(movement?.batchId),
+      relatedMovementId: normalizeText(movement?.relatedMovementId),
       attachment: normalizeAttachment(movement?.attachment),
       warehouseSignature: normalizeText(movement?.warehouseSignature),
       workshopSignature: normalizeText(movement?.workshopSignature),
@@ -396,6 +440,134 @@
     return stats;
   }
 
+  function movementChronologyKey(movement) {
+    return `${movement?.dateTime || movement?.date || ""}|${movement?.createdAt || ""}|${movement?.id || ""}`;
+  }
+
+  function movementLifecycleRecords(outgoingType, returnType) {
+    const outgoingMovements = state.movements
+      .filter((movement) => movement.type === outgoingType)
+      .slice()
+      .sort((first, second) => movementChronologyKey(first).localeCompare(movementChronologyKey(second)));
+    const records = outgoingMovements.map((movement) => ({
+      movement,
+      initialQuantity: normalizeNumber(movement.quantity),
+      returnedQuantity: 0,
+      remainingQuantity: normalizeNumber(movement.quantity),
+      returns: []
+    }));
+    const recordsById = new Map(records.map((record) => [record.movement.id, record]));
+    state.movements
+      .filter((movement) => movement.type === returnType)
+      .slice()
+      .sort((first, second) => movementChronologyKey(first).localeCompare(movementChronologyKey(second)))
+      .forEach((movement) => {
+        let quantityToApply = normalizeNumber(movement.quantity);
+        const target = recordsById.get(movement.relatedMovementId);
+        const returnKey = movementChronologyKey(movement);
+        const candidates = [
+          ...(target && target.movement.itemId === movement.itemId ? [target] : []),
+          ...records.filter(
+            (record) =>
+              record !== target &&
+              record.movement.itemId === movement.itemId &&
+              record.remainingQuantity > 0 &&
+              movementChronologyKey(record.movement) <= returnKey
+          )
+        ];
+        candidates.forEach((record) => {
+          if (quantityToApply <= 0 || record.remainingQuantity <= 0) return;
+          const applied = Math.min(quantityToApply, record.remainingQuantity);
+          record.remainingQuantity -= applied;
+          record.returnedQuantity += applied;
+          record.returns.push({ movement, quantity: applied });
+          quantityToApply -= applied;
+        });
+      });
+
+    return records.sort((first, second) =>
+      movementChronologyKey(second.movement).localeCompare(movementChronologyKey(first.movement))
+    );
+  }
+
+  function lifecycleRecordsByItem(records, activeOnly = false) {
+    const groups = new Map();
+    records.forEach((record) => {
+      if (activeOnly && record.remainingQuantity <= 0) return;
+      const itemId = record.movement.itemId;
+      if (!groups.has(itemId)) groups.set(itemId, []);
+      groups.get(itemId).push(record);
+    });
+    return groups;
+  }
+
+  function inventoryLifecycle() {
+    const workshop = movementLifecycleRecords("taller", "devolucion_taller");
+    const rental = movementLifecycleRecords("renta", "devolucion_renta");
+    return {
+      workshop,
+      rental,
+      activeWorkshopByItem: lifecycleRecordsByItem(workshop, true),
+      activeRentalByItem: lifecycleRecordsByItem(rental, true)
+    };
+  }
+
+  function availabilityObservationData(item, lifecycle) {
+    const rows = [];
+    const workshop = lifecycle.activeWorkshopByItem.get(item.id) || [];
+    const rental = lifecycle.activeRentalByItem.get(item.id) || [];
+    if (workshop.length) {
+      rows.push({
+        type: "workshop",
+        label: `En taller: ${workshop.reduce((sum, record) => sum + record.remainingQuantity, 0)}`,
+        dates: [...new Set(workshop.map((record) => displayDateTime(record.movement)))],
+        detail: [...new Set(workshop.map((record) => record.movement.repair).filter(Boolean))].join(" / ")
+      });
+    }
+    if (rental.length) {
+      rows.push({
+        type: "rental",
+        label: `En renta: ${rental.reduce((sum, record) => sum + record.remainingQuantity, 0)}`,
+        dates: [...new Set(rental.map((record) => displayDateTime(record.movement)))],
+        detail: [...new Set(rental.map((record) => record.movement.reference).filter(Boolean))].join(" / ")
+      });
+    }
+    return rows;
+  }
+
+  function availabilityObservationText(item, lifecycle) {
+    return availabilityObservationData(item, lifecycle)
+      .map((row) => {
+        const departure = row.dates.length ? `Salió de bodega: ${row.dates.join(", ")}.` : "";
+        const detailLabel = row.type === "workshop" ? "Falla" : "Cliente";
+        const detail = row.detail ? `${detailLabel}: ${row.detail}.` : "";
+        return `${row.label}. ${departure} ${detail}`.replace(/\s+/g, " ").trim();
+      })
+      .join(" ");
+  }
+
+  function availabilityObservationHtml(item, lifecycle) {
+    const observations = availabilityObservationData(item, lifecycle);
+    if (!observations.length) {
+      return '<span class="warehouse-observation-empty">Sin equipo en renta o taller.</span>';
+    }
+    return `
+      <div class="warehouse-availability-notes">
+        ${observations
+          .map(
+            (row) => `
+              <div class="warehouse-availability-note" data-type="${escapeHtml(row.type)}">
+                <strong>${escapeHtml(row.label)}</strong>
+                <span>Salió de bodega: ${escapeHtml(row.dates.join(", "))}</span>
+                ${row.detail ? `<span>${escapeHtml(row.type === "workshop" ? "Falla" : "Cliente")}: ${escapeHtml(row.detail)}</span>` : ""}
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+    `;
+  }
+
   function inventoryTotals() {
     return activeItems().reduce(
       (totals, item) => {
@@ -420,8 +592,8 @@
     const totals = inventoryTotals();
     const cards = [
       ["Equipos", totals.items],
-      ["Total físico", totals.physical],
-      ["Total real", totals.registered],
+      ["Inventario disponible", totals.physical],
+      ["Cantidad registrada", totals.registered],
       ["Fuera eventos", totals.out],
       ["Taller", totals.workshop],
       ["En renta", totals.rented],
@@ -497,12 +669,13 @@
     }
 
     let lastCategory = "";
+    const lifecycle = inventoryLifecycle();
     const body = rows
       .map((item) => {
         const stats = statsForItem(item);
         const categoryRow =
           lastCategory !== categoryLabel(item.category)
-            ? `<tr class="equipment-category-row"><td colspan="6">${escapeHtml(categoryLabel(item.category))}</td></tr>`
+            ? `<tr class="equipment-category-row"><td colspan="7">${escapeHtml(categoryLabel(item.category))}</td></tr>`
             : "";
         lastCategory = categoryLabel(item.category);
         const latestOut = latestMovementFor(item.id, ["salida"]);
@@ -515,10 +688,10 @@
               <textarea class="warehouse-inline-input warehouse-name-input" data-field="name" rows="2" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</textarea>
             </td>
             <td>
-              <input class="warehouse-inline-input warehouse-qty-input" data-field="physicalQuantity" type="number" min="0" step="1" value="${escapeHtml(stats.physical)}" />
+              <input class="warehouse-inline-input warehouse-qty-input" data-field="totalReal" type="number" min="0" step="1" value="${escapeHtml(item.quantity)}" aria-label="Cantidad registrada de ${escapeHtml(item.name)}" />
             </td>
             <td>
-              <input class="warehouse-inline-input warehouse-qty-input" data-field="totalReal" type="number" min="0" step="1" value="${escapeHtml(item.quantity)}" />
+              <output class="warehouse-available-value${stats.reserved > 0 ? " is-reduced" : ""}" aria-label="Inventario disponible de ${escapeHtml(item.name)}">${escapeHtml(stats.physical)}</output>
             </td>
             <td>
               <button class="warehouse-cell-action" type="button" data-action="events" data-item-id="${escapeHtml(item.id)}">
@@ -538,6 +711,7 @@
                 <span>${escapeHtml(latestRental?.reference || "Agregar a PDF")}</span>
               </button>
             </td>
+            <td>${availabilityObservationHtml(item, lifecycle)}</td>
           </tr>
         `;
       })
@@ -549,10 +723,11 @@
           <tr>
             <th>Descripción</th>
             <th>Cantidad</th>
-            <th>Total real</th>
+            <th>Inventario disponible</th>
             <th>Fuera</th>
             <th>Taller</th>
             <th>Renta</th>
+            <th>Observaciones</th>
           </tr>
         </thead>
         <tbody>${body}</tbody>
@@ -624,43 +799,75 @@
   }
 
   function renderWorkshopBoard() {
-    const rows = activeItems()
-      .map((item) => ({ item, stats: statsForItem(item) }))
-      .filter(({ stats }) => stats.workshop > 0)
-      .sort((a, b) => `${a.item.category} ${a.item.name}`.localeCompare(`${b.item.category} ${b.item.name}`, "es"));
+    const records = inventoryLifecycle().workshop
+      .sort((first, second) => {
+        const activeDifference = Number(second.remainingQuantity > 0) - Number(first.remainingQuantity > 0);
+        return activeDifference || movementChronologyKey(second.movement).localeCompare(movementChronologyKey(first.movement));
+      })
+      .slice(0, 150);
 
-    if (!rows.length) {
-      elements.workshopBoard.innerHTML = '<p class="warehouse-empty">No hay equipo registrado en taller.</p>';
+    if (!records.length) {
+      elements.workshopBoard.innerHTML = '<p class="warehouse-empty">No hay salidas a taller registradas.</p>';
       return;
     }
-
-    elements.workshopBoard.innerHTML = rows
-      .map(({ item, stats }) => {
-        const latest = state.movements
-          .filter((movement) => movement.itemId === item.id && movement.type === "taller")
-          .slice()
-          .sort((a, b) => `${b.dateTime || b.date} ${b.createdAt}`.localeCompare(`${a.dateTime || a.date} ${a.createdAt}`))[0];
+    const activeQuantity = records.reduce((sum, record) => sum + record.remainingQuantity, 0);
+    const activeRecords = records.filter((record) => record.remainingQuantity > 0).length;
+    const rows = records
+      .map((record) => {
+        const movement = record.movement;
+        const item = itemById(movement.itemId);
+        const isActive = record.remainingQuantity > 0;
+        const returns = record.returns.length
+          ? record.returns
+              .map((entry) => `${entry.quantity} x ${displayDateTime(entry.movement)}`)
+              .join(" · ")
+          : "Pendiente";
         return `
-          <article class="warehouse-board-card">
-            <header>
-              <div>
-                <strong>${escapeHtml(item.name)}</strong>
-                <span>${escapeHtml(item.category)} · En taller: ${escapeHtml(stats.workshop)}</span>
-              </div>
-              <button class="warehouse-row-button" type="button" data-workshop-return="${escapeHtml(item.id)}">Regresar de taller</button>
-            </header>
-            <div class="warehouse-board-lines">
-              <div>
-                <span>${escapeHtml(displayDateTime(latest))}</span>
-                <p><strong>Qué tiene malo:</strong> ${escapeHtml(latest?.repair || "Sin detalle")}</p>
-                <p><strong>Repuesto:</strong> ${escapeHtml(latest?.sparePart || "Sin detalle")}</p>
-                ${latest?.responsible ? `<small>Responsable: ${escapeHtml(latest.responsible)}</small>` : ""}
-              </div>
-            </div>
-          </article>
+          <tr>
+            <td><span class="warehouse-status-pill${isActive ? " is-active" : ""}">${isActive ? "En taller" : "Devuelto"}</span></td>
+            <td>
+              <strong>${escapeHtml(movementItemName(movement))}</strong>
+              <small>${escapeHtml(item?.category || "Sin categoría")}</small>
+            </td>
+            <td>${escapeHtml(movement.quantity)}${isActive ? `<small>Pendiente: ${escapeHtml(record.remainingQuantity)}</small>` : ""}</td>
+            <td>${escapeHtml(displayDateTime(movement))}</td>
+            <td>${escapeHtml(movement.repair || "Sin detalle")}</td>
+            <td>${escapeHtml(movement.sparePart || "Sin detalle")}</td>
+            <td>${escapeHtml(movement.responsible || "Sin responsable")}</td>
+            <td>${escapeHtml(returns)}</td>
+            <td>
+              ${isActive ? `<button class="warehouse-row-button" type="button" data-workshop-return="${escapeHtml(movement.itemId)}" data-related-movement="${escapeHtml(movement.id)}">Regresar</button>` : '<small>Completo</small>'}
+            </td>
+          </tr>
         `;
       })
       .join("");
+    elements.workshopBoard.innerHTML = `
+      <div class="warehouse-control-summary">
+        <div class="warehouse-control-summary-header">
+          <span>Registros activos: ${escapeHtml(activeRecords)}</span>
+          <span>Equipo pendiente: ${escapeHtml(activeQuantity)}</span>
+        </div>
+        <div class="warehouse-table-wrap">
+          <table class="equipment-base-table warehouse-control-table">
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th>Equipo</th>
+                <th>Cantidad</th>
+                <th>Salida a taller</th>
+                <th>Qué tiene malo</th>
+                <th>Repuesto necesario</th>
+                <th>Responsables</th>
+                <th>Regreso a bodega</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
   }
 
   function renderRentalDraft() {
@@ -740,35 +947,74 @@
   }
 
   function renderRentedBoard() {
-    const rows = activeItems()
-      .map((item) => ({ item, stats: statsForItem(item) }))
-      .filter(({ stats }) => stats.rented > 0)
-      .sort((a, b) => `${a.item.category} ${a.item.name}`.localeCompare(`${b.item.category} ${b.item.name}`, "es"));
+    const records = inventoryLifecycle().rental
+      .sort((first, second) => {
+        const activeDifference = Number(second.remainingQuantity > 0) - Number(first.remainingQuantity > 0);
+        return activeDifference || movementChronologyKey(second.movement).localeCompare(movementChronologyKey(first.movement));
+      })
+      .slice(0, 150);
 
-    if (!rows.length) {
-      elements.rentedBoard.innerHTML = '<p class="warehouse-empty">No hay equipo actualmente en renta.</p>';
+    if (!records.length) {
+      elements.rentedBoard.innerHTML = '<p class="warehouse-empty">No hay rentas registradas.</p>';
       return;
     }
-
-    elements.rentedBoard.innerHTML = rows
-      .map(({ item, stats }) => {
-        const latest = state.movements
-          .filter((movement) => movement.itemId === item.id && movement.type === "renta")
-          .slice()
-          .sort((a, b) => `${b.dateTime || b.date} ${b.createdAt}`.localeCompare(`${a.dateTime || a.date} ${a.createdAt}`))[0];
+    const activeQuantity = records.reduce((sum, record) => sum + record.remainingQuantity, 0);
+    const activeRecords = records.filter((record) => record.remainingQuantity > 0).length;
+    const rows = records
+      .map((record) => {
+        const movement = record.movement;
+        const isActive = record.remainingQuantity > 0;
+        const returns = record.returns.length
+          ? record.returns
+              .map((entry) => `${entry.quantity} x ${displayDateTime(entry.movement)}`)
+              .join(" · ")
+          : "Pendiente";
         return `
-          <article class="warehouse-board-card">
-            <header>
-              <div>
-                <strong>${escapeHtml(item.name)}</strong>
-                <span>En renta: ${escapeHtml(stats.rented)} · ${escapeHtml(latest?.reference || "Sin cliente")}</span>
-              </div>
-              <button class="warehouse-row-button" type="button" data-rental-return="${escapeHtml(item.id)}">Registrar devolución</button>
-            </header>
-          </article>
+          <tr>
+            <td><span class="warehouse-status-pill${isActive ? " is-active" : ""}">${isActive ? "En renta" : "Devuelto"}</span></td>
+            <td>${escapeHtml(movement.reference || "Sin cliente")}</td>
+            <td>
+              <strong>${escapeHtml(movement.description || movementItemName(movement))}</strong>
+              <small>${escapeHtml(movementItemName(movement))}</small>
+            </td>
+            <td>${escapeHtml(movement.quantity)}${isActive ? `<small>Pendiente: ${escapeHtml(record.remainingQuantity)}</small>` : ""}</td>
+            <td>${escapeHtml(movement.rentalDays || 1)}</td>
+            <td>${escapeHtml(displayDateTime(movement))}</td>
+            <td>${escapeHtml(returns)}</td>
+            <td>${escapeHtml(movement.responsible || "Sin responsable")}</td>
+            <td>
+              ${isActive ? `<button class="warehouse-row-button" type="button" data-rental-return="${escapeHtml(movement.itemId)}" data-related-movement="${escapeHtml(movement.id)}">Devolver</button>` : '<small>Completo</small>'}
+            </td>
+          </tr>
         `;
       })
       .join("");
+    elements.rentedBoard.innerHTML = `
+      <div class="warehouse-control-summary">
+        <div class="warehouse-control-summary-header">
+          <span>Rentas activas: ${escapeHtml(activeRecords)}</span>
+          <span>Equipo pendiente: ${escapeHtml(activeQuantity)}</span>
+        </div>
+        <div class="warehouse-table-wrap">
+          <table class="equipment-base-table warehouse-control-table">
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th>Cliente</th>
+                <th>Descripción del equipo</th>
+                <th>Cantidad</th>
+                <th>Días</th>
+                <th>Fecha y hora de renta</th>
+                <th>Fecha y hora de devolución</th>
+                <th>Responsable</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
   }
 
   function movementMatchesLogFilter(movement) {
@@ -830,6 +1076,36 @@
       .join("");
   }
 
+  function publishWarehouseAvailability() {
+    const lifecycle = inventoryLifecycle();
+    const publishedAt = new Date().toISOString();
+    const payload = {
+      version: 1,
+      updatedAt: state.updatedAt,
+      publishedAt,
+      savedAt: publishedAt,
+      state,
+      items: activeItems().map((item) => {
+        const stats = statsForItem(item);
+        return {
+          id: item.id,
+          sourceKey: item.sourceKey || warehouseCanonicalKey(item.name),
+          name: item.name,
+          category: item.category,
+          quantity: normalizeNumber(item.quantity),
+          available: stats.physical,
+          out: stats.out,
+          workshop: stats.workshop,
+          rented: stats.rented,
+          lost: stats.lost,
+          observation: availabilityObservationText(item, lifecycle)
+        };
+      })
+    };
+    window.LIVE_WAREHOUSE_AVAILABILITY = payload;
+    document.dispatchEvent(new CustomEvent("live:warehouse-inventory-updated", { detail: payload }));
+  }
+
   function renderAll() {
     renderSummary();
     renderCategoryFilter();
@@ -841,6 +1117,7 @@
     renderRentalDraft();
     renderRentedBoard();
     renderLog();
+    publishWarehouseAvailability();
   }
 
   function askDifferenceReason(message) {
@@ -924,14 +1201,14 @@
       const totalReal = normalizeNumber(target.value);
       if (previousTotal !== totalReal) {
         const reason = askDifferenceReason(
-          `Total real anterior: ${previousTotal}. Nuevo total real: ${totalReal}. ¿Por qué cambió el inventario real?`
+          `Cantidad registrada anterior: ${previousTotal}. Nueva cantidad registrada: ${totalReal}. ¿Por qué cambió el inventario?`
         );
         if (reason === null) {
           target.value = previousTotal;
           return;
         }
         item.quantity = totalReal;
-        addAuditMovement(item, previousTotal, totalReal, `Cambio de total real: ${reason}`);
+        addAuditMovement(item, previousTotal, totalReal, `Cambio de cantidad registrada: ${reason}`);
       }
     } else if (field === "name") {
       item.name = normalizeText(target.value) || item.name;
@@ -956,6 +1233,7 @@
       id: uid("item"),
       category: categoryLabel(elements.newCategory.value || "GENERAL"),
       name,
+      sourceKey: warehouseCanonicalKey(name),
       quantity: normalizeNumber(elements.newQuantity.value),
       notes: normalizeText(elements.newNotes.value),
       archived: false,
@@ -1042,8 +1320,10 @@
       repair: normalizeText(payload.repair),
       sparePart: normalizeText(payload.sparePart),
       description: normalizeText(payload.description),
+      rentalDays: Math.max(1, normalizeNumber(payload.rentalDays) || 1),
       notes: normalizeText(payload.notes),
       batchId: normalizeText(payload.batchId),
+      relatedMovementId: normalizeText(payload.relatedMovementId),
       attachment: normalizeAttachment(payload.attachment),
       warehouseSignature: normalizeText(payload.warehouseSignature),
       workshopSignature: normalizeText(payload.workshopSignature),
@@ -1072,10 +1352,10 @@
     });
   }
 
-  function openDialog(kind, itemId) {
+  function openDialog(kind, itemId, relatedMovementId = "") {
     const item = itemById(itemId);
     if (!item) return;
-    dialogContext = { kind, itemId };
+    dialogContext = { kind, itemId, relatedMovementId };
     const stats = statsForItem(item);
 
     if (kind === "events") {
@@ -1170,13 +1450,19 @@
     }
 
     if (kind === "workshopReturn" || kind === "rentalReturn") {
+      const relatedMovement = state.movements.find((movement) => movement.id === relatedMovementId);
+      const records = kind === "workshopReturn"
+        ? inventoryLifecycle().workshop
+        : inventoryLifecycle().rental;
+      const relatedRecord = records.find((record) => record.movement.id === relatedMovementId);
+      const maximum = relatedRecord?.remainingQuantity || (kind === "workshopReturn" ? stats.workshop : stats.rented);
       elements.dialogTitle.textContent = kind === "workshopReturn" ? "Devolución de taller" : "Devolución de renta";
       elements.dialogSaveButton.textContent = "Registrar devolución";
       elements.dialogBody.innerHTML = `
         <div class="warehouse-selected-equipment">
           <span>Equipo seleccionado</span>
           <strong>${escapeHtml(item.name)}</strong>
-          <small>${kind === "workshopReturn" ? `En taller: ${stats.workshop}` : `En renta: ${stats.rented}`}</small>
+          <small>${kind === "workshopReturn" ? `En taller: ${maximum}` : `En renta: ${maximum}`}${relatedMovement?.reference ? ` · ${escapeHtml(relatedMovement.reference)}` : ""}</small>
         </div>
         <div class="warehouse-form-grid">
           <label>
@@ -1185,7 +1471,7 @@
           </label>
           <label>
             Cantidad
-            <input id="dialogQuantity" type="number" min="1" step="1" value="1" />
+            <input id="dialogQuantity" type="number" min="1" max="${escapeHtml(maximum)}" step="1" value="${escapeHtml(maximum)}" />
           </label>
           <label>
             Responsable
@@ -1238,6 +1524,18 @@
     const item = itemById(dialogContext.itemId);
     if (!item) return;
     const quantity = normalizeNumber(elements.dialogBody.querySelector("#dialogQuantity")?.value);
+    if (dialogContext.kind === "workshopReturn" || dialogContext.kind === "rentalReturn") {
+      const records = dialogContext.kind === "workshopReturn"
+        ? inventoryLifecycle().workshop
+        : inventoryLifecycle().rental;
+      const relatedRecord = records.find((record) => record.movement.id === dialogContext.relatedMovementId);
+      const stats = statsForItem(item);
+      const maximum = relatedRecord?.remainingQuantity || (dialogContext.kind === "workshopReturn" ? stats.workshop : stats.rented);
+      if (quantity <= 0 || quantity > maximum) {
+        setStatus(`La devolución debe estar entre 1 y ${maximum}.`, "warning");
+        return;
+      }
+    }
 
     if (dialogContext.kind === "events") {
       const file = elements.dialogBody.querySelector("#dialogAttachment")?.files?.[0];
@@ -1274,13 +1572,16 @@
     }
 
     if (dialogContext.kind === "workshopReturn") {
+      const relatedMovement = state.movements.find((movement) => movement.id === dialogContext.relatedMovementId);
       const ok = addMovement({
         type: "devolucion_taller",
         itemId: item.id,
         quantity,
         dateTime: elements.dialogBody.querySelector("#dialogDateTime")?.value,
         responsible: elements.dialogBody.querySelector("#dialogResponsible")?.value,
-        reference: "Taller",
+        reference: relatedMovement?.reference || "Taller",
+        batchId: relatedMovement?.batchId,
+        relatedMovementId: relatedMovement?.id,
         notes: elements.dialogBody.querySelector("#dialogNotes")?.value
       });
       if (!ok) return;
@@ -1288,13 +1589,16 @@
     }
 
     if (dialogContext.kind === "rentalReturn") {
+      const relatedMovement = state.movements.find((movement) => movement.id === dialogContext.relatedMovementId);
       const ok = addMovement({
         type: "devolucion_renta",
         itemId: item.id,
         quantity,
         dateTime: elements.dialogBody.querySelector("#dialogDateTime")?.value,
         responsible: elements.dialogBody.querySelector("#dialogResponsible")?.value,
-        reference: "Renta",
+        reference: relatedMovement?.reference || "Renta",
+        batchId: relatedMovement?.batchId,
+        relatedMovementId: relatedMovement?.id,
         notes: elements.dialogBody.querySelector("#dialogNotes")?.value
       });
       if (!ok) return;
@@ -1476,7 +1780,7 @@
     const client = normalizeText(elements.rentalClient.value) || "Por definir";
     const responsible = normalizeText(elements.rentalResponsible.value) || "Por definir";
     const dateTime = elements.rentalDate.value || dateTimeLocalValue();
-    const date = dateTime.slice(0, 10);
+    const rentalDays = Math.max(1, normalizeNumber(elements.rentalDays.value) || 1);
     const notes = normalizeText(elements.rentalNotes.value);
     const batchId = uid("renta");
 
@@ -1492,6 +1796,7 @@
         responsible,
         reference: client,
         description: line.description,
+        rentalDays,
         notes,
         batchId
       });
@@ -1526,6 +1831,7 @@
         <section class="meta">
           <p><strong>Cliente / proveedor:</strong> ${escapeHtml(client)}</p>
           <p><strong>Responsable:</strong> ${escapeHtml(responsible)}</p>
+          <p><strong>Días de renta:</strong> ${escapeHtml(rentalDays)}</p>
           <p><strong>Monto:</strong></p>
           <div class="line"></div>
         </section>
@@ -1550,6 +1856,7 @@
     state.rentalDraft = [];
     elements.rentalClient.value = "";
     elements.rentalResponsible.value = "";
+    elements.rentalDays.value = "1";
     elements.rentalNotes.value = "";
     elements.rentalDate.value = dateTimeLocalValue();
     scheduleSave();
@@ -1606,25 +1913,25 @@
   }
 
   function printWorkshopReport() {
-    const workshopEntries = state.movements
-      .filter((movement) => movement.type === "taller")
+    const records = inventoryLifecycle().workshop
       .slice()
-      .sort((a, b) => `${a.dateTime || a.date} ${a.createdAt}`.localeCompare(`${b.dateTime || b.date} ${b.createdAt}`));
-    if (!workshopEntries.length) {
+      .sort((first, second) => movementChronologyKey(first.movement).localeCompare(movementChronologyKey(second.movement)));
+    if (!records.length) {
       setStatus("No hay equipo en reporte de taller.", "warning");
       return;
     }
-    const returns = state.movements.filter((movement) => movement.type === "devolucion_taller");
-    const rows = workshopEntries
-      .map((entry) => {
-        const returned = returns
-          .filter((movement) => movement.itemId === entry.itemId && movement.createdAt >= entry.createdAt)
-          .sort((a, b) => `${a.dateTime || a.date} ${a.createdAt}`.localeCompare(`${b.dateTime || b.date} ${b.createdAt}`))[0];
+    const rows = records
+      .map((record) => {
+        const entry = record.movement;
+        const returns = record.returns.length
+          ? record.returns.map((row) => `${row.quantity} x ${displayDateTime(row.movement)}`).join(" / ")
+          : "Pendiente";
         return `
           <tr>
             <td>${escapeHtml(displayDateTime(entry))}</td>
-            <td>${escapeHtml(returned ? displayDateTime(returned) : "Pendiente")}</td>
+            <td>${escapeHtml(returns)}</td>
             <td>${escapeHtml(entry.quantity)}</td>
+            <td>${escapeHtml(record.remainingQuantity > 0 ? `En taller: ${record.remainingQuantity}` : "Devuelto")}</td>
             <td>${escapeHtml(movementItemName(entry))}</td>
             <td>${escapeHtml(entry.repair || "")}</td>
             <td>${escapeHtml(entry.sparePart || "")}</td>
@@ -1633,7 +1940,9 @@
         `;
       })
       .join("");
-    const firstSigned = workshopEntries.find((entry) => entry.warehouseSignature || entry.workshopSignature);
+    const firstSigned = records
+      .map((record) => record.movement)
+      .find((entry) => entry.warehouseSignature || entry.workshopSignature);
     const signatureHtml = firstSigned
       ? `
         <div class="signatures">
@@ -1664,6 +1973,7 @@
               <th>Sale de bodega / ingresa a taller</th>
               <th>Regresa a bodega</th>
               <th>Cantidad</th>
+              <th>Estado</th>
               <th>Equipo</th>
               <th>Qué tiene malo</th>
               <th>Repuesto</th>
@@ -1673,6 +1983,63 @@
           <tbody>${rows}</tbody>
         </table>
         ${signatureHtml}
+      `
+    );
+  }
+
+  function printRentalReport() {
+    const records = inventoryLifecycle().rental
+      .slice()
+      .sort((first, second) => movementChronologyKey(first.movement).localeCompare(movementChronologyKey(second.movement)));
+    if (!records.length) {
+      setStatus("No hay rentas para generar el resumen.", "warning");
+      return;
+    }
+    const rows = records
+      .map((record) => {
+        const entry = record.movement;
+        const returns = record.returns.length
+          ? record.returns.map((row) => `${row.quantity} x ${displayDateTime(row.movement)}`).join(" / ")
+          : "Pendiente";
+        return `
+          <tr>
+            <td>${escapeHtml(entry.reference || "Sin cliente")}</td>
+            <td>${escapeHtml(entry.description || movementItemName(entry))}</td>
+            <td>${escapeHtml(entry.quantity)}</td>
+            <td>${escapeHtml(entry.rentalDays || 1)}</td>
+            <td>${escapeHtml(displayDateTime(entry))}</td>
+            <td>${escapeHtml(returns)}</td>
+            <td>${escapeHtml(record.remainingQuantity > 0 ? `En renta: ${record.remainingQuantity}` : "Devuelto")}</td>
+            <td>${escapeHtml(entry.responsible || "")}</td>
+          </tr>
+        `;
+      })
+      .join("");
+    openPrintDocument(
+      "Resumen de rentas",
+      `
+        <header>
+          <div>
+            <p>Live Productions</p>
+            <h1>Resumen de rentas de equipo</h1>
+          </div>
+          <div><p><strong>Generado:</strong> ${escapeHtml(formatWarehouseDateTime(dateTimeLocalValue()))}</p></div>
+        </header>
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Descripción del equipo</th>
+              <th>Cantidad</th>
+              <th>Días</th>
+              <th>Fecha y hora de renta</th>
+              <th>Fecha y hora de devolución</th>
+              <th>Estado</th>
+              <th>Responsable</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
       `
     );
   }
@@ -1758,6 +2125,7 @@
     elements.resetSeedButton.addEventListener("click", resetSeed);
     elements.generateRentalPdfButton.addEventListener("click", generateRentalPdf);
     elements.printWorkshopReportButton.addEventListener("click", printWorkshopReport);
+    elements.printRentalReportButton.addEventListener("click", printRentalReport);
     elements.clearRentalButton.addEventListener("click", () => {
       state.rentalDraft = [];
       scheduleSave();
@@ -1803,11 +2171,11 @@
     });
     elements.workshopBoard.addEventListener("click", (event) => {
       const button = event.target.closest("[data-workshop-return]");
-      if (button) openDialog("workshopReturn", button.dataset.workshopReturn);
+      if (button) openDialog("workshopReturn", button.dataset.workshopReturn, button.dataset.relatedMovement);
     });
     elements.rentedBoard.addEventListener("click", (event) => {
       const button = event.target.closest("[data-rental-return]");
-      if (button) openDialog("rentalReturn", button.dataset.rentalReturn);
+      if (button) openDialog("rentalReturn", button.dataset.rentalReturn, button.dataset.relatedMovement);
     });
     elements.rentalDraft.addEventListener("change", (event) => {
       if (event.target.matches("[data-rental-field]")) updateRentalDraftField(event.target);
@@ -1882,10 +2250,12 @@
       rentalClient: root.querySelector("#warehouseRentalClient"),
       rentalResponsible: root.querySelector("#warehouseRentalResponsible"),
       rentalDate: root.querySelector("#warehouseRentalDate"),
+      rentalDays: root.querySelector("#warehouseRentalDays"),
       rentalNotes: root.querySelector("#warehouseRentalNotes"),
       rentalDraft: root.querySelector("#warehouseRentalDraft"),
       rentedBoard: root.querySelector("#warehouseRentedBoard"),
       generateRentalPdfButton: root.querySelector("#warehouseGenerateRentalPdfButton"),
+      printRentalReportButton: root.querySelector("#warehousePrintRentalReportButton"),
       clearRentalButton: root.querySelector("#warehouseClearRentalButton"),
       logSearch: root.querySelector("#warehouseLogSearch"),
       logTypeFilter: root.querySelector("#warehouseLogTypeFilter"),

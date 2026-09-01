@@ -11,7 +11,7 @@
 
           <div id="warehouseSummary" class="warehouse-summary" aria-label="Resumen de inventario"></div>
 
-          <div class="warehouse-top-actions" aria-label="Acciones de inventario">
+          <nav class="warehouse-command-bar" aria-label="Acciones y ventanas de inventario">
             <button id="warehouseSaveNowButton" class="primary-button" type="button">Guardar cambios</button>
             <button id="warehouseExportButton" class="secondary-button" type="button">Exportar respaldo</button>
             <label class="secondary-button warehouse-import-button">
@@ -19,9 +19,6 @@
               <input id="warehouseImportInput" class="is-hidden" type="file" accept="application/json,.json" />
             </label>
             <button id="warehouseResetSeedButton" class="secondary-button" type="button">Restaurar libro inicial</button>
-          </div>
-
-          <nav class="warehouse-window-tabs" aria-label="Ventanas de inventario">
             <button class="is-active" type="button" data-warehouse-window="inventory">Inventario</button>
             <button type="button" data-warehouse-window="events">Fuera / Eventos</button>
             <button type="button" data-warehouse-window="workshop">Taller</button>
@@ -54,7 +51,7 @@
                     <input id="warehouseNewCategory" type="text" autocomplete="off" placeholder="Ej. AUDIO" />
                   </label>
                   <label>
-                    Total físico en bodega
+                    Cantidad registrada
                     <input id="warehouseNewQuantity" type="number" min="0" step="1" value="1" />
                   </label>
                   <label class="warehouse-field-wide">
@@ -80,7 +77,7 @@
             <section class="warehouse-panel" aria-labelledby="warehouseInventoryTitle">
               <div class="section-heading">
                   <span id="warehouseInventoryTitle">Inventario editable</span>
-                <small>cantidad = físico en bodega · total real = inventario registrado</small>
+                <small>cantidad = inventario registrado · disponible = cantidad física que permanece en bodega</small>
               </div>
               <div class="warehouse-filter-grid">
                 <label>
@@ -211,6 +208,10 @@
                   Fecha y hora de salida
                   <input id="warehouseRentalDate" type="datetime-local" />
                 </label>
+                <label>
+                  Días de renta
+                  <input id="warehouseRentalDays" type="number" min="1" step="1" value="1" />
+                </label>
                 <label class="warehouse-field-wide">
                   Observaciones para el documento
                   <textarea id="warehouseRentalNotes" rows="2" placeholder="Condiciones, fecha de devolución o notas importantes"></textarea>
@@ -224,8 +225,11 @@
             </section>
             <section class="warehouse-panel" aria-labelledby="warehouseRentedTitle">
               <div class="section-heading">
-                <span id="warehouseRentedTitle">Equipo actualmente en renta</span>
-                <small>control de devolución</small>
+                <span id="warehouseRentedTitle">Resumen de rentas</span>
+                <small>rentas activas, fechas y devoluciones</small>
+              </div>
+              <div class="warehouse-top-actions">
+                <button id="warehousePrintRentalReportButton" class="secondary-button" type="button">Guardar resumen rentas PDF</button>
               </div>
               <div id="warehouseRentedBoard" class="warehouse-board-list"></div>
             </section>
