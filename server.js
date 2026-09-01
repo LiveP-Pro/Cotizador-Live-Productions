@@ -57,6 +57,7 @@ fs.mkdirSync(equipmentPdfDir, { recursive: true });
 fs.mkdirSync(backupDir, { recursive: true });
 
 const authConfigPath = path.join(dataDir, "cotizador-auth.json");
+const fixedAuthUsername = "LiveAdmon";
 const defaultPasswordHash = {
   algorithm: "pbkdf2-sha256",
   iterations: 210000,
@@ -105,34 +106,20 @@ function writeAuthConfig(config) {
 }
 
 function loadAuthConfig() {
-  const envPassword = process.env.COTIZADOR_ADMIN_PASSWORD;
-  const envHash = process.env.COTIZADOR_ADMIN_PASSWORD_HASH;
-  const envSalt = process.env.COTIZADOR_ADMIN_PASSWORD_SALT;
-  const envIterations = Number.parseInt(process.env.COTIZADOR_ADMIN_PASSWORD_ITERATIONS || "", 10);
   const envConfig = {
-    username: process.env.COTIZADOR_ADMIN_USER || "LiveAdmon",
-    password: envPassword
-      ? newPasswordHash(envPassword)
-      : envHash && envSalt
-        ? {
-            algorithm: "pbkdf2-sha256",
-            iterations: Number.isFinite(envIterations) && envIterations > 0 ? envIterations : defaultPasswordHash.iterations,
-            salt: envSalt,
-            hash: envHash
-          }
-        : defaultPasswordHash,
+    username: fixedAuthUsername,
+    password: defaultPasswordHash,
     sessionSecret: process.env.COTIZADOR_SESSION_SECRET || crypto.randomBytes(32).toString("hex")
   };
 
   try {
     const stored = JSON.parse(fs.readFileSync(authConfigPath, "utf8"));
     const resolved = {
-      username: String(stored.username || envConfig.username),
-      password: stored.password?.hash ? stored.password : envConfig.password,
+      username: fixedAuthUsername,
+      password: defaultPasswordHash,
       sessionSecret: String(stored.sessionSecret || envConfig.sessionSecret)
     };
-    if (isPreviousDefaultPasswordHash(resolved.password)) {
-      resolved.password = envConfig.password;
+    if (String(stored.username || "") !== fixedAuthUsername || !samePasswordConfig(stored.password, defaultPasswordHash)) {
       writeAuthConfig(resolved);
     }
     return resolved;
