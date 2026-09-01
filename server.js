@@ -2597,6 +2597,208 @@ async function saveQuoteBatch(payload, response) {
   }
 }
 
+function warehouseDispatchLookupKey(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es-GT")
+    .replace(/[“”"']/g, "")
+    .replace(/\bno\.\s*/g, "no ")
+    .replace(/[.,;:]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function warehouseDispatchQuantity(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, Math.round(number));
+}
+
+function warehouseAvailableForDispatch(state, itemId) {
+  const item = (state.items || []).find((entry) => String(entry?.id || "") === String(itemId || ""));
+  if (!item || item.archived) return 0;
+  let reserved = 0;
+  (state.movements || []).forEach((movement) => {
+    if (String(movement?.itemId || "") !== String(item.id || "")) return;
+    const quantity = warehouseDispatchQuantity(movement?.quantity);
+    if (["salida", "taller", "renta", "perdido"].includes(movement?.type)) reserved += quantity;
+    if (["ingreso_evento", "devolucion_taller", "devolucion_renta", "recuperado"].includes(movement?.type)) reserved -= quantity;
+  });
+  return Math.max(0, warehouseDispatchQuantity(item.quantity) - Math.max(0, reserved));
+}
+
+function warehouseDispatchMovementId() {
+  return `movement-${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
+}
+
+function warehouseDispatchDateTime(dispatch, savedAt) {
+  const outAt = String(dispatch?.equipmentOutAt || "").trim();
+  if (outAt) return outAt;
+  const eventDate = String(dispatch?.eventDate || "").trim();
+  if (eventDate) return `${eventDate}T00:00`;
+  return String(savedAt || new Date().toISOString()).slice(0, 16);
+}
+
+async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
+  const dispatch = editableData?.mode === "full" ? editableData?.warehouseDispatch : null;
+  const documentId = String(dispatch?.id || "").trim().slice(0, 240);
+  if (!documentId) return { warehouseInventory: null, warehouseReceipt: null };
+
+  const warehouseInventory = readWarehouseInventory();
+  const state = warehouseInventory.state;
+  state.movements = Array.isArray(state.movements) ? state.movements : [];
+  const existingSourceMovements = state.movements.filter(
+    (movement) => String(movement?.sourceDocumentId || "") === documentId
+  );
+  const existingOutgoing = existingSourceMovements.filter((movement) => movement.type === "salida");
+  const hasRegisteredReturn = existingSourceMovements.some((movement) => movement.type === "ingreso_evento");
+  const now = new Date().toISOString();
+  const sourceFileFields = {
+    sourcePdfUrl: fileData.pdfUrl,
+    sourceJsonUrl: fileData.jsonUrl,
+    sourceFileName: fileData.fileName,
+    sourceJsonFileName: fileData.jsonFileName
+  };
+
+  if (hasRegisteredReturn) {
+    state.movements = state.movements.map((movement) => (
+      String(movement?.sourceDocumentId || "") === documentId
+        ? { ...movement, ...sourceFileFields }
+        : movement
+    ));
+    state.updatedAt = now;
+    const saved = { state, savedAt: now };
+    await writeWarehouseInventory(saved);
+    return {
+      warehouseInventory: saved,
+      warehouseReceipt: {
+        id: documentId,
+        received: true,
+        updated: false,
+        locked: true,
+        movementCount: existingOutgoing.length
+      }
+    };
+  }
+
+  if (existingOutgoing.length) {
+    state.movements = state.movements.filter(
+      (movement) => !(movement.type === "salida" && String(movement?.sourceDocumentId || "") === documentId)
+    );
+  }
+
+  const activeItems = (state.items || []).filter((item) => item && !item.archived);
+  const itemsById = new Map(activeItems.map((item) => [String(item.id || ""), item]));
+  const itemsByName = new Map();
+  activeItems.forEach((item) => {
+    const key = warehouseDispatchLookupKey(item.name);
+    if (!key) return;
+    if (!itemsByName.has(key)) itemsByName.set(key, []);
+    itemsByName.get(key).push(item);
+  });
+
+  const eventName = String(dispatch.name || "Evento por definir").trim() || "Evento por definir";
+  const eventPlace = String(dispatch.place || "Lugar por definir").trim() || "Lugar por definir";
+  const dateTime = warehouseDispatchDateTime(dispatch, editableData.savedAt || now);
+  const commonFields = {
+    type: "salida",
+    previousQuantity: null,
+    date: dateTime.slice(0, 10),
+    dateTime,
+    responsible: String(dispatch.responsible || "").trim(),
+    reference: eventName,
+    repair: "",
+    sparePart: "",
+    description: "",
+    rentalDays: 1,
+    notes: String(editableData.notes || "").trim(),
+    batchId: documentId,
+    relatedMovementId: "",
+    attachment: null,
+    warehouseSignature: "",
+    workshopSignature: "",
+    sourceType: "requerimiento-equipo",
+    sourceDocumentId: documentId,
+    sourceEventId: String(dispatch.eventId || "").trim(),
+    sourceEventName: eventName,
+    sourceEventPlace: eventPlace,
+    sourcePlanner: String(dispatch.planner || "").trim(),
+    sourceEventDate: String(dispatch.eventDate || "").trim(),
+    sourceExpectedReturnAt: String(dispatch.equipmentInAt || "").trim(),
+    ...sourceFileFields
+  };
+  let mappedQuantity = 0;
+  let unmappedQuantity = 0;
+  let lineIndex = 0;
+
+  (Array.isArray(dispatch.items) ? dispatch.items : []).slice(0, 5000).forEach((line) => {
+    const description = String(line?.description || "Equipo sin nombre").trim() || "Equipo sin nombre";
+    let remaining = warehouseDispatchQuantity(line?.quantity);
+    if (!remaining) return;
+    const requestedIds = Array.isArray(line?.warehouseItemIds) ? line.warehouseItemIds.map(String) : [];
+    const requestedItems = requestedIds.map((id) => itemsById.get(id)).filter(Boolean);
+    const fallbackItems = itemsByName.get(warehouseDispatchLookupKey(description)) || [];
+    const candidates = [...new Map([...requestedItems, ...fallbackItems].map((item) => [String(item.id), item])).values()];
+
+    candidates.forEach((item) => {
+      if (remaining <= 0) return;
+      const available = warehouseAvailableForDispatch(state, item.id);
+      const quantity = Math.min(remaining, available);
+      if (!quantity) return;
+      lineIndex += 1;
+      state.movements.push({
+        id: warehouseDispatchMovementId(),
+        ...commonFields,
+        itemId: String(item.id || ""),
+        itemName: String(item.name || description),
+        quantity,
+        sourceCategory: String(line?.category || item.category || "Equipo"),
+        sourceRequestedName: description,
+        sourceLineKey: `${warehouseDispatchLookupKey(description)}-${lineIndex}`,
+        sourceUnmatched: false,
+        createdAt: now
+      });
+      mappedQuantity += quantity;
+      remaining -= quantity;
+    });
+
+    if (remaining > 0) {
+      lineIndex += 1;
+      state.movements.push({
+        id: warehouseDispatchMovementId(),
+        ...commonFields,
+        itemId: "",
+        itemName: description,
+        quantity: remaining,
+        notes: [commonFields.notes, "Cantidad no descontada: no estaba disponible en el inventario de bodega."].filter(Boolean).join(" "),
+        sourceCategory: String(line?.category || "Equipo"),
+        sourceRequestedName: description,
+        sourceLineKey: `${warehouseDispatchLookupKey(description)}-${lineIndex}`,
+        sourceUnmatched: true,
+        createdAt: now
+      });
+      unmappedQuantity += remaining;
+    }
+  });
+
+  state.updatedAt = now;
+  const saved = { state, savedAt: now };
+  await writeWarehouseInventory(saved);
+  return {
+    warehouseInventory: saved,
+    warehouseReceipt: {
+      id: documentId,
+      received: true,
+      updated: existingOutgoing.length > 0,
+      locked: false,
+      movementCount: lineIndex,
+      mappedQuantity,
+      unmappedQuantity
+    }
+  };
+}
+
 async function saveEquipmentBoard(payload, request, response) {
   const html = String(payload?.html || "");
   if (!html.includes("equipment-pdf-document")) {
@@ -2640,6 +2842,13 @@ async function saveEquipmentBoard(payload, request, response) {
   };
   await fsp.writeFile(jsonTarget, JSON.stringify(savedEditableData, null, 2), "utf8");
 
+  const warehouseResult = await receiveEquipmentBoardInWarehouse(savedEditableData, {
+    fileName,
+    jsonFileName,
+    pdfUrl: publicPath,
+    jsonUrl: jsonPath
+  });
+
   jsonResponse(response, 200, {
     fileName,
     jsonFileName,
@@ -2647,7 +2856,8 @@ async function saveEquipmentBoard(payload, request, response) {
     pdfUrl: publicPath,
     jsonUrl: jsonPath,
     absolutePdfUrl: origin ? new URL(publicPath, origin).href : publicPath,
-    absoluteJsonUrl: origin ? new URL(jsonPath, origin).href : jsonPath
+    absoluteJsonUrl: origin ? new URL(jsonPath, origin).href : jsonPath,
+    ...warehouseResult
   });
 }
 

@@ -264,6 +264,9 @@
 }
 
 .warehouse-row-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 32px;
   padding: 6px 9px;
   color: #171717;
@@ -273,6 +276,8 @@
   font: inherit;
   font-size: 12px;
   font-weight: 900;
+  line-height: 1.2;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -500,6 +505,85 @@
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+.warehouse-board-actions {
+  display: flex !important;
+  grid-template-columns: none !important;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px !important;
+}
+
+.warehouse-source-pill {
+  justify-self: start;
+  width: fit-content;
+  padding: 3px 6px;
+  color: #17633a !important;
+  background: #e7f4eb;
+  border: 1px solid #b9d9c3;
+  border-radius: 4px;
+  font-size: 10px !important;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.warehouse-event-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.warehouse-event-meta span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.warehouse-event-meta strong {
+  color: #171717;
+}
+
+.warehouse-event-lines-disclosure {
+  border-top: 1px solid var(--line);
+}
+
+.warehouse-event-lines-disclosure summary {
+  padding: 10px 0 0;
+  color: #171717;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.warehouse-event-lines-disclosure[open] summary {
+  margin-bottom: 10px;
+}
+
+.warehouse-unmapped-note {
+  color: #9a5c00 !important;
+}
+
+.warehouse-return-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 220px;
+  overflow: auto;
+  margin-bottom: 12px;
+}
+
+.warehouse-return-list span {
+  padding: 8px;
+  color: #30343b;
+  background: #f6f7f8;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 12px;
 }
 
 .warehouse-board-lines {
@@ -837,5 +921,14 @@
 
   .warehouse-dialog-card footer button {
     width: 100%;
+  }
+
+  .warehouse-event-meta,
+  .warehouse-return-list {
+    grid-template-columns: 1fr;
+  }
+
+  .warehouse-board-actions {
+    justify-content: flex-start;
   }
 }

@@ -3,7 +3,7 @@
   const PREVIOUS_STORAGE_KEY = "liveWarehouseInventoryStateV2";
   const LEGACY_STORAGE_KEY = "liveWarehouseInventoryStateV1";
   const API_PATH = "/api/inventario-bodega";
-  const MODULE_PATH = "/warehouse-module.html?v=20260901-02";
+  const MODULE_PATH = "/warehouse-module.html?v=20260901-03";
   const movementLabels = {
     salida: "Salida de bodega",
     ingreso_evento: "Ingreso de evento",
@@ -183,12 +183,17 @@
   }
 
   function normalizeAttachment(attachment) {
-    if (!attachment?.dataUrl) return null;
+    if (!attachment?.dataUrl && !attachment?.url) return null;
     return {
       name: normalizeText(attachment.name) || "archivo",
       type: normalizeText(attachment.type) || "application/octet-stream",
-      dataUrl: attachment.dataUrl
+      dataUrl: attachment.dataUrl || "",
+      url: normalizeText(attachment.url)
     };
+  }
+
+  function attachmentHref(attachment) {
+    return attachment?.dataUrl || attachment?.url || "";
   }
 
   function normalizeMovement(movement, index = 0) {
@@ -217,6 +222,22 @@
       attachment: normalizeAttachment(movement?.attachment),
       warehouseSignature: normalizeText(movement?.warehouseSignature),
       workshopSignature: normalizeText(movement?.workshopSignature),
+      sourceType: normalizeText(movement?.sourceType),
+      sourceDocumentId: normalizeText(movement?.sourceDocumentId),
+      sourceEventId: normalizeText(movement?.sourceEventId),
+      sourceEventName: normalizeText(movement?.sourceEventName),
+      sourceEventPlace: normalizeText(movement?.sourceEventPlace),
+      sourcePlanner: normalizeText(movement?.sourcePlanner),
+      sourceEventDate: normalizeText(movement?.sourceEventDate),
+      sourceExpectedReturnAt: normalizeText(movement?.sourceExpectedReturnAt),
+      sourcePdfUrl: normalizeText(movement?.sourcePdfUrl),
+      sourceJsonUrl: normalizeText(movement?.sourceJsonUrl),
+      sourceFileName: normalizeText(movement?.sourceFileName),
+      sourceJsonFileName: normalizeText(movement?.sourceJsonFileName),
+      sourceCategory: normalizeText(movement?.sourceCategory),
+      sourceRequestedName: normalizeText(movement?.sourceRequestedName),
+      sourceLineKey: normalizeText(movement?.sourceLineKey),
+      sourceUnmatched: Boolean(movement?.sourceUnmatched),
       dateTime: normalizeText(movement?.dateTime) || `${movement?.date || todayInputValue()}T00:00`,
       createdAt: movement?.createdAt || new Date().toISOString()
     };
@@ -471,6 +492,10 @@
             (record) =>
               record !== target &&
               record.movement.itemId === movement.itemId &&
+              (
+                (!record.movement.sourceDocumentId && !movement.sourceDocumentId) ||
+                record.movement.sourceDocumentId === movement.sourceDocumentId
+              ) &&
               record.remainingQuantity > 0 &&
               movementChronologyKey(record.movement) <= returnKey
           )
@@ -744,7 +769,7 @@
   }
 
   function eventKey(movement) {
-    return movement.reference || "Sin evento";
+    return movement.sourceDocumentId ? `cuadro:${movement.sourceDocumentId}` : movement.reference || "Sin evento";
   }
 
   function renderEventsBoard() {
@@ -760,38 +785,66 @@
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(movement);
     });
+    const lifecycleByGroup = new Map();
+    movementLifecycleRecords("salida", "ingreso_evento").forEach((record) => {
+      const key = eventKey(record.movement);
+      if (!lifecycleByGroup.has(key)) lifecycleByGroup.set(key, []);
+      lifecycleByGroup.get(key).push(record);
+    });
 
     elements.eventsBoard.innerHTML = [...groups.entries()]
       .sort((a, b) => (b[1][0].dateTime || b[1][0].date).localeCompare(a[1][0].dateTime || a[1][0].date))
-      .map(([name, entries]) => {
+      .map(([groupKey, entries]) => {
+        const sourceEntry = entries.find((entry) => entry.sourceType === "requerimiento-equipo") || null;
+        const name = sourceEntry?.sourceEventName || sourceEntry?.reference || groupKey;
+        const eventRecords = lifecycleByGroup.get(groupKey) || [];
         const outgoing = entries.filter((entry) => entry.type === "salida").reduce((sum, entry) => sum + entry.quantity, 0);
         const incoming = entries.filter((entry) => entry.type === "ingreso_evento").reduce((sum, entry) => sum + entry.quantity, 0);
+        const pending = eventRecords.reduce((sum, record) => sum + record.remainingQuantity, 0);
+        const sourcePdfUrl = sourceEntry?.sourcePdfUrl || attachmentHref(sourceEntry?.attachment);
+        const entryLines = entries
+          .slice()
+          .sort((a, b) => `${b.dateTime || b.date} ${b.createdAt}`.localeCompare(`${a.dateTime || a.date} ${a.createdAt}`))
+          .map(
+            (entry) => `
+              <div>
+                <span>${escapeHtml(displayDateTime(entry))}</span>
+                <strong>${escapeHtml(movementLabels[entry.type])}</strong>
+                <p>${escapeHtml(entry.quantity)} x ${escapeHtml(movementItemName(entry))}</p>
+                ${entry.responsible ? `<small>Responsable: ${escapeHtml(entry.responsible)}</small>` : ""}
+                ${entry.sourceUnmatched ? '<small class="warehouse-unmapped-note">No descontado: requiere renta o no estaba disponible.</small>' : ""}
+                ${entry.attachment ? `<a href="${escapeHtml(attachmentHref(entry.attachment))}" download="${escapeHtml(entry.attachment.name)}">Ver archivo: ${escapeHtml(entry.attachment.name)}</a>` : ""}
+              </div>
+            `
+          )
+          .join("");
         return `
           <article class="warehouse-board-card">
             <header>
               <div>
+                ${sourceEntry ? '<span class="warehouse-source-pill">Cuadro recibido</span>' : ""}
                 <strong>${escapeHtml(name)}</strong>
-                <span>Salió: ${escapeHtml(outgoing)} · Entró: ${escapeHtml(incoming)}</span>
+                <span>Salió: ${escapeHtml(outgoing)} · Entró: ${escapeHtml(incoming)} · Pendiente: ${escapeHtml(pending)}</span>
               </div>
-              <button class="warehouse-row-button" type="button" data-print-event="${escapeHtml(name)}">PDF evento</button>
+              <div class="warehouse-board-actions">
+                ${sourcePdfUrl ? `<a class="warehouse-row-button" href="${escapeHtml(sourcePdfUrl)}" target="_blank" rel="noopener">Ver cuadro</a>` : ""}
+                ${pending > 0 ? `<button class="warehouse-row-button" type="button" data-return-event="${escapeHtml(groupKey)}">Registrar devolución</button>` : ""}
+                <button class="warehouse-row-button" type="button" data-print-event="${escapeHtml(groupKey)}">PDF evento</button>
+              </div>
             </header>
-            <div class="warehouse-board-lines">
-              ${entries
-                .slice()
-                .sort((a, b) => `${b.dateTime || b.date} ${b.createdAt}`.localeCompare(`${a.dateTime || a.date} ${a.createdAt}`))
-                .map(
-                  (entry) => `
-                    <div>
-                      <span>${escapeHtml(displayDateTime(entry))}</span>
-                      <strong>${escapeHtml(movementLabels[entry.type])}</strong>
-                      <p>${escapeHtml(entry.quantity)} x ${escapeHtml(movementItemName(entry))}</p>
-                      ${entry.responsible ? `<small>Responsable: ${escapeHtml(entry.responsible)}</small>` : ""}
-                      ${entry.attachment ? `<a href="${entry.attachment.dataUrl}" download="${escapeHtml(entry.attachment.name)}">Ver archivo: ${escapeHtml(entry.attachment.name)}</a>` : ""}
-                    </div>
-                  `
-                )
-                .join("")}
-            </div>
+            ${sourceEntry ? `
+              <div class="warehouse-event-meta">
+                <span><strong>Lugar:</strong> ${escapeHtml(sourceEntry.sourceEventPlace || "Por definir")}</span>
+                <span><strong>Planner:</strong> ${escapeHtml(sourceEntry.sourcePlanner || "Por definir")}</span>
+                <span><strong>Salida:</strong> ${escapeHtml(displayDateTime(sourceEntry))}</span>
+                <span><strong>Regreso previsto:</strong> ${escapeHtml(sourceEntry.sourceExpectedReturnAt ? formatWarehouseDateTime(sourceEntry.sourceExpectedReturnAt) : "Por definir")}</span>
+              </div>` : ""}
+            ${sourceEntry
+              ? `<details class="warehouse-event-lines-disclosure">
+                  <summary>Ver equipo y movimientos (${escapeHtml(entries.length)} renglones)</summary>
+                  <div class="warehouse-board-lines">${entryLines}</div>
+                </details>`
+              : `<div class="warehouse-board-lines">${entryLines}</div>`}
           </article>
         `;
       })
@@ -1068,7 +1121,8 @@
             ${movement.repair ? `<p><strong>Qué tiene malo:</strong> ${escapeHtml(movement.repair)}</p>` : ""}
             ${movement.sparePart ? `<p><strong>Repuesto:</strong> ${escapeHtml(movement.sparePart)}</p>` : ""}
             ${movement.notes ? `<p>${escapeHtml(movement.notes)}</p>` : ""}
-            ${movement.attachment ? `<a href="${movement.attachment.dataUrl}" download="${escapeHtml(movement.attachment.name)}">Ver archivo adjunto</a>` : ""}
+            ${movement.attachment ? `<a href="${escapeHtml(attachmentHref(movement.attachment))}" download="${escapeHtml(movement.attachment.name)}">Ver archivo adjunto</a>` : ""}
+            ${movement.sourcePdfUrl ? `<a href="${escapeHtml(movement.sourcePdfUrl)}" target="_blank" rel="noopener">Ver cuadro de Requerimiento de equipo</a>` : ""}
             <button class="warehouse-row-button" type="button" data-delete-movement="${escapeHtml(movement.id)}">Eliminar</button>
           </article>
         `;
@@ -1291,14 +1345,14 @@
 
   function addMovement(payload) {
     const item = itemById(payload.itemId);
-    if (!item) return false;
+    if (!item && !normalizeText(payload.itemName)) return false;
     const quantity = normalizeNumber(payload.quantity);
     if (quantity <= 0) {
       setStatus("La cantidad debe ser mayor a 0.", "warning");
       return false;
     }
-    const stats = statsForItem(item);
-    if (movementReducesPhysical(payload.type) && quantity > stats.physical) {
+    const stats = item ? statsForItem(item) : null;
+    if (item && movementReducesPhysical(payload.type) && quantity > stats.physical) {
       const ok = window.confirm(
         `Total físico en bodega: ${stats.physical}. ¿Desea registrar ${quantity} y dejar faltante?`
       );
@@ -1309,8 +1363,8 @@
     state.movements.push({
       id: uid("movement"),
       type: payload.type,
-      itemId: item.id,
-      itemName: item.name,
+      itemId: item?.id || "",
+      itemName: item?.name || normalizeText(payload.itemName),
       quantity,
       previousQuantity: null,
       date: dateTime.slice(0, 10) || todayInputValue(),
@@ -1327,6 +1381,22 @@
       attachment: normalizeAttachment(payload.attachment),
       warehouseSignature: normalizeText(payload.warehouseSignature),
       workshopSignature: normalizeText(payload.workshopSignature),
+      sourceType: normalizeText(payload.sourceType),
+      sourceDocumentId: normalizeText(payload.sourceDocumentId),
+      sourceEventId: normalizeText(payload.sourceEventId),
+      sourceEventName: normalizeText(payload.sourceEventName),
+      sourceEventPlace: normalizeText(payload.sourceEventPlace),
+      sourcePlanner: normalizeText(payload.sourcePlanner),
+      sourceEventDate: normalizeText(payload.sourceEventDate),
+      sourceExpectedReturnAt: normalizeText(payload.sourceExpectedReturnAt),
+      sourcePdfUrl: normalizeText(payload.sourcePdfUrl),
+      sourceJsonUrl: normalizeText(payload.sourceJsonUrl),
+      sourceFileName: normalizeText(payload.sourceFileName),
+      sourceJsonFileName: normalizeText(payload.sourceJsonFileName),
+      sourceCategory: normalizeText(payload.sourceCategory),
+      sourceRequestedName: normalizeText(payload.sourceRequestedName),
+      sourceLineKey: normalizeText(payload.sourceLineKey),
+      sourceUnmatched: Boolean(payload.sourceUnmatched),
       createdAt: new Date().toISOString()
     });
     return true;
@@ -1513,6 +1583,50 @@
     initSignaturePad("dialogWorkshop", elements.dialogBody.querySelector("#dialogWorkshopSignature"));
   }
 
+  function openEventReturnDialog(groupKey) {
+    const records = movementLifecycleRecords("salida", "ingreso_evento")
+      .filter((record) => eventKey(record.movement) === groupKey && record.remainingQuantity > 0);
+    if (!records.length) {
+      setStatus("El equipo de este evento ya regresó por completo.", "success");
+      return;
+    }
+    const source = records.find((record) => record.movement.sourceType === "requerimiento-equipo")?.movement
+      || records[0].movement;
+    dialogContext = {
+      kind: "eventBatchReturn",
+      groupKey,
+      recordIds: records.map((record) => record.movement.id)
+    };
+    elements.dialogTitle.textContent = "Devolución del cuadro";
+    elements.dialogSaveButton.textContent = "Registrar devolución completa";
+    elements.dialogBody.innerHTML = `
+      <div class="warehouse-selected-equipment">
+        <span>Evento</span>
+        <strong>${escapeHtml(source.sourceEventName || source.reference || "Sin evento")}</strong>
+        <small>${escapeHtml(records.reduce((sum, record) => sum + record.remainingQuantity, 0))} unidades pendientes en ${escapeHtml(records.length)} renglones</small>
+      </div>
+      <div class="warehouse-return-list">
+        ${records.map((record) => `<span><strong>${escapeHtml(record.remainingQuantity)}</strong> x ${escapeHtml(movementItemName(record.movement))}</span>`).join("")}
+      </div>
+      <div class="warehouse-form-grid">
+        <label>
+          Fecha y hora de regreso
+          <input id="dialogDateTime" type="datetime-local" value="${escapeHtml(dateTimeLocalValue())}" />
+        </label>
+        <label>
+          Responsable que recibe
+          <input id="dialogResponsible" type="text" autocomplete="off" placeholder="Nombre del responsable" />
+        </label>
+        <label class="warehouse-field-wide">
+          Observaciones de devolución
+          <textarea id="dialogNotes" rows="3" placeholder="Estado y novedades del equipo al regresar"></textarea>
+        </label>
+      </div>
+    `;
+    if (elements.dialog.showModal) elements.dialog.showModal();
+    else elements.dialog.classList.add("is-open");
+  }
+
   function closeDialog() {
     dialogContext = null;
     if (elements.dialog.close) elements.dialog.close();
@@ -1521,6 +1635,60 @@
 
   async function saveDialog() {
     if (!dialogContext) return;
+    if (dialogContext.kind === "eventBatchReturn") {
+      const recordsById = new Map(
+        movementLifecycleRecords("salida", "ingreso_evento").map((record) => [record.movement.id, record])
+      );
+      const records = dialogContext.recordIds.map((id) => recordsById.get(id)).filter(
+        (record) => record && record.remainingQuantity > 0
+      );
+      if (!records.length) {
+        closeDialog();
+        renderAll();
+        setStatus("El equipo de este evento ya regresó por completo.", "success");
+        return;
+      }
+      const dateTime = elements.dialogBody.querySelector("#dialogDateTime")?.value || dateTimeLocalValue();
+      const responsible = elements.dialogBody.querySelector("#dialogResponsible")?.value;
+      const notes = elements.dialogBody.querySelector("#dialogNotes")?.value;
+      records.forEach((record) => {
+        const movement = record.movement;
+        addMovement({
+          type: "ingreso_evento",
+          itemId: movement.itemId,
+          itemName: movementItemName(movement),
+          quantity: record.remainingQuantity,
+          dateTime,
+          responsible,
+          reference: movement.reference,
+          notes,
+          batchId: movement.batchId,
+          relatedMovementId: movement.id,
+          sourceType: movement.sourceType,
+          sourceDocumentId: movement.sourceDocumentId,
+          sourceEventId: movement.sourceEventId,
+          sourceEventName: movement.sourceEventName,
+          sourceEventPlace: movement.sourceEventPlace,
+          sourcePlanner: movement.sourcePlanner,
+          sourceEventDate: movement.sourceEventDate,
+          sourceExpectedReturnAt: movement.sourceExpectedReturnAt,
+          sourcePdfUrl: movement.sourcePdfUrl,
+          sourceJsonUrl: movement.sourceJsonUrl,
+          sourceFileName: movement.sourceFileName,
+          sourceJsonFileName: movement.sourceJsonFileName,
+          sourceCategory: movement.sourceCategory,
+          sourceRequestedName: movement.sourceRequestedName,
+          sourceLineKey: movement.sourceLineKey,
+          sourceUnmatched: movement.sourceUnmatched
+        });
+      });
+      closeDialog();
+      switchWindow("events");
+      scheduleSave();
+      renderAll();
+      setStatus("Devolución completa del cuadro registrada.", "success");
+      return;
+    }
     const item = itemById(dialogContext.itemId);
     if (!item) return;
     const quantity = normalizeNumber(elements.dialogBody.querySelector("#dialogQuantity")?.value);
@@ -1864,11 +2032,14 @@
     setStatus("Renta registrada. Use la ventana abierta para guardar como PDF.", "success");
   }
 
-  function printEventPdf(eventName) {
+  function printEventPdf(groupKey) {
     const entries = state.movements
-      .filter((movement) => ["salida", "ingreso_evento"].includes(movement.type) && eventKey(movement) === eventName)
+      .filter((movement) => ["salida", "ingreso_evento"].includes(movement.type) && eventKey(movement) === groupKey)
       .slice()
       .sort((a, b) => `${a.dateTime || a.date} ${a.createdAt}`.localeCompare(`${b.dateTime || b.date} ${b.createdAt}`));
+    const eventName = entries.find((entry) => entry.sourceEventName)?.sourceEventName
+      || entries[0]?.reference
+      || "Sin evento";
     const rows = entries
       .map(
         (entry) => `
@@ -2166,8 +2337,10 @@
       if (button.dataset.action === "rental") openDialog("rental", button.dataset.itemId);
     });
     elements.eventsBoard.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-print-event]");
-      if (button) printEventPdf(button.dataset.printEvent);
+      const printButton = event.target.closest("[data-print-event]");
+      if (printButton) printEventPdf(printButton.dataset.printEvent);
+      const returnButton = event.target.closest("[data-return-event]");
+      if (returnButton) openEventReturnDialog(returnButton.dataset.returnEvent);
     });
     elements.workshopBoard.addEventListener("click", (event) => {
       const button = event.target.closest("[data-workshop-return]");
@@ -2284,6 +2457,17 @@
     renderAll();
     switchWindow(activeWindow);
   }
+
+  document.addEventListener("live:warehouse-server-updated", (event) => {
+    if (!event.detail?.state?.items?.length) return;
+    state = normalizeState(event.detail.state);
+    persistenceMode = "server";
+    saveLocalState();
+    if (elements.root) {
+      renderAll();
+      setStatus("Cuadro recibido desde Requerimiento de equipo.", "success");
+    }
+  });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initWarehouse);

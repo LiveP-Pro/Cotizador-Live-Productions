@@ -37,7 +37,8 @@ const equipmentState = {
   summarySearchTerm: "",
   summaryTransferEnabled: false,
   summaryTransferRoutes: [],
-  activeSummaryTransferRouteId: ""
+  activeSummaryTransferRouteId: "",
+  draftWarehouseDispatchId: createEquipmentWarehouseDispatchId()
 };
 
 let equipmentEventCounter = 1;
@@ -45,6 +46,11 @@ let equipmentManualMainCounter = 1;
 let equipmentManualSectionCounter = 1;
 let equipmentExtraCounter = 1;
 let equipmentTransferRouteCounter = 1;
+
+function createEquipmentWarehouseDispatchId() {
+  if (globalThis.crypto?.randomUUID) return `cuadro-${globalThis.crypto.randomUUID()}`;
+  return `cuadro-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 function equipmentQuery(selector) {
   return document.querySelector(selector);
@@ -1428,7 +1434,8 @@ function addEquipmentEvent() {
   const createdEvent = {
     ...draft,
     ...captureEquipmentEventSnapshot(),
-    id: `event-${Date.now()}-${equipmentEventCounter++}`
+    id: `event-${Date.now()}-${equipmentEventCounter++}`,
+    warehouseDispatchId: equipmentState.draftWarehouseDispatchId
   };
   equipmentState.events.push(createdEvent);
   resetEquipmentWindowDraft();
@@ -2489,6 +2496,7 @@ function resetEquipmentWindowDraft() {
   equipmentState.deletedStack = [];
   equipmentState.activeWindow = "review";
   equipmentState.servicePickerOpen = false;
+  equipmentState.draftWarehouseDispatchId = createEquipmentWarehouseDispatchId();
   updateNativeEquipmentServiceSelect();
   populateEquipmentEventFields(null);
   const notesInput = equipmentQuery("#equipmentNotes");
@@ -2770,6 +2778,7 @@ function cleanEquipmentJsonFilePart(value, fallback = "Cuadro de Equipo.requerim
 function cloneEquipmentEventForEditable(event, index = 0) {
   return {
     id: event?.id || `event-editable-${index}`,
+    warehouseDispatchId: event?.warehouseDispatchId || "",
     place: event?.place || "",
     name: event?.name || "",
     phone: event?.phone || "",
@@ -2796,11 +2805,64 @@ function cloneEquipmentEventForEditable(event, index = 0) {
 }
 
 function currentEquipmentEditableEvent() {
+  const selectedEvent = selectedEquipmentEvent();
+  const warehouseDispatchId = selectedEvent?.warehouseDispatchId || equipmentState.draftWarehouseDispatchId;
+  if (selectedEvent && !selectedEvent.warehouseDispatchId) selectedEvent.warehouseDispatchId = warehouseDispatchId;
   return cloneEquipmentEventForEditable({
     ...currentEquipmentEventDraft(),
     ...captureEquipmentEventSnapshot(),
-    id: equipmentState.selectedEventId || "event-draft"
+    id: equipmentState.selectedEventId || "event-draft",
+    warehouseDispatchId
   });
+}
+
+function equipmentWarehouseDispatchItems(event) {
+  const groups = new Map();
+  const sections = event?.sections?.length ? event.sections : selectedEquipmentSections();
+  sections.forEach((section) => {
+    (section.items || []).forEach((rawItem) => {
+      const item = normalizeEquipmentItem(rawItem);
+      const quantity = Math.max(0, Number(item.quantity) || 0);
+      const description = String(item.description || "").trim();
+      if (!description || quantity <= 0) return;
+      const key = equipmentInventoryCanonicalKey(description);
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          description,
+          category: section.title || "Equipo",
+          quantity: 0,
+          warehouseItemIds: []
+        };
+        groups.set(key, group);
+      }
+      group.quantity += quantity;
+    });
+  });
+
+  groups.forEach((group) => {
+    const matches = equipmentWarehouseInventoryState.recordsByLookupKey.get(
+      equipmentInventoryCanonicalKey(group.description)
+    ) || [];
+    group.warehouseItemIds = [...new Set(matches.map((record) => record.id).filter(Boolean))];
+  });
+  return [...groups.values()];
+}
+
+function equipmentWarehouseDispatchPayload(event) {
+  return {
+    id: event.warehouseDispatchId || equipmentState.draftWarehouseDispatchId,
+    eventId: event.id || "event-draft",
+    source: "requerimiento-equipo",
+    name: event.name || "Evento por definir",
+    place: event.place || "Lugar por definir",
+    planner: event.phone || "",
+    eventDate: event.date || "",
+    equipmentOutAt: event.equipmentOutAt || "",
+    equipmentInAt: event.equipmentInAt || "",
+    responsible: event.responsible && event.responsible !== "Por definir" ? event.responsible : event.phone || "",
+    items: equipmentWarehouseDispatchItems(event)
+  };
 }
 
 function equipmentEditablePayload(mode = "full", savedData = {}) {
@@ -2820,6 +2882,7 @@ function equipmentEditablePayload(mode = "full", savedData = {}) {
     jsonUrl: savedData.jsonUrl || "",
     event: currentEvent,
     events,
+    warehouseDispatch: mode === "full" ? equipmentWarehouseDispatchPayload(currentEvent) : null,
     inventory: [...equipmentState.inventory.entries()],
     observations: [...equipmentState.observations.entries()],
     summaryTransferEnabled: equipmentState.summaryTransferEnabled,
@@ -3013,7 +3076,15 @@ async function saveEquipmentPdf(mode = "full") {
         ? "Seleccione cualquier carpeta donde desea guardar el PDF y el JSON editable."
         : "El navegador descargará el PDF y el JSON; en Safari, Firefox o celular elija Guardar desde su sistema de descargas.";
     }
-    const directoryHandle = canChooseFolder ? await chooseEquipmentSaveFolder() : null;
+    let directoryHandle = null;
+    if (canChooseFolder) {
+      try {
+        directoryHandle = await chooseEquipmentSaveFolder();
+      } catch (pickerError) {
+        if (pickerError?.name === "AbortError") throw pickerError;
+        if (status) status.textContent = "No se pudo abrir el selector de carpeta. Se guardará en el servidor y se usarán las descargas del navegador.";
+      }
+    }
     if (status) status.textContent = mode === "rent" ? "Generando PDF de renta..." : "Generando PDF para bodega...";
     const documentSelector = mode === "rent" ? "#equipmentRentPdfDocument" : "#equipmentPdfDocument";
     const title = mode === "rent" ? "Resumen de renta" : "Equipo y extras para bodega";
@@ -3032,6 +3103,12 @@ async function saveEquipmentPdf(mode = "full") {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "No se pudo guardar el cuadro de equipo.");
+    if (data.warehouseInventory) {
+      applyEquipmentWarehouseInventoryPayload(data.warehouseInventory);
+      document.dispatchEvent(new CustomEvent("live:warehouse-server-updated", {
+        detail: data.warehouseInventory
+      }));
+    }
     const savedLabel = mode === "rent" ? "PDF + JSON de renta guardado" : "PDF + JSON de bodega guardado";
     let statusMessage = `${savedLabel}: ${data.fileName} + ${data.jsonFileName} en ${data.folder}`;
     try {
@@ -3039,6 +3116,13 @@ async function saveEquipmentPdf(mode = "full") {
     } catch (saveError) {
       const destinationLabel = directoryHandle ? "la carpeta seleccionada" : "las descargas del navegador";
       statusMessage = `${savedLabel}: ${data.fileName} + ${data.jsonFileName}. No se copió a ${destinationLabel}: ${saveError.message}`;
+    }
+    if (mode === "full" && data.warehouseReceipt?.received) {
+      const receiptAction = data.warehouseReceipt.updated ? "actualizado" : "recibido";
+      statusMessage += ` Cuadro ${receiptAction} en Fuera / Eventos sin duplicar la salida.`;
+      if (data.warehouseReceipt.unmappedQuantity > 0) {
+        statusMessage += ` ${data.warehouseReceipt.unmappedQuantity} unidades quedaron identificadas como renta o no disponibles, sin restarlas de bodega.`;
+      }
     }
     if (status) status.textContent = statusMessage;
     if (directoryHandle) window.open(data.pdfUrl, "_blank", "noopener");
@@ -3061,6 +3145,7 @@ function importedEquipmentEvent(rawEvent, index = 0) {
   return {
     ...cloneEquipmentEventForEditable({ ...rawEvent, serviceIds }, index),
     id: `event-${Date.now()}-${equipmentEventCounter++}`,
+    warehouseDispatchId: rawEvent?.warehouseDispatchId || createEquipmentWarehouseDispatchId(),
     place: rawEvent?.place || "",
     name: rawEvent?.name || "",
     phone: rawEvent?.phone || "",
