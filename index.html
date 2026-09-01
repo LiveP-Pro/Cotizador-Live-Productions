@@ -7,10 +7,13 @@
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
     <link rel="stylesheet" href="styles.css?v=20260822-01" />
+    <link rel="stylesheet" href="warehouse-inventory.css?v=20260901-01" />
     <script src="app.js?v=20260814-01" defer></script>
     <script src="equipment-catalog.js?v=20260821-04" defer></script>
     <script src="equipment-inventory.js?v=20260822-01" defer></script>
     <script src="equipment.js?v=20260822-01" defer></script>
+    <script src="inventory-seed.js?v=20260901-01" defer></script>
+    <script src="inventory.js?v=20260901-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -472,31 +475,8 @@
       </section>
 
       <section id="contabilidadEquipoPage" class="site-page no-print" data-page="contabilidad-equipo">
-        <div class="site-page-card equipment-module-card">
-          <img class="page-logo" src="assets/logo-live-productions.jpeg" alt="Live Productions" />
-          <p class="eyebrow">Contabilidad de equipo</p>
-          <h1>Contabilidad de equipo</h1>
-          <p class="module-intro">
-            Base inicial para controlar inventario, salidas, retornos y disponibilidad del equipo.
-          </p>
-          <div class="equipment-table-wrap">
-            <table class="equipment-base-table">
-              <thead>
-                <tr>
-                  <th>Equipo</th>
-                  <th>Cantidad</th>
-                  <th>Asignado a</th>
-                  <th>Estado</th>
-                  <th>Observaciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colspan="5">Agregue el detalle del equipo para iniciar el control.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div id="warehouseModuleHost" class="warehouse-module-host" aria-live="polite">
+          <p class="warehouse-module-loading">Cargando Inventario Bodega...</p>
         </div>
       </section>
 

@@ -29,6 +29,9 @@ const equipmentPdfDir = process.env.EQUIPMENT_PDF_DIR
   : defaultEquipmentPdfDir;
 const backupDir = path.join(dataDir, "respaldo-cotizaciones");
 const dbPath = path.join(dataDir, "cotizaciones.sqlite");
+const warehouseInventoryPath = path.join(dataDir, "inventario-bodega.json");
+const warehouseInventoryBackupPath = path.join(dataDir, "inventario-bodega-anterior.json");
+const warehouseInventoryInitialPath = path.join(rootDir, "inventory-initial-state.json");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
 const whatsappConfig = {
@@ -55,6 +58,68 @@ const mimeTypes = {
 fs.mkdirSync(pdfDir, { recursive: true });
 fs.mkdirSync(equipmentPdfDir, { recursive: true });
 fs.mkdirSync(backupDir, { recursive: true });
+
+function normalizeWarehouseInventoryPayload(payload) {
+  const state = payload?.state || payload;
+  if (!state || !Array.isArray(state.items) || state.items.length === 0) {
+    throw new Error("El inventario debe incluir al menos un equipo.");
+  }
+  if (state.items.length > 10000) {
+    throw new Error("El inventario excede el límite permitido.");
+  }
+  return {
+    state,
+    savedAt: payload?.savedAt || new Date().toISOString()
+  };
+}
+
+function readWarehouseInventoryFile(filePath) {
+  return normalizeWarehouseInventoryPayload(JSON.parse(fs.readFileSync(filePath, "utf8")));
+}
+
+function readWarehouseInventory() {
+  const candidates = [warehouseInventoryPath, warehouseInventoryBackupPath, warehouseInventoryInitialPath];
+  let lastError;
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) continue;
+    try {
+      return readWarehouseInventoryFile(candidate);
+    } catch (error) {
+      lastError = error;
+      console.warn(`No se pudo leer ${path.basename(candidate)}: ${error.message}`);
+    }
+  }
+  throw lastError || new Error("No existe un inventario inicial disponible.");
+}
+
+function ensureWarehouseInventoryStorage() {
+  if (fs.existsSync(warehouseInventoryPath)) return;
+  const initial = readWarehouseInventoryFile(warehouseInventoryInitialPath);
+  fs.writeFileSync(warehouseInventoryPath, JSON.stringify(initial, null, 2), { mode: 0o600 });
+}
+
+async function saveWarehouseInventory(payload, response) {
+  let normalized;
+  try {
+    normalized = normalizeWarehouseInventoryPayload({
+      state: payload?.state,
+      savedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    errorResponse(response, 400, error.message);
+    return;
+  }
+
+  const temporaryPath = `${warehouseInventoryPath}.tmp-${process.pid}-${Date.now()}`;
+  if (fs.existsSync(warehouseInventoryPath)) {
+    await fsp.copyFile(warehouseInventoryPath, warehouseInventoryBackupPath);
+  }
+  await fsp.writeFile(temporaryPath, JSON.stringify(normalized, null, 2), { mode: 0o600 });
+  await fsp.rename(temporaryPath, warehouseInventoryPath);
+  jsonResponse(response, 200, normalized);
+}
+
+ensureWarehouseInventoryStorage();
 
 const authConfigPath = path.join(dataDir, "cotizador-auth.json");
 const defaultPasswordHash = {
@@ -2638,6 +2703,19 @@ async function handleRequest(request, response) {
         "Set-Cookie": expiredSessionCookie()
       });
       response.end(JSON.stringify({ authenticated: false }));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/inventario-bodega") {
+      if (!requireAuth(request, response)) return;
+      jsonResponse(response, 200, readWarehouseInventory());
+      return;
+    }
+
+    if (request.method === "PUT" && url.pathname === "/api/inventario-bodega") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => saveWarehouseInventory(payload, response));
       return;
     }
 

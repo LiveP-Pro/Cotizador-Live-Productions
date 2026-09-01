@@ -1,0 +1,281 @@
+        <div id="warehouseModule" class="site-page-card equipment-module-card warehouse-module-card">
+          <img class="page-logo" src="assets/logo-live-productions.jpeg" alt="Live Productions" />
+          <p class="eyebrow">Inventario Bodega</p>
+          <h1>Inventario Bodega</h1>
+          <p class="module-intro">
+            Control editable para inventario real, salidas de bodega, taller, renta,
+            devoluciones y bitácoras con firma digital.
+          </p>
+
+          <p id="warehouseStatus" class="warehouse-status" role="status"></p>
+
+          <div id="warehouseSummary" class="warehouse-summary" aria-label="Resumen de inventario"></div>
+
+          <div class="warehouse-top-actions" aria-label="Acciones de inventario">
+            <button id="warehouseSaveNowButton" class="primary-button" type="button">Guardar cambios</button>
+            <button id="warehouseExportButton" class="secondary-button" type="button">Exportar respaldo</button>
+            <label class="secondary-button warehouse-import-button">
+              Importar respaldo
+              <input id="warehouseImportInput" class="is-hidden" type="file" accept="application/json,.json" />
+            </label>
+            <button id="warehouseResetSeedButton" class="secondary-button" type="button">Restaurar libro inicial</button>
+          </div>
+
+          <nav class="warehouse-window-tabs" aria-label="Ventanas de inventario">
+            <button class="is-active" type="button" data-warehouse-window="inventory">Inventario</button>
+            <button type="button" data-warehouse-window="events">Fuera / Eventos</button>
+            <button type="button" data-warehouse-window="workshop">Taller</button>
+            <button type="button" data-warehouse-window="rental">Renta PDF</button>
+            <button type="button" data-warehouse-window="logs">Bitácoras</button>
+          </nav>
+
+          <section class="warehouse-view is-active" data-warehouse-view="inventory">
+            <div class="warehouse-work-grid">
+              <section class="warehouse-panel" aria-labelledby="warehouseNewItemTitle">
+                <div class="section-heading">
+                  <span id="warehouseNewItemTitle">Agregar equipo nuevo</span>
+                  <small>queda guardado en inventario</small>
+                </div>
+                <div class="warehouse-form-grid">
+                  <label>
+                    Agregar subtítulo
+                    <input id="warehouseNewSubtitle" type="text" autocomplete="off" placeholder="Ej. AUDIO, VIDEO, CABLEADO" />
+                  </label>
+                  <div class="warehouse-form-button-slot">
+                    <button id="warehouseAddSubtitleButton" class="secondary-button" type="button">Agregar subtítulo</button>
+                  </div>
+                  <span class="warehouse-form-spacer" aria-hidden="true"></span>
+                  <label>
+                    Nombre completo del equipo
+                    <input id="warehouseNewName" type="text" autocomplete="off" placeholder="Ej. Monitor QSC KLA12 con accesorios" />
+                  </label>
+                  <label>
+                    Categoría
+                    <input id="warehouseNewCategory" type="text" autocomplete="off" placeholder="Ej. AUDIO" />
+                  </label>
+                  <label>
+                    Total físico en bodega
+                    <input id="warehouseNewQuantity" type="number" min="0" step="1" value="1" />
+                  </label>
+                  <label class="warehouse-field-wide">
+                    Observaciones internas
+                    <textarea id="warehouseNewNotes" rows="2" placeholder="Serie, ubicación, accesorios o detalle importante"></textarea>
+                  </label>
+                </div>
+                <button id="warehouseAddItemButton" class="primary-button" type="button">Agregar equipo</button>
+              </section>
+
+              <section class="warehouse-panel warehouse-quick-panel" aria-labelledby="warehouseQuickTitle">
+                <div class="section-heading">
+                  <span id="warehouseQuickTitle">Acciones rápidas</span>
+                  <small>cada botón abre su ventana ordenada</small>
+                </div>
+                <p>
+                  En la tabla, use <strong>Fuera</strong> para salida/entrada por evento, <strong>Taller</strong>
+                  para bitácora de reparación y <strong>Renta</strong> para preparar el PDF de firma.
+                </p>
+              </section>
+            </div>
+
+            <section class="warehouse-panel" aria-labelledby="warehouseInventoryTitle">
+              <div class="section-heading">
+                  <span id="warehouseInventoryTitle">Inventario editable</span>
+                <small>cantidad = físico en bodega · total real = inventario registrado</small>
+              </div>
+              <div class="warehouse-filter-grid">
+                <label>
+                  Buscar
+                  <input id="warehouseSearch" type="search" autocomplete="off" placeholder="Buscar equipo o categoría" />
+                </label>
+                <label>
+                  Categoría
+                  <select id="warehouseCategoryFilter"></select>
+                </label>
+                <label>
+                  Estado
+                  <select id="warehouseStatusFilter">
+                    <option value="all">Todo</option>
+                    <option value="available">Con equipo en bodega</option>
+                    <option value="out">Fuera por evento</option>
+                    <option value="workshop">En taller</option>
+                    <option value="rented">En renta</option>
+                    <option value="lost">Diferencias / perdido</option>
+                    <option value="needs-quantity">Sin cantidad libro</option>
+                  </select>
+                </label>
+                <button id="warehouseClearFiltersButton" class="secondary-button" type="button">Limpiar filtros</button>
+              </div>
+              <div id="warehouseInventoryTable" class="warehouse-table-wrap"></div>
+            </section>
+          </section>
+
+          <section class="warehouse-view" data-warehouse-view="events">
+            <section class="warehouse-panel" aria-labelledby="warehouseEventsTitle">
+              <div class="section-heading">
+                <span id="warehouseEventsTitle">Fuera / Eventos</span>
+                <small>salidas, ingresos y archivos adjuntos</small>
+              </div>
+              <div id="warehouseEventsBoard" class="warehouse-board-list"></div>
+            </section>
+          </section>
+
+          <section class="warehouse-view" data-warehouse-view="workshop">
+            <section class="warehouse-panel" aria-labelledby="warehouseWorkshopTitle">
+              <div class="section-heading">
+                <span id="warehouseWorkshopTitle">Taller</span>
+                <small>bitácora de equipo en reparación</small>
+              </div>
+              <div class="warehouse-top-actions">
+                <button id="warehousePrintWorkshopReportButton" class="secondary-button" type="button">Guardar reporte taller PDF</button>
+              </div>
+              <div class="warehouse-workshop-multi">
+                <div class="section-heading">
+                  <span>Enviar varios equipos a taller</span>
+                  <small>seleccione todo lo necesario antes de guardar</small>
+                </div>
+                <div class="warehouse-form-grid">
+                  <label>
+                    Equipo
+                    <select id="warehouseWorkshopBulkItem"></select>
+                  </label>
+                  <label>
+                    Cantidad
+                    <input id="warehouseWorkshopBulkQuantity" type="number" min="1" step="1" value="1" />
+                  </label>
+                  <label>
+                    Fecha y hora fija
+                    <input id="warehouseWorkshopBulkDateTime" type="datetime-local" readonly />
+                  </label>
+                  <label>
+                    Responsable de bodega
+                    <input id="warehouseWorkshopBulkWarehouseResponsible" type="text" autocomplete="off" />
+                  </label>
+                  <label>
+                    Encargado de taller
+                    <input id="warehouseWorkshopBulkShopResponsible" type="text" autocomplete="off" />
+                  </label>
+                  <div class="warehouse-form-button-slot">
+                    <button id="warehouseAddWorkshopDraftButton" class="secondary-button" type="button">Agregar a taller</button>
+                  </div>
+                  <label class="warehouse-field-wide">
+                    Razón / qué tiene malo
+                    <textarea id="warehouseWorkshopBulkRepair" rows="3"></textarea>
+                  </label>
+                  <label class="warehouse-field-wide">
+                    Repuesto necesario
+                    <textarea id="warehouseWorkshopBulkSparePart" rows="3"></textarea>
+                  </label>
+                  <label class="warehouse-field-wide">
+                    Observaciones de salida
+                    <textarea id="warehouseWorkshopBulkNotes" rows="2"></textarea>
+                  </label>
+                </div>
+                <div class="warehouse-signature-grid">
+                  <div class="warehouse-signature-pad">
+                    <span>Firma responsable de bodega</span>
+                    <canvas id="warehouseWorkshopWarehouseSignature" width="520" height="160"></canvas>
+                    <button class="warehouse-row-button" type="button" data-clear-signature="workshopWarehouse">Limpiar firma</button>
+                  </div>
+                  <div class="warehouse-signature-pad">
+                    <span>Firma encargado de taller</span>
+                    <canvas id="warehouseWorkshopShopSignature" width="520" height="160"></canvas>
+                    <button class="warehouse-row-button" type="button" data-clear-signature="workshopShop">Limpiar firma</button>
+                  </div>
+                </div>
+                <div id="warehouseWorkshopDraft" class="warehouse-table-wrap"></div>
+                <div class="warehouse-top-actions">
+                  <button id="warehouseRegisterWorkshopDraftButton" class="primary-button" type="button">Enviar todo a taller</button>
+                  <button id="warehouseClearWorkshopDraftButton" class="secondary-button" type="button">Limpiar taller</button>
+                </div>
+              </div>
+              <div id="warehouseWorkshopBoard" class="warehouse-board-list"></div>
+            </section>
+          </section>
+
+          <section class="warehouse-view" data-warehouse-view="rental">
+            <section class="warehouse-panel" aria-labelledby="warehouseRentalTitle">
+              <div class="section-heading">
+                <span id="warehouseRentalTitle">Renta de equipo</span>
+                <small>descripción y cantidad editables para PDF</small>
+              </div>
+              <div class="warehouse-form-grid">
+                <label>
+                  Cliente / proveedor
+                  <input id="warehouseRentalClient" type="text" autocomplete="off" placeholder="Nombre de quien recibe el equipo" />
+                </label>
+                <label>
+                  Responsable
+                  <input id="warehouseRentalResponsible" type="text" autocomplete="off" placeholder="Quien entrega o autoriza" />
+                </label>
+                <label>
+                  Fecha y hora de salida
+                  <input id="warehouseRentalDate" type="datetime-local" />
+                </label>
+                <label class="warehouse-field-wide">
+                  Observaciones para el documento
+                  <textarea id="warehouseRentalNotes" rows="2" placeholder="Condiciones, fecha de devolución o notas importantes"></textarea>
+                </label>
+              </div>
+              <div id="warehouseRentalDraft" class="warehouse-table-wrap"></div>
+              <div class="warehouse-top-actions">
+                <button id="warehouseGenerateRentalPdfButton" class="primary-button" type="button">Registrar renta y generar PDF</button>
+                <button id="warehouseClearRentalButton" class="secondary-button" type="button">Limpiar renta</button>
+              </div>
+            </section>
+            <section class="warehouse-panel" aria-labelledby="warehouseRentedTitle">
+              <div class="section-heading">
+                <span id="warehouseRentedTitle">Equipo actualmente en renta</span>
+                <small>control de devolución</small>
+              </div>
+              <div id="warehouseRentedBoard" class="warehouse-board-list"></div>
+            </section>
+          </section>
+
+          <section class="warehouse-view" data-warehouse-view="logs">
+            <section class="warehouse-panel" aria-labelledby="warehouseLogTitle">
+              <div class="section-heading">
+                <span id="warehouseLogTitle">Bitácoras</span>
+                <small>historial completo de movimientos</small>
+              </div>
+              <div class="warehouse-filter-grid warehouse-log-filter-grid">
+                <label>
+                  Buscar bitácora
+                  <input id="warehouseLogSearch" type="search" autocomplete="off" placeholder="Evento, responsable, nota o equipo" />
+                </label>
+                <label>
+                  Tipo
+                  <select id="warehouseLogTypeFilter">
+                    <option value="all">Todos</option>
+                    <option value="salida">Salida de bodega</option>
+                    <option value="ingreso_evento">Ingreso de eventos</option>
+                    <option value="taller">Salida a taller</option>
+                    <option value="devolucion_taller">Devolución de taller</option>
+                    <option value="renta">Renta de equipo</option>
+                    <option value="devolucion_renta">Devolución de renta</option>
+                    <option value="perdido">Diferencias / perdido</option>
+                    <option value="recuperado">Recuperado</option>
+                    <option value="ajuste">Ajuste de conteo</option>
+                  </select>
+                </label>
+              </div>
+              <div id="warehouseLogList" class="warehouse-log-list"></div>
+            </section>
+          </section>
+
+          <dialog id="warehouseActionDialog" class="warehouse-dialog">
+            <form method="dialog" class="warehouse-dialog-card">
+              <header>
+                <div>
+                  <p class="eyebrow">Inventario Bodega</p>
+                  <h2 id="warehouseDialogTitle">Movimiento</h2>
+                </div>
+                <button id="warehouseDialogCloseButton" type="button" aria-label="Cerrar">×</button>
+              </header>
+              <div id="warehouseDialogBody" class="warehouse-dialog-body"></div>
+              <footer>
+                <button id="warehouseDialogCancelButton" class="secondary-button" type="button">Cancelar</button>
+                <button id="warehouseDialogSaveButton" class="primary-button" type="button">Guardar</button>
+              </footer>
+            </form>
+          </dialog>
+        </div>
