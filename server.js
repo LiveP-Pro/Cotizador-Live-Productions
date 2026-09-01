@@ -98,6 +98,15 @@ function ensureWarehouseInventoryStorage() {
   fs.writeFileSync(warehouseInventoryPath, JSON.stringify(initial, null, 2), { mode: 0o600 });
 }
 
+async function writeWarehouseInventory(normalized) {
+  const temporaryPath = `${warehouseInventoryPath}.tmp-${process.pid}-${Date.now()}`;
+  if (fs.existsSync(warehouseInventoryPath)) {
+    await fsp.copyFile(warehouseInventoryPath, warehouseInventoryBackupPath);
+  }
+  await fsp.writeFile(temporaryPath, JSON.stringify(normalized, null, 2), { mode: 0o600 });
+  await fsp.rename(temporaryPath, warehouseInventoryPath);
+}
+
 async function saveWarehouseInventory(payload, response) {
   let normalized;
   try {
@@ -110,13 +119,15 @@ async function saveWarehouseInventory(payload, response) {
     return;
   }
 
-  const temporaryPath = `${warehouseInventoryPath}.tmp-${process.pid}-${Date.now()}`;
-  if (fs.existsSync(warehouseInventoryPath)) {
-    await fsp.copyFile(warehouseInventoryPath, warehouseInventoryBackupPath);
-  }
-  await fsp.writeFile(temporaryPath, JSON.stringify(normalized, null, 2), { mode: 0o600 });
-  await fsp.rename(temporaryPath, warehouseInventoryPath);
+  await writeWarehouseInventory(normalized);
   jsonResponse(response, 200, normalized);
+}
+
+async function restoreWarehouseInventory(response) {
+  const initial = readWarehouseInventoryFile(warehouseInventoryInitialPath);
+  const restored = { state: initial.state, savedAt: new Date().toISOString() };
+  await writeWarehouseInventory(restored);
+  jsonResponse(response, 200, restored);
 }
 
 ensureWarehouseInventoryStorage();
@@ -2642,6 +2653,10 @@ async function saveEquipmentBoard(payload, request, response) {
 
 function serveStatic(request, response, pathname) {
   const requestedPath = pathname === "/" ? "/index.html" : decodeURIComponent(pathname);
+  if (requestedPath === "/inventory-initial-state.json") {
+    errorResponse(response, 404, "Archivo no encontrado.");
+    return;
+  }
   const isPdfRequest = requestedPath.startsWith("/cotizaciones-generadas/");
   const isEquipmentPdfRequest = requestedPath.startsWith("/cuadros-equipo/");
   const baseDir = isPdfRequest ? pdfDir : isEquipmentPdfRequest ? equipmentPdfDir : rootDir;
@@ -2716,6 +2731,12 @@ async function handleRequest(request, response) {
       if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
       await enqueueSave(() => saveWarehouseInventory(payload, response));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/inventario-bodega/restaurar") {
+      if (!requireAuth(request, response)) return;
+      await enqueueSave(() => restoreWarehouseInventory(response));
       return;
     }
 

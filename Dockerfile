@@ -14,7 +14,7 @@ WORKDIR /app
 
 COPY package.json ./
 COPY index.html app.js styles.css equipment-catalog.js equipment-inventory.js equipment.js server.js platform-server.js README.md ./
-COPY warehouse-module.html warehouse-inventory.css inventory-seed.js inventory.js inventory-initial-state.json ./
+COPY warehouse-module.html warehouse-inventory.css inventory.js inventory-initial-state.json ./
 COPY assets ./assets
 COPY luxury/package.json luxury/server.js ./luxury/
 COPY luxury/lib ./luxury/lib

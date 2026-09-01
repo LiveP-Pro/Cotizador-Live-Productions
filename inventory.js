@@ -1731,10 +1731,25 @@
   async function resetSeed() {
     const ok = window.confirm("¿Restaurar el inventario inicial del libro? Esto reemplaza movimientos y ediciones actuales.");
     if (!ok) return;
-    state = seedState();
-    await saveState();
-    renderAll();
-    setStatus("Inventario restaurado desde el libro inicial.", "success");
+    try {
+      if (isHttpPage()) {
+        const response = await fetch(`${API_PATH}/restaurar`, {
+          method: "POST",
+          credentials: "same-origin"
+        });
+        if (!response.ok) throw new Error("No se pudo restaurar en el servidor");
+        const payload = await response.json();
+        state = normalizeState(payload.state);
+        persistenceMode = "server";
+      } else {
+        state = seedState();
+      }
+      saveLocalState();
+      renderAll();
+      setStatus("Inventario restaurado desde el libro inicial.", "success");
+    } catch (error) {
+      setStatus(`No se pudo restaurar el inventario: ${error.message}`, "warning");
+    }
   }
 
   function bindEvents() {
