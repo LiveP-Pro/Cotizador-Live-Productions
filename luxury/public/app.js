@@ -222,7 +222,7 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "94";
+const APP_VERSION = "95";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -3438,6 +3438,39 @@ function posterServiceDateRange(item) {
   return `${posterCompactDate(start)} al ${posterCompactDate(end)}`;
 }
 
+function routeEditableValue(field, value, fallback = "Pendiente", tag = "span") {
+  const safeTag = tag === "h3" ? "h3" : "span";
+  const text = String(value || fallback).trim() || fallback;
+  return `<${safeTag} class="poster-route-editable" data-route-editable="${escapeHtml(field)}" data-edit-placeholder="${escapeHtml(fallback)}">${escapeHtml(text)}</${safeTag}>`;
+}
+
+function quoteRouteItineraryServices(quote) {
+  const selections = orderedQuoteServices(quote);
+  const baseServices = selections.length
+    ? selections
+    : [
+        {
+          destination: quote.destination || quote.destinationRateName || quote.serviceType || "Traslado",
+          destinationAddress: quote.destination || quote.destinationRateName || "",
+          serviceDate: quote.serviceDate || quote.serviceStartDate || "",
+          departureTime: quote.departureTime || "",
+          hasLuggage: quote.hasLuggage,
+          luggageDescription: quote.luggageDescription || quoteLuggageText(quote),
+          notes: "",
+        },
+      ];
+
+  return baseServices.map((item, index) => ({
+    ...item,
+    destination: item.destination || item.destinationAddress || quote.destination || quote.destinationRateName || `Traslado ${index + 1}`,
+    serviceDate: item.serviceDate || quote.serviceDate || quote.serviceStartDate || "",
+    departureTime: item.departureTime || quote.departureTime || "",
+    luggageDescription: item.hasLuggage === false
+      ? "No"
+      : formatLuggageDescription(item.luggageDescription) || quoteLuggageText(quote) || "No",
+  }));
+}
+
 function quotePosterServiceLines(quote) {
   const selections = orderedQuoteServices(quote);
   if (!selections.length) return [{ label: `1. Traslado 1 · ${quoteServiceText(quote)}`, amount: quoteSelectedFare(quote) }];
@@ -3517,7 +3550,7 @@ function quotePosterNotesHtml(quote) {
 }
 
 function quotePosterContinuationHtml(quote, options = {}) {
-  const selections = orderedQuoteServices(quote);
+  const selections = quoteRouteItineraryServices(quote);
   const hasServiceNotes = selections.some((item) => item.notes);
   if (!options.force && selections.length < 2 && !hasServiceNotes && !quote.notes) return "";
 
@@ -3537,13 +3570,13 @@ function quotePosterContinuationHtml(quote, options = {}) {
                   <div class="poster-route-heading">
                     <div>
                       <span>Traslado ${index + 1}</span>
-                      <h3>${escapeHtml(item.destination || item.destinationAddress || "Descripción pendiente")}</h3>
+                      ${routeEditableValue("description", item.destination || item.destinationAddress, "Descripción pendiente", "h3")}
                     </div>
                   </div>
                   <div class="poster-route-meta">
-                    <span><b>Fecha</b>${escapeHtml(formatDocumentDate(item.serviceDate))}</span>
-                    ${item.departureTime ? `<span><b>Hora de salida</b>${escapeHtml(formatTime12(item.departureTime))}</span>` : ""}
-                    <span><b>Equipaje</b>${escapeHtml(item.hasLuggage === false ? "No" : quoteLuggageText(quote))}</span>
+                    <span><b>Fecha</b>${routeEditableValue("date", formatDocumentDate(item.serviceDate), "Pendiente")}</span>
+                    <span><b>Hora de salida</b>${routeEditableValue("departureTime", item.departureTime ? formatTime12(item.departureTime) : "", "Pendiente")}</span>
+                    <span><b>Equipaje</b>${routeEditableValue("luggage", item.luggageDescription, "No")}</span>
                   </div>
                   ${item.notes ? `<p><b>Notas:</b> ${escapeHtml(item.notes)}</p>` : ""}
                 </div>
@@ -3832,7 +3865,7 @@ function openItineraryModal(quoteId) {
       <section class="itinerary-client-panel">
         <span>Cliente</span>
         <strong>Itinerario del recorrido</strong>
-        <p>Usará automáticamente los traslados de la cotización. Podrá editar todos los campos y elegir la carpeta al guardar la imagen.</p>
+        <p>Usará automáticamente los traslados de la cotización. Solo podrá editar descripción, fecha, hora de salida y equipaje de cada traslado.</p>
       </section>
       <p class="form-error" data-form-error></p>
       <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit">Abrir itinerario del recorrido</button></div>
@@ -3978,12 +4011,28 @@ function quoteDocumentStyles() {
     .poster-included-features .poster-feature-icon{width:36px;height:36px}.poster-included-features .poster-feature-item span{font-size:10px}
     .poster-quote-footer{position:absolute;left:0;top:245px;z-index:5;display:flex;width:1023px;height:48px;align-items:center;justify-content:center;border-bottom:3px solid #c99532;background:#020712;color:#fff;font-size:14px;font-weight:500;letter-spacing:.18em;text-align:center;text-transform:uppercase}.poster-quote-footer b{margin-left:7px;color:#dcae45}
     .poster-continuation{position:relative;z-index:4;display:grid;gap:24px;background:linear-gradient(180deg,#faf8f3,#f3eee4);padding:56px 54px 0;color:#111}
-    .poster-continuation.is-editing{outline:4px solid #c99532;outline-offset:-4px}.poster-continuation.is-editing *{cursor:text}.poster-continuation.is-editing [contenteditable="true"]:focus{outline:2px dashed rgba(154,106,30,.7);outline-offset:3px}
+    .poster-continuation.is-editing{outline:4px solid #c99532;outline-offset:-4px}.poster-continuation.is-editing [data-route-editable]{cursor:text;border-radius:6px;background:rgba(255,255,255,.76);box-shadow:0 0 0 1px rgba(201,149,50,.3);padding:2px 4px;margin:-2px -4px}.poster-continuation.is-editing [data-route-editable]:focus{outline:2px dashed rgba(154,106,30,.7);outline-offset:3px}.poster-route-editable:empty::before{content:attr(data-edit-placeholder);color:#8f8778}
     .poster-continuation-header{display:flex;align-items:end;justify-content:space-between;gap:24px;border-bottom:2px solid #c99532;padding-bottom:18px}.poster-continuation-header span{color:#ad7820;font-size:13px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}.poster-continuation-header h2{margin:7px 0 0;font-family:Georgia,serif;font-size:38px;font-weight:500}.poster-continuation-header>strong{border:1px solid #c99532;border-radius:999px;padding:9px 15px;color:#9a6716;font-size:14px;text-transform:uppercase}
     .poster-route-list{display:grid;gap:16px}.poster-route-card{display:grid;grid-template-columns:64px minmax(0,1fr);gap:18px;border:1px solid #d7b46c;border-radius:18px;background:#fff;padding:20px;box-shadow:0 10px 30px rgba(25,22,15,.06)}.poster-route-number{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#050a13;color:#dcae45;font-family:Georgia,serif;font-size:21px}.poster-route-content{min-width:0}.poster-route-heading{display:flex;align-items:start;justify-content:space-between;gap:18px}.poster-route-heading span{color:#a16d19;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.poster-route-heading h3{margin:5px 0 0;font-size:20px;line-height:1.25}.poster-route-heading h3 b{color:#c18b2c}.poster-route-heading>strong{color:#aa741b;font-family:Georgia,serif;font-size:23px;white-space:nowrap}.poster-route-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:16px;border-top:1px solid #ead8b4;padding-top:14px}.poster-route-meta span{color:#333;font-size:11px;line-height:1.35}.poster-route-meta b{display:block;margin-bottom:3px;color:#9a6a1e;font-size:9px;letter-spacing:.08em;text-transform:uppercase}.poster-route-content p{margin:14px 0 0;border-left:3px solid #c99532;background:#f8f2e7;padding:10px 12px;font-size:12px;line-height:1.45}
     .poster-general-notes{border:1px solid #d7b46c;border-radius:16px;background:#fff;padding:18px 20px}.poster-general-notes strong{color:#9a6a1e;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.poster-general-notes p{margin:7px 0 0;font-size:13px;line-height:1.5}
     .poster-continuation footer{margin:0 -54px;background:#020712;padding:17px;color:#fff;font-size:14px;letter-spacing:.18em;text-align:center;text-transform:uppercase}.poster-continuation footer b{color:#dcae45}
   `;
+}
+
+function setRouteItineraryEditing(continuation, editing) {
+  if (!continuation) return;
+  continuation.removeAttribute("contenteditable");
+  continuation.removeAttribute("spellcheck");
+  continuation.classList.toggle("is-editing", editing);
+  $$("[data-route-editable]", continuation).forEach((field) => {
+    if (editing) {
+      field.setAttribute("contenteditable", "true");
+      field.setAttribute("spellcheck", "false");
+    } else {
+      field.removeAttribute("contenteditable");
+      field.removeAttribute("spellcheck");
+    }
+  });
 }
 
 function openPremiumDocument(title, type, content) {
@@ -4013,7 +4062,7 @@ function openPremiumDocument(title, type, content) {
         `
       : type === "route"
         ? `
-          <button class="button button-secondary" data-edit-journey>Hacer todo editable</button>
+          <button class="button button-secondary" data-edit-journey>Finalizar edición</button>
           <button class="button button-gold" data-download-document-image="png" data-document-page=".poster-continuation" data-document-label="Itinerario">Guardar itinerario PNG Full HD</button>
         `
       : "";
@@ -4052,23 +4101,18 @@ function openPremiumDocument(title, type, content) {
   if (type === "route") {
     const continuation = $(".document-preview-scroll .poster-continuation");
     const editButton = $("[data-edit-journey]");
-    if (continuation) {
-      continuation.contentEditable = "true";
-      continuation.spellcheck = false;
-      continuation.classList.add("is-editing");
-    }
+    setRouteItineraryEditing(continuation, true);
     if (editButton) editButton.textContent = "Finalizar edición";
   }
   $("[data-edit-journey]")?.addEventListener("click", (event) => {
     const continuation = $(".document-preview-scroll .poster-continuation");
     if (!continuation) return;
-    const editing = continuation.contentEditable !== "true";
-    continuation.contentEditable = String(editing);
-    continuation.classList.toggle("is-editing", editing);
-    event.currentTarget.textContent = editing ? "Finalizar edición" : "Hacer todo editable";
+    const editing = !continuation.classList.contains("is-editing");
+    setRouteItineraryEditing(continuation, editing);
+    event.currentTarget.textContent = editing ? "Finalizar edición" : "Editar datos de traslados";
     if (editing) {
-      continuation.focus();
-      toast("El itinerario del recorrido ya se puede editar directamente.");
+      $("[data-route-editable]", continuation)?.focus();
+      toast("Puede editar descripción, fecha, hora de salida y equipaje.");
     }
   });
   $$("[data-download-document-image]").forEach((button) => {
@@ -4267,6 +4311,10 @@ async function renderDocumentCanvas(options = {}) {
     clone.classList.remove("is-editing");
     clone.removeAttribute("contenteditable");
     clone.removeAttribute("spellcheck");
+    $$("[contenteditable], [spellcheck]", clone).forEach((element) => {
+      element.removeAttribute("contenteditable");
+      element.removeAttribute("spellcheck");
+    });
     await inlineImages(clone, page);
     const canonicalWidth = page.matches(".quote-poster-content, .poster-continuation")
       ? 1023

@@ -59,9 +59,9 @@ test("la descarga de cotizaciones conserva compatibilidad entre navegadores", ()
   assert.doesNotMatch(appSource, /printablePageHeight/);
   assert.match(indexSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
   assert.match(serviceWorkerSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
-  assert.match(appSource, /APP_VERSION = "94"/);
-  assert.match(indexSource, /app\.js\?v=94/);
-  assert.match(serviceWorkerSource, /VERSION = "94"/);
+  assert.match(appSource, /APP_VERSION = "95"/);
+  assert.match(indexSource, /app\.js\?v=95/);
+  assert.match(serviceWorkerSource, /VERSION = "95"/);
   assert.match(appSource, /data-clear-payment-file/);
   assert.match(appSource, /function syncPaymentFileControl/);
   assert.match(appSource, /input\.value = ""/);
@@ -80,4 +80,22 @@ test("el generador de itinerarios ofrece únicamente la versión para cliente", 
   assert.doesNotMatch(modalSource, /value="piloto"/);
   assert.doesNotMatch(modalSource, /Itinerario para piloto/);
   assert.doesNotMatch(modalSource, /\/itineraries/);
+});
+
+test("el itinerario del recorrido limita la edición a datos de traslados", () => {
+  const start = appSource.indexOf("function quotePosterContinuationHtml");
+  const end = appSource.indexOf("function quotePosterVehicleHtml", start);
+  const routeDocumentSource = appSource.slice(start, end);
+
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+  assert.match(appSource, /data-route-editable="\$\{escapeHtml\(field\)\}"/);
+  assert.match(routeDocumentSource, /routeEditableValue\("description"/);
+  assert.match(routeDocumentSource, /routeEditableValue\("date"/);
+  assert.match(routeDocumentSource, /routeEditableValue\("departureTime"/);
+  assert.match(routeDocumentSource, /routeEditableValue\("luggage"/);
+  assert.match(appSource, /function setRouteItineraryEditing/);
+  assert.match(appSource, /\$\$\(\"\[data-route-editable\]\", continuation\)/);
+  assert.doesNotMatch(appSource, /Hacer todo editable/);
+  assert.doesNotMatch(appSource, /continuation\.contentEditable = "true"/);
 });
