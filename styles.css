@@ -1951,6 +1951,80 @@ body {
   line-height: 1.2;
 }
 
+.equipment-transfer-location p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.equipment-transfer-equipment-list {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.equipment-transfer-equipment-list > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.equipment-transfer-equipment-list > header strong {
+  font-size: 14px;
+}
+
+.equipment-transfer-equipment-list > header span {
+  font-size: 12px;
+}
+
+.equipment-transfer-equipment-list table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.equipment-transfer-equipment-list th,
+.equipment-transfer-equipment-list td {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.equipment-transfer-equipment-list th {
+  color: #ffffff;
+  background: #111111;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.equipment-transfer-equipment-list th:first-child,
+.equipment-transfer-equipment-list td:first-child {
+  width: 16%;
+  text-align: center;
+  font-weight: 900;
+}
+
+.equipment-transfer-equipment-list th:last-child,
+.equipment-transfer-equipment-list td:last-child {
+  width: 24%;
+}
+
+.equipment-transfer-route-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .equipment-transfer-card small {
   grid-column: 1 / -1;
   color: var(--muted);

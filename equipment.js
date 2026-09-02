@@ -108,6 +108,15 @@ function formatEquipmentDateForFile(value) {
   return `${day}-${month}-${year}`;
 }
 
+function formatEquipmentDateTimeForFile(value) {
+  const clean = String(value || "").trim();
+  if (!clean) return "Montaje por definir";
+  const [datePart, timePart = ""] = clean.split("T");
+  const dateLabel = formatEquipmentDateForFile(datePart);
+  const [hour, minute] = timePart.split(":");
+  return hour && minute ? `${dateLabel} ${hour}-${minute}` : dateLabel;
+}
+
 function currentEquipmentDateKey() {
   const now = new Date();
   const year = now.getFullYear();
@@ -131,18 +140,59 @@ function equipmentDateKeyFromDateTime(value) {
 }
 
 function equipmentEventOperationalDateKey(event) {
-  return event?.date || equipmentDateKeyFromDateTime(event?.equipmentOutAt) || equipmentDateKeyFromDateTime(event?.equipmentInAt) || "";
+  return event?.date
+    || equipmentDateKeyFromDateTime(equipmentEventSetupAt(event))
+    || equipmentDateKeyFromDateTime(event?.equipmentOutAt)
+    || equipmentDateKeyFromDateTime(event?.equipmentInAt)
+    || "";
+}
+
+function equipmentDateTimeInputValue(value) {
+  const clean = String(value || "").trim();
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(clean) ? clean.slice(0, 16) : "";
+}
+
+function equipmentEventSetupAt(event) {
+  return equipmentDateTimeInputValue(event?.setupAt || event?.mountingAt || event?.phone);
+}
+
+function equipmentEventChronologicalKey(event) {
+  const setupAt = equipmentEventSetupAt(event);
+  const dateKey = event?.date
+    || equipmentDateKeyFromDateTime(setupAt)
+    || equipmentDateKeyFromDateTime(event?.equipmentOutAt)
+    || equipmentDateKeyFromDateTime(event?.equipmentInAt)
+    || "9999-12-31";
+  const sequenceTime = setupAt
+    || (event?.date ? `${event.date}T23:59` : "")
+    || event?.equipmentOutAt
+    || event?.equipmentInAt
+    || "9999-12-31T23:59";
+  return `${dateKey}|${sequenceTime}`;
+}
+
+function sortEquipmentEventsByDate(events = []) {
+  return [...events]
+    .map((event, index) => ({ event, index, key: equipmentEventChronologicalKey(event) }))
+    .sort((first, second) => first.key.localeCompare(second.key) || first.index - second.index)
+    .map(({ event }) => event);
 }
 
 function equipmentEventSortDateTime(event) {
   const dateKey = equipmentEventOperationalDateKey(event);
-  return event?.equipmentOutAt || event?.equipmentInAt || (dateKey ? `${dateKey}T00:00` : "9999-12-31T23:59");
+  return equipmentEventSetupAt(event) || event?.equipmentOutAt || event?.equipmentInAt || (dateKey ? `${dateKey}T00:00` : "9999-12-31T23:59");
 }
 
 function equipmentEventTransferDateTime(event) {
+  const setupAt = equipmentEventSetupAt(event);
+  if (setupAt) return formatEquipmentDateTime(setupAt);
   if (event?.equipmentOutAt) return formatEquipmentDateTime(event.equipmentOutAt);
   const dateKey = equipmentEventOperationalDateKey(event);
   return dateKey ? `${formatEquipmentDate(dateKey)} · Hora por definir` : "Fecha y hora por definir";
+}
+
+function equipmentEventSetupDateTimeLabel(event) {
+  return formatEquipmentDateTime(equipmentEventSetupAt(event));
 }
 
 function equipmentDateOnlyFromDateTime(value) {
@@ -213,7 +263,7 @@ function equipmentActiveSummaryTransferRoute(events = activeEquipmentEvents()) {
 function equipmentTransferRouteEvents(route, events = activeEquipmentEvents()) {
   if (!route) return [];
   const eventsById = new Map(events.map((event) => [event.id, event]));
-  return route.eventIds.map((eventId) => eventsById.get(eventId)).filter(Boolean);
+  return sortEquipmentEventsByDate(route.eventIds.map((eventId) => eventsById.get(eventId)).filter(Boolean));
 }
 
 function equipmentSummaryTransferRoutesWithEvents(events = activeEquipmentEvents(), validOnly = false) {
@@ -610,7 +660,7 @@ function currentEquipmentEventDraft() {
     id: "event-draft",
     place: equipmentQuery("#equipmentEventPlace")?.value.trim() || "Lugar por definir",
     name: equipmentQuery("#equipmentEventName")?.value.trim() || "Evento por definir",
-    phone: equipmentQuery("#equipmentEventPhone")?.value.trim() || "Por definir",
+    setupAt: equipmentQuery("#equipmentEventSetupAt")?.value || "",
     date: equipmentQuery("#equipmentEventDate")?.value || "",
     equipmentOutAt: equipmentQuery("#equipmentEventOutAt")?.value || "",
     equipmentInAt: equipmentQuery("#equipmentEventInAt")?.value || "",
@@ -623,7 +673,7 @@ function selectedEquipmentEvent() {
 }
 
 function activeEquipmentEvents() {
-  return equipmentState.events.length ? equipmentState.events : [currentEquipmentEventDraft()];
+  return equipmentState.events.length ? sortEquipmentEventsByDate(equipmentState.events) : [currentEquipmentEventDraft()];
 }
 
 function equipmentPdfEvents() {
@@ -719,14 +769,14 @@ function restoreEquipmentEventSnapshot(event) {
 function populateEquipmentEventFields(event) {
   const placeInput = equipmentQuery("#equipmentEventPlace");
   const nameInput = equipmentQuery("#equipmentEventName");
-  const plannerInput = equipmentQuery("#equipmentEventPhone");
+  const setupAtInput = equipmentQuery("#equipmentEventSetupAt");
   const dateInput = equipmentQuery("#equipmentEventDate");
   const outAtInput = equipmentQuery("#equipmentEventOutAt");
   const inAtInput = equipmentQuery("#equipmentEventInAt");
   const responsibleInput = equipmentQuery("#equipmentEventResponsible");
   if (placeInput) placeInput.value = event?.place || "";
   if (nameInput) nameInput.value = event?.name || "";
-  if (plannerInput) plannerInput.value = event?.phone || "";
+  if (setupAtInput) setupAtInput.value = event ? equipmentEventSetupAt(event) : "";
   if (dateInput) dateInput.value = event?.date || "";
   if (outAtInput) outAtInput.value = event?.equipmentOutAt || "";
   if (inAtInput) inAtInput.value = event?.equipmentInAt || "";
@@ -788,6 +838,13 @@ function eventSummaryText(events, field, fallback = "Por definir") {
 function eventSummaryDateTimeText(events, field, fallback = "Por definir") {
   const values = events
     .map((event) => formatEquipmentDateTime(event[field], ""))
+    .filter(Boolean);
+  return values.length ? values.join(" / ") : fallback;
+}
+
+function eventSummarySetupDateTimeText(events, fallback = "Por definir") {
+  const values = events
+    .map((event) => formatEquipmentDateTime(equipmentEventSetupAt(event), ""))
     .filter(Boolean);
   return values.length ? values.join(" / ") : fallback;
 }
@@ -1005,6 +1062,21 @@ function equipmentTransferComparisonRows(rows = equipmentRowsSummary()) {
   return [...groups.values()];
 }
 
+function equipmentTransferredItemsBetweenEvents(from, to, comparisonRows = equipmentTransferComparisonRows()) {
+  return comparisonRows
+    .map((row) => {
+      const fromQuantity = Number(row.eventQuantities.get(from?.id)) || 0;
+      const toQuantity = Number(row.eventQuantities.get(to?.id)) || 0;
+      return {
+        ...row,
+        fromQuantity,
+        toQuantity,
+        quantity: Math.min(fromQuantity, toQuantity)
+      };
+    })
+    .filter((item) => item.quantity > 0);
+}
+
 function equipmentTransferUnusedByLeg() {
   if (!equipmentState.summaryTransferEnabled) return [];
   const events = activeEquipmentEvents();
@@ -1088,7 +1160,6 @@ function renderEquipmentTransferUnusedPanel() {
 
 function equipmentFilterSummaryRows(rows, searchTerm = equipmentState.summarySearchTerm) {
   const query = normalizeEquipmentKey(searchTerm);
-  if (!query) return rows;
   const filtered = [];
   let currentCategory = null;
   let currentMatches = [];
@@ -1104,8 +1175,9 @@ function equipmentFilterSummaryRows(rows, searchTerm = equipmentState.summarySea
       currentMatches = [];
       return;
     }
+    if ((Number(row.quantity) || 0) <= 0) return;
     const haystack = normalizeEquipmentKey(`${row.description || ""} ${row.categoryTitle || ""}`);
-    if (haystack.includes(query)) currentMatches.push(row);
+    if (!query || haystack.includes(query)) currentMatches.push(row);
   });
   flushCategory();
   return filtered;
@@ -1191,7 +1263,7 @@ function renderEquipmentSummaryTransferSelector() {
             <article class="equipment-transfer-chain-event">
               <span>${escapeEquipmentHtml(index ? `Destino ${index}` : "Origen")}</span>
               <strong>${escapeEquipmentHtml(`${eventIndex + 1}. ${title}`)}</strong>
-              <small>${escapeEquipmentHtml(equipmentEventTransferDateTime(event))}</small>
+              <small>${escapeEquipmentHtml(`Evento: ${event.name || "Por definir"} · Montaje: ${equipmentEventSetupDateTimeLabel(event)}`)}</small>
               <button
                 type="button"
                 data-equipment-transfer-remove-event="${escapeEquipmentHtml(event.id)}"
@@ -1359,13 +1431,14 @@ function renderEquipmentEvents() {
     host.innerHTML = `<p class="equipment-empty equipment-window-empty">Cree una ventana para que aparezca en este panel.</p>`;
     return;
   }
-  host.innerHTML = equipmentState.events
+  const orderedEvents = sortEquipmentEventsByDate(equipmentState.events);
+  host.innerHTML = orderedEvents
     .map((event, index) => {
       const activeClass = event.id === equipmentState.selectedEventId ? " is-active" : "";
       const lineCount = equipmentEventLineCount(event);
       const serviceName = event.serviceName || "Sin servicio";
-      const planner = event.phone || "Planner por definir";
       const date = formatEquipmentDate(event.date);
+      const setupAt = equipmentEventSetupDateTimeLabel(event);
       const cardTitle = equipmentEventCardTitle(event, index);
       const eventName = event.name && event.name !== "Evento por definir" ? event.name : "";
       const eventNameLine = eventName ? `<span>Evento: ${escapeEquipmentHtml(eventName)}</span>` : "";
@@ -1378,7 +1451,8 @@ function renderEquipmentEvents() {
             <strong>${escapeEquipmentHtml(`${index + 1}. ${cardTitle}`)}</strong>
             <small>${escapeEquipmentHtml(serviceName)}</small>
             ${eventNameLine}
-            <span>${escapeEquipmentHtml(date)} · ${escapeEquipmentHtml(planner)}</span>
+            <span>Fecha del evento: ${escapeEquipmentHtml(date)}</span>
+            <span>Montaje: ${escapeEquipmentHtml(setupAt)}</span>
             ${logisticsLine}
             <span>${escapeEquipmentHtml(lineCount)} líneas de equipo</span>
           </button>
@@ -2046,7 +2120,7 @@ function inventoryValueFor(row) {
 }
 
 function equipmentTransferPlanData() {
-  const events = [...equipmentState.events];
+  const events = sortEquipmentEventsByDate(equipmentState.events);
   const groups = equipmentEventsByOperationalDate(events);
   const missingDateEvents = events.filter((event) => !equipmentEventOperationalDateKey(event));
   const routes = [];
@@ -2081,10 +2155,15 @@ function equipmentTransferPlanData() {
       }
     });
   }
+  const comparisonRows = routes.length ? equipmentTransferComparisonRows() : [];
+  const detailedRoutes = routes.map((route) => ({
+    ...route,
+    items: equipmentTransferredItemsBetweenEvents(route.from, route.to, comparisonRows)
+  }));
   return {
     events,
     groups,
-    routes,
+    routes: detailedRoutes,
     configuredRoutes,
     missingDateEvents,
     hasDifferentDates: groups.size > 1
@@ -2117,22 +2196,49 @@ function renderEquipmentTransferPanel() {
     .map((message) => `<p class="equipment-transfer-note">${escapeEquipmentHtml(message)}</p>`)
     .join("");
   const routeHtml = plan.routes
-    .map(({ routeIndex, legIndex, dateKey, from, to, configured }) => `
-      <article class="equipment-transfer-card">
-        <div>
-          <span>${escapeEquipmentHtml(configured ? `Trasiego ${routeIndex + 1} · tramo ${legIndex + 1}` : "Trasiego sugerido")}</span>
-          <strong>${escapeEquipmentHtml(from.place || "Lugar por definir")}</strong>
-        </div>
-        <div>
-          <span>Trasegar hacia</span>
-          <strong>${escapeEquipmentHtml(to.place || "Lugar por definir")}</strong>
-        </div>
-        <div>
-          <span>Fecha y hora de destino</span>
-          <strong>${escapeEquipmentHtml(equipmentEventTransferDateTime(to))}</strong>
-        </div>
-        <small>Salida desde ${escapeEquipmentHtml(from.place || "evento anterior")} después del ingreso ${escapeEquipmentHtml(equipmentEventReturnDateTime(from))}${dateKey ? ` · destino ${escapeEquipmentHtml(formatEquipmentDate(dateKey))}` : ""}</small>
-      </article>`)
+    .map(({ routeIndex, legIndex, dateKey, from, to, configured, items }) => {
+      const itemRows = items
+        .map((item) => `
+          <tr>
+            <td>${escapeEquipmentHtml(item.quantity)}</td>
+            <td>${escapeEquipmentHtml(item.description)}</td>
+            <td>${escapeEquipmentHtml(item.categoryTitle)}</td>
+          </tr>`)
+        .join("");
+      const itemCount = items.reduce((total, item) => total + (Number(item.quantity) || 0), 0);
+      return `
+        <article class="equipment-transfer-card">
+          <div class="equipment-transfer-location">
+            <span>${escapeEquipmentHtml(configured ? `Trasiego ${routeIndex + 1} · tramo ${legIndex + 1} · origen` : "Trasiego sugerido · origen")}</span>
+            <strong>${escapeEquipmentHtml(from.place || "Lugar por definir")}</strong>
+            <p>Evento: ${escapeEquipmentHtml(from.name || "Por definir")}</p>
+            <p>Servicio: ${escapeEquipmentHtml(from.serviceName || "Por definir")}</p>
+          </div>
+          <div class="equipment-transfer-location">
+            <span>Trasegar hacia</span>
+            <strong>${escapeEquipmentHtml(to.place || "Lugar por definir")}</strong>
+            <p>Evento: ${escapeEquipmentHtml(to.name || "Por definir")}</p>
+            <p>Servicio: ${escapeEquipmentHtml(to.serviceName || "Por definir")}</p>
+          </div>
+          <div class="equipment-transfer-location">
+            <span>Fecha y hora de montaje en destino</span>
+            <strong>${escapeEquipmentHtml(equipmentEventSetupDateTimeLabel(to))}</strong>
+            <p>Fecha del evento: ${escapeEquipmentHtml(equipmentEventDateLabel(to))}</p>
+          </div>
+          <section class="equipment-transfer-equipment-list">
+            <header>
+              <strong>Equipo que se trasegará</strong>
+              <span>${escapeEquipmentHtml(`${items.length} tipos · ${itemCount} unidades`)}</span>
+            </header>
+            ${items.length ? `
+              <table>
+                <thead><tr><th>Cantidad</th><th>Equipo</th><th>Categoría</th></tr></thead>
+                <tbody>${itemRows}</tbody>
+              </table>` : '<p class="equipment-empty">No hay equipo idéntico requerido en ambos eventos.</p>'}
+          </section>
+          <p class="equipment-transfer-route-note">Salida desde ${escapeEquipmentHtml(from.place || "evento anterior")} después del ingreso ${escapeEquipmentHtml(equipmentEventReturnDateTime(from))}${dateKey ? ` · destino ${escapeEquipmentHtml(formatEquipmentDate(dateKey))}` : ""}</p>
+        </article>`;
+    })
     .join("");
 
   host.innerHTML = `${messageHtml}${routeHtml || ""}`;
@@ -2140,11 +2246,14 @@ function renderEquipmentTransferPanel() {
 
 function tableForEquipmentInventory(rows, editable = true) {
   if (!rows.length) {
-    return `<p class="equipment-empty">El resumen aparecerá al seleccionar un servicio.</p>`;
+    return `<p class="equipment-empty">No hay equipo requerido con cantidad mayor a 0.</p>`;
   }
   const events = activeEquipmentEvents();
   const eventDateHeaders = events
     .map((event) => `<th class="equipment-event-column equipment-date-column"><span>Fecha del evento</span><strong>${escapeEquipmentHtml(equipmentEventDateLabel(event))}</strong></th>`)
+    .join("");
+  const eventSetupHeaders = events
+    .map((event) => `<th class="equipment-event-column equipment-date-column"><span>Fecha y hora del montaje</span><strong>${escapeEquipmentHtml(equipmentEventSetupDateTimeLabel(event))}</strong></th>`)
     .join("");
   const eventOutHeaders = events
     .map((event) => `<th class="equipment-event-column equipment-date-column"><span>Fecha salida equipo</span><strong>${escapeEquipmentHtml(equipmentEventOutDateLabel(event))}</strong></th>`)
@@ -2216,13 +2325,16 @@ function tableForEquipmentInventory(rows, editable = true) {
     <table class="equipment-base-table equipment-inventory-table${editable ? "" : " equipment-table-compact"}">
       <thead>
         <tr class="equipment-summary-date-row">
-          <th class="equipment-description-column" rowspan="4">DESCRIPCION DE EQUIPO</th>
+          <th class="equipment-description-column" rowspan="5">DESCRIPCION DE EQUIPO</th>
           ${eventDateHeaders}
-          <th class="equipment-total-column" rowspan="3">EQUIPO REQUERIDO</th>
-          <th class="equipment-inventory-column" rowspan="3">INVENTARIO FISICO BODEGA PP</th>
-          <th class="equipment-shortage-column" rowspan="3">EQUIPO DISPONIBLE</th>
-          <th class="equipment-action-column" rowspan="3">ACCION</th>
-          <th class="equipment-observation-column" rowspan="3">OBSERVACIONES</th>
+          <th class="equipment-total-column" rowspan="4">EQUIPO REQUERIDO</th>
+          <th class="equipment-inventory-column" rowspan="4">INVENTARIO FISICO BODEGA PP</th>
+          <th class="equipment-shortage-column" rowspan="4">EQUIPO DISPONIBLE</th>
+          <th class="equipment-action-column" rowspan="4">ACCION</th>
+          <th class="equipment-observation-column" rowspan="4">OBSERVACIONES</th>
+        </tr>
+        <tr class="equipment-summary-date-row">
+          ${eventSetupHeaders}
         </tr>
         <tr class="equipment-summary-date-row">
           ${eventOutHeaders}
@@ -2602,11 +2714,11 @@ function renderEquipmentPdfPreview() {
   const summaryEvents = activeEquipmentEvents();
   const place = eventSummaryText(events, "place", "Lugar por definir");
   const eventName = eventSummaryText(events, "name");
-  const phone = eventSummaryText(events, "phone");
+  const setupAt = eventSummarySetupDateTimeText(events);
   const date = eventSummaryText(events, "date");
   const rentPlace = eventSummaryText(summaryEvents, "place", "Lugar por definir");
   const rentEventName = eventSummaryText(summaryEvents, "name");
-  const rentPhone = eventSummaryText(summaryEvents, "phone");
+  const rentSetupAt = eventSummarySetupDateTimeText(summaryEvents);
   const rentDate = eventSummaryText(summaryEvents, "date");
   const notes = equipmentQuery("#equipmentNotes")?.value.trim() || "";
   const rentalRows = equipmentRentalRows();
@@ -2616,7 +2728,7 @@ function renderEquipmentPdfPreview() {
   if (equipmentQuery("#equipmentPdfTitle")) equipmentQuery("#equipmentPdfTitle").textContent = title;
   if (equipmentQuery("#equipmentPdfPlace")) equipmentQuery("#equipmentPdfPlace").textContent = place;
   if (equipmentQuery("#equipmentPdfEvent")) equipmentQuery("#equipmentPdfEvent").textContent = eventName;
-  if (equipmentQuery("#equipmentPdfPhone")) equipmentQuery("#equipmentPdfPhone").textContent = phone;
+  if (equipmentQuery("#equipmentPdfSetupAt")) equipmentQuery("#equipmentPdfSetupAt").textContent = setupAt;
   if (equipmentQuery("#equipmentPdfDate")) equipmentQuery("#equipmentPdfDate").textContent = date;
   if (equipmentQuery("#equipmentPdfOutAt")) equipmentQuery("#equipmentPdfOutAt").textContent = eventSummaryDateTimeText(events, "equipmentOutAt");
   if (equipmentQuery("#equipmentPdfInAt")) equipmentQuery("#equipmentPdfInAt").textContent = eventSummaryDateTimeText(events, "equipmentInAt");
@@ -2633,7 +2745,7 @@ function renderEquipmentPdfPreview() {
   if (equipmentQuery("#equipmentRentPdfTitle")) equipmentQuery("#equipmentRentPdfTitle").textContent = rentTitle;
   if (equipmentQuery("#equipmentRentPdfPlace")) equipmentQuery("#equipmentRentPdfPlace").textContent = rentPlace;
   if (equipmentQuery("#equipmentRentPdfEvents")) equipmentQuery("#equipmentRentPdfEvents").textContent = rentEventName;
-  if (equipmentQuery("#equipmentRentPdfPhone")) equipmentQuery("#equipmentRentPdfPhone").textContent = rentPhone;
+  if (equipmentQuery("#equipmentRentPdfSetupAt")) equipmentQuery("#equipmentRentPdfSetupAt").textContent = rentSetupAt;
   if (equipmentQuery("#equipmentRentPdfDate")) equipmentQuery("#equipmentRentPdfDate").textContent = rentDate;
   if (equipmentQuery("#equipmentRentPdfOutAt")) equipmentQuery("#equipmentRentPdfOutAt").textContent = eventSummaryDateTimeText(summaryEvents, "equipmentOutAt");
   if (equipmentQuery("#equipmentRentPdfInAt")) equipmentQuery("#equipmentRentPdfInAt").textContent = eventSummaryDateTimeText(summaryEvents, "equipmentInAt");
@@ -2759,10 +2871,13 @@ function equipmentPdfFileName(mode = "full") {
   const service = currentEquipmentService();
   const events = equipmentPdfEvents();
   const eventName = cleanEquipmentFilePart(events.map(equipmentEventNameForFile).join(" - ") || "Evento por definir", "Evento por definir");
-  const plannerName = cleanEquipmentFilePart(events.map((event) => event.phone).join(" - ") || "Planner por definir", "Planner por definir");
+  const setupName = cleanEquipmentFilePart(
+    events.map((event) => formatEquipmentDateTimeForFile(equipmentEventSetupAt(event))).join(" - "),
+    "Montaje por definir"
+  );
   const serviceName = cleanEquipmentFilePart(service?.name || "Extras", "Extras");
   const eventDates = cleanEquipmentFilePart(events.map((event) => formatEquipmentDateForFile(event.date)).join(" - "), "Fecha por definir");
-  return `${eventName} - ${plannerName} - ${serviceName} - ${eventDates}.pdf`;
+  return `${eventName} - ${setupName} - ${serviceName} - ${eventDates}.pdf`;
 }
 
 function equipmentEditableJsonFileName(fileName) {
@@ -2781,6 +2896,7 @@ function cloneEquipmentEventForEditable(event, index = 0) {
     warehouseDispatchId: event?.warehouseDispatchId || "",
     place: event?.place || "",
     name: event?.name || "",
+    setupAt: equipmentEventSetupAt(event),
     phone: event?.phone || "",
     date: event?.date || "",
     equipmentOutAt: event?.equipmentOutAt || "",
@@ -2856,11 +2972,12 @@ function equipmentWarehouseDispatchPayload(event) {
     source: "requerimiento-equipo",
     name: event.name || "Evento por definir",
     place: event.place || "Lugar por definir",
-    planner: event.phone || "",
+    setupAt: equipmentEventSetupAt(event),
+    planner: "",
     eventDate: event.date || "",
     equipmentOutAt: event.equipmentOutAt || "",
     equipmentInAt: event.equipmentInAt || "",
-    responsible: event.responsible && event.responsible !== "Por definir" ? event.responsible : event.phone || "",
+    responsible: event.responsible && event.responsible !== "Por definir" ? event.responsible : "",
     items: equipmentWarehouseDispatchItems(event)
   };
 }
@@ -2868,11 +2985,11 @@ function equipmentWarehouseDispatchPayload(event) {
 function equipmentEditablePayload(mode = "full", savedData = {}) {
   const currentEvent = currentEquipmentEditableEvent();
   const events = mode === "rent"
-    ? (equipmentState.events.length ? equipmentState.events.map(cloneEquipmentEventForEditable) : [currentEvent])
+    ? (equipmentState.events.length ? sortEquipmentEventsByDate(equipmentState.events).map(cloneEquipmentEventForEditable) : [currentEvent])
     : [currentEvent];
   return {
     type: "live-productions-equipment-requirement",
-    version: 2,
+    version: 3,
     mode,
     savedAt: new Date().toISOString(),
     fileName: savedData.fileName || equipmentPdfFileName(mode),
@@ -3148,6 +3265,7 @@ function importedEquipmentEvent(rawEvent, index = 0) {
     warehouseDispatchId: rawEvent?.warehouseDispatchId || createEquipmentWarehouseDispatchId(),
     place: rawEvent?.place || "",
     name: rawEvent?.name || "",
+    setupAt: equipmentEventSetupAt(rawEvent),
     phone: rawEvent?.phone || "",
     date: rawEvent?.date || "",
     equipmentOutAt: rawEvent?.equipmentOutAt || "",
@@ -3211,7 +3329,7 @@ function importEquipmentEditablePayload(payload) {
   equipmentState.activeWindow = equipmentState.summaryTransferEnabled ? "summary" : "review";
   const notesInput = equipmentQuery("#equipmentNotes");
   if (notesInput) notesInput.value = payload.notes || "";
-  loadEquipmentEvent(events[0].id);
+  loadEquipmentEvent(sortEquipmentEventsByDate(events)[0].id);
   if (equipmentState.summaryTransferEnabled) {
     equipmentState.activeWindow = "summary";
     renderEquipmentModule();
@@ -3248,7 +3366,7 @@ function initEquipmentModule() {
   [
     "#equipmentEventPlace",
     "#equipmentEventName",
-    "#equipmentEventPhone",
+    "#equipmentEventSetupAt",
     "#equipmentEventDate",
     "#equipmentEventOutAt",
     "#equipmentEventInAt",
