@@ -688,6 +688,18 @@
       .sort((a, b) => `${b.dateTime || b.date} ${b.createdAt}`.localeCompare(`${a.dateTime || a.date} ${a.createdAt}`))[0];
   }
 
+  function resizeWarehouseNameInput(input) {
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.max(72, input.scrollHeight + 2)}px`;
+  }
+
+  function resizeWarehouseNameInputs() {
+    elements.inventoryTable
+      ?.querySelectorAll(".warehouse-name-input")
+      .forEach(resizeWarehouseNameInput);
+  }
+
   function renderInventoryTable() {
     const rows = filteredItems();
     if (!rows.length) {
@@ -766,6 +778,7 @@
         <tbody>${body}</tbody>
       </table>
     `;
+    window.requestAnimationFrame(resizeWarehouseNameInputs);
   }
 
   function movementItemName(movement) {
@@ -1428,6 +1441,7 @@
     elements.views.forEach((view) => {
       view.classList.toggle("is-active", view.dataset.warehouseView === activeWindow);
     });
+    if (activeWindow === "inventory") window.requestAnimationFrame(resizeWarehouseNameInputs);
   }
 
   function openDialog(kind, itemId, relatedMovementId = "") {
@@ -2452,6 +2466,9 @@
 
     elements.inventoryTable.addEventListener("change", (event) => {
       if (event.target.matches("[data-field]")) updateInlineField(event.target);
+    });
+    elements.inventoryTable.addEventListener("input", (event) => {
+      if (event.target.matches(".warehouse-name-input")) resizeWarehouseNameInput(event.target);
     });
     elements.inventoryTable.addEventListener("click", (event) => {
       const button = event.target.closest("[data-action]");
