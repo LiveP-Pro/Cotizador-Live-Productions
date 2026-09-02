@@ -2220,7 +2220,7 @@ function tableForEquipmentInventory(rows, editable = true) {
           ${eventDateHeaders}
           <th class="equipment-total-column" rowspan="3">EQUIPO REQUERIDO</th>
           <th class="equipment-inventory-column" rowspan="3">INVENTARIO FISICO BODEGA PP</th>
-          <th class="equipment-shortage-column" rowspan="3">DISPONIBLE DESPUÉS DEL REQUERIMIENTO</th>
+          <th class="equipment-shortage-column" rowspan="3">EQUIPO DISPONIBLE</th>
           <th class="equipment-action-column" rowspan="3">ACCION</th>
           <th class="equipment-observation-column" rowspan="3">OBSERVACIONES</th>
         </tr>
