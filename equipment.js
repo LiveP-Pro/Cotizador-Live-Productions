@@ -27,6 +27,7 @@ const equipmentState = {
   manualMainSections: [],
   manualExtras: [],
   itemOverrides: new Map(),
+  sectionAddedItems: new Map(),
   removedItemIds: new Set(),
   inventory: new Map(),
   observations: new Map(),
@@ -38,7 +39,18 @@ const equipmentState = {
   summaryTransferEnabled: false,
   summaryTransferRoutes: [],
   activeSummaryTransferRouteId: "",
+  expandedEquipmentSectionIds: new Set(),
   draftWarehouseDispatchId: createEquipmentWarehouseDispatchId()
+};
+
+const equipmentCatalogEditorState = {
+  loaded: false,
+  loadingPromise: null,
+  open: false,
+  saving: false,
+  serviceId: "",
+  audioType: "",
+  draft: null
 };
 
 let equipmentEventCounter = 1;
@@ -549,7 +561,7 @@ function normalizeEquipmentItem(item) {
 }
 
 function editableEquipmentItems(section, sectionKey) {
-  return (section.items || [])
+  const sourceItems = (section.items || [])
     .map(([quantity, description], itemIndex) => {
       const id = equipmentItemKey(sectionKey, itemIndex);
       const override = equipmentState.itemOverrides.get(id) || {};
@@ -562,6 +574,9 @@ function editableEquipmentItems(section, sectionKey) {
       };
     })
     .filter((item) => !equipmentState.removedItemIds.has(item.id));
+  const addedItems = cloneEquipmentSnapshotItems(equipmentState.sectionAddedItems.get(sectionKey) || [])
+    .map((item) => ({ ...item, editable: true, manual: true }));
+  return [...sourceItems, ...addedItems];
 }
 
 function manualMainSectionsForTable() {
@@ -711,6 +726,17 @@ function equipmentEntriesToMap(entries = []) {
   return new Map(entries.map(([key, value]) => [key, { ...(value || {}) }]));
 }
 
+function equipmentAddedItemsToEntries(map) {
+  return [...map.entries()].map(([key, items]) => [key, cloneEquipmentSnapshotItems(items || [])]);
+}
+
+function equipmentEntriesToAddedItemsMap(entries = []) {
+  return new Map((Array.isArray(entries) ? entries : []).map(([key, items]) => [
+    String(key || ""),
+    cloneEquipmentSnapshotItems(Array.isArray(items) ? items : [])
+  ]).filter(([key]) => key));
+}
+
 function captureEquipmentEventSnapshot() {
   const services = currentEquipmentServices();
   const serviceIds = selectedEquipmentServiceIds();
@@ -728,6 +754,7 @@ function captureEquipmentEventSnapshot() {
     })),
     manualExtras: cloneEquipmentSnapshotItems(equipmentState.manualExtras),
     itemOverrides: equipmentMapToEntries(equipmentState.itemOverrides),
+    sectionAddedItems: equipmentAddedItemsToEntries(equipmentState.sectionAddedItems),
     removedItemIds: [...equipmentState.removedItemIds],
     sections: cloneEquipmentSnapshotSections(selectedEquipmentSections())
   };
@@ -762,6 +789,7 @@ function restoreEquipmentEventSnapshot(event) {
   }));
   equipmentState.manualExtras = cloneEquipmentSnapshotItems(event.manualExtras || []);
   equipmentState.itemOverrides = equipmentEntriesToMap(event.itemOverrides || []);
+  equipmentState.sectionAddedItems = equipmentEntriesToAddedItemsMap(event.sectionAddedItems || []);
   equipmentState.removedItemIds = new Set(event.removedItemIds || []);
   updateNativeEquipmentServiceSelect();
 }
@@ -1365,17 +1393,23 @@ function tableForEquipmentSections(sections, compact = false) {
   }
   const rows = sections
     .map((section) => {
+      const inventoryCategories = compact ? [] : equipmentInventoryCategoriesForSection(section);
+      const sectionId = String(section.id || "");
+      const expanded = !compact && equipmentState.expandedEquipmentSectionIds.has(sectionId);
       const items = section.items
         .map((rawItem) => {
           const item = normalizeEquipmentItem(rawItem);
           if (!compact && item.editable && item.id) {
+            const recognized = equipmentRecognizedInventoryChoice(item.description);
+            const recognitionClass = recognized ? "" : " is-unrecognized";
             return `
-              <tr>
+              <tr class="equipment-service-item-row${recognitionClass}">
                 <td class="equipment-qty equipment-service-quantity-cell">
                   <input class="equipment-line-quantity" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="quantity" type="number" min="0" step="1" value="${escapeEquipmentHtml(item.quantity)}" />
                 </td>
                 <td class="equipment-service-description-cell">
-                  <input class="equipment-line-description" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="description" type="text" value="${escapeEquipmentHtml(item.description)}" />
+                  <input class="equipment-line-description${recognitionClass}" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="description" type="text" list="equipmentInventoryNameOptions" value="${escapeEquipmentHtml(item.description)}" aria-invalid="${recognized ? "false" : "true"}" />
+                  <span class="equipment-name-warning${recognized ? " is-hidden" : ""}">Nombre no reconocido. Seleccione el nombre exacto del inventario.</span>
                 </td>
                 <td class="equipment-row-action">
                   <button class="equipment-row-remove" type="button" data-remove-equipment-item="${escapeEquipmentHtml(item.id)}" aria-label="Eliminar línea">X</button>
@@ -1390,14 +1424,51 @@ function tableForEquipmentSections(sections, compact = false) {
             </tr>`;
         })
         .join("");
-      const categoryAction = !compact && section.manualSection
-        ? `<td class="equipment-row-action"><button class="equipment-row-remove" type="button" data-remove-equipment-section="${escapeEquipmentHtml(section.id)}" aria-label="Eliminar subtítulo">X</button></td>`
+      if (compact) {
+        return `
+          <tr class="equipment-category-row">
+            <td colspan="2">${escapeEquipmentHtml(section.title)}</td>
+          </tr>
+          ${items}`;
+      }
+      const categoryTitleEditor = section.manualSection
+        ? `<label>Nombre de la categoría<input data-equipment-manual-section-title="${escapeEquipmentHtml(sectionId)}" type="text" value="${escapeEquipmentHtml(section.title)}" /></label>`
         : "";
+      const categoryRemoveButton = section.manualSection
+        ? `<button class="equipment-category-remove" type="button" data-remove-equipment-section="${escapeEquipmentHtml(sectionId)}">Eliminar categoría</button>`
+        : "";
+      const library = expanded ? `
+        <tr class="equipment-category-library-row">
+          <td colspan="3">
+            <div class="equipment-category-library">
+              ${categoryTitleEditor}
+              <label class="equipment-category-choice-label">
+                Equipo disponible en esta categoría
+                <select data-equipment-category-choice="${escapeEquipmentHtml(sectionId)}">
+                  <option value="">Seleccione el equipo</option>
+                  ${equipmentInventoryOptionsHtml(inventoryCategories)}
+                </select>
+              </label>
+              <label class="equipment-category-quantity-label">
+                Cantidad
+                <input data-equipment-category-quantity="${escapeEquipmentHtml(sectionId)}" type="number" min="0" step="1" value="1" />
+              </label>
+              <button type="button" data-equipment-category-add="${escapeEquipmentHtml(sectionId)}">Agregar</button>
+              ${categoryRemoveButton}
+            </div>
+          </td>
+        </tr>` : "";
       return `
         <tr class="equipment-category-row">
-          <td colspan="${compact || section.manualSection ? "2" : "3"}">${escapeEquipmentHtml(section.title)}</td>
-          ${categoryAction}
+          <td colspan="3">
+            <button class="equipment-category-toggle" type="button" data-equipment-category-toggle="${escapeEquipmentHtml(sectionId)}" aria-expanded="${expanded ? "true" : "false"}">
+              <span>${escapeEquipmentHtml(section.title)}</span>
+              <small>${expanded ? "Ocultar opciones" : "Ver y elegir equipo"}</small>
+              <b aria-hidden="true">${expanded ? "−" : "+"}</b>
+            </button>
+          </td>
         </tr>
+        ${library}
         ${items}`;
     })
     .join("");
@@ -1543,6 +1614,12 @@ function updateEquipmentItem(itemId, field, value) {
       if (manualMain) break;
     }
   }
+  if (!manualMain) {
+    for (const items of equipmentState.sectionAddedItems.values()) {
+      manualMain = items.find((item) => item.id === itemId);
+      if (manualMain) break;
+    }
+  }
   const manualExtra = equipmentState.manualExtras.find((item) => item.id === itemId);
   const target = manualMain || manualExtra;
   const nextValue = field === "quantity" ? Number(value || 0) || 0 : String(value || "");
@@ -1576,6 +1653,16 @@ function removeManualEquipmentItem(itemId) {
       renderEquipmentModule();
       return;
     }
+  }
+
+  for (const [sectionId, items] of equipmentState.sectionAddedItems.entries()) {
+    const itemIndex = items.findIndex((item) => item.id === itemId);
+    if (itemIndex < 0) continue;
+    const [item] = items.splice(itemIndex, 1);
+    if (!items.length) equipmentState.sectionAddedItems.delete(sectionId);
+    pushDeletedEquipment({ type: "section-added-item", sectionId, item, index: itemIndex });
+    renderEquipmentModule();
+    return;
   }
 
   const extraIndex = equipmentState.manualExtras.findIndex((item) => item.id === itemId);
@@ -1618,6 +1705,10 @@ function restoreLastDeletedEquipment() {
     if (section) section.items.splice(entry.index, 0, entry.item);
   } else if (entry.type === "manual-extra") {
     equipmentState.manualExtras.splice(entry.index, 0, entry.item);
+  } else if (entry.type === "section-added-item") {
+    const items = equipmentState.sectionAddedItems.get(entry.sectionId) || [];
+    items.splice(entry.index, 0, entry.item);
+    equipmentState.sectionAddedItems.set(entry.sectionId, items);
   } else if (entry.type === "service-item") {
     equipmentState.removedItemIds.delete(entry.itemId);
     if (entry.override) equipmentState.itemOverrides.set(entry.itemId, entry.override);
@@ -1629,15 +1720,97 @@ function restoreLastDeletedEquipment() {
   renderEquipmentModule();
 }
 
+function equipmentManualSectionForId(sectionId) {
+  return equipmentState.manualMainSections.find((section) => section.id === sectionId) || null;
+}
+
+function addEquipmentChoiceToSection(sectionId) {
+  const section = selectedEquipmentSections().find((entry) => entry.id === sectionId);
+  const select = [...document.querySelectorAll("[data-equipment-category-choice]")]
+    .find((element) => element.dataset.equipmentCategoryChoice === sectionId);
+  const quantityInput = [...document.querySelectorAll("[data-equipment-category-quantity]")]
+    .find((element) => element.dataset.equipmentCategoryQuantity === sectionId);
+  const status = equipmentQuery("#equipmentSaveStatus");
+  const description = String(select?.value || "").trim();
+  const quantity = Math.max(0, Number(quantityInput?.value || 0) || 0);
+  if (!section || !description) {
+    if (status) status.textContent = "Seleccione un equipo del inventario antes de agregarlo.";
+    return;
+  }
+  const existing = (section.items || [])
+    .map(normalizeEquipmentItem)
+    .find((item) => equipmentInventoryCanonicalKey(item.description) === equipmentInventoryCanonicalKey(description));
+  if (existing?.id) {
+    updateEquipmentItem(existing.id, "quantity", (Number(existing.quantity) || 0) + quantity);
+  } else if (sectionId === "extras-manuales") {
+    equipmentState.manualExtras.push({
+      id: `manual-extra-${Date.now()}-${equipmentExtraCounter++}`,
+      quantity,
+      description
+    });
+  } else {
+    const manualSection = equipmentManualSectionForId(sectionId);
+    if (manualSection) {
+      manualSection.items.push({
+        id: `manual-main-${Date.now()}-${equipmentManualMainCounter++}`,
+        quantity,
+        description
+      });
+    } else {
+      const addedItems = equipmentState.sectionAddedItems.get(sectionId) || [];
+      addedItems.push({
+        id: `section-item-${Date.now()}-${equipmentManualMainCounter++}`,
+        quantity,
+        description
+      });
+      equipmentState.sectionAddedItems.set(sectionId, addedItems);
+    }
+  }
+  if (status) status.textContent = `Equipo agregado en ${section.title}: ${description}`;
+  renderEquipmentModule();
+}
+
+function updateEquipmentRecognitionState(input) {
+  if (!input || input.dataset.equipmentField !== "description") return;
+  const recognized = equipmentRecognizedInventoryChoice(input.value);
+  input.classList.toggle("is-unrecognized", !recognized);
+  input.setAttribute("aria-invalid", String(!recognized));
+  const row = input.closest("tr");
+  row?.classList.toggle("is-unrecognized", !recognized);
+  row?.querySelector(".equipment-name-warning")?.classList.toggle("is-hidden", recognized);
+}
+
 function bindEquipmentSectionInputs() {
   const host = equipmentQuery("#equipmentMainTable");
   if (!host) return;
   host.querySelectorAll("[data-equipment-item-id]").forEach((input) => {
     input.addEventListener("input", (event) => {
       updateEquipmentItem(input.dataset.equipmentItemId, input.dataset.equipmentField, event.target.value);
+      updateEquipmentRecognitionState(input);
       refreshEquipmentSummaryAndPreview();
     });
     input.addEventListener("change", renderEquipmentModule);
+  });
+  host.querySelectorAll("[data-equipment-category-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const sectionId = button.dataset.equipmentCategoryToggle || "";
+      if (equipmentState.expandedEquipmentSectionIds.has(sectionId)) {
+        equipmentState.expandedEquipmentSectionIds.delete(sectionId);
+      } else {
+        equipmentState.expandedEquipmentSectionIds.add(sectionId);
+      }
+      renderEquipmentModule();
+    });
+  });
+  host.querySelectorAll("[data-equipment-category-add]").forEach((button) => {
+    button.addEventListener("click", () => addEquipmentChoiceToSection(button.dataset.equipmentCategoryAdd || ""));
+  });
+  host.querySelectorAll("[data-equipment-manual-section-title]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const section = equipmentManualSectionForId(input.dataset.equipmentManualSectionTitle || "");
+      if (section && input.value.trim()) section.title = input.value.trim();
+      renderEquipmentModule();
+    });
   });
   host.querySelectorAll("[data-remove-equipment-item]").forEach((button) => {
     button.addEventListener("click", () => removeManualEquipmentItem(button.dataset.removeEquipmentItem));
@@ -1737,24 +1910,33 @@ function renderManualEquipmentExtras() {
     return;
   }
   host.innerHTML = equipmentState.manualExtras
-    .map(
-      (extra) => `
-        <article class="equipment-extra-line equipment-extra-line-editable">
+    .map((extra) => {
+      const recognized = equipmentRecognizedInventoryChoice(extra.description);
+      return `
+        <article class="equipment-extra-line equipment-extra-line-editable${recognized ? "" : " is-unrecognized"}">
           <label>
             Cantidad
             <input data-manual-extra-id="${escapeEquipmentHtml(extra.id)}" data-equipment-field="quantity" type="number" min="0" step="1" value="${escapeEquipmentHtml(extra.quantity)}" />
           </label>
           <label>
             Equipo extra
-            <input data-manual-extra-id="${escapeEquipmentHtml(extra.id)}" data-equipment-field="description" type="text" value="${escapeEquipmentHtml(extra.description)}" />
+            <input class="${recognized ? "" : "is-unrecognized"}" data-manual-extra-id="${escapeEquipmentHtml(extra.id)}" data-equipment-field="description" type="text" list="equipmentInventoryNameOptions" value="${escapeEquipmentHtml(extra.description)}" aria-invalid="${recognized ? "false" : "true"}" />
+            <span class="equipment-name-warning${recognized ? " is-hidden" : ""}">Nombre no reconocido por el inventario.</span>
           </label>
           <button type="button" data-remove-extra="${escapeEquipmentHtml(extra.id)}" aria-label="Eliminar extra">X</button>
-        </article>`
-    )
+        </article>`;
+    })
     .join("");
   host.querySelectorAll("[data-manual-extra-id]").forEach((input) => {
     input.addEventListener("input", (event) => {
       updateEquipmentItem(input.dataset.manualExtraId, input.dataset.equipmentField, event.target.value);
+      if (input.dataset.equipmentField === "description") {
+        const recognized = equipmentRecognizedInventoryChoice(input.value);
+        input.classList.toggle("is-unrecognized", !recognized);
+        input.setAttribute("aria-invalid", String(!recognized));
+        input.closest("article")?.classList.toggle("is-unrecognized", !recognized);
+        input.parentElement?.querySelector(".equipment-name-warning")?.classList.toggle("is-hidden", recognized);
+      }
       refreshEquipmentSummaryAndPreview();
     });
     input.addEventListener("change", renderEquipmentModule);
@@ -2056,6 +2238,446 @@ function equipmentInventorySummaryCategories() {
   return categories;
 }
 
+function equipmentInventoryChoiceCategories() {
+  return equipmentInventorySummaryCategories()
+    .map((category) => ({
+      title: String(category?.title || "Equipo").trim() || "Equipo",
+      items: (Array.isArray(category?.items) ? category.items : [])
+        .map((item) => String(item?.description || "").trim())
+        .filter(Boolean)
+    }))
+    .filter((category) => category.items.length);
+}
+
+function equipmentInventoryChoiceMap() {
+  const choices = new Map();
+  equipmentInventoryChoiceCategories().forEach((category) => {
+    category.items.forEach((description) => {
+      const key = equipmentInventoryCanonicalKey(description);
+      if (key && !choices.has(key)) choices.set(key, { description, category: category.title });
+    });
+  });
+  return choices;
+}
+
+function equipmentRecognizedInventoryChoice(description) {
+  const key = equipmentInventoryCanonicalKey(description);
+  return Boolean(key && equipmentInventoryChoiceMap().has(key));
+}
+
+function equipmentCategoryMatchKey(value) {
+  return normalizeEquipmentKey(value)
+    .replace(/\b(equipo|para|de|del|la|las|los)\b/g, " ")
+    .replace(/\b(consolas|pedestales|estructuras|herramientas|instrumentos|accesorios)\b/g, (word) => word.slice(0, -1))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function equipmentInventoryCategoriesForSection(section) {
+  const categories = equipmentInventoryChoiceCategories();
+  const sectionKeys = new Set((section?.items || [])
+    .map((item) => equipmentInventoryCanonicalKey(normalizeEquipmentItem(item).description))
+    .filter(Boolean));
+  const titleParts = String(section?.title || "")
+    .split("/")
+    .map(equipmentCategoryMatchKey)
+    .filter(Boolean);
+  const matches = categories.filter((category) => {
+    const categoryKey = equipmentCategoryMatchKey(category.title);
+    const titleMatches = titleParts.some((titleKey) => titleKey === categoryKey || titleKey.includes(categoryKey) || categoryKey.includes(titleKey));
+    const itemMatches = category.items.some((description) => sectionKeys.has(equipmentInventoryCanonicalKey(description)));
+    return titleMatches || itemMatches;
+  });
+  return matches.length ? matches : categories;
+}
+
+function equipmentInventoryOptionsHtml(categories, selectedDescription = "") {
+  const selectedKey = equipmentInventoryCanonicalKey(selectedDescription);
+  return categories.map((category) => {
+    const options = category.items.map((description) => {
+      const selected = equipmentInventoryCanonicalKey(description) === selectedKey ? " selected" : "";
+      return `<option value="${escapeEquipmentHtml(description)}"${selected}>${escapeEquipmentHtml(description)}</option>`;
+    }).join("");
+    return `<optgroup label="${escapeEquipmentHtml(category.title)}">${options}</optgroup>`;
+  }).join("");
+}
+
+function renderEquipmentInventoryNameOptions() {
+  const datalist = equipmentQuery("#equipmentInventoryNameOptions");
+  if (!datalist) return;
+  datalist.innerHTML = equipmentInventoryChoiceCategories()
+    .flatMap((category) => category.items)
+    .map((description) => `<option value="${escapeEquipmentHtml(description)}"></option>`)
+    .join("");
+}
+
+function cloneEquipmentCatalogItems(items = []) {
+  return (Array.isArray(items) ? items : []).map((item, index) => {
+    const normalized = normalizeEquipmentItem(item);
+    return {
+      id: normalized.id || `catalog-item-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+      quantity: Math.max(0, Number(normalized.quantity) || 0),
+      description: String(normalized.description || "").trim()
+    };
+  });
+}
+
+function cloneEquipmentCatalogAudioOptions(audioOptions = {}) {
+  return Object.fromEntries(Object.entries(audioOptions || {}).map(([key, option]) => [key, {
+    ...option,
+    label: String(option?.label || key),
+    items: cloneEquipmentCatalogItems(option?.items).map((item) => [item.quantity, item.description])
+  }]));
+}
+
+function applyEquipmentCatalogServiceOverride(serviceId, override) {
+  const service = equipmentServices[serviceId];
+  if (!service || !override || typeof override !== "object") return false;
+  if (Array.isArray(override.mainSections) && override.mainSections.length) {
+    service.mainSections = override.mainSections.map((section, index) => ({
+      ...(section?.id ? { id: String(section.id) } : {}),
+      ...(section?.audioVariant ? { audioVariant: true } : {}),
+      title: String(section?.title || `Categoría ${index + 1}`),
+      items: cloneEquipmentCatalogItems(section?.items).map((item) => [item.quantity, item.description])
+    }));
+  }
+  if (override.audioOptions && typeof override.audioOptions === "object" && Object.keys(override.audioOptions).length) {
+    service.audioOptions = {
+      ...(service.audioOptions || {}),
+      ...cloneEquipmentCatalogAudioOptions(override.audioOptions)
+    };
+  }
+  service.catalogUpdatedAt = override.updatedAt || "";
+  return true;
+}
+
+function applyEquipmentCatalogOverrides(payload) {
+  const services = payload?.services && typeof payload.services === "object" ? payload.services : {};
+  let changed = false;
+  Object.entries(services).forEach(([serviceId, override]) => {
+    changed = applyEquipmentCatalogServiceOverride(serviceId, override) || changed;
+  });
+  equipmentCatalogEditorState.loaded = true;
+  return changed;
+}
+
+async function loadEquipmentCatalogOverrides(force = false) {
+  if (equipmentCatalogEditorState.loadingPromise) return equipmentCatalogEditorState.loadingPromise;
+  if (equipmentCatalogEditorState.loaded && !force) return null;
+  equipmentCatalogEditorState.loadingPromise = fetch("/api/cuadros-equipo/catalogo", {
+    credentials: "same-origin",
+    cache: "no-store"
+  })
+    .then(async (response) => {
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "No se pudo cargar el catálogo editable.");
+      const changed = applyEquipmentCatalogOverrides(payload);
+      if (changed && !equipmentCatalogEditorState.open) renderEquipmentModule();
+      return payload;
+    })
+    .catch(() => null)
+    .finally(() => {
+      equipmentCatalogEditorState.loadingPromise = null;
+    });
+  return equipmentCatalogEditorState.loadingPromise;
+}
+
+function equipmentCatalogDraftForService(serviceId) {
+  const baseService = equipmentServices[serviceId];
+  const resolvedService = serviceWithEquipmentAudioOption(serviceId);
+  if (!baseService || !resolvedService) return null;
+  const audioType = baseService.audioOptions?.[equipmentState.djAudioType]
+    ? equipmentState.djAudioType
+    : Object.keys(baseService.audioOptions || {})[0] || "";
+  return {
+    serviceId,
+    name: baseService.name,
+    audioType,
+    sections: (resolvedService.mainSections || []).map((section, index) => {
+      const baseSection = baseService.mainSections?.[index] || {};
+      const persistentSectionId = baseSection.id || section.id || `custom-category-${Date.now()}-${index}`;
+      return {
+        editorId: `catalog-section-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+        sourceId: persistentSectionId,
+        baseTitle: baseSection.title || section.title || "",
+        audioVariant: Boolean(baseSection.audioVariant || section.audioVariant),
+        title: String(section.title || `Categoría ${index + 1}`),
+        items: cloneEquipmentCatalogItems(section.items)
+      };
+    })
+  };
+}
+
+function equipmentCatalogEditorValidation(draft = equipmentCatalogEditorState.draft) {
+  if (!draft?.sections?.length) return { ok: false, message: "Agregue al menos una categoría." };
+  for (const [sectionIndex, section] of draft.sections.entries()) {
+    if (!String(section.title || "").trim()) {
+      return { ok: false, message: `Escriba el nombre de la categoría ${sectionIndex + 1}.` };
+    }
+    for (const [itemIndex, item] of section.items.entries()) {
+      const description = String(item.description || "").trim();
+      if (!description) {
+        return { ok: false, message: `Escriba el nombre del equipo ${itemIndex + 1} en ${section.title}.` };
+      }
+      if (!equipmentRecognizedInventoryChoice(description)) {
+        return { ok: false, message: `No se reconoce "${description}" en ${section.title}. Seleccione el nombre exacto del inventario.` };
+      }
+      const quantity = Number(item.quantity);
+      if (!Number.isFinite(quantity) || quantity < 0) {
+        return { ok: false, message: `Corrija la cantidad de "${description}" en ${section.title}.` };
+      }
+    }
+  }
+  return { ok: true, message: "" };
+}
+
+function equipmentCatalogEditorPayload(draft = equipmentCatalogEditorState.draft) {
+  const baseService = equipmentServices[draft.serviceId];
+  const audioOptions = cloneEquipmentCatalogAudioOptions(baseService.audioOptions || {});
+  const mainSections = draft.sections.map((section) => {
+    const items = section.items.map((item) => [Math.max(0, Number(item.quantity) || 0), String(item.description || "").trim()]);
+    if (section.audioVariant) {
+      if (draft.audioType && audioOptions[draft.audioType]) audioOptions[draft.audioType].items = items;
+      return {
+        ...(section.sourceId ? { id: section.sourceId.replace(/-(qsc|t4|turbosound)$/i, "") } : {}),
+        title: section.baseTitle || "Audio",
+        audioVariant: true,
+        items: []
+      };
+    }
+    return {
+      ...(section.sourceId ? { id: section.sourceId } : {}),
+      title: String(section.title || "").trim(),
+      items
+    };
+  });
+  return {
+    serviceId: draft.serviceId,
+    name: draft.name,
+    mainSections,
+    audioOptions
+  };
+}
+
+function equipmentCatalogEditorSectionMarkup(section) {
+  const inventoryCategories = equipmentInventoryCategoriesForSection(section);
+  const rows = section.items.map((item, itemIndex) => {
+    const recognized = equipmentRecognizedInventoryChoice(item.description);
+    return `
+      <div class="equipment-catalog-item${recognized ? "" : " is-unrecognized"}">
+        <label>Cantidad<input data-catalog-item-quantity="${escapeEquipmentHtml(section.editorId)}:${itemIndex}" type="number" min="0" step="1" value="${escapeEquipmentHtml(item.quantity)}" /></label>
+        <label>Equipo<input class="${recognized ? "" : "is-unrecognized"}" data-catalog-item-description="${escapeEquipmentHtml(section.editorId)}:${itemIndex}" type="text" list="equipmentInventoryNameOptions" value="${escapeEquipmentHtml(item.description)}" aria-invalid="${recognized ? "false" : "true"}" />
+          <span class="equipment-name-warning${recognized ? " is-hidden" : ""}">Nombre no reconocido por el inventario.</span>
+        </label>
+        <button type="button" data-catalog-remove-item="${escapeEquipmentHtml(section.editorId)}:${itemIndex}" aria-label="Eliminar equipo">X</button>
+      </div>`;
+  }).join("");
+  return `
+    <details class="equipment-catalog-category" open data-catalog-section="${escapeEquipmentHtml(section.editorId)}">
+      <summary>${escapeEquipmentHtml(section.title || "Nueva categoría")}<span>${section.items.length} equipo(s)</span></summary>
+      <div class="equipment-catalog-category-body">
+        <label class="equipment-catalog-category-title">Nombre de la categoría<input data-catalog-section-title="${escapeEquipmentHtml(section.editorId)}" type="text" value="${escapeEquipmentHtml(section.title)}" ${section.audioVariant ? "readonly" : ""} /></label>
+        <div class="equipment-catalog-items">${rows || '<p class="equipment-empty">Esta categoría todavía no tiene equipo.</p>'}</div>
+        <div class="equipment-catalog-add-item">
+          <label>Equipo del inventario<select data-catalog-choice="${escapeEquipmentHtml(section.editorId)}"><option value="">Seleccione el equipo</option>${equipmentInventoryOptionsHtml(inventoryCategories)}</select></label>
+          <label>Cantidad<input data-catalog-choice-quantity="${escapeEquipmentHtml(section.editorId)}" type="number" min="0" step="1" value="1" /></label>
+          <button type="button" data-catalog-add-item="${escapeEquipmentHtml(section.editorId)}">Agregar equipo</button>
+          ${section.audioVariant ? "" : `<button class="equipment-catalog-delete-category" type="button" data-catalog-remove-section="${escapeEquipmentHtml(section.editorId)}">Eliminar categoría</button>`}
+        </div>
+      </div>
+    </details>`;
+}
+
+function renderEquipmentCatalogEditor() {
+  const overlay = equipmentQuery("#equipmentCatalogEditor");
+  const content = equipmentQuery("#equipmentCatalogEditorContent");
+  if (!overlay || !content) return;
+  overlay.classList.toggle("is-hidden", !equipmentCatalogEditorState.open);
+  if (!equipmentCatalogEditorState.open || !equipmentCatalogEditorState.draft) return;
+  const draft = equipmentCatalogEditorState.draft;
+  const title = equipmentQuery("#equipmentCatalogEditorTitle");
+  if (title) title.textContent = `Editar ${draft.name}`;
+  content.innerHTML = draft.sections.map(equipmentCatalogEditorSectionMarkup).join("");
+  bindEquipmentCatalogEditorInputs();
+}
+
+function equipmentCatalogDraftSection(sectionId) {
+  return equipmentCatalogEditorState.draft?.sections?.find((section) => section.editorId === sectionId) || null;
+}
+
+function equipmentCatalogEditorReference(value) {
+  const separatorIndex = String(value || "").lastIndexOf(":");
+  if (separatorIndex < 0) return { section: null, itemIndex: -1 };
+  const section = equipmentCatalogDraftSection(String(value).slice(0, separatorIndex));
+  const itemIndex = Number(String(value).slice(separatorIndex + 1));
+  return { section, itemIndex };
+}
+
+function bindEquipmentCatalogEditorInputs() {
+  const content = equipmentQuery("#equipmentCatalogEditorContent");
+  if (!content) return;
+  content.querySelectorAll("[data-catalog-section-title]").forEach((input) => {
+    input.addEventListener("input", () => {
+      const section = equipmentCatalogDraftSection(input.dataset.catalogSectionTitle || "");
+      if (section && !section.audioVariant) section.title = input.value;
+    });
+  });
+  content.querySelectorAll("[data-catalog-item-quantity]").forEach((input) => {
+    input.addEventListener("input", () => {
+      const { section, itemIndex } = equipmentCatalogEditorReference(input.dataset.catalogItemQuantity);
+      if (section?.items[itemIndex]) section.items[itemIndex].quantity = Math.max(0, Number(input.value) || 0);
+    });
+  });
+  content.querySelectorAll("[data-catalog-item-description]").forEach((input) => {
+    input.addEventListener("input", () => {
+      const { section, itemIndex } = equipmentCatalogEditorReference(input.dataset.catalogItemDescription);
+      if (section?.items[itemIndex]) section.items[itemIndex].description = input.value;
+      const recognized = equipmentRecognizedInventoryChoice(input.value);
+      input.classList.toggle("is-unrecognized", !recognized);
+      input.setAttribute("aria-invalid", String(!recognized));
+      input.closest(".equipment-catalog-item")?.classList.toggle("is-unrecognized", !recognized);
+      input.parentElement?.querySelector(".equipment-name-warning")?.classList.toggle("is-hidden", recognized);
+    });
+  });
+  content.querySelectorAll("[data-catalog-remove-item]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const { section, itemIndex } = equipmentCatalogEditorReference(button.dataset.catalogRemoveItem);
+      if (section && itemIndex >= 0) section.items.splice(itemIndex, 1);
+      renderEquipmentCatalogEditor();
+    });
+  });
+  content.querySelectorAll("[data-catalog-add-item]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const sectionId = button.dataset.catalogAddItem || "";
+      const section = equipmentCatalogDraftSection(sectionId);
+      const choice = [...content.querySelectorAll("[data-catalog-choice]")]
+        .find((select) => select.dataset.catalogChoice === sectionId);
+      const quantityInput = [...content.querySelectorAll("[data-catalog-choice-quantity]")]
+        .find((input) => input.dataset.catalogChoiceQuantity === sectionId);
+      const description = String(choice?.value || "").trim();
+      if (!section || !description) return;
+      const quantity = Math.max(0, Number(quantityInput?.value || 0) || 0);
+      const existing = section.items.find((item) => equipmentInventoryCanonicalKey(item.description) === equipmentInventoryCanonicalKey(description));
+      if (existing) existing.quantity += quantity;
+      else section.items.push({ id: `catalog-item-${Date.now()}`, quantity, description });
+      renderEquipmentCatalogEditor();
+    });
+  });
+  content.querySelectorAll("[data-catalog-remove-section]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const sectionId = button.dataset.catalogRemoveSection || "";
+      equipmentCatalogEditorState.draft.sections = equipmentCatalogEditorState.draft.sections
+        .filter((section) => section.editorId !== sectionId);
+      renderEquipmentCatalogEditor();
+    });
+  });
+}
+
+async function openEquipmentCatalogEditor() {
+  const status = equipmentQuery("#equipmentSaveStatus");
+  const serviceIds = selectedEquipmentServiceIds();
+  if (serviceIds.length !== 1) {
+    if (status) status.textContent = "Seleccione exactamente un tipo de servicio para editar su cuadro permanente.";
+    return;
+  }
+  await loadEquipmentCatalogOverrides(true);
+  const draft = equipmentCatalogDraftForService(serviceIds[0]);
+  if (!draft) {
+    if (status) status.textContent = "No se pudo abrir la plantilla del servicio seleccionado.";
+    return;
+  }
+  equipmentCatalogEditorState.open = true;
+  equipmentCatalogEditorState.serviceId = serviceIds[0];
+  equipmentCatalogEditorState.audioType = draft.audioType;
+  equipmentCatalogEditorState.draft = draft;
+  const editorStatus = equipmentQuery("#equipmentCatalogEditorStatus");
+  if (editorStatus) editorStatus.textContent = "";
+  renderEquipmentCatalogEditor();
+}
+
+function closeEquipmentCatalogEditor() {
+  equipmentCatalogEditorState.open = false;
+  equipmentCatalogEditorState.serviceId = "";
+  equipmentCatalogEditorState.audioType = "";
+  equipmentCatalogEditorState.draft = null;
+  renderEquipmentCatalogEditor();
+}
+
+function addEquipmentCatalogCategory() {
+  const draft = equipmentCatalogEditorState.draft;
+  if (!draft) return;
+  draft.sections.push({
+    editorId: `catalog-section-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    sourceId: `custom-category-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    baseTitle: "",
+    audioVariant: false,
+    title: "NUEVA CATEGORÍA",
+    items: []
+  });
+  renderEquipmentCatalogEditor();
+}
+
+async function saveEquipmentCatalogEditor() {
+  const editorStatus = equipmentQuery("#equipmentCatalogEditorStatus");
+  const saveButton = equipmentQuery("#equipmentCatalogSaveButton");
+  const validation = equipmentCatalogEditorValidation();
+  if (!validation.ok) {
+    if (editorStatus) editorStatus.textContent = validation.message;
+    return;
+  }
+  if (equipmentCatalogEditorState.saving) return;
+  equipmentCatalogEditorState.saving = true;
+  if (saveButton) saveButton.disabled = true;
+  if (editorStatus) editorStatus.textContent = "Guardando plantilla...";
+  try {
+    const payload = equipmentCatalogEditorPayload();
+    const response = await fetch("/api/cuadros-equipo/catalogo", {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "No se pudo guardar la plantilla.");
+    applyEquipmentCatalogServiceOverride(data.serviceId, data.service);
+    equipmentState.itemOverrides.clear();
+    equipmentState.sectionAddedItems.clear();
+    equipmentState.removedItemIds.clear();
+    equipmentState.manualMainItems = [];
+    equipmentState.manualMainSections = [];
+    const event = selectedEquipmentEvent();
+    if (event) updateEquipmentEventFromCurrent(event);
+    closeEquipmentCatalogEditor();
+    renderEquipmentModule();
+    const status = equipmentQuery("#equipmentSaveStatus");
+    if (status) status.textContent = `Plantilla permanente actualizada: ${payload.name}.`;
+  } catch (error) {
+    if (editorStatus) editorStatus.textContent = error.message || "No se pudo guardar la plantilla.";
+  } finally {
+    equipmentCatalogEditorState.saving = false;
+    if (saveButton) saveButton.disabled = false;
+  }
+}
+
+async function initEquipmentCatalogSync() {
+  const requirementPage = equipmentQuery("#requerimientoEquipoPage");
+  await waitForEquipmentAuthenticatedApp();
+  await loadEquipmentCatalogOverrides();
+  if (requirementPage && typeof MutationObserver === "function") {
+    const observer = new MutationObserver(() => {
+      if (requirementPage.classList.contains("is-active") && !equipmentCatalogEditorState.open) {
+        loadEquipmentCatalogOverrides(true);
+      }
+    });
+    observer.observe(requirementPage, { attributes: true, attributeFilter: ["class"] });
+  }
+  window.addEventListener("focus", () => {
+    if ((!requirementPage || requirementPage.classList.contains("is-active")) && !equipmentCatalogEditorState.open) {
+      loadEquipmentCatalogOverrides(true);
+    }
+  });
+}
+
 function equipmentWarehouseInventoryRecordFor(row) {
   const directId = row?.inventorySourceItem?.warehouseInventoryId
     || equipmentInventoryWarehouseIdByRowKey.get(row?.key);
@@ -2170,10 +2792,99 @@ function equipmentTransferPlanData() {
   };
 }
 
+function equipmentTransferItemCount(items = []) {
+  return items.reduce((total, item) => total + (Number(item.quantity) || 0), 0);
+}
+
+function equipmentTransferItemsTable(items = []) {
+  const itemRows = items
+    .map((item) => `
+      <tr>
+        <td>${escapeEquipmentHtml(item.quantity)}</td>
+        <td>${escapeEquipmentHtml(item.description)}</td>
+        <td>${escapeEquipmentHtml(item.categoryTitle)}</td>
+      </tr>`)
+    .join("");
+  if (!itemRows) return '<p class="equipment-empty">No hay equipo idéntico requerido en ambos eventos.</p>';
+  return `
+    <table class="equipment-transfer-items-table">
+      <colgroup><col class="equipment-transfer-quantity-column" /><col /><col class="equipment-transfer-category-column" /></colgroup>
+      <thead><tr><th>Cantidad</th><th>Equipo</th><th>Categoría</th></tr></thead>
+      <tbody>${itemRows}</tbody>
+    </table>`;
+}
+
+function equipmentConfiguredTransferRoutesWithItems(plan = equipmentTransferPlanData()) {
+  return plan.routes.filter((route) => route.configured && route.items.length);
+}
+
+function equipmentTransferDestinationSentence(route) {
+  return `Destino: ${route.to?.place || "Lugar por definir"} · Evento: ${route.to?.name || "Por definir"} · Montaje: ${equipmentEventSetupDateTimeLabel(route.to)}`;
+}
+
+function renderEquipmentTransferPdf(plan = equipmentTransferPlanData()) {
+  const host = equipmentQuery("#equipmentTransferPdfRoutes");
+  const saveButton = equipmentQuery("#equipmentSaveTransferPdfButton");
+  const routes = equipmentConfiguredTransferRoutesWithItems(plan);
+  if (saveButton) {
+    saveButton.disabled = !routes.length;
+    saveButton.title = routes.length
+      ? "Guardar como PDF el equipo de todos los trasiegos configurados"
+      : "Configure un trasiego con equipo compartido para generar el PDF";
+  }
+  if (!host) return;
+  if (!routes.length) {
+    host.innerHTML = '<p class="equipment-empty">Configure al menos un trasiego con equipo compartido para generar este PDF.</p>';
+    return;
+  }
+  host.innerHTML = routes.map(({ routeIndex, legIndex, from, to, items }) => `
+    <section class="equipment-transfer-pdf-route">
+      <div class="equipment-transfer-pdf-route-heading">
+        <div>
+          <span>${escapeEquipmentHtml(`Trasiego ${routeIndex + 1} · tramo ${legIndex + 1}`)}</span>
+          <h3>${escapeEquipmentHtml(`${from.place || "Lugar por definir"} hacia ${to.place || "Lugar por definir"}`)}</h3>
+        </div>
+        <strong>${escapeEquipmentHtml(`${items.length} tipos · ${equipmentTransferItemCount(items)} unidades`)}</strong>
+      </div>
+      <div class="equipment-transfer-pdf-meta">
+        <div><span>Origen</span><strong>${escapeEquipmentHtml(from.place || "Lugar por definir")}</strong><small>Evento: ${escapeEquipmentHtml(from.name || "Por definir")}</small></div>
+        <div><span>Destino</span><strong>${escapeEquipmentHtml(to.place || "Lugar por definir")}</strong><small>Evento: ${escapeEquipmentHtml(to.name || "Por definir")}</small></div>
+        <div><span>Montaje en destino</span><strong>${escapeEquipmentHtml(equipmentEventSetupDateTimeLabel(to))}</strong><small>Fecha del evento: ${escapeEquipmentHtml(equipmentEventDateLabel(to))}</small></div>
+      </div>
+      ${equipmentTransferItemsTable(items)}
+      <p class="equipment-transfer-route-note">${escapeEquipmentHtml(`Salida desde ${from.place || "Lugar por definir"} después del ingreso ${equipmentEventReturnDateTime(from)}. ${equipmentTransferDestinationSentence({ to })}`)}</p>
+    </section>`).join("");
+}
+
+function renderEquipmentPdfTransferDestinations(plan = equipmentTransferPlanData()) {
+  const host = equipmentQuery("#equipmentPdfTransferDestinations");
+  if (!host) return;
+  const selectedEventId = equipmentState.selectedEventId;
+  const routes = plan.routes.filter((route) => route.configured && route.from?.id === selectedEventId);
+  host.classList.toggle("is-hidden", !routes.length);
+  if (!routes.length) {
+    host.innerHTML = "";
+    return;
+  }
+  host.innerHTML = `
+    <strong class="equipment-pdf-transfer-title">Destino del equipo trasegado</strong>
+    <div class="equipment-pdf-transfer-grid">
+      ${routes.map(({ routeIndex, legIndex, to, items }) => `
+        <div>
+          <span>${escapeEquipmentHtml(`Trasiego ${routeIndex + 1} · tramo ${legIndex + 1}`)}</span>
+          <strong>${escapeEquipmentHtml(to.place || "Lugar por definir")}</strong>
+          <small>Evento: ${escapeEquipmentHtml(to.name || "Por definir")}</small>
+          <small>Montaje: ${escapeEquipmentHtml(equipmentEventSetupDateTimeLabel(to))}</small>
+          <small>${escapeEquipmentHtml(`${items.length} tipos · ${equipmentTransferItemCount(items)} unidades`)}</small>
+        </div>`).join("")}
+    </div>`;
+}
+
 function renderEquipmentTransferPanel() {
   const host = equipmentQuery("#equipmentTransferPlan");
   if (!host) return;
   const plan = equipmentTransferPlanData();
+  renderEquipmentTransferPdf(plan);
   if (plan.events.length < 2) {
     host.innerHTML = `<p class="equipment-empty">Agregue al menos dos ventanas para calcular el trasego de equipo.</p>`;
     return;
@@ -2197,15 +2908,7 @@ function renderEquipmentTransferPanel() {
     .join("");
   const routeHtml = plan.routes
     .map(({ routeIndex, legIndex, dateKey, from, to, configured, items }) => {
-      const itemRows = items
-        .map((item) => `
-          <tr>
-            <td>${escapeEquipmentHtml(item.quantity)}</td>
-            <td>${escapeEquipmentHtml(item.description)}</td>
-            <td>${escapeEquipmentHtml(item.categoryTitle)}</td>
-          </tr>`)
-        .join("");
-      const itemCount = items.reduce((total, item) => total + (Number(item.quantity) || 0), 0);
+      const itemCount = equipmentTransferItemCount(items);
       return `
         <article class="equipment-transfer-card">
           <div class="equipment-transfer-location">
@@ -2230,13 +2933,9 @@ function renderEquipmentTransferPanel() {
               <strong>Equipo que se trasegará</strong>
               <span>${escapeEquipmentHtml(`${items.length} tipos · ${itemCount} unidades`)}</span>
             </header>
-            ${items.length ? `
-              <table>
-                <thead><tr><th>Cantidad</th><th>Equipo</th><th>Categoría</th></tr></thead>
-                <tbody>${itemRows}</tbody>
-              </table>` : '<p class="equipment-empty">No hay equipo idéntico requerido en ambos eventos.</p>'}
+            ${equipmentTransferItemsTable(items)}
           </section>
-          <p class="equipment-transfer-route-note">Salida desde ${escapeEquipmentHtml(from.place || "evento anterior")} después del ingreso ${escapeEquipmentHtml(equipmentEventReturnDateTime(from))}${dateKey ? ` · destino ${escapeEquipmentHtml(formatEquipmentDate(dateKey))}` : ""}</p>
+          <p class="equipment-transfer-route-note">Salida desde ${escapeEquipmentHtml(from.place || "evento anterior")} después del ingreso ${escapeEquipmentHtml(equipmentEventReturnDateTime(from))}. ${escapeEquipmentHtml(equipmentTransferDestinationSentence({ to }))}${dateKey ? ` · Fecha operativa: ${escapeEquipmentHtml(formatEquipmentDate(dateKey))}` : ""}</p>
         </article>`;
     })
     .join("");
@@ -2604,10 +3303,12 @@ function resetEquipmentWindowDraft() {
   equipmentState.manualMainSections = [];
   equipmentState.manualExtras = [];
   equipmentState.itemOverrides.clear();
+  equipmentState.sectionAddedItems.clear();
   equipmentState.removedItemIds.clear();
   equipmentState.deletedStack = [];
   equipmentState.activeWindow = "review";
   equipmentState.servicePickerOpen = false;
+  equipmentState.expandedEquipmentSectionIds.clear();
   equipmentState.draftWarehouseDispatchId = createEquipmentWarehouseDispatchId();
   updateNativeEquipmentServiceSelect();
   populateEquipmentEventFields(null);
@@ -2722,6 +3423,7 @@ function renderEquipmentPdfPreview() {
   const rentDate = eventSummaryText(summaryEvents, "date");
   const notes = equipmentQuery("#equipmentNotes")?.value.trim() || "";
   const rentalRows = equipmentRentalRows();
+  const transferPlan = equipmentTransferPlanData();
 
   const title = service?.name || "Cuadro de equipo";
   const rentTitle = "Resumen de renta";
@@ -2742,6 +3444,8 @@ function renderEquipmentPdfPreview() {
   if (equipmentQuery("#equipmentPdfMainTable")) {
     equipmentQuery("#equipmentPdfMainTable").innerHTML = tableForEquipmentSections(sections, true);
   }
+  renderEquipmentPdfTransferDestinations(transferPlan);
+  renderEquipmentTransferPdf(transferPlan);
   if (equipmentQuery("#equipmentRentPdfTitle")) equipmentQuery("#equipmentRentPdfTitle").textContent = rentTitle;
   if (equipmentQuery("#equipmentRentPdfPlace")) equipmentQuery("#equipmentRentPdfPlace").textContent = rentPlace;
   if (equipmentQuery("#equipmentRentPdfEvents")) equipmentQuery("#equipmentRentPdfEvents").textContent = rentEventName;
@@ -2766,6 +3470,15 @@ function renderEquipmentModule() {
   const shouldShowWorkspace = Boolean(service) || equipmentState.events.length > 0 || ["summary", "transfer"].includes(equipmentState.activeWindow);
   if (workspace) workspace.classList.toggle("is-hidden", !shouldShowWorkspace);
   if (equipmentQuery("#equipmentServiceName")) equipmentQuery("#equipmentServiceName").textContent = service?.name || "";
+  const editTemplateButton = equipmentQuery("#equipmentEditServiceTemplateButton");
+  if (editTemplateButton) {
+    const selectedServiceCount = selectedEquipmentServiceIds().length;
+    editTemplateButton.disabled = selectedServiceCount !== 1;
+    editTemplateButton.title = selectedServiceCount === 1
+      ? "Editar y guardar permanentemente el cuadro de este servicio"
+      : "Seleccione exactamente un tipo de servicio para editar su cuadro";
+  }
+  renderEquipmentInventoryNameOptions();
   renderDjAudioOptions();
   renderEquipmentServicePicker();
   renderEquipmentEvents();
@@ -2786,6 +3499,7 @@ function renderEquipmentModule() {
   renderEquipmentTransferPanel();
   renderEquipmentPdfPreview();
   renderEquipmentWindowState();
+  renderEquipmentCatalogEditor();
 }
 
 function renderDjAudioOptions() {
@@ -2868,6 +3582,9 @@ function equipmentPdfFileName(mode = "full") {
   if (mode === "rent") {
     return `Resumen de renta - ${formatEquipmentDateForFile(currentEquipmentDateKey())}.pdf`;
   }
+  if (mode === "transfer") {
+    return `Resumen de trasiego - ${formatEquipmentDateForFile(currentEquipmentDateKey())}.pdf`;
+  }
   const service = currentEquipmentService();
   const events = equipmentPdfEvents();
   const eventName = cleanEquipmentFilePart(events.map(equipmentEventNameForFile).join(" - ") || "Evento por definir", "Evento por definir");
@@ -2915,6 +3632,9 @@ function cloneEquipmentEventForEditable(event, index = 0) {
     })),
     manualExtras: cloneEquipmentSnapshotItems(event?.manualExtras || []),
     itemOverrides: Array.isArray(event?.itemOverrides) ? event.itemOverrides.map(([key, value]) => [key, { ...(value || {}) }]) : [],
+    sectionAddedItems: Array.isArray(event?.sectionAddedItems)
+      ? event.sectionAddedItems.map(([key, items]) => [String(key || ""), cloneEquipmentSnapshotItems(items || [])])
+      : [],
     removedItemIds: Array.isArray(event?.removedItemIds) ? [...event.removedItemIds] : [],
     sections: cloneEquipmentSnapshotSections(event?.sections || [])
   };
@@ -2989,7 +3709,7 @@ function equipmentEditablePayload(mode = "full", savedData = {}) {
     : [currentEvent];
   return {
     type: "live-productions-equipment-requirement",
-    version: 3,
+    version: 4,
     mode,
     savedAt: new Date().toISOString(),
     fileName: savedData.fileName || equipmentPdfFileName(mode),
@@ -3172,6 +3892,21 @@ async function saveEquipmentPdfCopyToComputer(data, savedLabel, editablePayload,
   return `${savedLabel}: ${fileName} + editable ${jsonFileName} en ${directoryHandle.name || "carpeta seleccionada"}`;
 }
 
+async function saveEquipmentPdfOnlyCopyToComputer(data, savedLabel, directoryHandle = null) {
+  const fileName = cleanEquipmentFilePart(data?.fileName || "Resumen de trasiego.pdf", "Resumen de trasiego.pdf");
+  const pdfUrl = data?.pdfUrl || data?.absolutePdfUrl;
+  if (!pdfUrl) throw new Error("El servidor no devolvió la dirección del PDF generado.");
+  const pdfResponse = await fetch(equipmentPdfDownloadUrl(pdfUrl), { credentials: "same-origin" });
+  if (!pdfResponse.ok) throw new Error("No se pudo descargar el PDF de trasiego generado.");
+  const pdfBlob = await pdfResponse.blob();
+  if (!directoryHandle) {
+    downloadEquipmentPdfFallback(fileName, pdfBlob, pdfUrl);
+    return `${savedLabel}: ${fileName}. Use Guardar en Archivos o revise las descargas del navegador.`;
+  }
+  await writeEquipmentFileToFolder(directoryHandle, fileName, pdfBlob);
+  return `${savedLabel}: ${fileName} en ${directoryHandle.name || "carpeta seleccionada"}`;
+}
+
 async function saveEquipmentPdf(mode = "full") {
   const status = equipmentQuery("#equipmentSaveStatus");
   if (mode === "full" && !currentEquipmentService()) {
@@ -3186,12 +3921,20 @@ async function saveEquipmentPdf(mode = "full") {
     if (status) status.textContent = "No hay equipo para rentar con el inventario actual.";
     return;
   }
+  if (mode === "transfer") {
+    renderEquipmentTransferPdf();
+    if (!equipmentConfiguredTransferRoutesWithItems().length) {
+      if (status) status.textContent = "Configure al menos un trasiego con equipo compartido antes de generar el PDF.";
+      return;
+    }
+  }
   try {
     const canChooseFolder = typeof window.showDirectoryPicker === "function";
+    const pdfOnly = mode === "transfer";
     if (status) {
       status.textContent = canChooseFolder
-        ? "Seleccione cualquier carpeta donde desea guardar el PDF y el JSON editable."
-        : "El navegador descargará el PDF y el JSON; en Safari, Firefox o celular elija Guardar desde su sistema de descargas.";
+        ? `Seleccione cualquier carpeta donde desea guardar ${pdfOnly ? "el PDF de trasiego" : "el PDF y el JSON editable"}.`
+        : `El navegador descargará ${pdfOnly ? "el PDF" : "el PDF y el JSON"}; en Safari, Firefox o celular elija Guardar desde su sistema de descargas.`;
     }
     let directoryHandle = null;
     if (canChooseFolder) {
@@ -3202,12 +3945,26 @@ async function saveEquipmentPdf(mode = "full") {
         if (status) status.textContent = "No se pudo abrir el selector de carpeta. Se guardará en el servidor y se usarán las descargas del navegador.";
       }
     }
-    if (status) status.textContent = mode === "rent" ? "Generando PDF de renta..." : "Generando PDF para bodega...";
-    const documentSelector = mode === "rent" ? "#equipmentRentPdfDocument" : "#equipmentPdfDocument";
-    const title = mode === "rent" ? "Resumen de renta" : "Equipo y extras para bodega";
+    if (status) {
+      status.textContent = mode === "rent"
+        ? "Generando PDF de renta..."
+        : mode === "transfer"
+          ? "Generando PDF de trasiego..."
+          : "Generando PDF para bodega...";
+    }
+    const documentSelector = mode === "rent"
+      ? "#equipmentRentPdfDocument"
+      : mode === "transfer"
+        ? "#equipmentTransferPdfDocument"
+        : "#equipmentPdfDocument";
+    const title = mode === "rent"
+      ? "Resumen de renta"
+      : mode === "transfer"
+        ? "Resumen de trasiego"
+        : "Equipo y extras para bodega";
     const html = await equipmentPdfHtml(documentSelector, title);
     const requestedFileName = equipmentPdfFileName(mode);
-    const editablePayload = equipmentEditablePayload(mode, { fileName: requestedFileName });
+    const editablePayload = pdfOnly ? null : equipmentEditablePayload(mode, { fileName: requestedFileName });
     const response = await fetch("/api/cuadros-equipo", {
       method: "POST",
       credentials: "same-origin",
@@ -3215,7 +3972,7 @@ async function saveEquipmentPdf(mode = "full") {
       body: JSON.stringify({
         fileName: requestedFileName,
         html,
-        editableData: editablePayload
+        ...(pdfOnly ? { pdfOnly: true } : { editableData: editablePayload })
       })
     });
     const data = await response.json();
@@ -3226,13 +3983,23 @@ async function saveEquipmentPdf(mode = "full") {
         detail: data.warehouseInventory
       }));
     }
-    const savedLabel = mode === "rent" ? "PDF + JSON de renta guardado" : "PDF + JSON de bodega guardado";
-    let statusMessage = `${savedLabel}: ${data.fileName} + ${data.jsonFileName} en ${data.folder}`;
+    const savedLabel = mode === "rent"
+      ? "PDF + JSON de renta guardado"
+      : mode === "transfer"
+        ? "PDF de trasiego guardado"
+        : "PDF + JSON de bodega guardado";
+    let statusMessage = pdfOnly
+      ? `${savedLabel}: ${data.fileName} en ${data.folder}`
+      : `${savedLabel}: ${data.fileName} + ${data.jsonFileName} en ${data.folder}`;
     try {
-      statusMessage = await saveEquipmentPdfCopyToComputer(data, savedLabel, equipmentEditablePayload(mode, data), directoryHandle);
+      statusMessage = pdfOnly
+        ? await saveEquipmentPdfOnlyCopyToComputer(data, savedLabel, directoryHandle)
+        : await saveEquipmentPdfCopyToComputer(data, savedLabel, equipmentEditablePayload(mode, data), directoryHandle);
     } catch (saveError) {
       const destinationLabel = directoryHandle ? "la carpeta seleccionada" : "las descargas del navegador";
-      statusMessage = `${savedLabel}: ${data.fileName} + ${data.jsonFileName}. No se copió a ${destinationLabel}: ${saveError.message}`;
+      statusMessage = pdfOnly
+        ? `${savedLabel}: ${data.fileName}. No se copió a ${destinationLabel}: ${saveError.message}`
+        : `${savedLabel}: ${data.fileName} + ${data.jsonFileName}. No se copió a ${destinationLabel}: ${saveError.message}`;
     }
     if (mode === "full" && data.warehouseReceipt?.received) {
       const receiptAction = data.warehouseReceipt.updated ? "actualizado" : "recibido";
@@ -3400,6 +4167,18 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentSavePdfButton")?.addEventListener("click", () => saveEquipmentPdf("full"));
   equipmentQuery("#equipmentSaveRentPdfButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
   equipmentQuery("#equipmentGenerateRentReportButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
+  equipmentQuery("#equipmentSaveTransferPdfButton")?.addEventListener("click", () => saveEquipmentPdf("transfer"));
+  equipmentQuery("#equipmentEditServiceTemplateButton")?.addEventListener("click", openEquipmentCatalogEditor);
+  equipmentQuery("#equipmentCatalogEditorCloseButton")?.addEventListener("click", closeEquipmentCatalogEditor);
+  equipmentQuery("#equipmentCatalogCancelButton")?.addEventListener("click", closeEquipmentCatalogEditor);
+  equipmentQuery("#equipmentCatalogAddCategoryButton")?.addEventListener("click", addEquipmentCatalogCategory);
+  equipmentQuery("#equipmentCatalogSaveButton")?.addEventListener("click", saveEquipmentCatalogEditor);
+  equipmentQuery("#equipmentCatalogEditor")?.addEventListener("click", (event) => {
+    if (event.target.id === "equipmentCatalogEditor") closeEquipmentCatalogEditor();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && equipmentCatalogEditorState.open) closeEquipmentCatalogEditor();
+  });
   equipmentQuery("#equipmentSummaryTransferButton")?.addEventListener("click", () => {
     equipmentState.summaryTransferEnabled = !equipmentState.summaryTransferEnabled;
     if (equipmentState.summaryTransferEnabled) {
@@ -3420,6 +4199,7 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentRemoveWindowButton")?.addEventListener("click", removeEquipmentActiveWindow);
   equipmentQuery("#equipmentClearAllButton")?.addEventListener("click", clearEquipmentWorkingArea);
   equipmentQuery("#equipmentUndoDeleteButton")?.addEventListener("click", restoreLastDeletedEquipment);
+  initEquipmentCatalogSync();
   renderEquipmentModule();
   if (typeof window.requestAnimationFrame === "function") {
     window.requestAnimationFrame(renderEquipmentModule);

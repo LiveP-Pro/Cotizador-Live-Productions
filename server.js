@@ -32,6 +32,8 @@ const dbPath = path.join(dataDir, "cotizaciones.sqlite");
 const warehouseInventoryPath = path.join(dataDir, "inventario-bodega.json");
 const warehouseInventoryBackupPath = path.join(dataDir, "inventario-bodega-anterior.json");
 const warehouseInventoryInitialPath = path.join(rootDir, "inventory-initial-state.json");
+const equipmentCatalogOverridesPath = path.join(dataDir, "catalogo-requerimiento-equipo.json");
+const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requerimiento-equipo-anterior.json");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
 const whatsappConfig = {
@@ -131,6 +133,134 @@ async function restoreWarehouseInventory(response) {
 }
 
 ensureWarehouseInventoryStorage();
+
+function emptyEquipmentCatalogOverrides() {
+  return { version: 1, savedAt: "", services: {} };
+}
+
+function normalizeEquipmentCatalogItems(items, label = "categoría") {
+  if (!Array.isArray(items)) throw new Error(`Los equipos de ${label} no tienen un formato válido.`);
+  if (items.length > 2000) throw new Error(`La categoría ${label} excede el límite de equipos.`);
+  return items.map((item, index) => {
+    const quantity = Number(Array.isArray(item) ? item[0] : item?.quantity);
+    const description = String(Array.isArray(item) ? item[1] : item?.description || "").trim();
+    if (!Number.isFinite(quantity) || quantity < 0 || quantity > 100000) {
+      throw new Error(`La cantidad del equipo ${index + 1} en ${label} no es válida.`);
+    }
+    if (!description || description.length > 500) {
+      throw new Error(`El nombre del equipo ${index + 1} en ${label} no es válido.`);
+    }
+    return [quantity, description];
+  });
+}
+
+function normalizeEquipmentCatalogSections(sections) {
+  if (!Array.isArray(sections) || !sections.length) {
+    throw new Error("El cuadro debe incluir al menos una categoría.");
+  }
+  if (sections.length > 300) throw new Error("El cuadro excede el límite de categorías.");
+  return sections.map((section, index) => {
+    const title = String(section?.title || "").trim();
+    if (!title || title.length > 200) throw new Error(`El nombre de la categoría ${index + 1} no es válido.`);
+    const normalized = {
+      title,
+      items: normalizeEquipmentCatalogItems(section?.items, title)
+    };
+    const id = String(section?.id || "").trim();
+    if (id) normalized.id = id.slice(0, 160);
+    if (section?.audioVariant) normalized.audioVariant = true;
+    return normalized;
+  });
+}
+
+function normalizeEquipmentCatalogAudioOptions(audioOptions) {
+  if (!audioOptions || typeof audioOptions !== "object" || Array.isArray(audioOptions)) return {};
+  const entries = Object.entries(audioOptions);
+  if (entries.length > 20) throw new Error("El servicio excede el límite de opciones de audio.");
+  return Object.fromEntries(entries.map(([key, option]) => {
+    const safeKey = String(key || "").trim();
+    if (!/^[a-z0-9][a-z0-9-]{0,79}$/i.test(safeKey)) throw new Error("Una opción de audio tiene un identificador inválido.");
+    const label = String(option?.label || safeKey).trim().slice(0, 160);
+    return [safeKey, {
+      label,
+      items: normalizeEquipmentCatalogItems(option?.items, label)
+    }];
+  }));
+}
+
+function normalizeEquipmentCatalogOverride(payload) {
+  const serviceId = String(payload?.serviceId || "").trim();
+  if (!/^[a-z0-9][a-z0-9-]{0,159}$/i.test(serviceId)) {
+    throw new Error("El tipo de servicio no es válido.");
+  }
+  return {
+    serviceId,
+    service: {
+      name: String(payload?.name || "").trim().slice(0, 240),
+      mainSections: normalizeEquipmentCatalogSections(payload?.mainSections),
+      audioOptions: normalizeEquipmentCatalogAudioOptions(payload?.audioOptions),
+      updatedAt: new Date().toISOString()
+    }
+  };
+}
+
+function readEquipmentCatalogOverridesFile(filePath) {
+  const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  return {
+    version: 1,
+    savedAt: String(parsed?.savedAt || ""),
+    services: parsed?.services && typeof parsed.services === "object" && !Array.isArray(parsed.services)
+      ? parsed.services
+      : {}
+  };
+}
+
+function readEquipmentCatalogOverrides() {
+  for (const candidate of [equipmentCatalogOverridesPath, equipmentCatalogOverridesBackupPath]) {
+    if (!fs.existsSync(candidate)) continue;
+    try {
+      return readEquipmentCatalogOverridesFile(candidate);
+    } catch (error) {
+      console.warn(`No se pudo leer ${path.basename(candidate)}: ${error.message}`);
+    }
+  }
+  return emptyEquipmentCatalogOverrides();
+}
+
+async function writeEquipmentCatalogOverrides(data) {
+  const temporaryPath = `${equipmentCatalogOverridesPath}.tmp-${process.pid}-${Date.now()}`;
+  if (fs.existsSync(equipmentCatalogOverridesPath)) {
+    await fsp.copyFile(equipmentCatalogOverridesPath, equipmentCatalogOverridesBackupPath);
+  }
+  await fsp.writeFile(temporaryPath, JSON.stringify(data, null, 2), { mode: 0o600 });
+  await fsp.rename(temporaryPath, equipmentCatalogOverridesPath);
+}
+
+async function saveEquipmentCatalogOverride(payload, response) {
+  let normalized;
+  try {
+    normalized = normalizeEquipmentCatalogOverride(payload);
+  } catch (error) {
+    errorResponse(response, 400, error.message);
+    return;
+  }
+  const stored = readEquipmentCatalogOverrides();
+  const savedAt = new Date().toISOString();
+  const next = {
+    version: 1,
+    savedAt,
+    services: {
+      ...stored.services,
+      [normalized.serviceId]: normalized.service
+    }
+  };
+  await writeEquipmentCatalogOverrides(next);
+  jsonResponse(response, 200, {
+    serviceId: normalized.serviceId,
+    service: normalized.service,
+    savedAt
+  });
+}
 
 const authConfigPath = path.join(dataDir, "cotizador-auth.json");
 const defaultPasswordHash = {
@@ -2808,6 +2938,7 @@ async function saveEquipmentBoard(payload, request, response) {
 
   const requestedName = cleanFileName(payload?.fileName || "Cuadro-Equipo-Live-Productions.pdf");
   const { fileName, target } = uniqueEquipmentPdfTarget(requestedName);
+  const pdfOnly = payload?.pdfOnly === true;
   const jsonFileName = equipmentEditableJsonFileName(fileName);
   const jsonTarget = path.join(equipmentPdfDir, jsonFileName);
   await generatePdf(html, target, {
@@ -2822,8 +2953,19 @@ async function saveEquipmentBoard(payload, request, response) {
   });
 
   const publicPath = publicEquipmentPdfPath(fileName);
-  const jsonPath = publicEquipmentFilePath(jsonFileName);
   const origin = publicOrigin(request);
+  if (pdfOnly) {
+    jsonResponse(response, 200, {
+      fileName,
+      folder: equipmentPdfDir,
+      pdfUrl: publicPath,
+      absolutePdfUrl: origin ? new URL(publicPath, origin).href : publicPath,
+      pdfOnly: true
+    });
+    return;
+  }
+
+  const jsonPath = publicEquipmentFilePath(jsonFileName);
   const editableData = payload?.editableData && typeof payload.editableData === "object" && !Array.isArray(payload.editableData)
     ? payload.editableData
     : {};
@@ -3049,6 +3191,19 @@ async function handleRequest(request, response) {
       if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
       await enqueueSave(() => saveQuoteBatch(payload, response));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/cuadros-equipo/catalogo") {
+      if (!requireAuth(request, response)) return;
+      jsonResponse(response, 200, readEquipmentCatalogOverrides());
+      return;
+    }
+
+    if (request.method === "PUT" && url.pathname === "/api/cuadros-equipo/catalogo") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => saveEquipmentCatalogOverride(payload, response));
       return;
     }
 

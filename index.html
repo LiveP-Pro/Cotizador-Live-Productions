@@ -6,12 +6,12 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260902-02" />
+    <link rel="stylesheet" href="styles.css?v=20260902-03" />
     <link rel="stylesheet" href="warehouse-inventory.css?v=20260902-03" />
     <script src="app.js?v=20260814-01" defer></script>
     <script src="equipment-catalog.js?v=20260821-04" defer></script>
     <script src="equipment-inventory.js?v=20260822-01" defer></script>
-    <script src="equipment.js?v=20260902-02" defer></script>
+    <script src="equipment.js?v=20260902-03" defer></script>
     <script src="inventory.js?v=20260902-03" defer></script>
   </head>
   <body>
@@ -317,7 +317,7 @@
                 </label>
                 <label>
                   Equipo
-                  <input id="equipmentManualMainDescription" type="text" autocomplete="off" placeholder="Ej. Consola, luces, cableado, estructura" />
+                  <input id="equipmentManualMainDescription" type="text" list="equipmentInventoryNameOptions" autocomplete="off" placeholder="Seleccione o escriba el nombre exacto" />
                 </label>
                 <button id="equipmentAddMainItemButton" type="button">Agregar equipo</button>
               </div>
@@ -332,7 +332,10 @@
             <section id="equipmentMainPanel" class="equipment-panel">
               <div class="equipment-section-title">
                 <span>Equipo principal</span>
-                <small id="equipmentServiceName">Seleccione un servicio</small>
+                <div class="equipment-section-heading-actions">
+                  <small id="equipmentServiceName">Seleccione un servicio</small>
+                  <button id="equipmentEditServiceTemplateButton" type="button">Editar cuadro permanente</button>
+                </div>
               </div>
             <div id="equipmentMainTable" class="equipment-table-wrap"></div>
           </section>
@@ -354,10 +357,11 @@
                 </label>
                 <label>
                   Equipo extra
-                  <input id="equipmentExtraDescription" type="text" autocomplete="off" placeholder="Ej. Pistola LED CO2, toldo, cableado extra" />
+                  <input id="equipmentExtraDescription" type="text" list="equipmentInventoryNameOptions" autocomplete="off" placeholder="Seleccione o escriba el nombre exacto" />
                 </label>
                 <button id="equipmentAddExtraButton" type="button">Agregar extra</button>
               </div>
+              <datalist id="equipmentInventoryNameOptions"></datalist>
               <div id="equipmentManualExtrasList" class="equipment-extra-list"></div>
             </section>
 
@@ -385,8 +389,11 @@
 
             <section id="equipmentTransferPanel" class="equipment-panel is-hidden">
               <div class="equipment-section-title">
-                <span>Trasegar equipo</span>
-                <small>continúe una ruta o configure trasiegos múltiples</small>
+                <div>
+                  <span>Trasegar equipo</span>
+                  <small>continúe una ruta o configure trasiegos múltiples</small>
+                </div>
+                <button id="equipmentSaveTransferPdfButton" class="equipment-summary-report-button" type="button">Generar PDF de trasiego</button>
               </div>
               <div id="equipmentTransferPlan" class="equipment-transfer-plan"></div>
             </section>
@@ -426,6 +433,7 @@
                   <strong id="equipmentPdfInAt">Por definir</strong>
                 </div>
               </div>
+              <div id="equipmentPdfTransferDestinations" class="equipment-pdf-transfer-destinations is-hidden"></div>
               <p id="equipmentPdfNotes" class="equipment-pdf-notes is-hidden"></p>
               <div id="equipmentPdfMainTable"></div>
             </section>
@@ -468,6 +476,39 @@
               <p id="equipmentRentPdfNotes" class="equipment-pdf-notes is-hidden"></p>
               <div id="equipmentRentPdfTable"></div>
             </section>
+
+            <section id="equipmentTransferPdfDocument" class="equipment-pdf-document equipment-transfer-pdf-document">
+              <header class="equipment-pdf-header">
+                <div>
+                  <p>Live Productions</p>
+                  <h2>Resumen de trasiego</h2>
+                  <span>Equipo que debe trasladarse entre eventos</span>
+                </div>
+                <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
+              </header>
+              <div id="equipmentTransferPdfRoutes" class="equipment-transfer-pdf-routes"></div>
+            </section>
+            </div>
+          </div>
+
+          <div id="equipmentCatalogEditor" class="equipment-catalog-editor is-hidden" role="dialog" aria-modal="true" aria-labelledby="equipmentCatalogEditorTitle">
+            <div class="equipment-catalog-editor-panel">
+              <header>
+                <div>
+                  <p class="eyebrow">Plantilla del tipo de servicio</p>
+                  <h2 id="equipmentCatalogEditorTitle">Editar cuadro</h2>
+                </div>
+                <button id="equipmentCatalogEditorCloseButton" type="button" aria-label="Cerrar editor">X</button>
+              </header>
+              <div id="equipmentCatalogEditorContent" class="equipment-catalog-editor-content"></div>
+              <footer>
+                <span id="equipmentCatalogEditorStatus" role="status"></span>
+                <div>
+                  <button id="equipmentCatalogAddCategoryButton" type="button">Agregar categoría</button>
+                  <button id="equipmentCatalogCancelButton" type="button">Cancelar</button>
+                  <button id="equipmentCatalogSaveButton" class="equipment-catalog-save-button" type="button">Guardar permanentemente</button>
+                </div>
+              </footer>
             </div>
           </div>
         </div>
