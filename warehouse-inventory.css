@@ -216,7 +216,7 @@
 }
 
 .warehouse-table-wrap .equipment-base-table {
-  min-width: 1180px;
+  min-width: 1280px;
 }
 
 .warehouse-inventory-table th,
@@ -368,6 +368,69 @@
 .warehouse-inventory-table td:nth-child(7) {
   width: 340px;
   min-width: 340px;
+}
+
+.warehouse-inventory-table th:nth-child(8),
+.warehouse-inventory-table td:nth-child(8) {
+  width: 110px;
+  min-width: 110px;
+  text-align: center;
+}
+
+.warehouse-delete-item-button,
+.warehouse-danger-button {
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid #a7192d;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.warehouse-delete-item-button {
+  color: #a7192d;
+  background: #ffffff;
+}
+
+.warehouse-delete-item-button:hover {
+  background: #fff1f3;
+}
+
+.warehouse-danger-button {
+  color: #ffffff;
+  background: #a7192d;
+}
+
+.warehouse-danger-button:hover {
+  background: #861326;
+  border-color: #861326;
+}
+
+.warehouse-delete-warning {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  color: #30343b;
+  background: #fff5f5;
+  border: 1px solid #e5b8bf;
+  border-radius: 6px;
+}
+
+.warehouse-delete-warning strong {
+  color: #861326;
+  font-size: 17px;
+}
+
+.warehouse-delete-warning p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.warehouse-delete-warning small {
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .warehouse-available-value {

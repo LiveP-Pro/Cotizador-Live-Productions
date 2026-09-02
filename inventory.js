@@ -700,7 +700,7 @@
         const stats = statsForItem(item);
         const categoryRow =
           lastCategory !== categoryLabel(item.category)
-            ? `<tr class="equipment-category-row"><td colspan="7">${escapeHtml(categoryLabel(item.category))}</td></tr>`
+            ? `<tr class="equipment-category-row"><td colspan="8">${escapeHtml(categoryLabel(item.category))}</td></tr>`
             : "";
         lastCategory = categoryLabel(item.category);
         const latestOut = latestMovementFor(item.id, ["salida"]);
@@ -737,6 +737,11 @@
               </button>
             </td>
             <td>${availabilityObservationHtml(item, lifecycle)}</td>
+            <td>
+              <button class="warehouse-delete-item-button" type="button" data-action="delete" data-item-id="${escapeHtml(item.id)}">
+                Eliminar
+              </button>
+            </td>
           </tr>
         `;
       })
@@ -753,6 +758,7 @@
             <th>Taller</th>
             <th>Renta</th>
             <th>Observaciones</th>
+            <th>Acción</th>
           </tr>
         </thead>
         <tbody>${body}</tbody>
@@ -1427,6 +1433,20 @@
     if (!item) return;
     dialogContext = { kind, itemId, relatedMovementId };
     const stats = statsForItem(item);
+    elements.dialogSaveButton.classList.remove("warehouse-danger-button");
+
+    if (kind === "delete") {
+      elements.dialogTitle.textContent = "Eliminar equipo";
+      elements.dialogSaveButton.textContent = "Aceptar";
+      elements.dialogSaveButton.classList.add("warehouse-danger-button");
+      elements.dialogBody.innerHTML = `
+        <div class="warehouse-delete-warning">
+          <strong>¿Está seguro de eliminar este equipo?</strong>
+          <p>Se eliminará: <b>${escapeHtml(item.name)}</b></p>
+          <small>${escapeHtml(item.category)} · Cantidad registrada: ${escapeHtml(item.quantity)}</small>
+        </div>
+      `;
+    }
 
     if (kind === "events") {
       elements.dialogTitle.textContent = "Fuera / Evento";
@@ -1629,6 +1649,7 @@
 
   function closeDialog() {
     dialogContext = null;
+    elements.dialogSaveButton?.classList.remove("warehouse-danger-button");
     if (elements.dialog.close) elements.dialog.close();
     elements.dialog.classList.remove("is-open");
   }
@@ -1691,6 +1712,17 @@
     }
     const item = itemById(dialogContext.itemId);
     if (!item) return;
+    if (dialogContext.kind === "delete") {
+      item.archived = true;
+      item.updatedAt = new Date().toISOString();
+      state.rentalDraft = state.rentalDraft.filter((line) => line.itemId !== item.id);
+      state.workshopDraft = state.workshopDraft.filter((line) => line.itemId !== item.id);
+      closeDialog();
+      renderAll();
+      await saveState({ silent: true });
+      setStatus(`Equipo eliminado: ${item.name}.`, "success");
+      return;
+    }
     const quantity = normalizeNumber(elements.dialogBody.querySelector("#dialogQuantity")?.value);
     if (dialogContext.kind === "workshopReturn" || dialogContext.kind === "rentalReturn") {
       const records = dialogContext.kind === "workshopReturn"
@@ -2335,6 +2367,7 @@
       if (button.dataset.action === "events") openDialog("events", button.dataset.itemId);
       if (button.dataset.action === "workshop") openDialog("workshop", button.dataset.itemId);
       if (button.dataset.action === "rental") openDialog("rental", button.dataset.itemId);
+      if (button.dataset.action === "delete") openDialog("delete", button.dataset.itemId);
     });
     elements.eventsBoard.addEventListener("click", (event) => {
       const printButton = event.target.closest("[data-print-event]");
