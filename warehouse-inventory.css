@@ -203,6 +203,18 @@
   width: 100%;
 }
 
+.warehouse-workshop-action-slot {
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.warehouse-workshop-action-slot button:disabled,
+#warehouseRegisterWorkshopDraftButton:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .warehouse-form-spacer {
   display: block;
 }

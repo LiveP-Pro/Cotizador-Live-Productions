@@ -3,7 +3,7 @@
   const PREVIOUS_STORAGE_KEY = "liveWarehouseInventoryStateV2";
   const LEGACY_STORAGE_KEY = "liveWarehouseInventoryStateV1";
   const API_PATH = "/api/inventario-bodega";
-  const MODULE_PATH = "/warehouse-module.html?v=20260901-03";
+  const MODULE_PATH = "/warehouse-module.html?v=20260902-02";
   const movementLabels = {
     salida: "Salida de bodega",
     ingreso_evento: "Ingreso de evento",
@@ -411,15 +411,17 @@
   }
 
   async function saveState(options = {}) {
-    if (!state) return;
+    if (!state) return false;
     state.updatedAt = new Date().toISOString();
     saveLocalState();
     try {
       await persistServerState();
       if (!options.silent) setStatus("Cambios guardados en servidor.", "success");
+      return true;
     } catch {
       persistenceMode = "local";
       if (!options.silent) setStatus("Cambios guardados en este navegador.", "warning");
+      return false;
     }
   }
 
@@ -1841,13 +1843,20 @@
   function addWorkshopDraftLine() {
     const item = itemById(elements.workshopBulkItem.value);
     if (!item) {
-      setStatus("Seleccione un equipo para taller.", "warning");
+      setStatus("Seleccione un equipo disponible para agregar a la lista múltiple.", "warning");
       return;
     }
     const quantity = normalizeNumber(elements.workshopBulkQuantity.value) || 1;
     const existing = state.workshopDraft.find((line) => line.itemId === item.id);
+    const nextQuantity = (existing?.quantity || 0) + quantity;
+    const available = statsForItem(item).physical;
+    if (nextQuantity > available) {
+      setStatus(`Solo hay ${available} unidades disponibles de ${item.name}.`, "warning");
+      elements.workshopBulkQuantity.focus();
+      return;
+    }
     if (existing) {
-      existing.quantity += quantity;
+      existing.quantity = nextQuantity;
     } else {
       state.workshopDraft.push({
         id: uid("workshop-line"),
@@ -1859,7 +1868,7 @@
     elements.workshopBulkQuantity.value = "1";
     scheduleSave();
     renderWorkshopDraft();
-    setStatus("Equipo agregado a la salida múltiple de taller.", "success");
+    setStatus("Equipo agregado a la lista múltiple. Use Enviar lista a taller para registrar la salida.", "success");
   }
 
   function updateWorkshopDraftField(target) {
@@ -1879,60 +1888,142 @@
 
   function clearWorkshopDraft() {
     state.workshopDraft = [];
+    resetWorkshopFormDetails();
+    scheduleSave();
+    renderWorkshopDraft();
+  }
+
+  function resetWorkshopFormDetails() {
     elements.workshopBulkRepair.value = "";
     elements.workshopBulkSparePart.value = "";
     elements.workshopBulkNotes.value = "";
     clearSignature("workshopWarehouse");
     clearSignature("workshopShop");
     elements.workshopBulkDateTime.value = dateTimeLocalValue();
-    scheduleSave();
-    renderWorkshopDraft();
   }
 
-  function registerWorkshopDraft() {
-    if (!state.workshopDraft.length) {
-      setStatus("Agregue al menos un equipo a la salida múltiple de taller.", "warning");
-      return;
-    }
+  function workshopMovementDetails() {
     const repair = normalizeText(elements.workshopBulkRepair.value);
     if (!repair) {
       setStatus("Escriba la razón o qué tiene malo el equipo.", "warning");
       elements.workshopBulkRepair.focus();
-      return;
+      return null;
     }
-    const dateTime = elements.workshopBulkDateTime.value || dateTimeLocalValue();
-    const batchId = uid("taller");
+    const dateTime = dateTimeLocalValue();
+    elements.workshopBulkDateTime.value = dateTime;
     const warehouseResponsible = normalizeText(elements.workshopBulkWarehouseResponsible.value);
     const shopResponsible = normalizeText(elements.workshopBulkShopResponsible.value);
     const responsible = [warehouseResponsible && `Bodega: ${warehouseResponsible}`, shopResponsible && `Taller: ${shopResponsible}`]
       .filter(Boolean)
       .join(" / ");
-    const warehouseSignature = signatureData("workshopWarehouse");
-    const workshopSignature = signatureData("workshopShop");
+    return {
+      dateTime,
+      responsible,
+      repair,
+      sparePart: normalizeText(elements.workshopBulkSparePart.value),
+      notes: normalizeText(elements.workshopBulkNotes.value),
+      warehouseSignature: signatureData("workshopWarehouse"),
+      workshopSignature: signatureData("workshopShop")
+    };
+  }
 
-    for (const line of state.workshopDraft) {
-      const ok = addMovement({
-        type: "taller",
-        itemId: line.itemId,
-        quantity: line.quantity,
-        dateTime,
-        responsible,
-        reference: "Taller",
-        repair,
-        sparePart: elements.workshopBulkSparePart.value,
-        notes: elements.workshopBulkNotes.value,
-        batchId,
-        warehouseSignature,
-        workshopSignature
-      });
-      if (!ok) return;
+  function validateWorkshopLines(lines) {
+    const quantitiesByItem = new Map();
+    for (const line of lines) {
+      const item = itemById(line.itemId);
+      const quantity = normalizeNumber(line.quantity);
+      if (!item || item.archived || quantity <= 0) {
+        setStatus("Revise el equipo y la cantidad antes de enviarlo a taller.", "warning");
+        return false;
+      }
+      quantitiesByItem.set(item.id, (quantitiesByItem.get(item.id) || 0) + quantity);
+    }
+    for (const [itemId, quantity] of quantitiesByItem) {
+      const item = itemById(itemId);
+      const available = statsForItem(item).physical;
+      if (quantity > available) {
+        setStatus(`Solo hay ${available} unidades disponibles de ${item.name}.`, "warning");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function setWorkshopSubmitting(submitting) {
+    elements.registerSelectedWorkshopButton.disabled = submitting;
+    elements.registerWorkshopDraftButton.disabled = submitting;
+  }
+
+  async function registerWorkshopLines(lines, options = {}) {
+    if (!validateWorkshopLines(lines)) return false;
+    const details = workshopMovementDetails();
+    if (!details) return false;
+    const batchId = uid("taller");
+    setWorkshopSubmitting(true);
+
+    try {
+      for (const line of lines) {
+        const ok = addMovement({
+          type: "taller",
+          itemId: line.itemId,
+          quantity: line.quantity,
+          reference: "Taller",
+          batchId,
+          ...details
+        });
+        if (!ok) {
+          state.movements = state.movements.filter((movement) => movement.batchId !== batchId);
+          return false;
+        }
+      }
+
+      if (options.clearDraft) {
+        state.workshopDraft = [];
+      } else if (options.removeDraftItemId) {
+        state.workshopDraft = state.workshopDraft.filter((line) => line.itemId !== options.removeDraftItemId);
+      }
+      resetWorkshopFormDetails();
+      renderAll();
+      switchWindow("workshop");
+      const savedOnServer = await saveState({ silent: true });
+      const totalQuantity = lines.reduce((sum, line) => sum + normalizeNumber(line.quantity), 0);
+      const successMessage = options.successMessage || `${totalQuantity} unidades enviadas a taller.`;
+      setStatus(
+        savedOnServer ? successMessage : `${successMessage} El servidor no respondió; el cambio quedó guardado en este navegador.`,
+        savedOnServer ? "success" : "warning"
+      );
+      return true;
+    } finally {
+      setWorkshopSubmitting(false);
+    }
+  }
+
+  async function registerSelectedWorkshopItem() {
+    const item = itemById(elements.workshopBulkItem.value);
+    if (!item) {
+      setStatus("Seleccione un equipo disponible para taller.", "warning");
+      return;
+    }
+    const quantity = normalizeNumber(elements.workshopBulkQuantity.value) || 1;
+    await registerWorkshopLines(
+      [{ itemId: item.id, itemName: item.name, quantity }],
+      {
+        removeDraftItemId: item.id,
+        successMessage: `${quantity} x ${item.name} enviado a taller y descontado del inventario disponible.`
+      }
+    );
+  }
+
+  async function registerWorkshopDraft() {
+    if (!state.workshopDraft.length) {
+      setStatus("Agregue al menos un equipo a la lista múltiple de taller.", "warning");
+      return;
     }
 
-    clearWorkshopDraft();
-    scheduleSave();
-    renderAll();
-    switchWindow("workshop");
-    setStatus("Salida múltiple a taller registrada.", "success");
+    await registerWorkshopLines(state.workshopDraft.slice(), {
+      clearDraft: true,
+      successMessage: "Lista múltiple enviada a taller y descontada del inventario disponible."
+    });
   }
 
   function openPrintDocument(title, bodyHtml) {
@@ -2334,6 +2425,7 @@
       scheduleSave();
       renderRentalDraft();
     });
+    elements.registerSelectedWorkshopButton.addEventListener("click", registerSelectedWorkshopItem);
     elements.addWorkshopDraftButton.addEventListener("click", addWorkshopDraftLine);
     elements.registerWorkshopDraftButton.addEventListener("click", registerWorkshopDraft);
     elements.clearWorkshopDraftButton.addEventListener("click", clearWorkshopDraft);
@@ -2448,6 +2540,7 @@
       workshopBulkSparePart: root.querySelector("#warehouseWorkshopBulkSparePart"),
       workshopBulkNotes: root.querySelector("#warehouseWorkshopBulkNotes"),
       workshopDraft: root.querySelector("#warehouseWorkshopDraft"),
+      registerSelectedWorkshopButton: root.querySelector("#warehouseRegisterSelectedWorkshopButton"),
       addWorkshopDraftButton: root.querySelector("#warehouseAddWorkshopDraftButton"),
       registerWorkshopDraftButton: root.querySelector("#warehouseRegisterWorkshopDraftButton"),
       clearWorkshopDraftButton: root.querySelector("#warehouseClearWorkshopDraftButton"),

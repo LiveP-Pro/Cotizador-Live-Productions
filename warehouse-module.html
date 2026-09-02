@@ -128,7 +128,7 @@
               <div class="warehouse-workshop-multi">
                 <div class="section-heading">
                   <span>Enviar varios equipos a taller</span>
-                  <small>seleccione todo lo necesario antes de guardar</small>
+                  <small>envíe uno ahora o prepare una lista múltiple</small>
                 </div>
                 <div class="warehouse-form-grid">
                   <label>
@@ -151,8 +151,9 @@
                     Encargado de taller
                     <input id="warehouseWorkshopBulkShopResponsible" type="text" autocomplete="off" />
                   </label>
-                  <div class="warehouse-form-button-slot">
-                    <button id="warehouseAddWorkshopDraftButton" class="secondary-button" type="button">Agregar a taller</button>
+                  <div class="warehouse-form-button-slot warehouse-workshop-action-slot">
+                    <button id="warehouseRegisterSelectedWorkshopButton" class="primary-button" type="button">Agregar a taller</button>
+                    <button id="warehouseAddWorkshopDraftButton" class="secondary-button" type="button">Agregar a lista múltiple</button>
                   </div>
                   <label class="warehouse-field-wide">
                     Razón / qué tiene malo
@@ -181,8 +182,8 @@
                 </div>
                 <div id="warehouseWorkshopDraft" class="warehouse-table-wrap"></div>
                 <div class="warehouse-top-actions">
-                  <button id="warehouseRegisterWorkshopDraftButton" class="primary-button" type="button">Enviar todo a taller</button>
-                  <button id="warehouseClearWorkshopDraftButton" class="secondary-button" type="button">Limpiar taller</button>
+                  <button id="warehouseRegisterWorkshopDraftButton" class="primary-button" type="button">Enviar lista a taller</button>
+                  <button id="warehouseClearWorkshopDraftButton" class="secondary-button" type="button">Limpiar lista</button>
                 </div>
               </div>
               <div id="warehouseWorkshopBoard" class="warehouse-board-list"></div>
