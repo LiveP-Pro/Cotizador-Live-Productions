@@ -11,7 +11,15 @@ const externalPort = Number.parseInt(process.env.PORT || "8787", 10);
 const externalHost = process.env.HOST || "0.0.0.0";
 const livePort = Number.parseInt(process.env.LIVE_INTERNAL_PORT || "8791", 10);
 const luxuryPort = Number.parseInt(process.env.LUXURY_INTERNAL_PORT || "8792", 10);
-const dataDir = path.resolve(process.env.COTIZADOR_DATA_DIR || path.join(rootDir, "data"));
+const renderDataDir = "/data";
+
+function resolveDataDir() {
+  if (process.env.COTIZADOR_DATA_DIR) return path.resolve(process.env.COTIZADOR_DATA_DIR);
+  if (process.env.NODE_ENV === "production" && fs.existsSync(renderDataDir)) return renderDataDir;
+  return path.join(rootDir, "data");
+}
+
+const dataDir = resolveDataDir();
 const luxuryDataDir = resolveLuxuryDataDir(dataDir);
 const luxuryDataFile = path.join(luxuryDataDir, "luxury-travel.json");
 const luxuryMirrorFile = path.join(luxuryDataDir, "luxury-travel-recovery.json");
@@ -102,6 +110,7 @@ function childEnvironment(extra = {}) {
   return {
     ...process.env,
     HOST: "127.0.0.1",
+    COTIZADOR_DATA_DIR: dataDir,
     ...extra,
   };
 }

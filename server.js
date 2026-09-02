@@ -12,13 +12,18 @@ const rootDir = __dirname;
 const port = Number.parseInt(process.env.PORT || "8787", 10);
 const host = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
 const macBundleAppPath = `${path.sep}Cotizador Live Productions.app${path.sep}Contents${path.sep}Resources${path.sep}app`;
-const defaultDataDir =
-  process.platform === "darwin" && rootDir.includes(macBundleAppPath)
-    ? path.join(os.homedir(), "Documents", "Cotizador Live Productions")
-    : rootDir;
-const dataDir = process.env.COTIZADOR_DATA_DIR
-  ? path.resolve(process.env.COTIZADOR_DATA_DIR)
-  : defaultDataDir;
+const renderDataDir = "/data";
+
+function resolveDataDir() {
+  if (process.env.COTIZADOR_DATA_DIR) return path.resolve(process.env.COTIZADOR_DATA_DIR);
+  if (process.platform === "darwin" && rootDir.includes(macBundleAppPath)) {
+    return path.join(os.homedir(), "Documents", "Cotizador Live Productions");
+  }
+  if (process.env.NODE_ENV === "production" && fs.existsSync(renderDataDir)) return renderDataDir;
+  return rootDir;
+}
+
+const dataDir = resolveDataDir();
 const pdfDir = path.join(dataDir, "cotizaciones-generadas");
 const defaultEquipmentPdfDir =
   process.env.NODE_ENV === "production"
