@@ -6,12 +6,12 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260902-03" />
+    <link rel="stylesheet" href="styles.css?v=20260903-01" />
     <link rel="stylesheet" href="warehouse-inventory.css?v=20260902-03" />
     <script src="app.js?v=20260814-01" defer></script>
     <script src="equipment-catalog.js?v=20260821-04" defer></script>
     <script src="equipment-inventory.js?v=20260822-01" defer></script>
-    <script src="equipment.js?v=20260902-03" defer></script>
+    <script src="equipment.js?v=20260903-01" defer></script>
     <script src="inventory.js?v=20260902-03" defer></script>
   </head>
   <body>
@@ -398,6 +398,7 @@
               <div id="equipmentTransferPlan" class="equipment-transfer-plan"></div>
             </section>
 
+            <div id="equipmentReviewPdfPreview" class="equipment-pdf-preview">
             <section id="equipmentPdfDocument" class="equipment-pdf-document">
               <header class="equipment-pdf-header">
                 <div>
@@ -437,7 +438,13 @@
               <p id="equipmentPdfNotes" class="equipment-pdf-notes is-hidden"></p>
               <div id="equipmentPdfMainTable"></div>
             </section>
+            </div>
 
+            <div id="equipmentRentPdfPreview" class="equipment-pdf-preview is-hidden">
+              <div class="equipment-pdf-preview-toolbar">
+                <strong>Previsualización del Resumen de Renta</strong>
+                <button id="equipmentDownloadRentPdfButton" class="equipment-summary-report-button" type="button">Guardar PDF + JSON de renta</button>
+              </div>
             <section id="equipmentRentPdfDocument" class="equipment-pdf-document equipment-rent-pdf-document">
               <header class="equipment-pdf-header">
                 <div>
@@ -476,7 +483,9 @@
               <p id="equipmentRentPdfNotes" class="equipment-pdf-notes is-hidden"></p>
               <div id="equipmentRentPdfTable"></div>
             </section>
+            </div>
 
+            <div id="equipmentTransferPdfPreview" class="equipment-pdf-preview is-hidden">
             <section id="equipmentTransferPdfDocument" class="equipment-pdf-document equipment-transfer-pdf-document">
               <header class="equipment-pdf-header">
                 <div>
@@ -488,6 +497,7 @@
               </header>
               <div id="equipmentTransferPdfRoutes" class="equipment-transfer-pdf-routes"></div>
             </section>
+            </div>
             </div>
           </div>
 

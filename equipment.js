@@ -34,6 +34,7 @@ const equipmentState = {
   deletedStack: [],
   selectedEventId: "",
   activeWindow: "review",
+  rentPreviewVisible: false,
   servicePickerOpen: false,
   summarySearchTerm: "",
   summaryTransferEnabled: false,
@@ -3267,6 +3268,9 @@ function renderEquipmentWindowState() {
   const addEventButton = equipmentQuery("#equipmentAddEventButton");
   const summaryTransferButton = equipmentQuery("#equipmentSummaryTransferButton");
   const summarySearch = equipmentQuery("#equipmentSummarySearch");
+  const reviewPdfPreview = equipmentQuery("#equipmentReviewPdfPreview");
+  const rentPdfPreview = equipmentQuery("#equipmentRentPdfPreview");
+  const transferPdfPreview = equipmentQuery("#equipmentTransferPdfPreview");
   if (summaryTransferButton) {
     const transferCount = equipmentSummaryTransferRoutesWithEvents(activeEquipmentEvents(), true).length;
     summaryTransferButton.classList.toggle("is-active", equipmentState.summaryTransferEnabled);
@@ -3280,6 +3284,14 @@ function renderEquipmentWindowState() {
   if (extrasPanel) extrasPanel.classList.toggle("is-hidden", activeWindow !== "review");
   if (inventoryPanel) inventoryPanel.classList.toggle("is-hidden", activeWindow !== "summary");
   if (transferPanel) transferPanel.classList.toggle("is-hidden", activeWindow !== "transfer");
+  if (reviewPdfPreview) reviewPdfPreview.classList.toggle("is-hidden", activeWindow !== "review");
+  if (rentPdfPreview) {
+    rentPdfPreview.classList.toggle(
+      "is-hidden",
+      activeWindow !== "summary" || !equipmentState.rentPreviewVisible
+    );
+  }
+  if (transferPdfPreview) transferPdfPreview.classList.toggle("is-hidden", activeWindow !== "transfer");
   if (reviewButton) reviewButton.classList.toggle("is-active", activeWindow === "review");
   if (summaryButton) summaryButton.classList.toggle("is-active", activeWindow === "summary");
   if (transferButton) transferButton.classList.toggle("is-active", activeWindow === "transfer");
@@ -3307,6 +3319,7 @@ function resetEquipmentWindowDraft() {
   equipmentState.removedItemIds.clear();
   equipmentState.deletedStack = [];
   equipmentState.activeWindow = "review";
+  equipmentState.rentPreviewVisible = false;
   equipmentState.servicePickerOpen = false;
   equipmentState.expandedEquipmentSectionIds.clear();
   equipmentState.draftWarehouseDispatchId = createEquipmentWarehouseDispatchId();
@@ -3314,6 +3327,33 @@ function resetEquipmentWindowDraft() {
   populateEquipmentEventFields(null);
   const notesInput = equipmentQuery("#equipmentNotes");
   if (notesInput) notesInput.value = "";
+}
+
+function equipmentRentReportValidationMessage() {
+  if (!equipmentRowsSummary().some((row) => row.type !== "category")) {
+    return "Agregue al menos una ventana con equipo antes de generar el resumen.";
+  }
+  if (!equipmentRentalRows().length) {
+    return "No hay equipo para rentar con el inventario actual.";
+  }
+  return "";
+}
+
+function previewEquipmentRentReport() {
+  const status = equipmentQuery("#equipmentSaveStatus");
+  const validationMessage = equipmentRentReportValidationMessage();
+  if (validationMessage) {
+    if (status) status.textContent = validationMessage;
+    return;
+  }
+  equipmentState.activeWindow = "summary";
+  equipmentState.rentPreviewVisible = true;
+  renderEquipmentModule();
+  if (status) status.textContent = "Previsualización del Resumen de Renta lista para revisar y guardar.";
+  const preview = equipmentQuery("#equipmentRentPdfPreview");
+  if (preview && typeof preview.scrollIntoView === "function") {
+    window.requestAnimationFrame(() => preview.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
 }
 
 function saveCurrentEquipmentWindow() {
@@ -3913,13 +3953,12 @@ async function saveEquipmentPdf(mode = "full") {
     if (status) status.textContent = "Seleccione un servicio antes de guardar.";
     return;
   }
-  if (mode === "rent" && !equipmentRowsSummary().some((row) => row.type !== "category")) {
-    if (status) status.textContent = "Agregue al menos una ventana con equipo antes de guardar el resumen.";
-    return;
-  }
-  if (mode === "rent" && !equipmentRentalRows().length) {
-    if (status) status.textContent = "No hay equipo para rentar con el inventario actual.";
-    return;
+  if (mode === "rent") {
+    const validationMessage = equipmentRentReportValidationMessage();
+    if (validationMessage) {
+      if (status) status.textContent = validationMessage;
+      return;
+    }
   }
   if (mode === "transfer") {
     renderEquipmentTransferPdf();
@@ -4165,8 +4204,9 @@ function initEquipmentModule() {
     }
   });
   equipmentQuery("#equipmentSavePdfButton")?.addEventListener("click", () => saveEquipmentPdf("full"));
-  equipmentQuery("#equipmentSaveRentPdfButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
-  equipmentQuery("#equipmentGenerateRentReportButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
+  equipmentQuery("#equipmentSaveRentPdfButton")?.addEventListener("click", previewEquipmentRentReport);
+  equipmentQuery("#equipmentGenerateRentReportButton")?.addEventListener("click", previewEquipmentRentReport);
+  equipmentQuery("#equipmentDownloadRentPdfButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
   equipmentQuery("#equipmentSaveTransferPdfButton")?.addEventListener("click", () => saveEquipmentPdf("transfer"));
   equipmentQuery("#equipmentEditServiceTemplateButton")?.addEventListener("click", openEquipmentCatalogEditor);
   equipmentQuery("#equipmentCatalogEditorCloseButton")?.addEventListener("click", closeEquipmentCatalogEditor);

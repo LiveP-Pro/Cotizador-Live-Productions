@@ -2217,12 +2217,23 @@ body {
   border: 2px solid #111111;
 }
 
-.equipment-rent-pdf-document {
-  display: none;
+.equipment-pdf-preview {
+  width: 100%;
 }
 
-.equipment-transfer-pdf-document {
-  display: none;
+.equipment-pdf-preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.equipment-pdf-preview-toolbar strong {
+  color: var(--ink);
+  font-size: 20px;
+  overflow-wrap: anywhere;
 }
 
 .equipment-pdf-header {
