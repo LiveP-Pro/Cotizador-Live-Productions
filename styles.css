@@ -1427,6 +1427,172 @@ body {
   opacity: 0.45;
 }
 
+.equipment-transfer-leg-editors {
+  display: grid;
+  gap: 14px;
+}
+
+.equipment-transfer-leg-editor {
+  display: grid;
+  gap: 12px;
+  padding: 14px 0 0;
+  border-top: 2px solid #111111;
+}
+
+.equipment-transfer-leg-editor > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.equipment-transfer-leg-editor > header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.equipment-transfer-leg-editor > header span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.equipment-transfer-leg-editor > header strong {
+  color: var(--ink);
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.equipment-transfer-leg-editor > header small {
+  max-width: 520px;
+  color: #17633a;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.equipment-transfer-leg-editor > header small.is-warning {
+  color: #8a5b00;
+}
+
+.equipment-transfer-item-picker {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 120px 48px;
+  gap: 8px;
+  align-items: end;
+}
+
+.equipment-transfer-item-picker label {
+  display: grid;
+  gap: 5px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.equipment-transfer-item-picker select,
+.equipment-transfer-item-picker input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.equipment-transfer-item-picker button {
+  width: 48px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid #111111;
+  border-radius: 6px;
+  color: #ffffff;
+  background: #111111;
+  font: inherit;
+  font-size: 24px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.equipment-transfer-item-picker button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.equipment-transfer-selected-list {
+  overflow-x: auto;
+}
+
+.equipment-transfer-selected-list table {
+  width: 100%;
+  min-width: 680px;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.equipment-transfer-selected-list th,
+.equipment-transfer-selected-list td {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+.equipment-transfer-selected-list th {
+  color: #ffffff;
+  background: #111111;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.equipment-transfer-selected-list th:first-child,
+.equipment-transfer-selected-list td:first-child {
+  width: 110px;
+}
+
+.equipment-transfer-selected-list th:nth-child(3),
+.equipment-transfer-selected-list td:nth-child(3) {
+  width: 190px;
+}
+
+.equipment-transfer-selected-list th:last-child,
+.equipment-transfer-selected-list td:last-child {
+  width: 74px;
+  text-align: center;
+}
+
+.equipment-transfer-selected-quantity {
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font: inherit;
+  font-weight: 900;
+  text-align: center;
+}
+
+.equipment-transfer-selected-list button {
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border: 1px solid #d7aaa5;
+  border-radius: 5px;
+  color: #8d1f18;
+  background: #ffffff;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .equipment-transfer-selector-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -2195,6 +2361,153 @@ body {
   background: #df1717 !important;
   font-weight: 900;
   text-align: center;
+}
+
+.equipment-rental-edit-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink);
+  background: #ffffff;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+  resize: vertical;
+}
+
+.equipment-rent-needed .equipment-rental-edit-input {
+  color: #ffffff;
+  background: transparent;
+  border-color: rgb(255 255 255 / 70%);
+  font-weight: 950;
+  text-align: center;
+}
+
+.equipment-pdf-control-value {
+  display: inline-block;
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.equipment-logistics-dialog {
+  width: min(720px, calc(100vw - 28px));
+  max-width: none;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #333333;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 38%);
+}
+
+.equipment-logistics-dialog::backdrop {
+  background: rgb(0 0 0 / 68%);
+}
+
+.equipment-logistics-modal {
+  display: grid;
+}
+
+.equipment-logistics-modal > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 16px;
+  align-items: start;
+  padding: 18px 20px;
+  color: #ffffff;
+  background: #111111;
+  border-bottom: 4px solid #2f8b57;
+}
+
+.equipment-logistics-dialog[data-status="warning"] .equipment-logistics-modal > header {
+  border-bottom-color: #c08a2c;
+}
+
+.equipment-logistics-dialog[data-status="danger"] .equipment-logistics-modal > header {
+  border-bottom-color: #c62828;
+}
+
+.equipment-logistics-modal h2,
+.equipment-logistics-modal .eyebrow {
+  margin: 0;
+}
+
+.equipment-logistics-modal h2 {
+  margin-top: 4px;
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.equipment-logistics-modal > header button {
+  width: 42px;
+  min-height: 42px;
+  padding: 0;
+  border: 1px solid #5d5d5d;
+  border-radius: 6px;
+  color: #ffffff;
+  background: transparent;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.equipment-logistics-content {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
+}
+
+.equipment-logistics-content strong {
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.equipment-logistics-content p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.equipment-logistics-modal > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  background: #f5f6f7;
+}
+
+.equipment-logistics-modal > footer button {
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid #111111;
+  border-radius: 6px;
+  color: #ffffff;
+  background: #111111;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.equipment-logistics-modal > footer button:first-child {
+  color: var(--ink);
+  border-color: var(--line);
+  background: #ffffff;
+}
+
+.equipment-logistics-modal > footer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
 }
 
 .equipment-rest-ok {
@@ -5995,7 +6308,8 @@ body.pdf-export .additional-services-section {
   }
 
   .equipment-transfer-selector-head,
-  .equipment-transfer-continue-row {
+  .equipment-transfer-continue-row,
+  .equipment-transfer-item-picker {
     align-items: stretch;
     grid-template-columns: minmax(0, 1fr);
   }
@@ -6005,7 +6319,23 @@ body.pdf-export .additional-services-section {
   }
 
   .equipment-transfer-selector-actions button,
-  .equipment-transfer-continue-row button {
+  .equipment-transfer-continue-row button,
+  .equipment-transfer-item-picker button {
+    width: 100%;
+  }
+
+  .equipment-transfer-leg-editor > header,
+  .equipment-logistics-modal > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .equipment-transfer-leg-editor > header small {
+    max-width: none;
+    text-align: left;
+  }
+
+  .equipment-logistics-modal > footer button {
     width: 100%;
   }
 

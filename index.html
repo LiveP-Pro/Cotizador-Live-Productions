@@ -6,12 +6,12 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260903-01" />
+    <link rel="stylesheet" href="styles.css?v=20260905-03" />
     <link rel="stylesheet" href="warehouse-inventory.css?v=20260902-03" />
     <script src="app.js?v=20260814-01" defer></script>
     <script src="equipment-catalog.js?v=20260821-04" defer></script>
     <script src="equipment-inventory.js?v=20260822-01" defer></script>
-    <script src="equipment.js?v=20260903-01" defer></script>
+    <script src="equipment.js?v=20260905-03" defer></script>
     <script src="inventory.js?v=20260902-03" defer></script>
   </head>
   <body>
@@ -252,10 +252,6 @@
               <input id="equipmentEventDate" type="date" />
             </label>
             <label>
-              Fecha y hora de salida de equipo
-              <input id="equipmentEventOutAt" type="datetime-local" />
-            </label>
-            <label>
               Fecha y hora de ingreso de equipo
               <input id="equipmentEventInAt" type="datetime-local" />
             </label>
@@ -426,10 +422,6 @@
                   <strong id="equipmentPdfDate">Por definir</strong>
                 </div>
                 <div>
-                  <span>Salida equipo</span>
-                  <strong id="equipmentPdfOutAt">Por definir</strong>
-                </div>
-                <div>
                   <span>Ingreso equipo</span>
                   <strong id="equipmentPdfInAt">Por definir</strong>
                 </div>
@@ -472,10 +464,6 @@
                   <strong id="equipmentRentPdfDate">Por definir</strong>
                 </div>
                 <div>
-                  <span>Salidas equipo</span>
-                  <strong id="equipmentRentPdfOutAt">Por definir</strong>
-                </div>
-                <div>
                   <span>Ingresos equipo</span>
                   <strong id="equipmentRentPdfInAt">Por definir</strong>
                 </div>
@@ -500,6 +488,28 @@
             </div>
             </div>
           </div>
+
+          <dialog id="equipmentLogisticsDialog" class="equipment-logistics-dialog no-print" aria-labelledby="equipmentLogisticsDialogTitle">
+            <section class="equipment-logistics-modal">
+              <header>
+                <div>
+                  <p class="eyebrow">Decisión logística</p>
+                  <h2 id="equipmentLogisticsDialogTitle">Revisar fecha y hora</h2>
+                </div>
+                <button id="equipmentLogisticsCloseButton" type="button" aria-label="Cerrar">X</button>
+              </header>
+              <div class="equipment-logistics-content">
+                <strong id="equipmentLogisticsDialogSummary"></strong>
+                <p id="equipmentLogisticsDialogDetail"></p>
+                <p id="equipmentLogisticsDialogRecommendation"></p>
+              </div>
+              <footer>
+                <button id="equipmentLogisticsCancelButton" type="button">Cancelar</button>
+                <button id="equipmentLogisticsRentButton" type="button">Rentar</button>
+                <button id="equipmentLogisticsTransferButton" type="button">Trasegar</button>
+              </footer>
+            </section>
+          </dialog>
 
           <div id="equipmentCatalogEditor" class="equipment-catalog-editor is-hidden" role="dialog" aria-modal="true" aria-labelledby="equipmentCatalogEditorTitle">
             <div class="equipment-catalog-editor-panel">

@@ -35,6 +35,7 @@ const equipmentState = {
   selectedEventId: "",
   activeWindow: "review",
   rentPreviewVisible: false,
+  rentalOverrides: new Map(),
   servicePickerOpen: false,
   summarySearchTerm: "",
   summaryTransferEnabled: false,
@@ -59,6 +60,9 @@ let equipmentManualMainCounter = 1;
 let equipmentManualSectionCounter = 1;
 let equipmentExtraCounter = 1;
 let equipmentTransferRouteCounter = 1;
+let equipmentLogisticsDecision = null;
+
+const EQUIPMENT_TRANSFER_BUFFER_MINUTES = 120;
 
 function createEquipmentWarehouseDispatchId() {
   if (globalThis.crypto?.randomUUID) return `cuadro-${globalThis.crypto.randomUUID()}`;
@@ -67,6 +71,11 @@ function createEquipmentWarehouseDispatchId() {
 
 function equipmentQuery(selector) {
   return document.querySelector(selector);
+}
+
+function invalidateEquipmentRentalPreview() {
+  equipmentState.rentalOverrides.clear();
+  equipmentState.rentPreviewVisible = false;
 }
 
 function escapeEquipmentHtml(value) {
@@ -155,7 +164,6 @@ function equipmentDateKeyFromDateTime(value) {
 function equipmentEventOperationalDateKey(event) {
   return event?.date
     || equipmentDateKeyFromDateTime(equipmentEventSetupAt(event))
-    || equipmentDateKeyFromDateTime(event?.equipmentOutAt)
     || equipmentDateKeyFromDateTime(event?.equipmentInAt)
     || "";
 }
@@ -173,12 +181,10 @@ function equipmentEventChronologicalKey(event) {
   const setupAt = equipmentEventSetupAt(event);
   const dateKey = event?.date
     || equipmentDateKeyFromDateTime(setupAt)
-    || equipmentDateKeyFromDateTime(event?.equipmentOutAt)
     || equipmentDateKeyFromDateTime(event?.equipmentInAt)
     || "9999-12-31";
   const sequenceTime = setupAt
     || (event?.date ? `${event.date}T23:59` : "")
-    || event?.equipmentOutAt
     || event?.equipmentInAt
     || "9999-12-31T23:59";
   return `${dateKey}|${sequenceTime}`;
@@ -193,13 +199,12 @@ function sortEquipmentEventsByDate(events = []) {
 
 function equipmentEventSortDateTime(event) {
   const dateKey = equipmentEventOperationalDateKey(event);
-  return equipmentEventSetupAt(event) || event?.equipmentOutAt || event?.equipmentInAt || (dateKey ? `${dateKey}T00:00` : "9999-12-31T23:59");
+  return equipmentEventSetupAt(event) || event?.equipmentInAt || (dateKey ? `${dateKey}T00:00` : "9999-12-31T23:59");
 }
 
 function equipmentEventTransferDateTime(event) {
   const setupAt = equipmentEventSetupAt(event);
   if (setupAt) return formatEquipmentDateTime(setupAt);
-  if (event?.equipmentOutAt) return formatEquipmentDateTime(event.equipmentOutAt);
   const dateKey = equipmentEventOperationalDateKey(event);
   return dateKey ? `${formatEquipmentDate(dateKey)} · Hora por definir` : "Fecha y hora por definir";
 }
@@ -217,12 +222,104 @@ function equipmentEventDateLabel(event) {
   return event?.date ? formatEquipmentDate(event.date) : "Por definir";
 }
 
-function equipmentEventOutDateLabel(event) {
-  return event?.equipmentOutAt
-    ? equipmentDateOnlyFromDateTime(event.equipmentOutAt)
-    : event?.date
-      ? formatEquipmentDate(event.date)
-      : "Por definir";
+function equipmentDateTimeMillis(value) {
+  const clean = equipmentDateTimeInputValue(value);
+  if (!clean) return Number.NaN;
+  const [datePart, timePart] = clean.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
+  return new Date(year, month - 1, day, hour, minute, 0, 0).getTime();
+}
+
+function equipmentEventUsageWindow(event) {
+  const setupAt = equipmentEventSetupAt(event);
+  const eventDate = String(event?.date || "").trim();
+  const returnAt = equipmentDateTimeInputValue(event?.equipmentInAt);
+  const startValue = setupAt || (eventDate ? `${eventDate}T00:00` : "");
+  let endValue = returnAt || (eventDate ? `${eventDate}T23:59` : "");
+  let startMs = equipmentDateTimeMillis(startValue);
+  let endMs = equipmentDateTimeMillis(endValue);
+  if (Number.isFinite(startMs) && !Number.isFinite(endMs)) {
+    endMs = startMs + (24 * 60 * 60 * 1000);
+    endValue = "";
+  }
+  if (!Number.isFinite(startMs) && Number.isFinite(endMs)) {
+    startMs = endMs - (24 * 60 * 60 * 1000);
+  }
+  if (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs < startMs) {
+    endMs = startMs;
+  }
+  const availableAtMs = Number.isFinite(endMs)
+    ? endMs + (EQUIPMENT_TRANSFER_BUFFER_MINUTES * 60 * 1000)
+    : Number.NaN;
+  return {
+    startValue,
+    endValue,
+    startMs,
+    endMs,
+    availableAtMs,
+    hasExactStart: Boolean(setupAt),
+    hasExactEnd: Boolean(returnAt)
+  };
+}
+
+function formatEquipmentMinutes(totalMinutes) {
+  if (!Number.isFinite(totalMinutes)) return "tiempo por definir";
+  const absoluteMinutes = Math.max(0, Math.round(Math.abs(totalMinutes)));
+  const days = Math.floor(absoluteMinutes / 1440);
+  const hours = Math.floor((absoluteMinutes % 1440) / 60);
+  const minutes = absoluteMinutes % 60;
+  return [days ? `${days} d` : "", hours ? `${hours} h` : "", minutes || (!days && !hours) ? `${minutes} min` : ""]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function equipmentLogisticsPairAnalysis(from, to) {
+  const fromWindow = equipmentEventUsageWindow(from);
+  const toWindow = equipmentEventUsageWindow(to);
+  const rawGapMinutes = Number.isFinite(fromWindow.endMs) && Number.isFinite(toWindow.startMs)
+    ? (toWindow.startMs - fromWindow.endMs) / 60000
+    : Number.NaN;
+  const availableGapMinutes = Number.isFinite(fromWindow.availableAtMs) && Number.isFinite(toWindow.startMs)
+    ? (toWindow.startMs - fromWindow.availableAtMs) / 60000
+    : Number.NaN;
+  const timestampsAvailable = Number.isFinite(rawGapMinutes);
+  const timingKnown = timestampsAvailable && fromWindow.hasExactEnd && toWindow.hasExactStart;
+  const overlaps = timestampsAvailable && rawGapMinutes < 0;
+  const tight = timestampsAvailable && rawGapMinutes >= 0 && rawGapMinutes < EQUIPMENT_TRANSFER_BUFFER_MINUTES;
+  const rentApplies = overlaps || tight;
+  return {
+    from,
+    to,
+    fromWindow,
+    toWindow,
+    rawGapMinutes,
+    availableGapMinutes,
+    timingKnown,
+    overlaps,
+    tight,
+    rentApplies
+  };
+}
+
+function equipmentScheduleAnalysis(events = activeEquipmentEvents()) {
+  const orderedEvents = sortEquipmentEventsByDate(events).filter(Boolean);
+  const pairs = orderedEvents.slice(0, -1).map((event, index) => (
+    equipmentLogisticsPairAnalysis(event, orderedEvents[index + 1])
+  ));
+  const rankedPairs = [...pairs].sort((first, second) => {
+    if (first.rentApplies !== second.rentApplies) return first.rentApplies ? -1 : 1;
+    const firstGap = Number.isFinite(first.rawGapMinutes) ? first.rawGapMinutes : Number.POSITIVE_INFINITY;
+    const secondGap = Number.isFinite(second.rawGapMinutes) ? second.rawGapMinutes : Number.POSITIVE_INFINITY;
+    return firstGap - secondGap;
+  });
+  return {
+    events: orderedEvents,
+    pairs,
+    focusPair: rankedPairs[0] || null,
+    rentApplies: pairs.some((pair) => pair.rentApplies),
+    timingIncomplete: pairs.some((pair) => !pair.timingKnown)
+  };
 }
 
 function equipmentTransferredRouteQuantity(row, events = []) {
@@ -232,28 +329,53 @@ function equipmentTransferredRouteQuantity(row, events = []) {
   );
 }
 
-function createEquipmentSummaryTransferRoute(eventIds = [], routeId = "") {
+function equipmentTransferLegKey(fromId, toId) {
+  return `${String(fromId || "")}::${String(toId || "")}`;
+}
+
+function normalizeEquipmentTransferLegSelections(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).map(([legKey, selections]) => [
+    String(legKey || ""),
+    (Array.isArray(selections) ? selections : [])
+      .map((selection) => ({
+        identity: equipmentInventoryCanonicalKey(selection?.identity),
+        quantity: Math.max(0, Math.floor(Number(selection?.quantity) || 0))
+      }))
+      .filter((selection) => selection.identity && selection.quantity > 0)
+  ]).filter(([legKey]) => legKey));
+}
+
+function createEquipmentSummaryTransferRoute(eventIds = [], routeId = "", legSelections = {}) {
   return {
     id: routeId || `transfer-route-${Date.now()}-${equipmentTransferRouteCounter++}`,
-    eventIds: [...new Set((Array.isArray(eventIds) ? eventIds : []).map(String).filter(Boolean))]
+    eventIds: [...new Set((Array.isArray(eventIds) ? eventIds : []).map(String).filter(Boolean))],
+    legSelections: normalizeEquipmentTransferLegSelections(legSelections)
   };
 }
 
 function cleanupEquipmentSummaryTransferRoutes(events = activeEquipmentEvents()) {
   const availableIds = new Set(events.map((event) => event.id));
-  const assignedIds = new Set();
   equipmentState.summaryTransferRoutes = (Array.isArray(equipmentState.summaryTransferRoutes)
     ? equipmentState.summaryTransferRoutes
     : [])
     .map((route) => {
-      const eventIds = (Array.isArray(route?.eventIds) ? route.eventIds : [])
+      const eventIds = [...new Set((Array.isArray(route?.eventIds) ? route.eventIds : [])
         .map(String)
-        .filter((eventId) => {
-          if (!availableIds.has(eventId) || assignedIds.has(eventId)) return false;
-          assignedIds.add(eventId);
-          return true;
-        });
-      return createEquipmentSummaryTransferRoute(eventIds, String(route?.id || ""));
+        .filter((eventId) => availableIds.has(eventId)))];
+      const validLegKeys = new Set(eventIds.slice(0, -1).map((eventId, index) => (
+        equipmentTransferLegKey(eventId, eventIds[index + 1])
+      )));
+      const legSelections = Object.fromEntries(Object.entries(normalizeEquipmentTransferLegSelections(route?.legSelections))
+        .filter(([legKey]) => validLegKeys.has(legKey)));
+      const normalizedRoute = route && typeof route === "object"
+        ? route
+        : createEquipmentSummaryTransferRoute();
+      normalizedRoute.id = String(normalizedRoute.id || "")
+        || `transfer-route-${Date.now()}-${equipmentTransferRouteCounter++}`;
+      normalizedRoute.eventIds = eventIds;
+      normalizedRoute.legSelections = legSelections;
+      return normalizedRoute;
     });
   if (equipmentState.summaryTransferEnabled && !equipmentState.summaryTransferRoutes.length) {
     equipmentState.summaryTransferRoutes.push(createEquipmentSummaryTransferRoute());
@@ -276,7 +398,7 @@ function equipmentActiveSummaryTransferRoute(events = activeEquipmentEvents()) {
 function equipmentTransferRouteEvents(route, events = activeEquipmentEvents()) {
   if (!route) return [];
   const eventsById = new Map(events.map((event) => [event.id, event]));
-  return sortEquipmentEventsByDate(route.eventIds.map((eventId) => eventsById.get(eventId)).filter(Boolean));
+  return route.eventIds.map((eventId) => eventsById.get(eventId)).filter(Boolean);
 }
 
 function equipmentSummaryTransferRoutesWithEvents(events = activeEquipmentEvents(), validOnly = false) {
@@ -290,32 +412,69 @@ function equipmentSummaryTransferRoutesWithEvents(events = activeEquipmentEvents
     .filter((entry) => !validOnly || entry.events.length >= 2);
 }
 
-function equipmentTransferAdjustedQuantity(row, events, transferRoutes) {
-  const routedEventIds = new Set();
-  let adjustedQuantity = 0;
-  let appliedRouteCount = 0;
-  transferRoutes.forEach(({ events: routeEvents }) => {
-    routeEvents.forEach((event) => routedEventIds.add(event.id));
-    const originalRouteQuantity = routeEvents.reduce(
-      (total, event) => total + (Number(row.eventQuantities.get(event.id)) || 0),
-      0
-    );
-    const rowTransferEvents = routeEvents.filter(
-      (event) => (Number(row.eventQuantities.get(event.id)) || 0) > 0
-    );
-    if (rowTransferEvents.length < 2) {
-      adjustedQuantity += originalRouteQuantity;
+function equipmentSummaryRowIdentity(row) {
+  return equipmentInventoryCanonicalKey(row?.inventorySourceItem?.description || row?.description || row?.key);
+}
+
+function equipmentTransferSelectedQuantity(route, from, to, identity) {
+  const legKey = equipmentTransferLegKey(from?.id, to?.id);
+  const selections = normalizeEquipmentTransferLegSelections(route?.legSelections)?.[legKey] || [];
+  return selections
+    .filter((selection) => selection.identity === identity)
+    .reduce((total, selection) => total + (Number(selection.quantity) || 0), 0);
+}
+
+function equipmentTransferInboundStats(row, eventId, transferRoutes) {
+  const identity = equipmentSummaryRowIdentity(row);
+  let quantity = 0;
+  const routeIds = new Set();
+  transferRoutes.forEach(({ route, events: routeEvents }) => {
+    routeEvents.slice(0, -1).forEach((from, index) => {
+      const to = routeEvents[index + 1];
+      if (to.id !== eventId) return;
+      const selectedQuantity = equipmentTransferSelectedQuantity(route, from, to, identity);
+      if (selectedQuantity <= 0) return;
+      quantity += selectedQuantity;
+      routeIds.add(route.id);
+    });
+  });
+  return { quantity, routeIds };
+}
+
+function equipmentPeakRequiredQuantity(row, events, transferRoutes = [], applyTransfers = true) {
+  const points = [];
+  let quantityWithoutDates = 0;
+  const appliedRouteIds = new Set();
+  events.forEach((event) => {
+    const eventQuantity = Math.max(0, Number(row.eventQuantities.get(event.id)) || 0);
+    if (!eventQuantity) return;
+    const inbound = applyTransfers
+      ? equipmentTransferInboundStats(row, event.id, transferRoutes)
+      : { quantity: 0, routeIds: new Set() };
+    const effectiveQuantity = Math.max(0, eventQuantity - inbound.quantity);
+    if (effectiveQuantity < eventQuantity) inbound.routeIds.forEach((routeId) => appliedRouteIds.add(routeId));
+    if (!effectiveQuantity) return;
+    const usage = equipmentEventUsageWindow(event);
+    if (!Number.isFinite(usage.startMs) || !Number.isFinite(usage.availableAtMs)) {
+      quantityWithoutDates += effectiveQuantity;
       return;
     }
-    const routeQuantity = equipmentTransferredRouteQuantity(row, rowTransferEvents);
-    adjustedQuantity += routeQuantity;
-    if (routeQuantity < originalRouteQuantity) appliedRouteCount += 1;
+    points.push({ time: usage.startMs, delta: effectiveQuantity, order: 1 });
+    points.push({ time: usage.availableAtMs, delta: -effectiveQuantity, order: 0 });
   });
-  events.forEach((event) => {
-    if (routedEventIds.has(event.id)) return;
-    adjustedQuantity += Number(row.eventQuantities.get(event.id)) || 0;
+  points.sort((first, second) => first.time - second.time || first.order - second.order);
+  let current = quantityWithoutDates;
+  let peak = current;
+  points.forEach((point) => {
+    current += point.delta;
+    peak = Math.max(peak, current);
   });
-  return { quantity: adjustedQuantity, appliedRouteCount };
+  return { quantity: Math.max(0, peak), appliedRouteIds };
+}
+
+function equipmentTransferAdjustedQuantity(row, events, transferRoutes) {
+  const result = equipmentPeakRequiredQuantity(row, events, transferRoutes, true);
+  return { quantity: result.quantity, appliedRouteCount: result.appliedRouteIds.size };
 }
 
 function equipmentEventReturnDateTime(event) {
@@ -672,13 +831,14 @@ function warehousePdfSections() {
 }
 
 function currentEquipmentEventDraft() {
+  const setupAt = equipmentQuery("#equipmentEventSetupAt")?.value || "";
   return {
     id: "event-draft",
     place: equipmentQuery("#equipmentEventPlace")?.value.trim() || "Lugar por definir",
     name: equipmentQuery("#equipmentEventName")?.value.trim() || "Evento por definir",
-    setupAt: equipmentQuery("#equipmentEventSetupAt")?.value || "",
+    setupAt,
     date: equipmentQuery("#equipmentEventDate")?.value || "",
-    equipmentOutAt: equipmentQuery("#equipmentEventOutAt")?.value || "",
+    equipmentOutAt: setupAt,
     equipmentInAt: equipmentQuery("#equipmentEventInAt")?.value || "",
     responsible: equipmentQuery("#equipmentEventResponsible")?.value.trim() || "Por definir"
   };
@@ -800,14 +960,12 @@ function populateEquipmentEventFields(event) {
   const nameInput = equipmentQuery("#equipmentEventName");
   const setupAtInput = equipmentQuery("#equipmentEventSetupAt");
   const dateInput = equipmentQuery("#equipmentEventDate");
-  const outAtInput = equipmentQuery("#equipmentEventOutAt");
   const inAtInput = equipmentQuery("#equipmentEventInAt");
   const responsibleInput = equipmentQuery("#equipmentEventResponsible");
   if (placeInput) placeInput.value = event?.place || "";
   if (nameInput) nameInput.value = event?.name || "";
   if (setupAtInput) setupAtInput.value = event ? equipmentEventSetupAt(event) : "";
   if (dateInput) dateInput.value = event?.date || "";
-  if (outAtInput) outAtInput.value = event?.equipmentOutAt || "";
   if (inAtInput) inAtInput.value = event?.equipmentInAt || "";
   if (responsibleInput) responsibleInput.value = event?.responsible || "";
 }
@@ -892,25 +1050,23 @@ function equipmentEventsByOperationalDate(events = activeEquipmentEvents()) {
 function equipmentSummaryDateNotice() {
   const events = equipmentState.events;
   if (!events.length) return { text: "", type: "" };
-  const groups = equipmentEventsByOperationalDate(events);
-  const missingDateCount = events.filter((event) => !equipmentEventOperationalDateKey(event)).length;
-  if (groups.size > 1) {
+  const schedule = equipmentScheduleAnalysis(events);
+  if (schedule.timingIncomplete) {
     return {
       type: "warning",
-      text: "Hay ventanas en fechas distintas. Si el mismo equipo se moverá entre lugares, active Trasegar Equipo y marque solo esos eventos; los no marcados se suman normal."
+      text: "Complete la fecha y hora de montaje y de ingreso para confirmar disponibilidad, renta y trasiego."
     };
   }
-  if (missingDateCount) {
+  if (schedule.events.length > 1 && schedule.rentApplies) {
     return {
       type: "warning",
-      text: "Complete la fecha de cada ventana para confirmar si el resumen y el trasego aplican."
+      text: "Hay eventos con horarios simultáneos o con menos de 2 horas entre ingreso y montaje. El equipo coincidente se considera ocupado y puede generar renta."
     };
   }
-  if (events.length > 1 && groups.size === 1) {
-    const [dateKey] = groups.keys();
+  if (schedule.events.length > 1) {
     return {
       type: "ok",
-      text: `Resumen combinado para eventos del mismo día: ${formatEquipmentDate(dateKey)}.`
+      text: "Los intervalos no se traslapan. El equipo puede reutilizarse y no se duplica en el cálculo de renta."
     };
   }
   return { text: "", type: "" };
@@ -1043,13 +1199,11 @@ function equipmentRowsSummary() {
     : [];
   itemRows.forEach((row) => {
     const originalQuantity = Number(row.quantity) || 0;
-    const adjustment = transferRoutes.length
-      ? equipmentTransferAdjustedQuantity(row, events, transferRoutes)
-      : { quantity: originalQuantity, appliedRouteCount: 0 };
+    const adjustment = equipmentTransferAdjustedQuantity(row, events, transferRoutes);
     row.originalQuantity = originalQuantity;
     row.quantity = Math.min(originalQuantity, adjustment.quantity);
-    row.transferApplied = row.quantity < originalQuantity;
-    row.transferRouteCount = row.transferApplied ? adjustment.appliedRouteCount : 0;
+    row.transferApplied = adjustment.appliedRouteCount > 0;
+    row.transferRouteCount = adjustment.appliedRouteCount;
   });
   return groups.flatMap((group) => group.rows.length || group.alwaysVisible ? [{
     type: "category",
@@ -1106,24 +1260,61 @@ function equipmentTransferredItemsBetweenEvents(from, to, comparisonRows = equip
     .filter((item) => item.quantity > 0);
 }
 
+function equipmentSelectedTransferredItemsBetweenEvents(route, from, to, candidates = null) {
+  const availableItems = candidates || equipmentTransferredItemsBetweenEvents(from, to);
+  const availableByIdentity = new Map(availableItems.map((item) => [item.identity, item]));
+  const legKey = equipmentTransferLegKey(from?.id, to?.id);
+  const selectedQuantities = new Map();
+  (normalizeEquipmentTransferLegSelections(route?.legSelections)?.[legKey] || []).forEach((selection) => {
+    selectedQuantities.set(
+      selection.identity,
+      (Number(selectedQuantities.get(selection.identity)) || 0) + (Number(selection.quantity) || 0)
+    );
+  });
+  return [...selectedQuantities.entries()].map(([identity, selectedQuantity]) => {
+    const candidate = availableByIdentity.get(identity);
+    if (!candidate) return null;
+    const quantity = Math.min(Math.max(0, selectedQuantity), Number(candidate.quantity) || 0);
+    return quantity > 0 ? { ...candidate, availableQuantity: candidate.quantity, quantity } : null;
+  }).filter(Boolean);
+}
+
+function equipmentSetTransferLegSelections(route, from, to, selections) {
+  if (!route) return;
+  const legKey = equipmentTransferLegKey(from?.id, to?.id);
+  route.legSelections = normalizeEquipmentTransferLegSelections(route.legSelections);
+  route.legSelections[legKey] = (Array.isArray(selections) ? selections : [])
+    .map((selection) => ({
+      identity: equipmentInventoryCanonicalKey(selection?.identity),
+      quantity: Math.max(0, Math.floor(Number(selection?.quantity) || 0))
+    }))
+    .filter((selection) => selection.identity && selection.quantity > 0);
+}
+
 function equipmentTransferUnusedByLeg() {
   if (!equipmentState.summaryTransferEnabled) return [];
   const events = activeEquipmentEvents();
   const transferRoutes = equipmentSummaryTransferRoutesWithEvents(events, true);
   if (!transferRoutes.length) return [];
   const comparisonRows = equipmentTransferComparisonRows();
-  return transferRoutes.flatMap(({ events: routeEvents, index: routeIndex }) => {
+  return transferRoutes.flatMap(({ route, events: routeEvents, index: routeIndex }) => {
     return routeEvents.slice(0, -1).map((from, legIndex) => {
       const to = routeEvents[legIndex + 1];
+      const candidates = equipmentTransferredItemsBetweenEvents(from, to, comparisonRows);
+      const transferredByIdentity = new Map(
+        equipmentSelectedTransferredItemsBetweenEvents(route, from, to, candidates)
+          .map((item) => [item.identity, Number(item.quantity) || 0])
+      );
       const items = comparisonRows
         .map((row) => {
           const fromQuantity = Number(row.eventQuantities.get(from.id)) || 0;
           const toQuantity = Number(row.eventQuantities.get(to.id)) || 0;
+          const transferredQuantity = Number(transferredByIdentity.get(row.identity)) || 0;
           return {
             ...row,
             fromQuantity,
             toQuantity,
-            quantity: Math.max(0, fromQuantity - toQuantity)
+            quantity: Math.max(0, fromQuantity - transferredQuantity)
           };
         })
         .filter((item) => item.quantity > 0);
@@ -1229,16 +1420,19 @@ function equipmentSummaryTransferNotice() {
     };
   }
   const labels = transferRoutes
-    .map(({ events: routeEvents }, routeIndex) => {
+    .map(({ route, events: routeEvents }, routeIndex) => {
       const routeLabel = routeEvents
         .map((event) => equipmentSummaryColumnName(event, events.indexOf(event)))
         .join(" -> ");
-      return `Trasiego ${routeIndex + 1}: ${routeLabel}`;
+      const selectedTypes = routeEvents.slice(0, -1).reduce((total, from, index) => (
+        total + equipmentSelectedTransferredItemsBetweenEvents(route, from, routeEvents[index + 1]).length
+      ), 0);
+      return `Trasiego ${routeIndex + 1}: ${routeLabel} (${selectedTypes} tipos elegidos)`;
     })
     .join(" | ");
   return {
     type: "ok",
-    text: `${labels}. Los eventos fuera de estas rutas se suman normalmente para renta.`
+    text: `${labels}. Solo el equipo elegido se descuenta como trasegado; todo lo demás conserva su cálculo por fecha y hora.`
   };
 }
 
@@ -1250,6 +1444,73 @@ function renderEquipmentSummaryTransferNotice() {
   notice.classList.toggle("is-hidden", !text);
   notice.classList.toggle("is-warning", type === "warning");
   notice.classList.toggle("is-ok", type === "ok");
+}
+
+function equipmentTransferLegEditorHtml(route, from, to, legIndex, comparisonRows) {
+  const legKey = equipmentTransferLegKey(from.id, to.id);
+  const candidates = equipmentTransferredItemsBetweenEvents(from, to, comparisonRows);
+  const selectedItems = equipmentSelectedTransferredItemsBetweenEvents(route, from, to, candidates);
+  const options = candidates.map((item) => `
+    <option value="${escapeEquipmentHtml(item.identity)}" data-max="${escapeEquipmentHtml(item.quantity)}">
+      ${escapeEquipmentHtml(`${item.description} · máximo ${item.quantity}`)}
+    </option>`).join("");
+  const selectedRows = selectedItems.map((item) => `
+    <tr>
+      <td>
+        <input
+          class="equipment-transfer-selected-quantity"
+          data-equipment-transfer-selected-quantity
+          data-equipment-transfer-leg-key="${escapeEquipmentHtml(legKey)}"
+          data-equipment-transfer-identity="${escapeEquipmentHtml(item.identity)}"
+          type="number"
+          min="1"
+          max="${escapeEquipmentHtml(item.availableQuantity)}"
+          step="1"
+          value="${escapeEquipmentHtml(item.quantity)}"
+          aria-label="Cantidad de ${escapeEquipmentHtml(item.description)} para trasegar"
+        />
+      </td>
+      <td>${escapeEquipmentHtml(item.description)}</td>
+      <td>${escapeEquipmentHtml(item.categoryTitle)}</td>
+      <td><button type="button" data-equipment-transfer-remove-item data-equipment-transfer-leg-key="${escapeEquipmentHtml(legKey)}" data-equipment-transfer-identity="${escapeEquipmentHtml(item.identity)}" aria-label="Quitar ${escapeEquipmentHtml(item.description)} del trasiego">X</button></td>
+    </tr>`).join("");
+  const timing = equipmentLogisticsPairAnalysis(from, to);
+  const timingLabel = timing.timingKnown
+    ? timing.rentApplies
+      ? `Tiempo ajustado: ${formatEquipmentMinutes(timing.rawGapMinutes)} entre ingreso y montaje. Revise si corresponde renta.`
+      : `Tiempo disponible: ${formatEquipmentMinutes(timing.rawGapMinutes)} entre ingreso y montaje.`
+    : "Complete montaje e ingreso para validar el tiempo del traslado.";
+  return `
+    <section class="equipment-transfer-leg-editor" data-equipment-transfer-leg-editor data-from-event-id="${escapeEquipmentHtml(from.id)}" data-to-event-id="${escapeEquipmentHtml(to.id)}">
+      <header>
+        <div>
+          <span>${escapeEquipmentHtml(`Tramo ${legIndex + 1}`)}</span>
+          <strong>${escapeEquipmentHtml(`${from.place || "Origen"} hacia ${to.place || "Destino"}`)}</strong>
+        </div>
+        <small class="${timing.rentApplies ? "is-warning" : ""}">${escapeEquipmentHtml(timingLabel)}</small>
+      </header>
+      <div class="equipment-transfer-item-picker">
+        <label>
+          Equipo que se va a trasegar
+          <select data-equipment-transfer-item-select ${candidates.length ? "" : "disabled"}>
+            <option value="">Seleccione equipo</option>
+            ${options}
+          </select>
+        </label>
+        <label>
+          Cantidad
+          <input data-equipment-transfer-item-quantity type="number" min="1" step="1" value="1" ${candidates.length ? "" : "disabled"} />
+        </label>
+        <button type="button" data-equipment-transfer-add-item disabled title="Agregar equipo al trasiego" aria-label="Agregar equipo al trasiego">+</button>
+      </div>
+      ${selectedRows ? `
+        <div class="equipment-transfer-selected-list">
+          <table>
+            <thead><tr><th>Cantidad</th><th>Equipo</th><th>Categoría</th><th>Acción</th></tr></thead>
+            <tbody>${selectedRows}</tbody>
+          </table>
+        </div>` : '<p class="equipment-empty">Aún no ha seleccionado equipo para este tramo.</p>'}
+    </section>`;
 }
 
 function renderEquipmentSummaryTransferSelector() {
@@ -1269,8 +1530,7 @@ function renderEquipmentSummaryTransferSelector() {
   const routes = equipmentSummaryTransferRoutesWithEvents(events);
   const activeRoute = equipmentActiveSummaryTransferRoute(events);
   const activeRouteEvents = equipmentTransferRouteEvents(activeRoute, events);
-  const assignedIds = new Set(routes.flatMap(({ route }) => route.eventIds));
-  const availableEvents = events.filter((event) => !assignedIds.has(event.id));
+  const availableEvents = events.filter((event) => !activeRoute?.eventIds.includes(event.id));
   const routeTabs = routes
     .map(({ route, events: routeEvents }, index) => `
       <button
@@ -1309,6 +1569,10 @@ function renderEquipmentSummaryTransferSelector() {
       return `<option value="${escapeEquipmentHtml(event.id)}">${escapeEquipmentHtml(`${eventIndex + 1}. ${title} · ${equipmentEventTransferDateTime(event)}`)}</option>`;
     })
     .join("");
+  const comparisonRows = activeRouteEvents.length > 1 ? equipmentTransferComparisonRows() : [];
+  const legEditors = activeRouteEvents.slice(0, -1)
+    .map((from, index) => equipmentTransferLegEditorHtml(activeRoute, from, activeRouteEvents[index + 1], index, comparisonRows))
+    .join("");
   host.innerHTML = `
     <div class="equipment-transfer-selector-head">
       <div>
@@ -1322,6 +1586,7 @@ function renderEquipmentSummaryTransferSelector() {
     </div>
     <div class="equipment-transfer-route-tabs" role="tablist" aria-label="Rutas de trasiego">${routeTabs}</div>
     <div class="equipment-transfer-chain">${chain}</div>
+    <div class="equipment-transfer-leg-editors">${legEditors}</div>
     <div class="equipment-transfer-continue-row">
       <label>
         ${activeRouteEvents.length ? "Siguiente lugar" : "Lugar de origen"}
@@ -1348,6 +1613,7 @@ function bindEquipmentSummaryTransferSelector() {
     button.addEventListener("click", () => {
       const route = equipmentActiveSummaryTransferRoute();
       if (!route) return;
+      invalidateEquipmentRentalPreview();
       route.eventIds = route.eventIds.filter((eventId) => eventId !== button.dataset.equipmentTransferRemoveEvent);
       renderEquipmentModule();
     });
@@ -1361,16 +1627,34 @@ function bindEquipmentSummaryTransferSelector() {
     const route = equipmentActiveSummaryTransferRoute();
     const eventId = nextEventSelect?.value || "";
     if (!route || !eventId || route.eventIds.includes(eventId)) return;
-    route.eventIds.push(eventId);
-    renderEquipmentModule();
+    const destination = activeEquipmentEvents().find((event) => event.id === eventId);
+    const origin = equipmentTransferRouteEvents(route).at(-1) || null;
+    const addEventToRoute = () => {
+      invalidateEquipmentRentalPreview();
+      route.eventIds.push(eventId);
+      renderEquipmentModule();
+    };
+    if (!origin || !destination) {
+      addEventToRoute();
+      return;
+    }
+    openEquipmentLogisticsDecision({
+      from: origin,
+      to: destination,
+      context: "transfer-leg",
+      onTransfer: addEventToRoute,
+      onRent: () => previewEquipmentRentReport({ skipLogisticsDecision: true })
+    });
   });
   host.querySelector("[data-equipment-transfer-new-route]")?.addEventListener("click", () => {
+    invalidateEquipmentRentalPreview();
     const route = createEquipmentSummaryTransferRoute();
     equipmentState.summaryTransferRoutes.push(route);
     equipmentState.activeSummaryTransferRouteId = route.id;
     renderEquipmentModule();
   });
   host.querySelector("[data-equipment-transfer-delete-route]")?.addEventListener("click", () => {
+    invalidateEquipmentRentalPreview();
     const activeRouteId = equipmentState.activeSummaryTransferRouteId;
     equipmentState.summaryTransferRoutes = equipmentState.summaryTransferRoutes.filter(
       (route) => route.id !== activeRouteId
@@ -1383,8 +1667,79 @@ function bindEquipmentSummaryTransferSelector() {
   });
   host.querySelector("[data-equipment-transfer-clear-route]")?.addEventListener("click", () => {
     const route = equipmentActiveSummaryTransferRoute();
-    if (route) route.eventIds = [];
+    if (route) {
+      invalidateEquipmentRentalPreview();
+      route.eventIds = [];
+      route.legSelections = {};
+    }
     renderEquipmentModule();
+  });
+  host.querySelectorAll("[data-equipment-transfer-leg-editor]").forEach((editor) => {
+    const select = editor.querySelector("[data-equipment-transfer-item-select]");
+    const quantityInput = editor.querySelector("[data-equipment-transfer-item-quantity]");
+    const addButton = editor.querySelector("[data-equipment-transfer-add-item]");
+    const updateAddButton = () => {
+      if (addButton) addButton.disabled = !select?.value;
+      const option = select?.selectedOptions?.[0];
+      if (quantityInput && option?.dataset?.max) quantityInput.max = option.dataset.max;
+    };
+    select?.addEventListener("change", updateAddButton);
+    addButton?.addEventListener("click", () => {
+      const route = equipmentActiveSummaryTransferRoute();
+      const events = activeEquipmentEvents();
+      const from = events.find((event) => event.id === editor.dataset.fromEventId);
+      const to = events.find((event) => event.id === editor.dataset.toEventId);
+      const identity = equipmentInventoryCanonicalKey(select?.value);
+      if (!route || !from || !to || !identity) return;
+      const candidates = equipmentTransferredItemsBetweenEvents(from, to);
+      const candidate = candidates.find((item) => item.identity === identity);
+      if (!candidate) return;
+      const requested = Math.max(1, Math.floor(Number(quantityInput?.value) || 1));
+      invalidateEquipmentRentalPreview();
+      const selected = equipmentSelectedTransferredItemsBetweenEvents(route, from, to, candidates)
+        .map((item) => ({ identity: item.identity, quantity: item.quantity }));
+      const existing = selected.find((item) => item.identity === identity);
+      if (existing) existing.quantity = Math.min(candidate.quantity, existing.quantity + requested);
+      else selected.push({ identity, quantity: Math.min(candidate.quantity, requested) });
+      equipmentSetTransferLegSelections(route, from, to, selected);
+      renderEquipmentModule();
+    });
+  });
+  host.querySelectorAll("[data-equipment-transfer-selected-quantity]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const route = equipmentActiveSummaryTransferRoute();
+      const [fromId, toId] = String(input.dataset.equipmentTransferLegKey || "").split("::");
+      const events = activeEquipmentEvents();
+      const from = events.find((event) => event.id === fromId);
+      const to = events.find((event) => event.id === toId);
+      if (!route || !from || !to) return;
+      const candidates = equipmentTransferredItemsBetweenEvents(from, to);
+      const candidate = candidates.find((item) => item.identity === input.dataset.equipmentTransferIdentity);
+      const selected = equipmentSelectedTransferredItemsBetweenEvents(route, from, to, candidates)
+        .map((item) => ({ identity: item.identity, quantity: item.quantity }));
+      const item = selected.find((selection) => selection.identity === input.dataset.equipmentTransferIdentity);
+      if (!item || !candidate) return;
+      invalidateEquipmentRentalPreview();
+      item.quantity = Math.min(candidate.quantity, Math.max(1, Math.floor(Number(input.value) || 1)));
+      equipmentSetTransferLegSelections(route, from, to, selected);
+      renderEquipmentModule();
+    });
+  });
+  host.querySelectorAll("[data-equipment-transfer-remove-item]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const route = equipmentActiveSummaryTransferRoute();
+      const [fromId, toId] = String(button.dataset.equipmentTransferLegKey || "").split("::");
+      const events = activeEquipmentEvents();
+      const from = events.find((event) => event.id === fromId);
+      const to = events.find((event) => event.id === toId);
+      if (!route || !from || !to) return;
+      invalidateEquipmentRentalPreview();
+      const selections = equipmentSelectedTransferredItemsBetweenEvents(route, from, to)
+        .filter((item) => item.identity !== button.dataset.equipmentTransferIdentity)
+        .map((item) => ({ identity: item.identity, quantity: item.quantity }));
+      equipmentSetTransferLegSelections(route, from, to, selections);
+      renderEquipmentModule();
+    });
   });
 }
 
@@ -1514,8 +1869,8 @@ function renderEquipmentEvents() {
       const cardTitle = equipmentEventCardTitle(event, index);
       const eventName = event.name && event.name !== "Evento por definir" ? event.name : "";
       const eventNameLine = eventName ? `<span>Evento: ${escapeEquipmentHtml(eventName)}</span>` : "";
-      const logisticsLine = event.equipmentOutAt || event.equipmentInAt
-        ? `<span>Salida: ${escapeEquipmentHtml(equipmentEventTransferDateTime(event))} · Ingreso: ${escapeEquipmentHtml(equipmentEventReturnDateTime(event))}</span>`
+      const logisticsLine = event.equipmentInAt
+        ? `<span>Ingreso: ${escapeEquipmentHtml(equipmentEventReturnDateTime(event))}</span>`
         : "";
       return `
         <article class="equipment-event-card${activeClass}">
@@ -1583,6 +1938,7 @@ function addEquipmentEvent() {
     id: `event-${Date.now()}-${equipmentEventCounter++}`,
     warehouseDispatchId: equipmentState.draftWarehouseDispatchId
   };
+  invalidateEquipmentRentalPreview();
   equipmentState.events.push(createdEvent);
   resetEquipmentWindowDraft();
   renderEquipmentModule();
@@ -2211,6 +2567,7 @@ function applyEquipmentWarehouseInventoryPayload(payload) {
   equipmentWarehouseInventoryState.records = records;
   equipmentWarehouseInventoryState.recordsById = recordsById;
   equipmentWarehouseInventoryState.recordsByLookupKey = recordsByLookupKey;
+  invalidateEquipmentRentalPreview();
   return true;
 }
 
@@ -2745,15 +3102,19 @@ function inventoryValueFor(row) {
 function equipmentTransferPlanData() {
   const events = sortEquipmentEventsByDate(equipmentState.events);
   const groups = equipmentEventsByOperationalDate(events);
-  const missingDateEvents = events.filter((event) => !equipmentEventOperationalDateKey(event));
+  const missingDateEvents = events.filter((event) => {
+    const usage = equipmentEventUsageWindow(event);
+    return !Number.isFinite(usage.startMs) || !Number.isFinite(usage.endMs);
+  });
   const routes = [];
   const configuredRoutes = equipmentState.summaryTransferEnabled
     ? equipmentSummaryTransferRoutesWithEvents(events, true)
     : [];
   if (configuredRoutes.length) {
-    configuredRoutes.forEach(({ events: routeEvents, index: routeIndex }) => {
+    configuredRoutes.forEach(({ route, events: routeEvents, index: routeIndex }) => {
       for (let index = 0; index < routeEvents.length - 1; index += 1) {
         routes.push({
+          route,
           routeIndex,
           legIndex: index,
           dateKey: equipmentEventOperationalDateKey(routeEvents[index + 1]),
@@ -2763,26 +3124,17 @@ function equipmentTransferPlanData() {
         });
       }
     });
-  } else {
-    groups.forEach((groupEvents, dateKey) => {
-      const sortedEvents = [...groupEvents].sort((first, second) => equipmentEventSortDateTime(first).localeCompare(equipmentEventSortDateTime(second)));
-      for (let index = 0; index < sortedEvents.length - 1; index += 1) {
-        routes.push({
-          routeIndex: 0,
-          legIndex: index,
-          dateKey,
-          from: sortedEvents[index],
-          to: sortedEvents[index + 1],
-          configured: false
-        });
-      }
-    });
   }
   const comparisonRows = routes.length ? equipmentTransferComparisonRows() : [];
-  const detailedRoutes = routes.map((route) => ({
-    ...route,
-    items: equipmentTransferredItemsBetweenEvents(route.from, route.to, comparisonRows)
-  }));
+  const detailedRoutes = routes.map((route) => {
+    const candidates = equipmentTransferredItemsBetweenEvents(route.from, route.to, comparisonRows);
+    return {
+      ...route,
+      candidates,
+      items: equipmentSelectedTransferredItemsBetweenEvents(route.route, route.from, route.to, candidates),
+      timing: equipmentLogisticsPairAnalysis(route.from, route.to)
+    };
+  });
   return {
     events,
     groups,
@@ -2831,11 +3183,11 @@ function renderEquipmentTransferPdf(plan = equipmentTransferPlanData()) {
     saveButton.disabled = !routes.length;
     saveButton.title = routes.length
       ? "Guardar como PDF el equipo de todos los trasiegos configurados"
-      : "Configure un trasiego con equipo compartido para generar el PDF";
+      : "Seleccione equipo en al menos un tramo para generar el PDF";
   }
   if (!host) return;
   if (!routes.length) {
-    host.innerHTML = '<p class="equipment-empty">Configure al menos un trasiego con equipo compartido para generar este PDF.</p>';
+    host.innerHTML = '<p class="equipment-empty">Configure un tramo y seleccione el equipo que se trasladará para generar este PDF.</p>';
     return;
   }
   host.innerHTML = routes.map(({ routeIndex, legIndex, from, to, items }) => `
@@ -2861,7 +3213,7 @@ function renderEquipmentPdfTransferDestinations(plan = equipmentTransferPlanData
   const host = equipmentQuery("#equipmentPdfTransferDestinations");
   if (!host) return;
   const selectedEventId = equipmentState.selectedEventId;
-  const routes = plan.routes.filter((route) => route.configured && route.from?.id === selectedEventId);
+  const routes = plan.routes.filter((route) => route.configured && route.items.length && route.from?.id === selectedEventId);
   host.classList.toggle("is-hidden", !routes.length);
   if (!routes.length) {
     host.innerHTML = "";
@@ -2895,13 +3247,13 @@ function renderEquipmentTransferPanel() {
   if (plan.configuredRoutes.length) {
     messages.push(`${plan.configuredRoutes.length} trasiego(s) configurado(s). Cada ruta puede continuar por varios eventos.`);
   } else if (plan.hasDifferentDates) {
-    messages.push("Para eventos en fechas distintas, configure una ruta dentro de Resumen de Equipo con Continuar trasiego. Puede crear rutas adicionales con Trasiego múltiple.");
+    messages.push("Configure una ruta dentro de Resumen de Equipo y seleccione manualmente cada equipo que continuará al destino.");
   }
   if (plan.missingDateEvents.length) {
-    messages.push("Hay ventanas sin fecha operativa; complete fecha, salida o ingreso de equipo para evaluar el trasego.");
+    messages.push("Hay ventanas sin fecha operativa; complete fecha de montaje e ingreso para evaluar el trasiego.");
   }
   if (!plan.routes.length) {
-    messages.push("No hay ventanas compartiendo el mismo día en esta vista; para fechas consecutivas use el selector del resumen.");
+    messages.push("No hay tramos configurados. Use Trasegar Equipo en el resumen para elegir origen, destino y equipo.");
   }
 
   const messageHtml = messages
@@ -2954,9 +3306,6 @@ function tableForEquipmentInventory(rows, editable = true) {
     .join("");
   const eventSetupHeaders = events
     .map((event) => `<th class="equipment-event-column equipment-date-column"><span>Fecha y hora del montaje</span><strong>${escapeEquipmentHtml(equipmentEventSetupDateTimeLabel(event))}</strong></th>`)
-    .join("");
-  const eventOutHeaders = events
-    .map((event) => `<th class="equipment-event-column equipment-date-column"><span>Fecha salida equipo</span><strong>${escapeEquipmentHtml(equipmentEventOutDateLabel(event))}</strong></th>`)
     .join("");
   const eventHeaders = events
     .map((event, index) => `<th class="equipment-event-column equipment-location-column">${escapeEquipmentHtml(equipmentSummaryColumnName(event, index))}</th>`)
@@ -3025,19 +3374,16 @@ function tableForEquipmentInventory(rows, editable = true) {
     <table class="equipment-base-table equipment-inventory-table${editable ? "" : " equipment-table-compact"}">
       <thead>
         <tr class="equipment-summary-date-row">
-          <th class="equipment-description-column" rowspan="5">DESCRIPCION DE EQUIPO</th>
+          <th class="equipment-description-column" rowspan="4">DESCRIPCION DE EQUIPO</th>
           ${eventDateHeaders}
-          <th class="equipment-total-column" rowspan="4">EQUIPO REQUERIDO</th>
-          <th class="equipment-inventory-column" rowspan="4">INVENTARIO FISICO BODEGA PP</th>
-          <th class="equipment-shortage-column" rowspan="4">EQUIPO DISPONIBLE</th>
-          <th class="equipment-action-column" rowspan="4">ACCION</th>
-          <th class="equipment-observation-column" rowspan="4">OBSERVACIONES</th>
+          <th class="equipment-total-column" rowspan="3">EQUIPO REQUERIDO</th>
+          <th class="equipment-inventory-column" rowspan="3">INVENTARIO FISICO BODEGA PP</th>
+          <th class="equipment-shortage-column" rowspan="3">EQUIPO DISPONIBLE</th>
+          <th class="equipment-action-column" rowspan="3">ACCION</th>
+          <th class="equipment-observation-column" rowspan="3">OBSERVACIONES</th>
         </tr>
         <tr class="equipment-summary-date-row">
           ${eventSetupHeaders}
-        </tr>
-        <tr class="equipment-summary-date-row">
-          ${eventOutHeaders}
         </tr>
         <tr>
           ${eventHeaders}
@@ -3128,29 +3474,49 @@ function consolidateEquipmentRentalRows(summaryRows, events) {
         eventDetails,
         observation: group.observations.join(" / ")
       };
-    })
-    .filter((row) => row.missing > 0);
+    });
 }
 
 function equipmentRentalRows() {
   const events = activeEquipmentEvents();
-  return consolidateEquipmentRentalRows(equipmentRowsSummary(), events);
+  return consolidateEquipmentRentalRows(equipmentRowsSummary(), events)
+    .map((row) => {
+      const rentalKey = row.matchKey || row.key;
+      const override = equipmentState.rentalOverrides.get(rentalKey) || {};
+      const quantity = Object.hasOwn(override, "quantity") ? Math.max(0, Number(override.quantity) || 0) : row.quantity;
+      const inventory = Object.hasOwn(override, "inventory") ? Math.max(0, Number(override.inventory) || 0) : row.inventory;
+      const calculatedMissing = Math.max(0, quantity - equipmentInventoryNumber(inventory));
+      const missing = override.missingManual
+        ? Math.max(0, Number(override.missing) || 0)
+        : calculatedMissing;
+      return {
+        ...row,
+        rentalKey,
+        description: Object.hasOwn(override, "description") ? String(override.description || "") : row.description,
+        eventDetails: Object.hasOwn(override, "eventDetails") ? String(override.eventDetails || "") : row.eventDetails,
+        quantity,
+        inventory,
+        missing,
+        observation: Object.hasOwn(override, "observation") ? String(override.observation || "") : row.observation
+      };
+    })
+    .filter((row) => row.missing > 0 || equipmentState.rentalOverrides.has(row.rentalKey));
 }
 
-function tableForEquipmentRentalReport(rows) {
+function tableForEquipmentRentalReport(rows, editable = false) {
   if (!rows.length) {
     return `<p class="equipment-empty">No hay equipo para renta con el inventario actual.</p>`;
   }
   const body = rows
     .map(
       (row) => `
-        <tr>
-          <td>${escapeEquipmentHtml(row.description)}</td>
-          <td>${escapeEquipmentHtml(row.eventDetails)}</td>
-          <td class="equipment-qty">${escapeEquipmentHtml(row.quantity)}</td>
-          <td class="equipment-qty">${escapeEquipmentHtml(row.inventory)}</td>
-          <td class="equipment-rent-needed">${escapeEquipmentHtml(row.missing)}</td>
-          <td>${escapeEquipmentHtml(row.observation)}</td>
+        <tr data-equipment-rental-key="${escapeEquipmentHtml(row.rentalKey)}">
+          <td>${editable ? `<textarea class="equipment-rental-edit-input" data-equipment-rental-field="description" rows="2">${escapeEquipmentHtml(row.description)}</textarea>` : escapeEquipmentHtml(row.description)}</td>
+          <td>${editable ? `<textarea class="equipment-rental-edit-input" data-equipment-rental-field="eventDetails" rows="2">${escapeEquipmentHtml(row.eventDetails)}</textarea>` : escapeEquipmentHtml(row.eventDetails)}</td>
+          <td class="equipment-qty">${editable ? `<input class="equipment-rental-edit-input" data-equipment-rental-field="quantity" type="number" min="0" step="1" value="${escapeEquipmentHtml(row.quantity)}" />` : escapeEquipmentHtml(row.quantity)}</td>
+          <td class="equipment-qty">${editable ? `<input class="equipment-rental-edit-input" data-equipment-rental-field="inventory" type="number" min="0" step="1" value="${escapeEquipmentHtml(row.inventory)}" />` : escapeEquipmentHtml(row.inventory)}</td>
+          <td class="equipment-rent-needed">${editable ? `<input class="equipment-rental-edit-input equipment-rental-missing-input" data-equipment-rental-field="missing" type="number" min="0" step="1" value="${escapeEquipmentHtml(row.missing)}" />` : escapeEquipmentHtml(row.missing)}</td>
+          <td>${editable ? `<textarea class="equipment-rental-edit-input" data-equipment-rental-field="observation" rows="2">${escapeEquipmentHtml(row.observation)}</textarea>` : escapeEquipmentHtml(row.observation)}</td>
         </tr>`
     )
     .join("");
@@ -3170,6 +3536,36 @@ function tableForEquipmentRentalReport(rows) {
     </table>`;
 }
 
+function bindEquipmentRentalReportInputs() {
+  const host = equipmentQuery("#equipmentRentPdfTable");
+  if (!host) return;
+  host.querySelectorAll("tr[data-equipment-rental-key]").forEach((rowElement) => {
+    const rentalKey = rowElement.dataset.equipmentRentalKey || "";
+    rowElement.querySelectorAll("[data-equipment-rental-field]").forEach((input) => {
+      input.addEventListener("input", () => {
+        const field = input.dataset.equipmentRentalField;
+        const override = { ...(equipmentState.rentalOverrides.get(rentalKey) || {}) };
+        if (["quantity", "inventory", "missing"].includes(field)) {
+          override[field] = Math.max(0, Number(input.value) || 0);
+        } else {
+          override[field] = input.value;
+        }
+        if (field === "missing") {
+          override.missingManual = true;
+        } else if (["quantity", "inventory"].includes(field) && !override.missingManual) {
+          const currentRentalRow = equipmentRentalRows().find((row) => row.rentalKey === rentalKey);
+          const quantity = field === "quantity" ? override.quantity : currentRentalRow?.quantity;
+          const inventory = field === "inventory" ? override.inventory : currentRentalRow?.inventory;
+          override.missing = Math.max(0, (Number(quantity) || 0) - (Number(inventory) || 0));
+          const missingInput = rowElement.querySelector('[data-equipment-rental-field="missing"]');
+          if (missingInput) missingInput.value = String(override.missing);
+        }
+        equipmentState.rentalOverrides.set(rentalKey, override);
+      });
+    });
+  });
+}
+
 function bindEquipmentInventoryInputs() {
   equipmentQuery("#equipmentInventoryTable")
     ?.querySelectorAll("tr[data-equipment-key]")
@@ -3178,11 +3574,13 @@ function bindEquipmentInventoryInputs() {
       const inventoryInput = row.querySelector(".equipment-inventory-input");
       if (inventoryInput && !inventoryInput.readOnly) {
         inventoryInput.addEventListener("input", (event) => {
+          invalidateEquipmentRentalPreview();
           equipmentState.inventory.set(key, event.target.value);
           row.classList.toggle("equipment-inventory-zero-row", equipmentInventoryNeedsManualEntry(event.target.value));
           renderEquipmentPdfPreview();
         });
         inventoryInput.addEventListener("change", (event) => {
+          invalidateEquipmentRentalPreview();
           equipmentState.inventory.set(key, event.target.value);
           renderEquipmentModule();
         });
@@ -3339,8 +3737,151 @@ function equipmentRentReportValidationMessage() {
   return "";
 }
 
-function previewEquipmentRentReport() {
+function closeEquipmentLogisticsDecision() {
+  const dialog = equipmentQuery("#equipmentLogisticsDialog");
+  equipmentLogisticsDecision = null;
+  if (!dialog) return;
+  if (typeof dialog.close === "function" && dialog.open) dialog.close();
+  else dialog.removeAttribute("open");
+}
+
+function runEquipmentLogisticsDecision(action) {
+  const callback = action === "rent"
+    ? equipmentLogisticsDecision?.onRent
+    : equipmentLogisticsDecision?.onTransfer;
+  closeEquipmentLogisticsDecision();
+  if (typeof callback === "function") callback();
+}
+
+function equipmentLogisticsDecisionMessage(analysis, context = "transfer") {
+  const from = analysis?.from;
+  const to = analysis?.to;
+  const fromDate = equipmentEventReturnDateTime(from);
+  const toDate = equipmentEventSetupDateTimeLabel(to);
+  const fromEventDate = equipmentEventDateLabel(from);
+  const toEventDate = equipmentEventDateLabel(to);
+  const movement = `El equipo utilizado el ${fromEventDate} en ${from?.place || "el evento de origen"} se propone usar el ${toEventDate} en ${to?.place || "el evento de destino"}.`;
+  const timingDetail = `Ingreso del origen: ${fromDate}. Montaje del destino: ${toDate}.`;
+  if (!analysis?.timingKnown) {
+    return {
+      title: "Fechas y horas por confirmar",
+      summary: movement,
+      detail: `${timingDetail} Complete ambos horarios para que la recomendación sea exacta.`,
+      recommendation: "Puede continuar con trasiego o revisar la renta manualmente.",
+      status: "warning"
+    };
+  }
+  if (analysis.overlaps) {
+    return {
+      title: "El equipo aún estará ocupado",
+      summary: movement,
+      detail: `${timingDetail} El montaje del destino comienza ${formatEquipmentMinutes(analysis.rawGapMinutes)} antes del ingreso del equipo del origen.`,
+      recommendation: "La renta aplica por cruce de horarios. También puede forzar el trasiego si confirma otra logística.",
+      status: "danger"
+    };
+  }
+  if (analysis.tight) {
+    return {
+      title: "Tiempo ajustado para trasegar",
+      summary: movement,
+      detail: `${timingDetail} Hay ${formatEquipmentMinutes(analysis.rawGapMinutes)} entre ambos horarios; el margen operativo recomendado es de ${formatEquipmentMinutes(EQUIPMENT_TRANSFER_BUFFER_MINUTES)}.`,
+      recommendation: "Decida si corresponde rentar, trasegar o cancelar.",
+      status: "warning"
+    };
+  }
+  return {
+    title: context === "rent" ? "No aplica renta conjunta por horario" : "Trasiego disponible",
+    summary: movement,
+    detail: `${timingDetail} Hay ${formatEquipmentMinutes(analysis.rawGapMinutes)} entre ambos horarios.`,
+    recommendation: context === "rent"
+      ? "Los eventos no se sumarán entre sí; el reporte conservará únicamente faltantes individuales o simultáneos reales."
+      : "El equipo puede seleccionarse para trasiego sin duplicarlo en la renta.",
+    status: "ok"
+  };
+}
+
+function openEquipmentLogisticsDecision({ from, to, context = "transfer", onRent = null, onTransfer = null } = {}) {
+  const dialog = equipmentQuery("#equipmentLogisticsDialog");
+  if (!dialog || !from || !to) return false;
+  const analysis = equipmentLogisticsPairAnalysis(from, to);
+  const content = equipmentLogisticsDecisionMessage(analysis, context);
+  const title = equipmentQuery("#equipmentLogisticsDialogTitle");
+  const summary = equipmentQuery("#equipmentLogisticsDialogSummary");
+  const detail = equipmentQuery("#equipmentLogisticsDialogDetail");
+  const recommendation = equipmentQuery("#equipmentLogisticsDialogRecommendation");
+  const rentButton = equipmentQuery("#equipmentLogisticsRentButton");
+  const transferButton = equipmentQuery("#equipmentLogisticsTransferButton");
+  if (title) title.textContent = content.title;
+  if (summary) summary.textContent = content.summary;
+  if (detail) detail.textContent = content.detail;
+  if (recommendation) recommendation.textContent = content.recommendation;
+  dialog.dataset.status = content.status;
+  if (rentButton) {
+    rentButton.disabled = typeof onRent !== "function";
+    rentButton.textContent = "Rentar";
+  }
+  if (transferButton) {
+    transferButton.disabled = typeof onTransfer !== "function";
+    transferButton.textContent = analysis.rentApplies ? "Trasegar de todos modos" : "Trasegar";
+  }
+  equipmentLogisticsDecision = { onRent, onTransfer };
+  if (typeof dialog.showModal === "function") dialog.showModal();
+  else dialog.setAttribute("open", "");
+  return true;
+}
+
+function enableEquipmentTransferConfiguration() {
+  equipmentState.summaryTransferEnabled = true;
+  equipmentState.activeWindow = "summary";
+  cleanupEquipmentSummaryTransferRoutes(activeEquipmentEvents());
+  renderEquipmentModule();
+  const selector = equipmentQuery("#equipmentSummaryTransferSelector");
+  if (selector && typeof selector.scrollIntoView === "function") {
+    window.requestAnimationFrame(() => selector.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+}
+
+function requestEquipmentTransferDecision(target = "summary") {
   const status = equipmentQuery("#equipmentSaveStatus");
+  const schedule = equipmentScheduleAnalysis(equipmentState.events);
+  if (schedule.events.length < 2 || !schedule.focusPair) {
+    if (status) status.textContent = "Agregue al menos dos ventanas para configurar un trasiego.";
+    return;
+  }
+  openEquipmentLogisticsDecision({
+    from: schedule.focusPair.from,
+    to: schedule.focusPair.to,
+    context: "transfer",
+    onRent: () => previewEquipmentRentReport({ skipLogisticsDecision: true }),
+    onTransfer: () => {
+      if (target === "preview" && equipmentConfiguredTransferRoutesWithItems().length) {
+        equipmentState.activeWindow = "transfer";
+        renderEquipmentModule();
+        return;
+      }
+      enableEquipmentTransferConfiguration();
+    }
+  });
+}
+
+function previewEquipmentRentReport(options = {}) {
+  const status = equipmentQuery("#equipmentSaveStatus");
+  const skipLogisticsDecision = Boolean(options?.skipLogisticsDecision);
+  const schedule = equipmentScheduleAnalysis(equipmentState.events);
+  if (!skipLogisticsDecision && schedule.events.length > 1 && schedule.focusPair) {
+    const hasRentalRows = equipmentRentalRows().length > 0;
+    openEquipmentLogisticsDecision({
+      from: schedule.focusPair.from,
+      to: schedule.focusPair.to,
+      context: "rent",
+      onRent: hasRentalRows ? () => previewEquipmentRentReport({ skipLogisticsDecision: true }) : null,
+      onTransfer: enableEquipmentTransferConfiguration
+    });
+    if (!hasRentalRows && status) {
+      status.textContent = "No hay faltantes para rentar con el inventario y los horarios actuales.";
+    }
+    return;
+  }
   const validationMessage = equipmentRentReportValidationMessage();
   if (validationMessage) {
     if (status) status.textContent = validationMessage;
@@ -3377,6 +3918,7 @@ function saveCurrentEquipmentWindow() {
     addEquipmentEvent();
     return equipmentState.events.length > previousEventCount;
   }
+  invalidateEquipmentRentalPreview();
   updateEquipmentEventFromCurrent(event);
   if (status) status.textContent = `Ventana actualizada: ${event.place || event.name}`;
   renderEquipmentModule();
@@ -3409,6 +3951,7 @@ function removeEquipmentEventById(eventId) {
   if (index < 0) return;
   const removed = equipmentState.events[index];
   const wasSelected = equipmentState.selectedEventId === eventId;
+  invalidateEquipmentRentalPreview();
   equipmentState.events.splice(index, 1);
   equipmentState.summaryTransferRoutes.forEach((route) => {
     route.eventIds = route.eventIds.filter((routeEventId) => routeEventId !== eventId);
@@ -3443,6 +3986,7 @@ function clearEquipmentWorkingArea() {
   equipmentState.summaryTransferRoutes = [];
   equipmentState.activeSummaryTransferRouteId = "";
   equipmentState.summaryTransferEnabled = false;
+  invalidateEquipmentRentalPreview();
   equipmentState.inventory.clear();
   equipmentState.observations.clear();
   renderEquipmentModule();
@@ -3472,7 +4016,6 @@ function renderEquipmentPdfPreview() {
   if (equipmentQuery("#equipmentPdfEvent")) equipmentQuery("#equipmentPdfEvent").textContent = eventName;
   if (equipmentQuery("#equipmentPdfSetupAt")) equipmentQuery("#equipmentPdfSetupAt").textContent = setupAt;
   if (equipmentQuery("#equipmentPdfDate")) equipmentQuery("#equipmentPdfDate").textContent = date;
-  if (equipmentQuery("#equipmentPdfOutAt")) equipmentQuery("#equipmentPdfOutAt").textContent = eventSummaryDateTimeText(events, "equipmentOutAt");
   if (equipmentQuery("#equipmentPdfInAt")) equipmentQuery("#equipmentPdfInAt").textContent = eventSummaryDateTimeText(events, "equipmentInAt");
 
   const notesEl = equipmentQuery("#equipmentPdfNotes");
@@ -3491,7 +4034,6 @@ function renderEquipmentPdfPreview() {
   if (equipmentQuery("#equipmentRentPdfEvents")) equipmentQuery("#equipmentRentPdfEvents").textContent = rentEventName;
   if (equipmentQuery("#equipmentRentPdfSetupAt")) equipmentQuery("#equipmentRentPdfSetupAt").textContent = rentSetupAt;
   if (equipmentQuery("#equipmentRentPdfDate")) equipmentQuery("#equipmentRentPdfDate").textContent = rentDate;
-  if (equipmentQuery("#equipmentRentPdfOutAt")) equipmentQuery("#equipmentRentPdfOutAt").textContent = eventSummaryDateTimeText(summaryEvents, "equipmentOutAt");
   if (equipmentQuery("#equipmentRentPdfInAt")) equipmentQuery("#equipmentRentPdfInAt").textContent = eventSummaryDateTimeText(summaryEvents, "equipmentInAt");
   const rentNotesEl = equipmentQuery("#equipmentRentPdfNotes");
   if (rentNotesEl) {
@@ -3499,8 +4041,9 @@ function renderEquipmentPdfPreview() {
     rentNotesEl.classList.toggle("is-hidden", !notes);
   }
   if (equipmentQuery("#equipmentRentPdfTable")) {
-    equipmentQuery("#equipmentRentPdfTable").innerHTML = tableForEquipmentRentalReport(rentalRows);
+    equipmentQuery("#equipmentRentPdfTable").innerHTML = tableForEquipmentRentalReport(rentalRows, true);
   }
+  bindEquipmentRentalReportInputs();
 }
 
 function renderEquipmentModule() {
@@ -3568,7 +4111,18 @@ async function equipmentPdfHtml(documentSelector = "#equipmentPdfDocument", titl
     fetch("styles.css", { credentials: "same-origin" }).then((response) => response.text()),
     equipmentPdfLogoSource()
   ]);
-  const sourceHtml = equipmentQuery(documentSelector)?.outerHTML || "";
+  const sourceElement = equipmentQuery(documentSelector);
+  const sourceClone = sourceElement?.cloneNode(true) || null;
+  sourceClone?.querySelectorAll("input, textarea, select").forEach((control) => {
+    const value = control.tagName === "SELECT"
+      ? control.selectedOptions?.[0]?.textContent || ""
+      : control.value;
+    const replacement = document.createElement("span");
+    replacement.className = "equipment-pdf-control-value";
+    replacement.textContent = value;
+    control.replaceWith(replacement);
+  });
+  const sourceHtml = sourceClone?.outerHTML || "";
   const documentHtml = equipmentHtmlWithPdfAssets(sourceHtml, logoSource);
   return `<!doctype html>
 <html lang="es">
@@ -3735,7 +4289,7 @@ function equipmentWarehouseDispatchPayload(event) {
     setupAt: equipmentEventSetupAt(event),
     planner: "",
     eventDate: event.date || "",
-    equipmentOutAt: event.equipmentOutAt || "",
+    equipmentOutAt: equipmentEventSetupAt(event),
     equipmentInAt: event.equipmentInAt || "",
     responsible: event.responsible && event.responsible !== "Por definir" ? event.responsible : "",
     items: equipmentWarehouseDispatchItems(event)
@@ -3749,7 +4303,7 @@ function equipmentEditablePayload(mode = "full", savedData = {}) {
     : [currentEvent];
   return {
     type: "live-productions-equipment-requirement",
-    version: 4,
+    version: 5,
     mode,
     savedAt: new Date().toISOString(),
     fileName: savedData.fileName || equipmentPdfFileName(mode),
@@ -3765,7 +4319,8 @@ function equipmentEditablePayload(mode = "full", savedData = {}) {
     summaryTransferEnabled: equipmentState.summaryTransferEnabled,
     summaryTransferRoutes: equipmentState.summaryTransferRoutes.map((route) => ({
       id: route.id,
-      eventIds: [...route.eventIds]
+      eventIds: [...route.eventIds],
+      legSelections: normalizeEquipmentTransferLegSelections(route.legSelections)
     })),
     activeSummaryTransferRouteId: equipmentState.activeSummaryTransferRouteId,
     summaryTransferEventIds: [...(equipmentState.summaryTransferRoutes[0]?.eventIds || [])],
@@ -4106,10 +4661,27 @@ function importEquipmentEditablePayload(payload) {
     .map((eventId) => idMap.get(String(eventId)) || String(eventId || ""))
     .filter((eventId) => availableIds.has(eventId));
   let restoredTransferRoutes = Array.isArray(payload.summaryTransferRoutes)
-    ? payload.summaryTransferRoutes.map((route) => createEquipmentSummaryTransferRoute(
-        mapRestoredTransferIds(route?.eventIds),
-        String(route?.id || "")
-      ))
+    ? payload.summaryTransferRoutes.map((route) => {
+        const originalEventIds = (Array.isArray(route?.eventIds) ? route.eventIds : []).map(String);
+        const restoredEventIds = mapRestoredTransferIds(originalEventIds);
+        const restoredLegSelections = {};
+        originalEventIds.slice(0, -1).forEach((fromId, index) => {
+          const toId = originalEventIds[index + 1];
+          const restoredFromId = idMap.get(fromId) || fromId;
+          const restoredToId = idMap.get(toId) || toId;
+          const selections = normalizeEquipmentTransferLegSelections(route?.legSelections)?.[
+            equipmentTransferLegKey(fromId, toId)
+          ] || [];
+          if (selections.length) {
+            restoredLegSelections[equipmentTransferLegKey(restoredFromId, restoredToId)] = selections;
+          }
+        });
+        return createEquipmentSummaryTransferRoute(
+          restoredEventIds,
+          String(route?.id || ""),
+          restoredLegSelections
+        );
+      })
     : [];
   if (!restoredTransferRoutes.length) {
     const legacyTransferIds = mapRestoredTransferIds(payload.summaryTransferEventIds);
@@ -4118,6 +4690,7 @@ function importEquipmentEditablePayload(payload) {
     }
   }
   equipmentState.events = events;
+  invalidateEquipmentRentalPreview();
   equipmentState.inventory = equipmentSimpleEntriesToMap(payload.inventory);
   equipmentState.observations = equipmentSimpleEntriesToMap(payload.observations);
   equipmentState.summaryTransferRoutes = restoredTransferRoutes;
@@ -4174,7 +4747,6 @@ function initEquipmentModule() {
     "#equipmentEventName",
     "#equipmentEventSetupAt",
     "#equipmentEventDate",
-    "#equipmentEventOutAt",
     "#equipmentEventInAt",
     "#equipmentEventResponsible",
     "#equipmentNotes"
@@ -4219,14 +4791,7 @@ function initEquipmentModule() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && equipmentCatalogEditorState.open) closeEquipmentCatalogEditor();
   });
-  equipmentQuery("#equipmentSummaryTransferButton")?.addEventListener("click", () => {
-    equipmentState.summaryTransferEnabled = !equipmentState.summaryTransferEnabled;
-    if (equipmentState.summaryTransferEnabled) {
-      equipmentState.activeWindow = "summary";
-      cleanupEquipmentSummaryTransferRoutes(activeEquipmentEvents());
-    }
-    renderEquipmentModule();
-  });
+  equipmentQuery("#equipmentSummaryTransferButton")?.addEventListener("click", () => requestEquipmentTransferDecision("summary"));
   equipmentQuery("#equipmentSummarySearch")?.addEventListener("input", (event) => {
     equipmentState.summarySearchTerm = event.target.value || "";
     renderEquipmentModule();
@@ -4235,10 +4800,18 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentEditableFileInput")?.addEventListener("change", openEquipmentEditableFile);
   equipmentQuery("#equipmentReviewWindowButton")?.addEventListener("click", () => switchEquipmentWindow("review"));
   equipmentQuery("#equipmentSummaryWindowButton")?.addEventListener("click", () => switchEquipmentWindow("summary"));
-  equipmentQuery("#equipmentTransferWindowButton")?.addEventListener("click", () => switchEquipmentWindow("transfer"));
+  equipmentQuery("#equipmentTransferWindowButton")?.addEventListener("click", () => requestEquipmentTransferDecision("preview"));
   equipmentQuery("#equipmentRemoveWindowButton")?.addEventListener("click", removeEquipmentActiveWindow);
   equipmentQuery("#equipmentClearAllButton")?.addEventListener("click", clearEquipmentWorkingArea);
   equipmentQuery("#equipmentUndoDeleteButton")?.addEventListener("click", restoreLastDeletedEquipment);
+  equipmentQuery("#equipmentLogisticsCloseButton")?.addEventListener("click", closeEquipmentLogisticsDecision);
+  equipmentQuery("#equipmentLogisticsCancelButton")?.addEventListener("click", closeEquipmentLogisticsDecision);
+  equipmentQuery("#equipmentLogisticsRentButton")?.addEventListener("click", () => runEquipmentLogisticsDecision("rent"));
+  equipmentQuery("#equipmentLogisticsTransferButton")?.addEventListener("click", () => runEquipmentLogisticsDecision("transfer"));
+  equipmentQuery("#equipmentLogisticsDialog")?.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeEquipmentLogisticsDecision();
+  });
   initEquipmentCatalogSync();
   renderEquipmentModule();
   if (typeof window.requestAnimationFrame === "function") {
