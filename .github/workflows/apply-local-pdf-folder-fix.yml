@@ -1,0 +1,47 @@
+name: Apply local PDF folder fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-local-pdf-folder-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch Cotizador local PDF folder compatibility
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'app.js';
+          let source = fs.readFileSync(path, 'utf8');
+          const oldFn = `function isPreferredLocalPdfFolderName(folderName) {
+            return normalizedSearchText(folderName) === normalizedSearchText(preferredLocalPdfFolderName);
+          }`;
+          const newFn = `function isPreferredLocalPdfFolderName(folderName) {
+            const normalizedFolderName = normalizedSearchText(folderName);
+            return ["Cotizaciones liveproductionsgt", "Cotizaciones Live Productions"].some(
+              (acceptedName) => normalizedFolderName === normalizedSearchText(acceptedName)
+            );
+          }`;
+          if (!source.includes(oldFn)) throw new Error('No se encontró la función esperada; se aborta sin modificar nada.');
+          source = source.replace(oldFn, newFn);
+          fs.writeFileSync(path, source);
+          NODE
+          node --check app.js
+      - name: Commit application change and remove helper workflow
+        run: |
+          git config user.name "Live Productions"
+          git config user.email "liveproductionsgt@gmail.com"
+          git add app.js
+          git rm .github/workflows/apply-local-pdf-folder-fix.yml
+          test "$(git diff --cached --name-only | sort | tr '\n' ' ')" = ".github/workflows/apply-local-pdf-folder-fix.yml app.js "
+          git commit -m "Corregir guardado local de cotizaciones"
+          git push origin main
