@@ -2314,7 +2314,10 @@ function setLocalFolderStatus(message, type = "") {
 }
 
 function isPreferredLocalPdfFolderName(folderName) {
-  return normalizedSearchText(folderName) === normalizedSearchText(preferredLocalPdfFolderName);
+  const normalizedFolderName = normalizedSearchText(folderName);
+  return ["Cotizaciones liveproductionsgt", "Cotizaciones Live Productions"].some(
+    (acceptedName) => normalizedFolderName === normalizedSearchText(acceptedName)
+  );
 }
 
 function absoluteAppUrl(pathOrUrl) {
