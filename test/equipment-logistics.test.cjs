@@ -144,7 +144,7 @@ test("route cleanup keeps manual selections made through an active route referen
   ]);
 });
 
-test("logistics decision names both event dates and exact operational times", () => {
+test("same-day logistics decision recommends transfer and names exact times", () => {
   const context = createEquipmentContext();
   const message = evaluate(context, `(() => {
     const origin = {
@@ -170,5 +170,96 @@ test("logistics decision names both event dates and exact operational times", ()
   assert.match(message.summary, /12\/09\/2026/);
   assert.match(message.detail, /12\/09\/2026 · 03:00/);
   assert.match(message.detail, /12\/09\/2026 · 04:00/);
-  assert.equal(message.title, "Tiempo ajustado para trasegar");
+  assert.equal(message.title, "Se recomienda trasegar");
+  assert.match(message.detail, /FALTA TIEMPO/);
+  assert.match(message.recommendation, /SE RECOMIENDA TRASEGAR/);
+});
+
+test("event date must stay inside setup and warehouse-return dates", () => {
+  const context = createEquipmentContext();
+  const result = evaluate(context, `(() => ({
+    before: equipmentEventTimelineValidation({
+      setupAt: "2026-09-18T08:00",
+      date: "2026-09-17",
+      equipmentInAt: "2026-09-20T02:00"
+    }, { requireComplete: true }),
+    inside: equipmentEventTimelineValidation({
+      setupAt: "2026-09-18T08:00",
+      date: "2026-09-19",
+      equipmentInAt: "2026-09-20T02:00"
+    }, { requireComplete: true })
+  }))()`);
+  assert.equal(result.before.valid, false);
+  assert.equal(result.before.code, "event-outside-operation-range");
+  assert.match(result.before.summary, /FUERA DE LAS FECHAS ESTABLECIDAS/);
+  assert.equal(result.inside.valid, true);
+});
+
+test("warehouse return cannot be earlier than setup", () => {
+  const context = createEquipmentContext();
+  const result = evaluate(context, `equipmentEventTimelineValidation({
+    setupAt: "2026-09-18T08:00",
+    date: "2026-09-18",
+    equipmentInAt: "2026-09-18T07:00"
+  }, { requireComplete: true })`);
+  assert.equal(result.valid, false);
+  assert.equal(result.code, "return-before-setup");
+});
+
+test("same-day warehouse return is flagged even with more than two hours", () => {
+  const context = createEquipmentContext();
+  const analysis = evaluate(context, `equipmentLogisticsPairAnalysis(
+    { id: "a", setupAt: "2026-09-18T08:00", date: "2026-09-18", equipmentInAt: "2026-09-19T01:00" },
+    { id: "b", setupAt: "2026-09-19T08:00", date: "2026-09-19", equipmentInAt: "2026-09-20T01:00" }
+  )`);
+  assert.equal(analysis.sameDayTurnaround, true);
+  assert.equal(analysis.rentApplies, false);
+});
+
+test("a short turnaround across midnight still triggers the automatic logistics decision", () => {
+  const context = createEquipmentContext();
+  const result = evaluate(context, `(() => {
+    equipmentState.events = [
+      { id: "a", active: true, setupAt: "2026-09-18T08:00", date: "2026-09-18", equipmentInAt: "2026-09-18T23:30" },
+      { id: "b", active: true, setupAt: "2026-09-19T00:30", date: "2026-09-19", equipmentInAt: "2026-09-20T01:00" }
+    ];
+    const pair = equipmentAutomaticLogisticsPair("b");
+    return {
+      from: pair?.from?.id || "",
+      to: pair?.to?.id || "",
+      tight: Boolean(pair?.tight),
+      sameDay: Boolean(pair?.sameDayTurnaround)
+    };
+  })()`);
+  assert.equal(result.from, "a");
+  assert.equal(result.to, "b");
+  assert.equal(result.tight, true);
+  assert.equal(result.sameDay, false);
+});
+
+test("configured transfer pair is recognized without asking the decision again", () => {
+  const context = createEquipmentContext();
+  const result = evaluate(context, `(() => {
+    const events = [
+      { id: "a", active: true },
+      { id: "b", active: true },
+      { id: "c", active: true }
+    ];
+    equipmentState.events = events;
+    equipmentState.summaryTransferEnabled = true;
+    equipmentState.summaryTransferRoutes = [
+      createEquipmentSummaryTransferRoute(["a", "b"], "route-1"),
+      createEquipmentSummaryTransferRoute(["a", "c"], "route-2")
+    ];
+    return {
+      first: equipmentPairHasConfiguredTransfer(events[0], events[1], events),
+      second: equipmentPairHasConfiguredTransfer(events[0], events[2], events),
+      unrelated: equipmentPairHasConfiguredTransfer(events[1], events[2], events),
+      routeCount: equipmentSummaryTransferRoutesWithEvents(events, true).length
+    };
+  })()`);
+  assert.equal(result.first, true);
+  assert.equal(result.second, true);
+  assert.equal(result.unrelated, false);
+  assert.equal(result.routeCount, 2);
 });
