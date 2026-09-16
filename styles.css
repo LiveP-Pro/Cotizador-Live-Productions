@@ -472,6 +472,21 @@ body {
   cursor: pointer;
 }
 
+.equipment-event-actions .equipment-save-window-button {
+  background: #17633a;
+  border-color: #17633a;
+}
+
+.equipment-event-actions button:disabled {
+  cursor: not-allowed;
+  opacity: .42;
+}
+
+.equipment-module-card input[aria-invalid="true"] {
+  border-color: #b3261e;
+  box-shadow: 0 0 0 3px rgb(179 38 30 / 14%);
+}
+
 .equipment-manual-item-form {
   margin-top: 14px;
 }
@@ -1530,9 +1545,23 @@ body {
   overflow-x: auto;
 }
 
+.equipment-transfer-selected-list > strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.equipment-transfer-selected-list > p {
+  margin: 0 0 9px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .equipment-transfer-selected-list table {
   width: 100%;
-  min-width: 680px;
+  min-width: 860px;
   table-layout: fixed;
   border-collapse: collapse;
 }
@@ -1555,18 +1584,18 @@ body {
 
 .equipment-transfer-selected-list th:first-child,
 .equipment-transfer-selected-list td:first-child {
+  width: 76px;
+  text-align: center;
+}
+
+.equipment-transfer-selected-list th:nth-child(2),
+.equipment-transfer-selected-list td:nth-child(2) {
   width: 110px;
 }
 
-.equipment-transfer-selected-list th:nth-child(3),
-.equipment-transfer-selected-list td:nth-child(3) {
-  width: 190px;
-}
-
-.equipment-transfer-selected-list th:last-child,
-.equipment-transfer-selected-list td:last-child {
-  width: 74px;
-  text-align: center;
+.equipment-transfer-selected-list th:nth-child(4),
+.equipment-transfer-selected-list td:nth-child(4) {
+  width: 230px;
 }
 
 .equipment-transfer-selected-quantity {
@@ -1578,6 +1607,30 @@ body {
   font: inherit;
   font-weight: 900;
   text-align: center;
+}
+
+.equipment-transfer-selected-toggle {
+  width: 22px !important;
+  min-height: 22px !important;
+  margin: 0;
+  accent-color: #17633a;
+  cursor: pointer;
+}
+
+.equipment-transfer-selected-destination {
+  display: grid;
+  gap: 2px;
+}
+
+.equipment-transfer-selected-destination strong,
+.equipment-transfer-selected-destination small {
+  overflow-wrap: anywhere;
+}
+
+.equipment-transfer-selected-destination small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .equipment-transfer-selected-list button {
@@ -2772,6 +2825,10 @@ body {
 }
 
 .equipment-transfer-items-table .equipment-transfer-category-column {
+  width: 20%;
+}
+
+.equipment-transfer-items-table .equipment-transfer-destination-column {
   width: 24%;
 }
 
@@ -6280,15 +6337,6 @@ body.pdf-export .additional-services-section {
 .equipment-window-sidebar .equipment-event-card-actions .equipment-event-remove-button {
   color: #8d1f18;
   border-color: #d7aaa5;
-}
-
-.equipment-window-sidebar .equipment-event-card-actions .equipment-event-save-button {
-  width: 72px;
-  min-width: 72px;
-  color: #ffffff;
-  background: #17633a;
-  border-color: #17633a;
-  font-size: 11px;
 }
 
 @media (max-width: 900px) {
