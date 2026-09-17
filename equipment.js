@@ -108,6 +108,22 @@ function equipmentInventoryCanonicalKey(value) {
   return equipmentInventoryAliases[key] || key;
 }
 
+function equipmentDescriptionEndsWithConsumable(value) {
+  return /(?:^|\s)consumible$/.test(normalizeEquipmentKey(value));
+}
+
+function equipmentRowIsConsumable(row) {
+  return [
+    row?.inventorySourceItem?.description,
+    row?.description,
+    row?.key
+  ].some(equipmentDescriptionEndsWithConsumable);
+}
+
+function equipmentProcurementActionFor(row) {
+  return equipmentRowIsConsumable(row) ? "COMPRA" : "RENTA";
+}
+
 function cleanEquipmentFilePart(value, fallback) {
   const clean = String(value || fallback || "equipo")
     .replace(/[\\/:*?"<>|]/g, "")
@@ -510,6 +526,15 @@ function equipmentTransferInboundStats(row, eventId, transferRoutes) {
 }
 
 function equipmentPeakRequiredQuantity(row, events, transferRoutes = [], applyTransfers = true) {
+  if (equipmentRowIsConsumable(row)) {
+    return {
+      quantity: events.reduce(
+        (total, event) => total + Math.max(0, Number(row.eventQuantities.get(event.id)) || 0),
+        0
+      ),
+      appliedRouteIds: new Set()
+    };
+  }
   const points = [];
   let quantityWithoutDates = 0;
   const appliedRouteIds = new Set();
@@ -1341,7 +1366,7 @@ function equipmentTransferredItemsBetweenEvents(from, to, comparisonRows = equip
         quantity: Math.min(fromQuantity, toQuantity)
       };
     })
-    .filter((item) => item.quantity > 0);
+    .filter((item) => item.quantity > 0 && !equipmentRowIsConsumable(item));
 }
 
 function equipmentSelectedTransferredItemsBetweenEvents(route, from, to, candidates = null) {
@@ -1808,7 +1833,7 @@ function bindEquipmentSummaryTransferSelector() {
     });
   });
   host.querySelectorAll("[data-equipment-transfer-selected-quantity]").forEach((input) => {
-    input.addEventListener("change", () => {
+    const updateSelectedTransferQuantity = (rerender) => {
       const route = equipmentActiveSummaryTransferRoute();
       const [fromId, toId] = String(input.dataset.equipmentTransferLegKey || "").split("::");
       const events = activeEquipmentEvents();
@@ -1824,8 +1849,11 @@ function bindEquipmentSummaryTransferSelector() {
       invalidateEquipmentRentalPreview();
       item.quantity = Math.min(candidate.quantity, Math.max(1, Math.floor(Number(input.value) || 1)));
       equipmentSetTransferLegSelections(route, from, to, selected);
-      renderEquipmentModule();
-    });
+      if (rerender) renderEquipmentModule();
+      else renderEquipmentPdfPreview();
+    };
+    input.addEventListener("input", () => updateSelectedTransferQuantity(false));
+    input.addEventListener("change", () => updateSelectedTransferQuantity(true));
   });
   host.querySelectorAll("[data-equipment-transfer-toggle-item]").forEach((input) => {
     input.addEventListener("change", () => {
@@ -3448,6 +3476,7 @@ function tableForEquipmentInventory(rows, editable = true) {
       const required = Number(row.quantity) || 0;
       const availableAfterRequirement = availableInventory - required;
       const needsRent = availableAfterRequirement < 0;
+      const procurementAction = equipmentProcurementActionFor(row);
       const warehouseRecord = equipmentWarehouseInventoryRecordFor(row);
       const zeroInventory = !warehouseRecord && equipmentInventoryNeedsManualEntry(inventory);
       const shortageClass = needsRent ? "equipment-shortage-cell" : "equipment-rest-ok";
@@ -3455,11 +3484,13 @@ function tableForEquipmentInventory(rows, editable = true) {
       const multipleTransfers = (Number(row.transferRouteCount) || 0) > 1;
       const transferLabel = multipleTransfers ? "TRASIEGO MÚLTIPLE" : "TRASIEGO";
       const actionLabel = needsRent
-        ? (transferApplied ? `RENTA + ${transferLabel}` : "RENTA")
+        ? (transferApplied ? `${procurementAction} + ${transferLabel}` : procurementAction)
         : transferApplied
           ? "EQUIPO TRASEGADO NO GENERA RENTA"
           : "";
-      const actionClass = needsRent ? "equipment-action-rent" : transferApplied ? "equipment-action-transfer" : "equipment-action-empty";
+      const actionClass = needsRent
+        ? procurementAction === "COMPRA" ? "equipment-action-buy" : "equipment-action-rent"
+        : transferApplied ? "equipment-action-transfer" : "equipment-action-empty";
       const observation = equipmentState.observations.get(row.key) || "";
       const automaticObservation = equipmentInventoryAutomaticObservationFor(row);
       const combinedObservation = equipmentInventoryCombinedObservationFor(row);
@@ -3613,14 +3644,16 @@ function equipmentRentalRows() {
       const missing = override.missingManual
         ? Math.max(0, Number(override.missing) || 0)
         : calculatedMissing;
+      const description = Object.hasOwn(override, "description") ? String(override.description || "") : row.description;
       return {
         ...row,
         rentalKey,
-        description: Object.hasOwn(override, "description") ? String(override.description || "") : row.description,
+        description,
         eventDetails: Object.hasOwn(override, "eventDetails") ? String(override.eventDetails || "") : row.eventDetails,
         quantity,
         inventory,
         missing,
+        action: equipmentProcurementActionFor({ ...row, description }),
         observation: Object.hasOwn(override, "observation") ? String(override.observation || "") : row.observation
       };
     })
@@ -3629,7 +3662,7 @@ function equipmentRentalRows() {
 
 function tableForEquipmentRentalReport(rows, editable = false) {
   if (!rows.length) {
-    return `<p class="equipment-empty">No hay equipo para renta con el inventario actual.</p>`;
+    return `<p class="equipment-empty">No hay equipo faltante para renta o compra con el inventario actual.</p>`;
   }
   const body = rows
     .map(
@@ -3640,6 +3673,7 @@ function tableForEquipmentRentalReport(rows, editable = false) {
           <td class="equipment-qty">${editable ? `<input class="equipment-rental-edit-input" data-equipment-rental-field="quantity" type="number" min="0" step="1" value="${escapeEquipmentHtml(row.quantity)}" />` : escapeEquipmentHtml(row.quantity)}</td>
           <td class="equipment-qty">${editable ? `<input class="equipment-rental-edit-input" data-equipment-rental-field="inventory" type="number" min="0" step="1" value="${escapeEquipmentHtml(row.inventory)}" />` : escapeEquipmentHtml(row.inventory)}</td>
           <td class="equipment-rent-needed">${editable ? `<input class="equipment-rental-edit-input equipment-rental-missing-input" data-equipment-rental-field="missing" type="number" min="0" step="1" value="${escapeEquipmentHtml(row.missing)}" />` : escapeEquipmentHtml(row.missing)}</td>
+          <td class="${row.action === "COMPRA" ? "equipment-action-buy" : "equipment-action-rent"}">${escapeEquipmentHtml(row.action || "RENTA")}</td>
           <td>${editable ? `<textarea class="equipment-rental-edit-input" data-equipment-rental-field="observation" rows="2">${escapeEquipmentHtml(row.observation)}</textarea>` : escapeEquipmentHtml(row.observation)}</td>
         </tr>`
     )
@@ -3652,7 +3686,8 @@ function tableForEquipmentRentalReport(rows, editable = false) {
           <th>Eventos</th>
           <th>Total requerido</th>
           <th>Inventario disponible</th>
-          <th>Equipo para renta</th>
+          <th>Cantidad faltante</th>
+          <th>Acción</th>
           <th>Observaciones</th>
         </tr>
       </thead>
@@ -3903,7 +3938,7 @@ function equipmentRentReportValidationMessage() {
     return "Agregue al menos una ventana con equipo antes de generar el resumen.";
   }
   if (!equipmentRentalRows().length) {
-    return "No hay equipo para rentar con el inventario actual.";
+    return "No hay equipo para rentar o comprar con el inventario actual.";
   }
   return "";
 }
@@ -4150,7 +4185,7 @@ function previewEquipmentRentReport(options = {}) {
       onTransfer: enableEquipmentTransferConfiguration
     });
     if (!hasRentalRows && status) {
-      status.textContent = "No hay faltantes para rentar con el inventario y los horarios actuales.";
+      status.textContent = "No hay faltantes para rentar o comprar con el inventario y los horarios actuales.";
     }
     return;
   }

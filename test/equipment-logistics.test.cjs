@@ -65,6 +65,69 @@ test("separated events reuse equipment instead of adding both quantities", () =>
   assert.equal(quantity, 5);
 });
 
+test("consumables accumulate across events and are classified for purchase", () => {
+  const context = createEquipmentContext();
+  const result = evaluate(context, `(() => {
+    const events = [
+      { id: "a", setupAt: "2026-09-07T08:00", date: "2026-09-07", equipmentInAt: "2026-09-07T22:00" },
+      { id: "b", setupAt: "2026-09-12T08:00", date: "2026-09-12", equipmentInAt: "2026-09-12T22:00" }
+    ];
+    const row = {
+      key: "cinta",
+      description: "Cinta gaffer CONSUMIBLE.",
+      inventorySourceItem: { description: "Cinta gaffer" },
+      eventQuantities: new Map([["a", 5], ["b", 5]])
+    };
+    const route = createEquipmentSummaryTransferRoute(["a", "b"], "route-consumible", {
+      "a::b": [{ identity: "cinta gaffer consumible", quantity: 5 }]
+    });
+    return {
+      quantity: equipmentPeakRequiredQuantity(row, events, [{ route, events }], true).quantity,
+      action: equipmentProcurementActionFor(row),
+      isConsumable: equipmentDescriptionEndsWithConsumable(row.description)
+    };
+  })()`);
+  assert.equal(result.quantity, 10);
+  assert.equal(result.action, "COMPRA");
+  assert.equal(result.isConsumable, true);
+});
+
+test("consumables are excluded from transfer candidates", () => {
+  const context = createEquipmentContext();
+  const result = evaluate(context, `(() => {
+    const from = { id: "a" };
+    const to = { id: "b" };
+    const rows = [
+      {
+        identity: "cinta consumible",
+        description: "Cinta consumible",
+        categoryTitle: "Consumibles",
+        eventQuantities: new Map([["a", 4], ["b", 4]])
+      },
+      {
+        identity: "luz led",
+        description: "Luz LED",
+        categoryTitle: "Iluminación",
+        eventQuantities: new Map([["a", 2], ["b", 2]])
+      }
+    ];
+    return equipmentTransferredItemsBetweenEvents(from, to, rows).map((item) => item.description);
+  })()`);
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), ["Luz LED"]);
+});
+
+test("shortage report shows purchase and rent actions without merging different equipment", () => {
+  const context = createEquipmentContext();
+  const html = evaluate(context, `tableForEquipmentRentalReport([
+    { rentalKey: "cinta", description: "Cinta consumible", eventDetails: "A: 4", quantity: 4, inventory: 0, missing: 4, action: "COMPRA", observation: "" },
+    { rentalKey: "luz", description: "Luz LED", eventDetails: "A: 2", quantity: 2, inventory: 0, missing: 2, action: "RENTA", observation: "" }
+  ], false)`);
+  assert.match(html, /COMPRA/);
+  assert.match(html, /RENTA/);
+  assert.match(html, /Cantidad faltante/);
+  assert.match(html, /Acción/);
+});
+
 test("simultaneous events add their equipment requirements", () => {
   const context = createEquipmentContext();
   const quantity = evaluate(context, `

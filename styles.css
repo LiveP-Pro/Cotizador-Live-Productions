@@ -2084,6 +2084,7 @@ body {
 .equipment-required-total,
 .equipment-shortage-cell,
 .equipment-action-rent,
+.equipment-action-buy,
 .equipment-action-empty {
   font-weight: 900;
   text-align: center;
@@ -2097,6 +2098,13 @@ body {
 .equipment-action-rent {
   color: var(--ink);
   background: #ffffff;
+}
+
+.equipment-action-buy {
+  color: #ffffff;
+  background: #1769aa;
+  font-weight: 950;
+  text-align: center;
 }
 
 
@@ -2181,6 +2189,7 @@ body {
 .equipment-inventory-table .equipment-shortage-cell,
 .equipment-inventory-table .equipment-rest-ok,
 .equipment-inventory-table .equipment-action-rent,
+.equipment-inventory-table .equipment-action-buy,
 .equipment-inventory-table .equipment-action-empty {
   font-size: 18px;
   font-weight: 950;
@@ -2189,6 +2198,7 @@ body {
 }
 
 .equipment-inventory-table .equipment-action-rent,
+.equipment-inventory-table .equipment-action-buy,
 .equipment-inventory-table .equipment-action-transfer,
 .equipment-inventory-table .equipment-action-empty {
   white-space: normal;
