@@ -1,0 +1,230 @@
+name: Corregir ACCION TRASIEGO automatico
+on:
+  push:
+    branches: [codex/requerimiento-trasiegos-20260923]
+    paths: [.github/workflows/resumen-automatico-validation.yml]
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Aplicar correccion revisada sobre archivos exactos
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess, json
+          expected = {'equipment.js': '6879f4471db60d1973db66827a444b84ac39cacc', 'test/equipment-logistics.test.cjs': '408bd428744f1cb07e0ce89f871de4020a51e358', 'index.html': '868ccff3758c674a0d4364c6bad28c76ff635240'}
+          for name, sha in expected.items():
+              actual = subprocess.check_output(["git", "hash-object", name], text=True).strip()
+              assert actual == sha, f"Concurrent change in {name}: {actual}"
+          p = Path("equipment.js")
+          s = p.read_text()
+          replacements = json.loads(r'''[["  summaryTransferEnabled: false,\n", "  summaryTransferEnabled: false,\n  summaryTransferAutomatic: true,\n", 1], ["function createEquipmentSummaryTransferRoute(eventIds = [], routeId = \"\", legSelections = {}, legOptions = {}) {", "function createEquipmentSummaryTransferRoute(eventIds = [], routeId = \"\", legSelections = {}, legOptions = {}, automatic = false) {", 1], ["    legOptions: normalizeEquipmentTransferLegOptions(legOptions)\n", "    legOptions: normalizeEquipmentTransferLegOptions(legOptions),\n    automatic: automatic === true\n", 1], ["function cleanupEquipmentSummaryTransferRoutes(events = activeEquipmentEvents()) {", "// Build the plan while calculating the summary, not only after the transfer\n// editor has been opened. Keep route objects (including explicit [] selections)\n// when dates temporarily become incompatible, so a redraw never undoes a click.\nfunction syncEquipmentAutomaticTransferRoutes(events, comparisonRows) {\n  if (equipmentState.summaryTransferAutomatic === false) return;\n  const previous = equipmentState.summaryTransferRoutes;\n  if (previous.some((route) => !route.automatic && route.eventIds.length)) return;\n  const eventIds = new Set(events.map((event) => event.id));\n  const routes = previous.filter((route) => route.automatic\n    && route.eventIds.length === 2 && route.eventIds.every((id) => eventIds.has(id)));\n  routes.forEach((route) => { route.automaticActive = false; });\n  const ordered = sortEquipmentEventsByDate(events);\n  ordered.slice(0, -1).forEach((from, index) => {\n    const to = ordered[index + 1];\n    if (![from, to].every((event) => equipmentEventTimelineValidation(event, { requireComplete: true }).valid)) return;\n    const timing = equipmentLogisticsPairAnalysis(from, to);\n    // Do not silently approve simultaneous events, unknown times or a turnaround\n    // shorter than the existing two-hour rule. These retain the manual decision.\n    if (!timing.timingKnown || timing.rentApplies) return;\n    if (!equipmentTransferredItemsBetweenEvents(from, to, comparisonRows).length) return;\n    let route = routes.find((item) => item.eventIds[0] === from.id && item.eventIds[1] === to.id);\n    if (!route) {\n      route = createEquipmentSummaryTransferRoute([from.id, to.id], \"\", {}, {}, true);\n      routes.push(route);\n    }\n    route.automaticActive = true;\n  });\n  equipmentState.summaryTransferRoutes = routes;\n  const activeRoutes = routes.filter((route) => route.automaticActive);\n  equipmentState.summaryTransferEnabled = activeRoutes.length > 0;\n  if (!activeRoutes.some((route) => route.id === equipmentState.activeSummaryTransferRouteId)) {\n    equipmentState.activeSummaryTransferRouteId = activeRoutes[0]?.id || \"\";\n  }\n}\n\nfunction cleanupEquipmentSummaryTransferRoutes(events = activeEquipmentEvents()) {", 1], ["  return equipmentState.summaryTransferRoutes.find(\n    (route) => route.id === equipmentState.activeSummaryTransferRouteId\n  ) || equipmentState.summaryTransferRoutes[0] || null;", "  const routes = equipmentState.summaryTransferRoutes.filter((route) => route.automaticActive !== false);\n  return routes.find((route) => route.id === equipmentState.activeSummaryTransferRouteId) || routes[0] || null;", 1], ["  return equipmentState.summaryTransferRoutes\n    .map((route, index) => ({", "  return equipmentState.summaryTransferRoutes\n    .filter((route) => route.automaticActive !== false)\n    .map((route, index) => ({", 1], ["  let quantity = 0;\n  const routeIds = new Set();", "  let quantity = 0;\n  let adjustmentQuantity = 0;\n  const routeIds = new Set();", 1], ["      quantity += selectedQuantity;\n      routeIds.add(route.id);", "      quantity += selectedQuantity;\n      // Automatic routes follow non-overlapping schedules. Reuse is already\n      // included in the peak calculation; subtracting it again hides shortages.\n      if (!route.automatic) adjustmentQuantity += selectedQuantity;\n      routeIds.add(route.id);", 1], ["  return { quantity, routeIds };", "  return { quantity, adjustmentQuantity, routeIds };", 1], ["      : { quantity: 0, routeIds: new Set() };\n    const effectiveQuantity = Math.max(0, eventQuantity - inbound.quantity);\n    if (effectiveQuantity < eventQuantity) inbound.routeIds.forEach((routeId) => appliedRouteIds.add(routeId));", "      : { quantity: 0, adjustmentQuantity: 0, routeIds: new Set() };\n    const effectiveQuantity = Math.max(0, eventQuantity - inbound.adjustmentQuantity);\n    if (inbound.quantity > 0) inbound.routeIds.forEach((routeId) => appliedRouteIds.add(routeId));", 1], ["  const transferRoutes = equipmentState.summaryTransferEnabled\n    ? equipmentEffectiveTransferRoutes(equipmentSummaryTransferRoutesWithEvents(events, true), equipmentTransferComparisonRows(itemRows))", "  const comparisonRows = equipmentTransferComparisonRows(itemRows);\n  syncEquipmentAutomaticTransferRoutes(events, comparisonRows);\n  const transferRoutes = equipmentState.summaryTransferEnabled\n    ? equipmentEffectiveTransferRoutes(equipmentSummaryTransferRoutesWithEvents(events, true), comparisonRows)", 1], ["function equipmentTransferPlanData() {\n  const events = sortEquipmentEventsByDate(equipmentState.events);", "function equipmentTransferPlanData() {\n  // This also initializes automatic routes when the PDF/editor is requested first.\n  const comparisonRows = equipmentTransferComparisonRows();\n  const events = sortEquipmentEventsByDate(equipmentState.events);", 1], ["  const comparisonRows = routes.length ? equipmentTransferComparisonRows() : [];\n", "", 1], ["const transferLabel = multipleTransfers ? \"TRASIEGO MÚLTIPLE\" : \"TRASIEGO\";", "const transferLabel = \"TRASIEGO\";", 1], ["      route.eventIds = route.eventIds.filter((eventId) => eventId !== button.dataset.equipmentTransferRemoveEvent);", "      equipmentState.summaryTransferAutomatic = false;\n      route.eventIds = route.eventIds.filter((eventId) => eventId !== button.dataset.equipmentTransferRemoveEvent);", 1], ["      route.eventIds.push(eventId);\n      renderEquipmentModule();", "      equipmentState.summaryTransferAutomatic = false;\n      route.automatic = false;\n      route.eventIds.push(eventId);\n      renderEquipmentModule();", 1], ["  host.querySelector(\"[data-equipment-transfer-new-route]\")?.addEventListener(\"click\", () => {\n    invalidateEquipmentRentalPreview();", "  host.querySelector(\"[data-equipment-transfer-new-route]\")?.addEventListener(\"click\", () => {\n    equipmentState.summaryTransferAutomatic = false;\n    invalidateEquipmentRentalPreview();", 1], ["  host.querySelector(\"[data-equipment-transfer-delete-route]\")?.addEventListener(\"click\", () => {\n    invalidateEquipmentRentalPreview();", "  host.querySelector(\"[data-equipment-transfer-delete-route]\")?.addEventListener(\"click\", () => {\n    equipmentState.summaryTransferAutomatic = false;\n    invalidateEquipmentRentalPreview();", 1], ["  host.querySelector(\"[data-equipment-transfer-clear-route]\")?.addEventListener(\"click\", () => {\n    const route", "  host.querySelector(\"[data-equipment-transfer-clear-route]\")?.addEventListener(\"click\", () => {\n    equipmentState.summaryTransferAutomatic = false;\n    const route", 1], ["function enableEquipmentTransferConfiguration() {\n  equipmentState.summaryTransferEnabled = true;", "function enableEquipmentTransferConfiguration() {\n  equipmentState.summaryTransferAutomatic = false;\n  equipmentState.summaryTransferEnabled = true;", 1], ["  equipmentState.summaryTransferEnabled = true;\n  cleanupEquipmentSummaryTransferRoutes(activeEquipmentEvents());", "  equipmentState.summaryTransferAutomatic = false;\n  equipmentState.summaryTransferEnabled = true;\n  cleanupEquipmentSummaryTransferRoutes(activeEquipmentEvents());", 1], ["  equipmentState.summaryTransferEnabled = false;\n  invalidateEquipmentRentalPreview();", "  equipmentState.summaryTransferEnabled = false;\n  equipmentState.summaryTransferAutomatic = true;\n  invalidateEquipmentRentalPreview();", 1], ["  const events = mode === \"rent\" || equipmentHasConfiguredTransferRoutes()", "  const events = mode === \"rent\" || equipmentHasConfiguredTransferRoutes()\n    || (equipmentState.summaryTransferAutomatic && equipmentState.events.length > 1)", 1], ["    version: 6,", "    version: 7,", 1], ["    summaryTransferEnabled: equipmentState.summaryTransferEnabled,\n    summaryTransferRoutes:", "    summaryTransferEnabled: equipmentState.summaryTransferEnabled,\n    summaryTransferAutomatic: equipmentState.summaryTransferAutomatic,\n    summaryTransferRoutes:", 1], ["      legOptions: normalizeEquipmentTransferLegOptions(route.legOptions)\n    })),", "      legOptions: normalizeEquipmentTransferLegOptions(route.legOptions),\n      automatic: route.automatic === true,\n      automaticActive: route.automaticActive !== false\n    })),", 1], ["        return createEquipmentSummaryTransferRoute(\n          restoredEventIds,\n          String(route?.id || \"\"),\n          restoredLegSelections,\n          restoredLegOptions\n        );", "        const restoredRoute = createEquipmentSummaryTransferRoute(\n          restoredEventIds,\n          String(route?.id || \"\"),\n          restoredLegSelections,\n          restoredLegOptions,\n          route?.automatic === true\n        );\n        restoredRoute.automaticActive = route?.automaticActive !== false;\n        return restoredRoute;", 1], ["  equipmentState.summaryTransferRoutes = restoredTransferRoutes;\n  equipmentState.activeSummaryTransferRouteId", "  equipmentState.summaryTransferRoutes = restoredTransferRoutes;\n  equipmentState.summaryTransferAutomatic = typeof payload.summaryTransferAutomatic === \"boolean\"\n    ? payload.summaryTransferAutomatic\n    : !restoredTransferRoutes.some((route) => route.eventIds.length);\n  equipmentState.activeSummaryTransferRouteId", 1], ["  if (schedule.pairs.some((pair) => pair.sameDayTurnaround)) {", "  if (equipmentHasConfiguredTransferRoutes(events)) {\n    return {\n      type: \"ok\",\n      text: \"El equipo seleccionado para trasladarse aparece como TRASIEGO en la columna ACCIÓN. Puede ajustarlo en Trasegar equipo.\"\n    };\n  }\n  if (schedule.pairs.some((pair) => pair.sameDayTurnaround)) {", 1], ["  renderManualEquipmentExtras();\n  renderEquipmentSummaryTransferSelector();\n  if (equipmentQuery(\"#equipmentInventoryTable\")) {\n    equipmentQuery(\"#equipmentInventoryTable\").innerHTML = tableForEquipmentInventory(equipmentFilterSummaryRows(equipmentRowsSummary()), true);", "  renderManualEquipmentExtras();\n  const summaryRows = equipmentRowsSummary();\n  renderEquipmentSummaryTransferSelector();\n  if (equipmentQuery(\"#equipmentInventoryTable\")) {\n    equipmentQuery(\"#equipmentInventoryTable\").innerHTML = tableForEquipmentInventory(equipmentFilterSummaryRows(summaryRows), true);", 1]]''')
+          for old, new, count in replacements:
+              assert s.count(old) == count, f"Unexpected source: {old[:100]}"
+              s = s.replace(old, new)
+          p.write_text(s)
+          p = Path("index.html")
+          s = p.read_text()
+          old = "equipment.js?v=20260923-trasiegos-01"
+          assert s.count(old) == 1
+          p.write_text(s.replace(old, "equipment.js?v=20260923-resumen-automatico-02"))
+          p = Path("test/equipment-logistics.test.cjs")
+          p.write_text(p.read_text() + r'''
+          // The summary must create the transfer plan without opening the transfer editor.
+          function createAutomaticSummaryContext() {
+            const context = createTransferRegressionContext();
+            evaluate(context, `
+              equipmentState.summaryTransferEnabled = false;
+              equipmentState.summaryTransferAutomatic = true;
+              equipmentState.summaryTransferRoutes = [];
+              equipmentState.activeSummaryTransferRouteId = "";
+              equipmentState.activeWindow = "summary";
+            `);
+            return context;
+          }
+
+          test("summary alone automatically writes TRASIEGO in ACCION before any route or transfer click", () => {
+            const context = createAutomaticSummaryContext();
+            assert.equal(evaluate(context, "equipmentState.summaryTransferEnabled"), false);
+            const result = plain(evaluate(context, `(() => {
+              const rows = equipmentRowsSummary();
+              const row = rows.find((item) => item.description === "Teclado de prueba");
+              return { applied: row.transferApplied, quantity: row.quantity,
+                html: tableForEquipmentInventory([row], false),
+                plan: equipmentTransferPlanData().routes[0].items.map((item) => item.description) };
+            })()`));
+            assert.equal(result.applied, true);
+            assert.equal(result.quantity, 1);
+            assert.match(result.html, /equipment-action-transfer">TRASIEGO<\/td>/);
+            assert.ok(result.plan.includes("Teclado de prueba"));
+          });
+
+          test("automatic summary reproduces screenshot dates and both exact current console rows", () => {
+            const context = createEquipmentContext(true);
+            const result = plain(evaluate(context, `(() => {
+              const serviceId = Object.keys(equipmentServices).find((id) =>
+                /sunday funday - bateria acustica opcion a/.test(normalizeEquipmentKey(equipmentServices[id].name)));
+              if (!serviceId) throw new Error("Current Sunday Funday variant not found");
+              const snapshot = captureEquipmentEventSnapshotForServiceIds([serviceId]);
+              equipmentState.events = [
+                { ...snapshot, id: "a", active: true, place: "A", name: "BODA", date: "2026-09-25", setupAt: "2026-09-25T07:00", equipmentInAt: "2026-09-26T03:00" },
+                { ...snapshot, id: "b", active: true, place: "B", name: "BODA", date: "2026-09-26", setupAt: "2026-09-26T08:00", equipmentInAt: "2026-09-27T04:00" }
+              ];
+              return equipmentRowsSummary().filter((row) => /^(consola x32 mesa digital con cable ac|router con cargador y funda)$/.test(normalizeEquipmentKey(row.description)))
+                .map((row) => ({ description: row.description, quantity: row.quantity,
+                  applied: row.transferApplied, html: tableForEquipmentInventory([row], false) }));
+            })()`));
+            assert.equal(result.length, 2);
+            for (const row of result) {
+              assert.equal(row.applied, true, row.description);
+              assert.equal(row.quantity, 1, row.description);
+              assert.match(row.html, /equipment-action-transfer">TRASIEGO<\/td>/, row.description);
+            }
+          });
+
+          test("unchecking automatic transfers removes action and PDF entries on repeated redraw", () => {
+            const context = createAutomaticSummaryContext();
+            const result = plain(evaluate(context, `(() => {
+              equipmentRowsSummary();
+              equipmentSetTransferLegSelections(equipmentState.summaryTransferRoutes[0], ...equipmentState.events, []);
+              equipmentRowsSummary(); equipmentRowsSummary();
+              const row = equipmentRowsSummary().find((item) => item.description === "Teclado de prueba");
+              return { applied: row.transferApplied, html: tableForEquipmentInventory([row], false),
+                count: equipmentConfiguredTransferRoutesWithItems().length };
+            })()`));
+            assert.equal(result.applied, false);
+            assert.doesNotMatch(result.html, />TRASIEGO<\/td>/);
+            assert.equal(result.count, 0);
+          });
+
+          test("automatic plan respects Sunday backline filtering in action and PDF", () => {
+            const context = createAutomaticSummaryContext();
+            const result = plain(evaluate(context, `(() => {
+              equipmentRowsSummary();
+              equipmentState.summaryTransferRoutes[0].legOptions = { "a::b": { backlineOnly: true } };
+              const rows = equipmentRowsSummary();
+              return { backline: rows.find((r) => r.description === "Teclado de prueba").transferApplied,
+                audio: rows.find((r) => r.description === "Monitor de prueba").transferApplied,
+                items: equipmentTransferPlanData().routes[0].items.map((r) => r.description) };
+            })()`));
+            assert.equal(result.backline, true);
+            assert.equal(result.audio, false);
+            assert.deepEqual(result.items, ["Teclado de prueba"]);
+          });
+
+          test("automatic labels never silently authorize overlapping, tight or incomplete schedules", () => {
+            for (const setupAt of ["2026-09-25T10:00", "2026-09-26T03:00", ""]) {
+              const context = createAutomaticSummaryContext();
+              evaluate(context, `equipmentState.events[1].setupAt = ${JSON.stringify(setupAt)}`);
+              const result = plain(evaluate(context, `({
+                applied: equipmentRowsSummary().some((row) => row.transferApplied),
+                routes: equipmentTransferPlanData().routes.length
+              })`));
+              assert.equal(result.applied, false, setupAt);
+              assert.equal(result.routes, 0, setupAt);
+            }
+          });
+
+          test("automatic transfer does not subtract reuse twice or hide a larger destination shortage", () => {
+            const context = createAutomaticSummaryContext();
+            const result = plain(evaluate(context, `(() => {
+              equipmentState.events[1].sections[0].items[0][0] = 5;
+              const row = equipmentRowsSummary().find((item) => item.description === "Teclado de prueba");
+              return { quantity: row.quantity, html: tableForEquipmentInventory([row], false),
+                transferred: equipmentTransferPlanData().routes[0].items.find((item) => item.description === "Teclado de prueba").quantity,
+                missing: equipmentProcurementReportRows("rent").find((item) => item.description === "Teclado de prueba").missing };
+            })()`));
+            assert.equal(result.quantity, 5);
+            assert.equal(result.transferred, 1);
+            assert.equal(result.missing, 4);
+            assert.match(result.html, />RENTA \+ TRASIEGO<\/td>/);
+          });
+
+          test("a third simultaneous event still counts equipment already transferred to the second event", () => {
+            const context = createAutomaticSummaryContext();
+            const result = plain(evaluate(context, `(() => {
+              equipmentState.events.push({ ...equipmentState.events[1], id: "c", place: "C", setupAt: "2026-09-26T10:00" });
+              const row = equipmentRowsSummary().find((item) => item.description === "Teclado de prueba");
+              return { quantity: row.quantity, applied: row.transferApplied, routes: equipmentTransferPlanData().routes.length };
+            })()`));
+            assert.equal(result.quantity, 2);
+            assert.equal(result.applied, true);
+            assert.equal(result.routes, 1);
+          });
+
+          test("temporary incompatible dates suspend automatic transfers without losing unchecked items", () => {
+            const context = createAutomaticSummaryContext();
+            const result = plain(evaluate(context, `(() => {
+              equipmentRowsSummary();
+              equipmentSetTransferLegSelections(equipmentState.summaryTransferRoutes[0], ...equipmentState.events,
+                [{ identity: "monitor de prueba", quantity: 1 }]);
+              equipmentState.events[1].setupAt = "2026-09-26T03:00";
+              equipmentRowsSummary();
+              const suspended = equipmentTransferPlanData().routes.length;
+              const payload = equipmentEditablePayload("full");
+              importEquipmentEditablePayload(JSON.parse(JSON.stringify(payload)));
+              equipmentState.events[1].setupAt = "2026-09-26T08:00";
+              return { suspended, count: equipmentState.events.length,
+                items: equipmentTransferPlanData().routes[0].items.map(({ description, quantity }) => ({ description, quantity })) };
+            })()`));
+            assert.equal(result.suspended, 0);
+            assert.equal(result.count, 2);
+            assert.deepEqual(result.items, [{ description: "Monitor de prueba", quantity: 1 }]);
+          });
+
+          test("adding a third sequential event extends the automatic plan without altering the literal action", () => {
+            const context = createAutomaticSummaryContext();
+            const result = plain(evaluate(context, `(() => {
+              equipmentRowsSummary();
+              equipmentState.events.push({ ...equipmentState.events[1], id: "c", place: "C",
+                date: "2026-09-27", setupAt: "2026-09-27T08:00", equipmentInAt: "2026-09-28T02:00" });
+              const row = equipmentRowsSummary().find((item) => item.description === "Teclado de prueba");
+              return { quantity: row.quantity, routes: row.transferRouteCount, html: tableForEquipmentInventory([row], false) };
+            })()`));
+            assert.equal(result.quantity, 1);
+            assert.equal(result.routes, 2);
+            assert.match(result.html, /equipment-action-transfer">TRASIEGO<\/td>/);
+          });
+
+          test("manual empty plan is not recreated and consumables or nonshared equipment are not transferred", () => {
+            const context = createAutomaticSummaryContext();
+            const result = plain(evaluate(context, `(() => {
+              const rows = equipmentRowsSummary();
+              const consumable = rows.find((item) => item.description === "Pila de prueba consumible");
+              const unique = rows.find((item) => item.description === "Bombo acústico de prueba");
+              equipmentState.summaryTransferAutomatic = false;
+              equipmentState.summaryTransferRoutes = [createEquipmentSummaryTransferRoute()];
+              equipmentRowsSummary();
+              return { consumable: consumable.transferApplied, unique: unique.transferApplied,
+                html: tableForEquipmentInventory([consumable], false), count: equipmentTransferPlanData().routes.length };
+            })()`));
+            assert.equal(result.consumable, false);
+            assert.equal(result.unique, false);
+            assert.match(result.html, />COMPRA<\/td>/);
+            assert.equal(result.count, 0);
+          });
+          ''')
+          expected_after = {'equipment.js': 'bb5216e921d2f0c5059fa5c4a65e4678667603d1', 'test/equipment-logistics.test.cjs': '79fc5d5519f82fab894b2327aa7b8cd1daef3620', 'index.html': '433fd731939cb12302e3a7c942ea9789f47cd74d'}
+          for name, sha in expected_after.items():
+              assert subprocess.check_output(["git", "hash-object", name], text=True).strip() == sha, name
+          PY
+      - name: Verificar sintaxis y 36 pruebas
+        run: |
+          node --check equipment.js
+          node --test test/equipment-logistics.test.cjs
+          git diff --check
+      - name: Guardar solo en la rama de revision y retirar herramienta temporal
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/resumen-automatico-validation.yml
+          git add equipment.js index.html test/equipment-logistics.test.cjs
+          git commit -m 'Marcar TRASIEGO automaticamente en ACCION del resumen de equipo'
+          git push origin HEAD:codex/requerimiento-trasiegos-20260923
