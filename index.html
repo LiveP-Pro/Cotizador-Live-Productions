@@ -6,12 +6,12 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260916-01" />
+    <link rel="stylesheet" href="styles.css?v=20260923-trasiegos-01" />
     <link rel="stylesheet" href="warehouse-inventory.css?v=20260902-03" />
     <script src="app.js?v=20260814-01" defer></script>
     <script src="equipment-catalog.js?v=20260821-04" defer></script>
     <script src="equipment-inventory.js?v=20260822-01" defer></script>
-    <script src="equipment.js?v=20260916-01" defer></script>
+    <script src="equipment.js?v=20260923-trasiegos-01" defer></script>
     <script src="inventory.js?v=20260902-03" defer></script>
   </head>
   <body>
@@ -282,6 +282,7 @@
           <div class="equipment-actions">
             <button id="equipmentSavePdfButton" type="button">Guardar PDF + JSON bodega</button>
             <button id="equipmentSaveRentPdfButton" type="button">Generar Resumen de Renta</button>
+            <button id="equipmentGeneratePurchaseReportButton" type="button">Generar Informe de Compra</button>
             <button id="equipmentOpenEditableButton" type="button">Abrir JSON editable</button>
             <input id="equipmentEditableFileInput" class="is-hidden" type="file" accept=".json,application/json" />
             <span id="equipmentSaveStatus" role="status"></span>
@@ -371,6 +372,7 @@
                 <div class="equipment-summary-actions">
                   <button id="equipmentSummaryTransferButton" class="equipment-summary-transfer-button" type="button" aria-pressed="false">Trasegar Equipo</button>
                   <button id="equipmentGenerateRentReportButton" class="equipment-summary-report-button" type="button">Generar Resumen de Renta</button>
+                  <button id="equipmentSummaryPurchaseReportButton" class="equipment-summary-report-button" type="button">Generar Informe de Compra</button>
                 </div>
               </div>
               <div class="equipment-summary-search-row">
@@ -443,7 +445,7 @@
                 <div>
                   <p>Live Productions</p>
                   <h2 id="equipmentRentPdfTitle">Resumen de renta</h2>
-                  <span>Equipo faltante para renta o compra</span>
+                  <span>Equipo faltante únicamente para renta</span>
                 </div>
                 <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
               </header>
@@ -471,6 +473,47 @@
               </div>
               <p id="equipmentRentPdfNotes" class="equipment-pdf-notes is-hidden"></p>
               <div id="equipmentRentPdfTable"></div>
+            </section>
+            </div>
+
+            <div id="equipmentPurchasePdfPreview" class="equipment-pdf-preview is-hidden">
+              <div class="equipment-pdf-preview-toolbar">
+                <strong>Previsualización del Informe de Compra</strong>
+                <button id="equipmentDownloadPurchasePdfButton" class="equipment-summary-report-button" type="button">Guardar PDF de compra</button>
+              </div>
+            <section id="equipmentPurchasePdfDocument" class="equipment-pdf-document equipment-rent-pdf-document">
+              <header class="equipment-pdf-header">
+                <div>
+                  <p>Live Productions</p>
+                  <h2 id="equipmentPurchasePdfTitle">Informe de compra</h2>
+                  <span>Únicamente líneas con acción COMPRA</span>
+                </div>
+                <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
+              </header>
+              <div class="equipment-pdf-meta">
+                <div>
+                  <span>Lugares</span>
+                  <strong id="equipmentPurchasePdfPlace">Por definir</strong>
+                </div>
+                <div>
+                  <span>Eventos</span>
+                  <strong id="equipmentPurchasePdfEvents">Por definir</strong>
+                </div>
+                <div>
+                  <span>Fechas y horas de montaje</span>
+                  <strong id="equipmentPurchasePdfSetupAt">Por definir</strong>
+                </div>
+                <div>
+                  <span>Fecha</span>
+                  <strong id="equipmentPurchasePdfDate">Por definir</strong>
+                </div>
+                <div>
+                  <span>Ingresos equipo</span>
+                  <strong id="equipmentPurchasePdfInAt">Por definir</strong>
+                </div>
+              </div>
+              <p id="equipmentPurchasePdfNotes" class="equipment-pdf-notes is-hidden"></p>
+              <div id="equipmentPurchasePdfTable"></div>
             </section>
             </div>
 

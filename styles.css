@@ -6405,3 +6405,23 @@ body.pdf-export .additional-services-section {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* Requerimiento de Equipo: interactive transfer selection (both tabs). */
+.equipment-transfer-backline-option {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.equipment-transfer-backline-option select { width: 100%; max-width: 480px; min-height: 42px; }
+.equipment-transfer-backline-option small { color: #475569; line-height: 1.5; }
+.equipment-transfer-card .equipment-transfer-leg-editor strong { font-size: 14px; }
+.equipment-transfer-card .equipment-transfer-leg-editor span { text-transform: none; letter-spacing: normal; }
+.equipment-transfer-card .equipment-transfer-leg-editor > header { margin-bottom: 12px; }
+.equipment-transfer-summary-row .equipment-required-total { background: #eaf4ee; }
+.equipment-transfer-summary-row > td:first-child { border-left: 3px solid #166534; }
+.equipment-transfer-selected-toggle { min-width: 20px; min-height: 20px; cursor: pointer; }
