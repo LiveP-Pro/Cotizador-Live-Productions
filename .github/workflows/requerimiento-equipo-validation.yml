@@ -1,0 +1,35 @@
+name: Validar Requerimiento de Equipo
+on:
+  push:
+    branches:
+      - codex/requerimiento-trasiegos-20260923
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Pruebas de logística
+        run: node --test test/equipment-logistics.test.cjs
+      - name: Archivos para revisión aislada
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: requerimiento-equipo-review
+          path: |
+            AGENTS.md
+            equipment.js
+            equipment-catalog.js
+            equipment-inventory.js
+            inventory.js
+            index.html
+            styles.css
+            server.js
+            package.json
+            test/
+          retention-days: 1
