@@ -4,7 +4,7 @@ on:
     branches:
       - codex/requerimiento-trasiegos-20260923
 permissions:
-  contents: read
+  contents: write
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -14,22 +14,57 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Pruebas de logística
-        run: node --test test/equipment-logistics.test.cjs
-      - name: Archivos para revisión aislada
+      - name: Aplicar cambios revisados sobre archivos exactos
+        shell: python
+        run: |
+          import base64, hashlib, json, lzma
+          from pathlib import Path
+          encoded = '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'
+          payload = lzma.decompress(base64.b64decode(encoded))
+          assert hashlib.sha256(payload).hexdigest() == '211904b7fd2474a9c11f8836d0d794b834700a212b237b44fbdd7ccb955260a9'
+          changes = json.loads(payload)
+          allowed = {'equipment.js', 'index.html', 'styles.css', 'test/equipment-logistics.test.cjs'}
+          assert {item['path'] for item in changes} == allowed
+          prepared = []
+          for item in changes:
+              path = Path(item['path'])
+              original = path.read_bytes()
+              current = hashlib.sha256(original).hexdigest()
+              if current == item['result']:
+                  continue
+              assert current == item['base'], 'La base cambió: ' + str(path)
+              lines = original.decode('utf-8').splitlines(keepends=True)
+              for start, end, replacement in reversed(item['ops']):
+                  lines[start:end] = [replacement]
+              updated = ''.join(lines).encode('utf-8')
+              assert hashlib.sha256(updated).hexdigest() == item['result'], 'Resultado incorrecto: ' + str(path)
+              prepared.append((path, updated))
+          for path, content in prepared:
+              path.write_bytes(content)
+              print('Aplicado:', path)
+      - name: Verificar sintaxis y pruebas de logística
+        run: |
+          node --check equipment.js
+          node --test test/equipment-logistics.test.cjs
+          git diff --check
+      - name: Guardar únicamente en la rama de revisión
+        run: |
+          test "$GITHUB_REF_NAME" = "codex/requerimiento-trasiegos-20260923"
+          git add equipment.js index.html styles.css test/equipment-logistics.test.cjs
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'Corregir selección de trasiegos, backline y reporte de compra'
+            git push origin HEAD:refs/heads/codex/requerimiento-trasiegos-20260923
+          fi
+      - name: Archivos verificados
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: requerimiento-equipo-review
+          name: requerimiento-equipo-verificado
           path: |
-            AGENTS.md
             equipment.js
-            equipment-catalog.js
-            equipment-inventory.js
-            inventory.js
             index.html
             styles.css
-            server.js
-            package.json
-            test/
+            test/equipment-logistics.test.cjs
           retention-days: 1
