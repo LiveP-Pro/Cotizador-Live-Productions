@@ -6425,3 +6425,6 @@ body.pdf-export .additional-services-section {
 .equipment-transfer-summary-row .equipment-required-total { background: #eaf4ee; }
 .equipment-transfer-summary-row > td:first-child { border-left: 3px solid #166534; }
 .equipment-transfer-selected-toggle { min-width: 20px; min-height: 20px; cursor: pointer; }
+
+/* Keep transfer names readable on phones; scroll the checklist horizontally. */
+.equipment-transfer-card .equipment-transfer-selected-list table { min-width: 860px; }
