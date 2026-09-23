@@ -544,3 +544,177 @@ test("all current Sunday variants build nonempty synchronized plans using the un
     assert.equal(result.noConsumables, true, result.serviceId);
   });
 });
+
+// The summary must create the transfer plan without opening the transfer editor.
+function createAutomaticSummaryContext() {
+  const context = createTransferRegressionContext();
+  evaluate(context, `
+    equipmentState.summaryTransferEnabled = false;
+    equipmentState.summaryTransferAutomatic = true;
+    equipmentState.summaryTransferRoutes = [];
+    equipmentState.activeSummaryTransferRouteId = "";
+    equipmentState.activeWindow = "summary";
+  `);
+  return context;
+}
+
+test("summary alone automatically writes TRASIEGO in ACCION before any route or transfer click", () => {
+  const context = createAutomaticSummaryContext();
+  assert.equal(evaluate(context, "equipmentState.summaryTransferEnabled"), false);
+  const result = plain(evaluate(context, `(() => {
+    const rows = equipmentRowsSummary();
+    const row = rows.find((item) => item.description === "Teclado de prueba");
+    return { applied: row.transferApplied, quantity: row.quantity,
+      html: tableForEquipmentInventory([row], false),
+      plan: equipmentTransferPlanData().routes[0].items.map((item) => item.description) };
+  })()`));
+  assert.equal(result.applied, true);
+  assert.equal(result.quantity, 1);
+  assert.match(result.html, /equipment-action-transfer">TRASIEGO<\/td>/);
+  assert.ok(result.plan.includes("Teclado de prueba"));
+});
+
+test("automatic summary reproduces screenshot dates and both exact current console rows", () => {
+  const context = createEquipmentContext(true);
+  const result = plain(evaluate(context, `(() => {
+    const serviceId = Object.keys(equipmentServices).find((id) =>
+      /sunday funday - bateria acustica opcion a/.test(normalizeEquipmentKey(equipmentServices[id].name)));
+    if (!serviceId) throw new Error("Current Sunday Funday variant not found");
+    const snapshot = captureEquipmentEventSnapshotForServiceIds([serviceId]);
+    equipmentState.events = [
+      { ...snapshot, id: "a", active: true, place: "A", name: "BODA", date: "2026-09-25", setupAt: "2026-09-25T07:00", equipmentInAt: "2026-09-26T03:00" },
+      { ...snapshot, id: "b", active: true, place: "B", name: "BODA", date: "2026-09-26", setupAt: "2026-09-26T08:00", equipmentInAt: "2026-09-27T04:00" }
+    ];
+    return equipmentRowsSummary().filter((row) => /^(consola x32 mesa digital con cable ac|router con cargador y funda)$/.test(normalizeEquipmentKey(row.description)))
+      .map((row) => ({ description: row.description, quantity: row.quantity,
+        applied: row.transferApplied, html: tableForEquipmentInventory([row], false) }));
+  })()`));
+  assert.equal(result.length, 2);
+  for (const row of result) {
+    assert.equal(row.applied, true, row.description);
+    assert.equal(row.quantity, 1, row.description);
+    assert.match(row.html, /equipment-action-transfer">TRASIEGO<\/td>/, row.description);
+  }
+});
+
+test("unchecking automatic transfers removes action and PDF entries on repeated redraw", () => {
+  const context = createAutomaticSummaryContext();
+  const result = plain(evaluate(context, `(() => {
+    equipmentRowsSummary();
+    equipmentSetTransferLegSelections(equipmentState.summaryTransferRoutes[0], ...equipmentState.events, []);
+    equipmentRowsSummary(); equipmentRowsSummary();
+    const row = equipmentRowsSummary().find((item) => item.description === "Teclado de prueba");
+    return { applied: row.transferApplied, html: tableForEquipmentInventory([row], false),
+      count: equipmentConfiguredTransferRoutesWithItems().length };
+  })()`));
+  assert.equal(result.applied, false);
+  assert.doesNotMatch(result.html, />TRASIEGO<\/td>/);
+  assert.equal(result.count, 0);
+});
+
+test("automatic plan respects Sunday backline filtering in action and PDF", () => {
+  const context = createAutomaticSummaryContext();
+  const result = plain(evaluate(context, `(() => {
+    equipmentRowsSummary();
+    equipmentState.summaryTransferRoutes[0].legOptions = { "a::b": { backlineOnly: true } };
+    const rows = equipmentRowsSummary();
+    return { backline: rows.find((r) => r.description === "Teclado de prueba").transferApplied,
+      audio: rows.find((r) => r.description === "Monitor de prueba").transferApplied,
+      items: equipmentTransferPlanData().routes[0].items.map((r) => r.description) };
+  })()`));
+  assert.equal(result.backline, true);
+  assert.equal(result.audio, false);
+  assert.deepEqual(result.items, ["Teclado de prueba"]);
+});
+
+test("automatic labels never silently authorize overlapping, tight or incomplete schedules", () => {
+  for (const setupAt of ["2026-09-25T10:00", "2026-09-26T03:00", ""]) {
+    const context = createAutomaticSummaryContext();
+    evaluate(context, `equipmentState.events[1].setupAt = ${JSON.stringify(setupAt)}`);
+    const result = plain(evaluate(context, `({
+      applied: equipmentRowsSummary().some((row) => row.transferApplied),
+      routes: equipmentTransferPlanData().routes.length
+    })`));
+    assert.equal(result.applied, false, setupAt);
+    assert.equal(result.routes, 0, setupAt);
+  }
+});
+
+test("automatic transfer does not subtract reuse twice or hide a larger destination shortage", () => {
+  const context = createAutomaticSummaryContext();
+  const result = plain(evaluate(context, `(() => {
+    equipmentState.events[1].sections[0].items[0][0] = 5;
+    const row = equipmentRowsSummary().find((item) => item.description === "Teclado de prueba");
+    return { quantity: row.quantity, html: tableForEquipmentInventory([row], false),
+      transferred: equipmentTransferPlanData().routes[0].items.find((item) => item.description === "Teclado de prueba").quantity,
+      missing: equipmentProcurementReportRows("rent").find((item) => item.description === "Teclado de prueba").missing };
+  })()`));
+  assert.equal(result.quantity, 5);
+  assert.equal(result.transferred, 1);
+  assert.equal(result.missing, 4);
+  assert.match(result.html, />RENTA \+ TRASIEGO<\/td>/);
+});
+
+test("a third simultaneous event still counts equipment already transferred to the second event", () => {
+  const context = createAutomaticSummaryContext();
+  const result = plain(evaluate(context, `(() => {
+    equipmentState.events.push({ ...equipmentState.events[1], id: "c", place: "C", setupAt: "2026-09-26T10:00" });
+    const row = equipmentRowsSummary().find((item) => item.description === "Teclado de prueba");
+    return { quantity: row.quantity, applied: row.transferApplied, routes: equipmentTransferPlanData().routes.length };
+  })()`));
+  assert.equal(result.quantity, 2);
+  assert.equal(result.applied, true);
+  assert.equal(result.routes, 1);
+});
+
+test("temporary incompatible dates suspend automatic transfers without losing unchecked items", () => {
+  const context = createAutomaticSummaryContext();
+  const result = plain(evaluate(context, `(() => {
+    equipmentRowsSummary();
+    equipmentSetTransferLegSelections(equipmentState.summaryTransferRoutes[0], ...equipmentState.events,
+      [{ identity: "monitor de prueba", quantity: 1 }]);
+    equipmentState.events[1].setupAt = "2026-09-26T03:00";
+    equipmentRowsSummary();
+    const suspended = equipmentTransferPlanData().routes.length;
+    const payload = equipmentEditablePayload("full");
+    importEquipmentEditablePayload(JSON.parse(JSON.stringify(payload)));
+    equipmentState.events[1].setupAt = "2026-09-26T08:00";
+    return { suspended, count: equipmentState.events.length,
+      items: equipmentTransferPlanData().routes[0].items.map(({ description, quantity }) => ({ description, quantity })) };
+  })()`));
+  assert.equal(result.suspended, 0);
+  assert.equal(result.count, 2);
+  assert.deepEqual(result.items, [{ description: "Monitor de prueba", quantity: 1 }]);
+});
+
+test("adding a third sequential event extends the automatic plan without altering the literal action", () => {
+  const context = createAutomaticSummaryContext();
+  const result = plain(evaluate(context, `(() => {
+    equipmentRowsSummary();
+    equipmentState.events.push({ ...equipmentState.events[1], id: "c", place: "C",
+      date: "2026-09-27", setupAt: "2026-09-27T08:00", equipmentInAt: "2026-09-28T02:00" });
+    const row = equipmentRowsSummary().find((item) => item.description === "Teclado de prueba");
+    return { quantity: row.quantity, routes: row.transferRouteCount, html: tableForEquipmentInventory([row], false) };
+  })()`));
+  assert.equal(result.quantity, 1);
+  assert.equal(result.routes, 2);
+  assert.match(result.html, /equipment-action-transfer">TRASIEGO<\/td>/);
+});
+
+test("manual empty plan is not recreated and consumables or nonshared equipment are not transferred", () => {
+  const context = createAutomaticSummaryContext();
+  const result = plain(evaluate(context, `(() => {
+    const rows = equipmentRowsSummary();
+    const consumable = rows.find((item) => item.description === "Pila de prueba consumible");
+    const unique = rows.find((item) => item.description === "Bombo acústico de prueba");
+    equipmentState.summaryTransferAutomatic = false;
+    equipmentState.summaryTransferRoutes = [createEquipmentSummaryTransferRoute()];
+    equipmentRowsSummary();
+    return { consumable: consumable.transferApplied, unique: unique.transferApplied,
+      html: tableForEquipmentInventory([consumable], false), count: equipmentTransferPlanData().routes.length };
+  })()`));
+  assert.equal(result.consumable, false);
+  assert.equal(result.unique, false);
+  assert.match(result.html, />COMPRA<\/td>/);
+  assert.equal(result.count, 0);
+});
