@@ -46,6 +46,12 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
 const warehouseAssetVersion = "20260928-02";
+const warehouseSignedImportMarkerPath = path.join(dataDir, "inventario-bodega-importacion-firmada.json");
+const warehouseSignedImportExpiresAt = Date.parse("2026-09-29T04:00:00.000Z");
+const warehouseSignedImportExpectedFingerprint = "a6f7644a576a12950d573d079fb2cd71188a0ddc308031773851a670f7bfe8da";
+const warehouseSignedImportPublicKey = `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEA3VD8IOyY7GzxeSiLwvbz5v9Cmg51WwjxMJBBg3XYCDo=
+-----END PUBLIC KEY-----`;
 const whatsappConfig = {
   apiVersion: process.env.WHATSAPP_API_VERSION || "v23.0",
   phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
@@ -187,19 +193,7 @@ async function writeWarehouseInventory(normalized) {
   await writeWarehouseInventoryFile(warehouseInventoryPath, normalized);
 }
 
-async function saveWarehouseInventory(payload, response) {
-  let normalized;
-  try {
-    normalized = normalizeWarehouseInventoryPayload({
-      state: payload?.state,
-      savedAt: new Date().toISOString()
-    });
-  } catch (error) {
-    errorResponse(response, 400, error.message);
-    return;
-  }
-
-  const setAsInitial = payload?.setAsInitial === true;
+async function persistWarehouseInventory(normalized, setAsInitial = false) {
   if (setAsInitial && fs.existsSync(warehouseInventoryPath)) {
     const datasetId = warehouseInventoryDatasetId(normalized);
     if (datasetId) {
@@ -213,7 +207,116 @@ async function saveWarehouseInventory(payload, response) {
     await writeWarehouseInventoryFile(warehouseInventoryPrivateInitialPath, normalized);
   }
   await writeWarehouseInventory(normalized);
+}
+
+async function saveWarehouseInventory(payload, response) {
+  let normalized;
+  try {
+    normalized = normalizeWarehouseInventoryPayload({
+      state: payload?.state,
+      savedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    errorResponse(response, 400, error.message);
+    return;
+  }
+
+  const setAsInitial = payload?.setAsInitial === true;
+  await persistWarehouseInventory(normalized, setAsInitial);
   jsonResponse(response, 200, { ...normalized, initialSaved: setAsInitial });
+}
+
+function signedWarehouseImportSummary(normalized) {
+  const state = normalized.state;
+  const registered = state.items.reduce((total, item) => total + warehouseDispatchQuantity(item.quantity), 0);
+  const available = state.items.reduce(
+    (total, item) => total + warehouseAvailableForDispatch(state, item.id),
+    0
+  );
+  const workshopOut = state.movements
+    .filter((movement) => movement?.type === "taller")
+    .reduce((total, movement) => total + warehouseDispatchQuantity(movement.quantity), 0);
+  const workshopReturned = state.movements
+    .filter((movement) => movement?.type === "devolucion_taller")
+    .reduce((total, movement) => total + warehouseDispatchQuantity(movement.quantity), 0);
+  return {
+    items: state.items.length,
+    registered,
+    available,
+    workshop: Math.max(0, workshopOut - workshopReturned),
+    consumables: state.items.filter(warehouseDispatchItemIsConsumable).length
+  };
+}
+
+async function importSignedWarehouseInventory(payload, response) {
+  if (Date.now() >= warehouseSignedImportExpiresAt) {
+    errorResponse(response, 410, "La ventana de importación firmada expiró.");
+    return;
+  }
+  const inventory = payload?.inventory;
+  const signature = String(payload?.signature || "").trim();
+  const serialized = inventory ? JSON.stringify(inventory) : "";
+  const fingerprint = crypto.createHash("sha256").update(serialized).digest("hex");
+  if (fingerprint !== warehouseSignedImportExpectedFingerprint) {
+    errorResponse(response, 403, "El archivo no corresponde al inventario autorizado.");
+    return;
+  }
+  let verified = false;
+  try {
+    verified = Boolean(
+      serialized
+      && signature
+      && crypto.verify(
+        null,
+        Buffer.from(serialized, "utf8"),
+        warehouseSignedImportPublicKey,
+        Buffer.from(signature, "base64")
+      )
+    );
+  } catch {
+    verified = false;
+  }
+  if (!verified) {
+    errorResponse(response, 403, "Firma de importación no válida.");
+    return;
+  }
+
+  if (fs.existsSync(warehouseSignedImportMarkerPath)) {
+    const marker = JSON.parse(await fsp.readFile(warehouseSignedImportMarkerPath, "utf8"));
+    if (marker?.fingerprint !== fingerprint) {
+      errorResponse(response, 409, "La importación firmada ya fue utilizada.");
+      return;
+    }
+    const current = readWarehouseInventory();
+    jsonResponse(response, 200, {
+      imported: true,
+      alreadyImported: true,
+      ...signedWarehouseImportSummary(current)
+    });
+    return;
+  }
+
+  let normalized;
+  try {
+    normalized = normalizeWarehouseInventoryPayload({
+      state: inventory?.state,
+      savedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    errorResponse(response, 400, error.message);
+    return;
+  }
+
+  await persistWarehouseInventory(normalized, true);
+  await writeWarehouseInventoryFile(warehouseSignedImportMarkerPath, {
+    fingerprint,
+    importedAt: new Date().toISOString()
+  });
+  jsonResponse(response, 200, {
+    imported: true,
+    alreadyImported: false,
+    ...signedWarehouseImportSummary(normalized)
+  });
 }
 
 async function restoreWarehouseInventory(response) {
@@ -3196,6 +3299,12 @@ async function handleRequest(request, response) {
         "Set-Cookie": expiredSessionCookie()
       });
       response.end(JSON.stringify({ authenticated: false }));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/inventario-bodega/importar-firmado") {
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => importSignedWarehouseInventory(payload, response));
       return;
     }
 
