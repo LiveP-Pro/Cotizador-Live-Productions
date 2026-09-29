@@ -107,7 +107,7 @@ const equipmentInventoryAliases = {
 };
 
 function equipmentInventoryCanonicalKey(value) {
-  const key = normalizeEquipmentKey(value);
+  const key = normalizeEquipmentKey(value).replace(/\s*\/?\s*consumible$/i, "").trim();
   return equipmentInventoryAliases[key] || key;
 }
 
@@ -116,10 +116,18 @@ function equipmentDescriptionEndsWithConsumable(value) {
 }
 
 function equipmentRowIsConsumable(row) {
+  if ([
+    row?.itemType,
+    row?.inventorySourceItem?.itemType,
+    row?.inventorySourceItem?.warehouseRecord?.item?.itemType,
+    row?.item?.itemType
+  ].some((value) => String(value || "").trim().toLowerCase() === "consumible")) return true;
   return [
     row?.inventorySourceItem?.description,
+    row?.inventorySourceItem?.warehouseRecord?.item?.name,
     row?.description,
-    row?.key
+    row?.key,
+    row?.item?.name
   ].some(equipmentDescriptionEndsWithConsumable);
 }
 
@@ -2677,7 +2685,16 @@ function equipmentWarehouseMovementDateTime(movement) {
 }
 
 function equipmentWarehouseMovementStats(itemId, movements) {
-  const stats = { out: 0, workshop: 0, rented: 0, lost: 0, workshopLots: [], rentalLots: [] };
+  const stats = {
+    out: 0,
+    consumed: 0,
+    workshop: 0,
+    rented: 0,
+    lost: 0,
+    consumptionLots: [],
+    workshopLots: [],
+    rentalLots: []
+  };
   const entries = (Array.isArray(movements) ? movements : [])
     .filter((movement) => String(movement?.itemId || "") === String(itemId || ""))
     .slice()
@@ -2704,6 +2721,15 @@ function equipmentWarehouseMovementStats(itemId, movements) {
     if (!quantity) return;
     if (movement.type === "salida") stats.out += quantity;
     if (movement.type === "ingreso_evento") stats.out -= quantity;
+    if (movement.type === "consumo") {
+      stats.consumed += quantity;
+      stats.consumptionLots.push({
+        movementId: movement.id,
+        quantity,
+        dateTime: equipmentWarehouseMovementDateTime(movement),
+        reference: movement.sourceEventName || movement.reference
+      });
+    }
     if (movement.type === "taller") {
       stats.workshop += quantity;
       stats.workshopLots.push({
@@ -2736,17 +2762,27 @@ function equipmentWarehouseMovementStats(itemId, movements) {
   });
 
   stats.out = Math.max(0, stats.out);
+  stats.consumed = Math.max(0, stats.consumed);
   stats.workshop = Math.max(0, stats.workshop);
   stats.rented = Math.max(0, stats.rented);
   stats.lost = Math.max(0, stats.lost);
   stats.workshopLots = stats.workshopLots.filter((lot) => lot.quantity > 0);
   stats.rentalLots = stats.rentalLots.filter((lot) => lot.quantity > 0);
-  stats.reserved = stats.out + stats.workshop + stats.rented + stats.lost;
+  stats.reserved = stats.out + stats.consumed + stats.workshop + stats.rented + stats.lost;
   return stats;
 }
 
 function equipmentWarehouseAutomaticObservation(stats) {
   const notes = [];
+  if (stats.consumed > 0) {
+    const dates = [...new Set(stats.consumptionLots.map((lot) => formatEquipmentDateTime(lot.dateTime, "")).filter(Boolean))];
+    const events = [...new Set(stats.consumptionLots.map((lot) => String(lot.reference || "").trim()).filter(Boolean))];
+    const detail = [
+      dates.length ? `Fecha de consumo: ${dates.join(", ")}` : "",
+      events.length ? `Evento: ${events.join(" / ")}` : ""
+    ].filter(Boolean).join(". ");
+    notes.push(`Consumido: ${stats.consumed}${detail ? `. ${detail}` : ""}`);
+  }
   if (stats.workshop > 0) {
     const dates = [...new Set(stats.workshopLots.map((lot) => formatEquipmentDateTime(lot.dateTime, "")).filter(Boolean))];
     const repairs = [...new Set(stats.workshopLots.map((lot) => String(lot.repair || "").trim()).filter(Boolean))];
@@ -2782,7 +2818,9 @@ function equipmentWarehousePayloadFingerprint(payload) {
       item?.id,
       item?.name,
       item?.category,
+      item?.itemType,
       item?.quantity,
+      item?.notes,
       item?.updatedAt
     ]),
     movementCount: movements.length,
@@ -2813,6 +2851,9 @@ function applyEquipmentWarehouseInventoryPayload(payload) {
       const stats = equipmentWarehouseMovementStats(item.id, movements);
       const physical = equipmentWarehouseNumber(item.quantity);
       const staticItem = equipmentInventoryStaticItemsByWarehouseId.get(String(item.id || "")) || null;
+      const automaticObservation = equipmentWarehouseAutomaticObservation(stats);
+      const inventoryNote = String(item.notes || "").trim();
+      const noteAlreadyVisible = inventoryNote && automaticObservation.includes(inventoryNote);
       return {
         id: String(item.id || ""),
         item,
@@ -2820,7 +2861,10 @@ function applyEquipmentWarehouseInventoryPayload(payload) {
         available: Math.max(0, physical - stats.reserved),
         stats,
         staticItem,
-        automaticObservation: equipmentWarehouseAutomaticObservation(stats)
+        consumable: equipmentRowIsConsumable({ item, inventorySourceItem: staticItem }),
+        automaticObservation: [automaticObservation, inventoryNote && !noteAlreadyVisible ? `Nota del inventario: ${inventoryNote}` : ""]
+          .filter(Boolean)
+          .join(" · ")
       };
     });
 
@@ -2866,6 +2910,7 @@ function equipmentInventorySummaryCategories() {
       legacyDescription: record.staticItem?.description || "",
       value: record.physical,
       sourceQuantity: String(record.physical),
+      itemType: record.consumable ? "consumible" : "equipo",
       warehouseInventoryId: record.id,
       warehouseRecord: record
     });
@@ -4755,7 +4800,8 @@ function equipmentWarehouseDispatchItems(event) {
           description,
           category: section.title || "Equipo",
           quantity: 0,
-          warehouseItemIds: []
+          warehouseItemIds: [],
+          consumable: equipmentDescriptionEndsWithConsumable(description)
         };
         groups.set(key, group);
       }
@@ -4768,6 +4814,7 @@ function equipmentWarehouseDispatchItems(event) {
       equipmentInventoryCanonicalKey(group.description)
     ) || [];
     group.warehouseItemIds = [...new Set(matches.map((record) => record.id).filter(Boolean))];
+    group.consumable = group.consumable || matches.some((record) => record.consumable);
   });
   return [...groups.values()];
 }
@@ -5097,8 +5144,16 @@ async function saveEquipmentPdf(mode = "full") {
     if (mode === "full" && data.warehouseReceipt?.received) {
       const receiptAction = data.warehouseReceipt.updated ? "actualizado" : "recibido";
       statusMessage += ` Cuadro ${receiptAction} en Fuera / Eventos sin duplicar la salida.`;
-      if (data.warehouseReceipt.unmappedQuantity > 0) {
-        statusMessage += ` ${data.warehouseReceipt.unmappedQuantity} unidades quedaron identificadas como renta o no disponibles, sin restarlas de bodega.`;
+      const purchaseQuantity = Math.max(0, Number(data.warehouseReceipt.purchaseQuantity) || 0);
+      const unavailableQuantity = Math.max(
+        0,
+        (Number(data.warehouseReceipt.unmappedQuantity) || 0) - purchaseQuantity
+      );
+      if (purchaseQuantity > 0) {
+        statusMessage += ` ${purchaseQuantity} unidades consumibles deben comprarse; no se enviaron a renta.`;
+      }
+      if (unavailableQuantity > 0) {
+        statusMessage += ` ${unavailableQuantity} unidades quedaron identificadas como renta o no disponibles, sin restarlas de bodega.`;
       }
     }
     if (status) status.textContent = statusMessage;

@@ -10,6 +10,7 @@ cotizaciones-generadas/
 respaldo-cotizaciones/
 cotizador-auth.json
 cotizador-servidor.log
+inventario-bodega*.json
 
 # Paquetes generados o copiados
 dist/

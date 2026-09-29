@@ -3,10 +3,12 @@
   const PREVIOUS_STORAGE_KEY = "liveWarehouseInventoryStateV2";
   const LEGACY_STORAGE_KEY = "liveWarehouseInventoryStateV1";
   const API_PATH = "/api/inventario-bodega";
-  const MODULE_PATH = "/warehouse-module.html?v=20260902-02";
+  const MODULE_PATH = "/warehouse-module.html?v=20260928-02";
   const movementLabels = {
     salida: "Salida de bodega",
     ingreso_evento: "Ingreso de evento",
+    consumo: "Consumo en evento",
+    compra: "Compra necesaria",
     taller: "Salida a taller",
     devolucion_taller: "Devolución de taller",
     renta: "Renta de equipo",
@@ -167,13 +169,29 @@
     return normalizeText(value || "SIN CATEGORIA").toUpperCase();
   }
 
+  function hasConsumableMarker(value) {
+    return /(?:^|\s)\/?\s*consumible$/i.test(normalizeText(value));
+  }
+
+  function itemTypeFor(item) {
+    return normalizeText(item?.itemType).toLowerCase() === "consumible" || hasConsumableMarker(item?.name)
+      ? "consumible"
+      : "equipo";
+  }
+
+  function isConsumableItem(item) {
+    return itemTypeFor(item) === "consumible";
+  }
+
   function normalizeItem(item, index = 0) {
     const now = new Date().toISOString();
     return {
       id: normalizeText(item?.id) || `item-${String(index + 1).padStart(4, "0")}`,
       category: categoryLabel(item?.category),
       name: normalizeText(item?.name) || "Equipo sin nombre",
+      itemType: itemTypeFor(item),
       sourceKey: inventorySourceKey(item, index),
+      sourceRow: normalizeNumber(item?.sourceRow),
       quantity: normalizeNumber(item?.quantity),
       notes: normalizeText(item?.notes),
       archived: Boolean(item?.archived),
@@ -268,14 +286,17 @@
       : [];
     const now = new Date().toISOString();
     return {
-      version: 3,
+      version: 4,
+      datasetId: normalizeText(window.LIVE_WAREHOUSE_INITIAL_INVENTORY_META?.datasetId),
       source: window.LIVE_WAREHOUSE_INITIAL_INVENTORY_META?.source || "EQUIPO-DE-AUDIO.xlsx / hoja INVENTARIO",
       createdAt: now,
       updatedAt: now,
       title: window.LIVE_WAREHOUSE_INITIAL_INVENTORY_META?.title || "INVENTARIO",
       subtitles: [...(window.LIVE_WAREHOUSE_INITIAL_INVENTORY_META?.subtitles || [])].map(categoryLabel),
       items: seed.map(normalizeItem),
-      movements: [],
+      movements: (Array.isArray(window.LIVE_WAREHOUSE_INITIAL_MOVEMENTS)
+        ? window.LIVE_WAREHOUSE_INITIAL_MOVEMENTS
+        : []).map(normalizeMovement),
       rentalDraft: [],
       workshopDraft: []
     };
@@ -290,8 +311,11 @@
     const workshopDraft = Array.isArray(base.workshopDraft) ? base.workshopDraft : [];
     const subtitles = Array.isArray(base.subtitles) && base.subtitles.length ? base.subtitles : seeded.subtitles;
     return {
-      version: 3,
+      version: 4,
+      datasetId: normalizeText(base.datasetId || seeded.datasetId),
       source: base.source || seeded.source,
+      sourceSpreadsheetId: normalizeText(base.sourceSpreadsheetId),
+      sourceSheetId: normalizeNumber(base.sourceSheetId),
       createdAt: base.createdAt || new Date().toISOString(),
       updatedAt: base.updatedAt || new Date().toISOString(),
       title: base.title || seeded.title,
@@ -367,13 +391,16 @@
     return normalizeState(data.state);
   }
 
-  async function persistServerState() {
+  async function persistServerState(options = {}) {
     if (!isHttpPage()) return false;
     const response = await fetch(API_PATH, {
       method: "PUT",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state })
+      body: JSON.stringify({
+        state,
+        setAsInitial: options.setAsInitial === true
+      })
     });
     if (!response.ok) throw new Error("No se pudo guardar en servidor");
     persistenceMode = "server";
@@ -415,7 +442,7 @@
     state.updatedAt = new Date().toISOString();
     saveLocalState();
     try {
-      await persistServerState();
+      await persistServerState(options);
       if (!options.silent) setStatus("Cambios guardados en servidor.", "success");
       return true;
     } catch {
@@ -440,12 +467,13 @@
   }
 
   function statsForItem(item) {
-    const stats = { out: 0, workshop: 0, rented: 0, lost: 0 };
+    const stats = { out: 0, consumed: 0, workshop: 0, rented: 0, lost: 0 };
     state.movements.forEach((movement) => {
       if (movement.itemId !== item.id) return;
       const quantity = normalizeNumber(movement.quantity);
       if (movement.type === "salida") stats.out += quantity;
       if (movement.type === "ingreso_evento") stats.out -= quantity;
+      if (movement.type === "consumo") stats.consumed += quantity;
       if (movement.type === "taller") stats.workshop += quantity;
       if (movement.type === "devolucion_taller") stats.workshop -= quantity;
       if (movement.type === "renta") stats.rented += quantity;
@@ -454,10 +482,11 @@
       if (movement.type === "recuperado") stats.lost -= quantity;
     });
     stats.out = Math.max(0, stats.out);
+    stats.consumed = Math.max(0, stats.consumed);
     stats.workshop = Math.max(0, stats.workshop);
     stats.rented = Math.max(0, stats.rented);
     stats.lost = Math.max(0, stats.lost);
-    stats.reserved = stats.out + stats.workshop + stats.rented + stats.lost;
+    stats.reserved = stats.out + stats.consumed + stats.workshop + stats.rented + stats.lost;
     stats.physical = Math.max(0, normalizeNumber(item.quantity) - stats.reserved);
     stats.deficit = Math.max(0, stats.reserved - normalizeNumber(item.quantity));
     return stats;
@@ -559,15 +588,52 @@
         detail: [...new Set(rental.map((record) => record.movement.reference).filter(Boolean))].join(" / ")
       });
     }
+    const consumption = state.movements
+      .filter((movement) => movement.itemId === item.id && movement.type === "consumo")
+      .slice()
+      .sort((first, second) => movementChronologyKey(second).localeCompare(movementChronologyKey(first)));
+    if (consumption.length) {
+      rows.push({
+        type: "consumption",
+        label: `Consumido: ${consumption.reduce((sum, movement) => sum + normalizeNumber(movement.quantity), 0)}`,
+        dates: [...new Set(consumption.map(displayDateTime))].slice(0, 3),
+        detail: [...new Set(consumption.map((movement) => movement.sourceEventName || movement.reference).filter(Boolean))]
+          .slice(0, 3)
+          .join(" / ")
+      });
+    }
+    const lost = statsForItem(item).lost;
+    if (lost > 0) {
+      const latestLost = latestMovementFor(item.id, ["perdido"]);
+      rows.push({
+        type: "lost",
+        label: `Diferencia / perdido: ${lost}`,
+        dates: latestLost ? [displayDateTime(latestLost)] : [],
+        detail: latestLost?.notes || latestLost?.reference || ""
+      });
+    }
+    const itemNote = normalizeText(item.notes);
+    const noteAlreadyVisible = rows.some((row) => normalizeText(row.detail) === itemNote);
+    if (itemNote && !noteAlreadyVisible) {
+      rows.unshift({ type: "note", label: "Nota del inventario", dates: [], detail: itemNote });
+    }
     return rows;
+  }
+
+  function availabilityObservationLabels(type) {
+    if (type === "workshop") return { date: "Salió de bodega", detail: "Falla" };
+    if (type === "rental") return { date: "Salió de bodega", detail: "Cliente" };
+    if (type === "consumption") return { date: "Fecha de consumo", detail: "Evento" };
+    if (type === "lost") return { date: "Fecha registrada", detail: "Justificación" };
+    return { date: "", detail: "Detalle" };
   }
 
   function availabilityObservationText(item, lifecycle) {
     return availabilityObservationData(item, lifecycle)
       .map((row) => {
-        const departure = row.dates.length ? `Salió de bodega: ${row.dates.join(", ")}.` : "";
-        const detailLabel = row.type === "workshop" ? "Falla" : "Cliente";
-        const detail = row.detail ? `${detailLabel}: ${row.detail}.` : "";
+        const labels = availabilityObservationLabels(row.type);
+        const departure = row.dates.length ? `${labels.date}: ${row.dates.join(", ")}.` : "";
+        const detail = row.detail ? `${labels.detail}: ${row.detail}.` : "";
         return `${row.label}. ${departure} ${detail}`.replace(/\s+/g, " ").trim();
       })
       .join(" ");
@@ -576,19 +642,22 @@
   function availabilityObservationHtml(item, lifecycle) {
     const observations = availabilityObservationData(item, lifecycle);
     if (!observations.length) {
-      return '<span class="warehouse-observation-empty">Sin equipo en renta o taller.</span>';
+      return '<span class="warehouse-observation-empty">Sin movimientos ni observaciones.</span>';
     }
     return `
       <div class="warehouse-availability-notes">
         ${observations
           .map(
-            (row) => `
+            (row) => {
+              const labels = availabilityObservationLabels(row.type);
+              return `
               <div class="warehouse-availability-note" data-type="${escapeHtml(row.type)}">
                 <strong>${escapeHtml(row.label)}</strong>
-                <span>Salió de bodega: ${escapeHtml(row.dates.join(", "))}</span>
-                ${row.detail ? `<span>${escapeHtml(row.type === "workshop" ? "Falla" : "Cliente")}: ${escapeHtml(row.detail)}</span>` : ""}
+                ${row.dates.length ? `<span>${escapeHtml(labels.date)}: ${escapeHtml(row.dates.join(", "))}</span>` : ""}
+                ${row.detail ? `<span>${escapeHtml(labels.detail)}: ${escapeHtml(row.detail)}</span>` : ""}
               </div>
-            `
+            `;
+            }
           )
           .join("")}
       </div>
@@ -603,6 +672,7 @@
         totals.registered += normalizeNumber(item.quantity);
         totals.physical += stats.physical;
         totals.out += stats.out;
+        totals.consumed += stats.consumed;
         totals.workshop += stats.workshop;
         totals.rented += stats.rented;
         totals.lost += stats.lost;
@@ -611,7 +681,7 @@
         }
         return totals;
       },
-      { items: 0, registered: 0, physical: 0, out: 0, workshop: 0, rented: 0, lost: 0, needsQuantity: 0 }
+      { items: 0, registered: 0, physical: 0, out: 0, consumed: 0, workshop: 0, rented: 0, lost: 0, needsQuantity: 0 }
     );
   }
 
@@ -622,6 +692,7 @@
       ["Inventario disponible", totals.physical],
       ["Cantidad registrada", totals.registered],
       ["Fuera eventos", totals.out],
+      ["Consumido", totals.consumed],
       ["Taller", totals.workshop],
       ["En renta", totals.rented],
       ["Diferencias", totals.lost],
@@ -659,6 +730,7 @@
     const stats = statsForItem(item);
     if (statusFilter === "available") return stats.physical > 0;
     if (statusFilter === "out") return stats.out > 0;
+    if (statusFilter === "consumed") return stats.consumed > 0;
     if (statusFilter === "workshop") return stats.workshop > 0;
     if (statusFilter === "rented") return stats.rented > 0;
     if (statusFilter === "lost") return stats.lost > 0;
@@ -717,7 +789,8 @@
             ? `<tr class="equipment-category-row"><td colspan="8">${escapeHtml(categoryLabel(item.category))}</td></tr>`
             : "";
         lastCategory = categoryLabel(item.category);
-        const latestOut = latestMovementFor(item.id, ["salida"]);
+        const consumable = isConsumableItem(item);
+        const latestOut = latestMovementFor(item.id, consumable ? ["consumo"] : ["salida"]);
         const latestWorkshop = latestMovementFor(item.id, ["taller"]);
         const latestRental = latestMovementFor(item.id, ["renta"]);
         return `
@@ -734,8 +807,8 @@
             </td>
             <td>
               <button class="warehouse-cell-action" type="button" data-action="events" data-item-id="${escapeHtml(item.id)}">
-                <strong>${escapeHtml(stats.out)}</strong>
-                <span>${escapeHtml(latestOut?.reference || "Salida / entrada")}</span>
+                <strong>${escapeHtml(consumable ? stats.consumed : stats.out)}</strong>
+                <span>${escapeHtml(latestOut?.reference || (consumable ? "Registrar consumo" : "Salida / entrada"))}</span>
               </button>
             </td>
             <td>
@@ -745,10 +818,12 @@
               </button>
             </td>
             <td>
-              <button class="warehouse-cell-action" type="button" data-action="rental" data-item-id="${escapeHtml(item.id)}">
-                <strong>${escapeHtml(stats.rented)}</strong>
-                <span>${escapeHtml(latestRental?.reference || "Agregar a PDF")}</span>
-              </button>
+              ${consumable
+                ? '<button class="warehouse-cell-action" type="button" disabled title="Los consumibles se compran; no se rentan"><strong>0</strong><span>No se renta</span></button>'
+                : `<button class="warehouse-cell-action" type="button" data-action="rental" data-item-id="${escapeHtml(item.id)}">
+                    <strong>${escapeHtml(stats.rented)}</strong>
+                    <span>${escapeHtml(latestRental?.reference || "Agregar a PDF")}</span>
+                  </button>`}
             </td>
             <td>${availabilityObservationHtml(item, lifecycle)}</td>
             <td>
@@ -794,7 +869,7 @@
   }
 
   function renderEventsBoard() {
-    const movements = activeMovements(["salida", "ingreso_evento"]);
+    const movements = activeMovements(["salida", "ingreso_evento", "consumo", "compra"]);
     if (!movements.length) {
       elements.eventsBoard.innerHTML = '<p class="warehouse-empty">Aún no hay salidas o ingresos por evento.</p>';
       return;
@@ -821,6 +896,8 @@
         const eventRecords = lifecycleByGroup.get(groupKey) || [];
         const outgoing = entries.filter((entry) => entry.type === "salida").reduce((sum, entry) => sum + entry.quantity, 0);
         const incoming = entries.filter((entry) => entry.type === "ingreso_evento").reduce((sum, entry) => sum + entry.quantity, 0);
+        const consumed = entries.filter((entry) => entry.type === "consumo").reduce((sum, entry) => sum + entry.quantity, 0);
+        const purchase = entries.filter((entry) => entry.type === "compra").reduce((sum, entry) => sum + entry.quantity, 0);
         const pending = eventRecords.reduce((sum, record) => sum + record.remainingQuantity, 0);
         const sourcePdfUrl = sourceEntry?.sourcePdfUrl || attachmentHref(sourceEntry?.attachment);
         const entryLines = entries
@@ -833,7 +910,11 @@
                 <strong>${escapeHtml(movementLabels[entry.type])}</strong>
                 <p>${escapeHtml(entry.quantity)} x ${escapeHtml(movementItemName(entry))}</p>
                 ${entry.responsible ? `<small>Responsable: ${escapeHtml(entry.responsible)}</small>` : ""}
-                ${entry.sourceUnmatched ? '<small class="warehouse-unmapped-note">No descontado: requiere renta o no estaba disponible.</small>' : ""}
+                ${entry.type === "compra"
+                  ? '<small class="warehouse-unmapped-note">No descontado: consumible pendiente de comprar.</small>'
+                  : entry.sourceUnmatched
+                    ? '<small class="warehouse-unmapped-note">No descontado: requiere renta o no estaba disponible.</small>'
+                    : ""}
                 ${entry.attachment ? `<a href="${escapeHtml(attachmentHref(entry.attachment))}" download="${escapeHtml(entry.attachment.name)}">Ver archivo: ${escapeHtml(entry.attachment.name)}</a>` : ""}
               </div>
             `
@@ -845,7 +926,7 @@
               <div>
                 ${sourceEntry ? '<span class="warehouse-source-pill">Cuadro recibido</span>' : ""}
                 <strong>${escapeHtml(name)}</strong>
-                <span>Salió: ${escapeHtml(outgoing)} · Entró: ${escapeHtml(incoming)} · Pendiente: ${escapeHtml(pending)}</span>
+                <span>Salió: ${escapeHtml(outgoing)} · Consumido: ${escapeHtml(consumed)} · Por comprar: ${escapeHtml(purchase)} · Entró: ${escapeHtml(incoming)} · Pendiente: ${escapeHtml(pending)}</span>
               </div>
               <div class="warehouse-board-actions">
                 ${sourcePdfUrl ? `<a class="warehouse-row-button" href="${escapeHtml(sourcePdfUrl)}" target="_blank" rel="noopener">Ver cuadro</a>` : ""}
@@ -1167,8 +1248,10 @@
           sourceKey: item.sourceKey || warehouseCanonicalKey(item.name),
           name: item.name,
           category: item.category,
+          itemType: item.itemType,
           quantity: normalizeNumber(item.quantity),
           available: stats.physical,
+          consumed: stats.consumed,
           out: stats.out,
           workshop: stats.workshop,
           rented: stats.rented,
@@ -1308,6 +1391,7 @@
       id: uid("item"),
       category: categoryLabel(elements.newCategory.value || "GENERAL"),
       name,
+      itemType: hasConsumableMarker(name) ? "consumible" : "equipo",
       sourceKey: warehouseCanonicalKey(name),
       quantity: normalizeNumber(elements.newQuantity.value),
       notes: normalizeText(elements.newNotes.value),
@@ -1361,7 +1445,7 @@
   }
 
   function movementReducesPhysical(type) {
-    return ["salida", "taller", "renta", "perdido"].includes(type);
+    return ["salida", "consumo", "taller", "renta", "perdido"].includes(type);
   }
 
   function addMovement(payload) {
@@ -1447,6 +1531,10 @@
   function openDialog(kind, itemId, relatedMovementId = "") {
     const item = itemById(itemId);
     if (!item) return;
+    if (kind === "rental" && isConsumableItem(item)) {
+      setStatus(`${item.name} es consumible: si hace falta debe comprarse, no rentarse.`, "warning");
+      return;
+    }
     dialogContext = { kind, itemId, relatedMovementId };
     const stats = statsForItem(item);
     elements.dialogSaveButton.classList.remove("warehouse-danger-button");
@@ -1465,8 +1553,9 @@
     }
 
     if (kind === "events") {
-      elements.dialogTitle.textContent = "Fuera / Evento";
-      elements.dialogSaveButton.textContent = "Guardar movimiento";
+      const consumable = isConsumableItem(item);
+      elements.dialogTitle.textContent = consumable ? "Consumo en evento" : "Fuera / Evento";
+      elements.dialogSaveButton.textContent = consumable ? "Registrar consumo" : "Guardar movimiento";
       elements.dialogBody.innerHTML = `
         <div class="warehouse-selected-equipment">
           <span>Equipo seleccionado</span>
@@ -1477,8 +1566,9 @@
           <label>
             Movimiento
             <select id="dialogEventType">
-              <option value="salida">Salida de bodega</option>
-              <option value="ingreso_evento">Ingreso de evento</option>
+              ${consumable
+                ? '<option value="consumo">Consumo permanente en evento</option>'
+                : '<option value="salida">Salida de bodega</option><option value="ingreso_evento">Ingreso de evento</option>'}
             </select>
           </label>
           <label>
@@ -1756,8 +1846,9 @@
     if (dialogContext.kind === "events") {
       const file = elements.dialogBody.querySelector("#dialogAttachment")?.files?.[0];
       const attachment = await readFileAsDataUrl(file);
+      const selectedType = elements.dialogBody.querySelector("#dialogEventType")?.value || "salida";
       const ok = addMovement({
-        type: elements.dialogBody.querySelector("#dialogEventType")?.value || "salida",
+        type: isConsumableItem(item) && selectedType === "salida" ? "consumo" : selectedType,
         itemId: item.id,
         quantity,
         dateTime: elements.dialogBody.querySelector("#dialogDateTime")?.value,
@@ -2078,8 +2169,12 @@
   }
 
   function generateRentalPdf() {
+    state.rentalDraft = state.rentalDraft.filter((line) => {
+      const item = itemById(line.itemId);
+      return item && !isConsumableItem(item);
+    });
     if (!state.rentalDraft.length) {
-      setStatus("Agregue equipo a la renta antes de generar PDF.", "warning");
+      setStatus("Agregue equipo no consumible a la renta antes de generar PDF.", "warning");
       return;
     }
     const client = normalizeText(elements.rentalClient.value) || "Por definir";
@@ -2171,7 +2266,7 @@
 
   function printEventPdf(groupKey) {
     const entries = state.movements
-      .filter((movement) => ["salida", "ingreso_evento"].includes(movement.type) && eventKey(movement) === groupKey)
+      .filter((movement) => ["salida", "ingreso_evento", "consumo", "compra"].includes(movement.type) && eventKey(movement) === groupKey)
       .slice()
       .sort((a, b) => `${a.dateTime || a.date} ${a.createdAt}`.localeCompare(`${b.dateTime || b.date} ${b.createdAt}`));
     const eventName = entries.find((entry) => entry.sourceEventName)?.sourceEventName
@@ -2390,9 +2485,9 @@
       const imported = normalizeState(payload.state || payload);
       if (!imported.items.length) throw new Error("El archivo no tiene inventario.");
       state = imported;
-      await saveState();
+      await saveState({ setAsInitial: true });
       renderAll();
-      setStatus("Respaldo importado correctamente.", "success");
+      setStatus("Inventario importado y guardado como libro inicial.", "success");
     } catch (error) {
       setStatus(`No se pudo importar el respaldo: ${error.message}`, "warning");
     } finally {

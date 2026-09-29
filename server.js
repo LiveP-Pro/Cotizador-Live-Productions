@@ -36,11 +36,16 @@ const backupDir = path.join(dataDir, "respaldo-cotizaciones");
 const dbPath = path.join(dataDir, "cotizaciones.sqlite");
 const warehouseInventoryPath = path.join(dataDir, "inventario-bodega.json");
 const warehouseInventoryBackupPath = path.join(dataDir, "inventario-bodega-anterior.json");
-const warehouseInventoryInitialPath = path.join(rootDir, "inventory-initial-state.json");
+const warehouseInventoryPrivateInitialPath = path.join(dataDir, "inventario-bodega-inicial.json");
+const warehouseInventoryBundledInitialPath = path.join(rootDir, "inventory-initial-state.json");
+const warehouseInventoryOverrideInitialPath = process.env.WAREHOUSE_INITIAL_STATE_PATH
+  ? path.resolve(process.env.WAREHOUSE_INITIAL_STATE_PATH)
+  : "";
 const equipmentCatalogOverridesPath = path.join(dataDir, "catalogo-requerimiento-equipo.json");
 const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requerimiento-equipo-anterior.json");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
+const warehouseAssetVersion = "20260928-02";
 const whatsappConfig = {
   apiVersion: process.env.WHATSAPP_API_VERSION || "v23.0",
   phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
@@ -84,8 +89,36 @@ function readWarehouseInventoryFile(filePath) {
   return normalizeWarehouseInventoryPayload(JSON.parse(fs.readFileSync(filePath, "utf8")));
 }
 
+function warehouseInventoryInitialPaths() {
+  return [
+    warehouseInventoryPrivateInitialPath,
+    warehouseInventoryOverrideInitialPath,
+    warehouseInventoryBundledInitialPath
+  ].filter((filePath, index, paths) => filePath && paths.indexOf(filePath) === index);
+}
+
+function readWarehouseInventoryInitial() {
+  let lastError;
+  for (const candidate of warehouseInventoryInitialPaths()) {
+    if (!fs.existsSync(candidate)) continue;
+    try {
+      return readWarehouseInventoryFile(candidate);
+    } catch (error) {
+      lastError = error;
+      console.warn(`No se pudo leer ${path.basename(candidate)}: ${error.message}`);
+    }
+  }
+  throw lastError || new Error("No existe un inventario inicial disponible.");
+}
+
 function readWarehouseInventory() {
-  const candidates = [warehouseInventoryPath, warehouseInventoryBackupPath, warehouseInventoryInitialPath];
+  const candidates = [
+    warehouseInventoryPath,
+    warehouseInventoryPrivateInitialPath,
+    warehouseInventoryBackupPath,
+    warehouseInventoryOverrideInitialPath,
+    warehouseInventoryBundledInitialPath
+  ].filter((filePath, index, paths) => filePath && paths.indexOf(filePath) === index);
   let lastError;
   for (const candidate of candidates) {
     if (!fs.existsSync(candidate)) continue;
@@ -99,19 +132,59 @@ function readWarehouseInventory() {
   throw lastError || new Error("No existe un inventario inicial disponible.");
 }
 
+function warehouseInventoryDatasetId(payload) {
+  return String(payload?.state?.datasetId || payload?.datasetId || "").trim();
+}
+
+function warehouseInventoryMigrationBackupPath(datasetId) {
+  const fingerprint = crypto.createHash("sha256").update(datasetId).digest("hex").slice(0, 12);
+  return path.join(dataDir, `inventario-bodega-antes-${fingerprint}.json`);
+}
+
+function replaceWarehouseInventorySync(normalized) {
+  const temporaryPath = `${warehouseInventoryPath}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(temporaryPath, JSON.stringify(normalized, null, 2), { mode: 0o600 });
+  fs.renameSync(temporaryPath, warehouseInventoryPath);
+}
+
 function ensureWarehouseInventoryStorage() {
-  if (fs.existsSync(warehouseInventoryPath)) return;
-  const initial = readWarehouseInventoryFile(warehouseInventoryInitialPath);
-  fs.writeFileSync(warehouseInventoryPath, JSON.stringify(initial, null, 2), { mode: 0o600 });
+  const initial = readWarehouseInventoryInitial();
+  if (!fs.existsSync(warehouseInventoryPath)) {
+    replaceWarehouseInventorySync(initial);
+    return;
+  }
+
+  const targetDatasetId = warehouseInventoryDatasetId(initial);
+  if (!targetDatasetId) return;
+
+  let current;
+  try {
+    current = readWarehouseInventoryFile(warehouseInventoryPath);
+  } catch (error) {
+    console.warn(`El inventario activo no se pudo leer y será sustituido: ${error.message}`);
+  }
+  if (warehouseInventoryDatasetId(current) === targetDatasetId) return;
+
+  const migrationBackupPath = warehouseInventoryMigrationBackupPath(targetDatasetId);
+  if (!fs.existsSync(migrationBackupPath)) {
+    fs.copyFileSync(warehouseInventoryPath, migrationBackupPath);
+  }
+  fs.copyFileSync(warehouseInventoryPath, warehouseInventoryBackupPath);
+  replaceWarehouseInventorySync(initial);
+  console.log(`Inventario de bodega migrado al conjunto ${targetDatasetId}.`);
+}
+
+async function writeWarehouseInventoryFile(filePath, normalized) {
+  const temporaryPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  await fsp.writeFile(temporaryPath, JSON.stringify(normalized, null, 2), { mode: 0o600 });
+  await fsp.rename(temporaryPath, filePath);
 }
 
 async function writeWarehouseInventory(normalized) {
-  const temporaryPath = `${warehouseInventoryPath}.tmp-${process.pid}-${Date.now()}`;
   if (fs.existsSync(warehouseInventoryPath)) {
     await fsp.copyFile(warehouseInventoryPath, warehouseInventoryBackupPath);
   }
-  await fsp.writeFile(temporaryPath, JSON.stringify(normalized, null, 2), { mode: 0o600 });
-  await fsp.rename(temporaryPath, warehouseInventoryPath);
+  await writeWarehouseInventoryFile(warehouseInventoryPath, normalized);
 }
 
 async function saveWarehouseInventory(payload, response) {
@@ -126,12 +199,25 @@ async function saveWarehouseInventory(payload, response) {
     return;
   }
 
+  const setAsInitial = payload?.setAsInitial === true;
+  if (setAsInitial && fs.existsSync(warehouseInventoryPath)) {
+    const datasetId = warehouseInventoryDatasetId(normalized);
+    if (datasetId) {
+      const migrationBackupPath = warehouseInventoryMigrationBackupPath(datasetId);
+      if (!fs.existsSync(migrationBackupPath)) {
+        await fsp.copyFile(warehouseInventoryPath, migrationBackupPath);
+      }
+    }
+  }
+  if (setAsInitial) {
+    await writeWarehouseInventoryFile(warehouseInventoryPrivateInitialPath, normalized);
+  }
   await writeWarehouseInventory(normalized);
-  jsonResponse(response, 200, normalized);
+  jsonResponse(response, 200, { ...normalized, initialSaved: setAsInitial });
 }
 
 async function restoreWarehouseInventory(response) {
-  const initial = readWarehouseInventoryFile(warehouseInventoryInitialPath);
+  const initial = readWarehouseInventoryInitial();
   const restored = { state: initial.state, savedAt: new Date().toISOString() };
   await writeWarehouseInventory(restored);
   jsonResponse(response, 200, restored);
@@ -268,23 +354,9 @@ async function saveEquipmentCatalogOverride(payload, response) {
 }
 
 const authConfigPath = path.join(dataDir, "cotizador-auth.json");
-const defaultPasswordHash = {
-  algorithm: "pbkdf2-sha256",
-  iterations: 210000,
-  salt: "b7d889cfb3151c2a2df99b950a95fb6d",
-  hash: "52ac54adf50bc2e80b8d0df3faeb688d2e3301f86cd7dae6f2035dbf221a8d22"
-};
+const passwordHashIterations = 210000;
 
-const previousDefaultPasswordHashes = [
-  {
-    algorithm: "pbkdf2-sha256",
-    iterations: 210000,
-    salt: "4735e732b458c196f2d378103a6102da",
-    hash: "982f65163a62c92be2eeada89a8a42284a594e7e5391bc11fb13c0d32581fe10"
-  }
-];
-
-function hashPassword(password, salt, iterations = defaultPasswordHash.iterations) {
+function hashPassword(password, salt, iterations = passwordHashIterations) {
   return crypto.pbkdf2Sync(String(password || ""), salt, iterations, 32, "sha256").toString("hex");
 }
 
@@ -292,23 +364,10 @@ function newPasswordHash(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   return {
     algorithm: "pbkdf2-sha256",
-    iterations: defaultPasswordHash.iterations,
+    iterations: passwordHashIterations,
     salt,
     hash: hashPassword(password, salt)
   };
-}
-
-function samePasswordConfig(first, second) {
-  return (
-    String(first?.algorithm || "") === String(second?.algorithm || "") &&
-    Number(first?.iterations || 0) === Number(second?.iterations || 0) &&
-    String(first?.salt || "") === String(second?.salt || "") &&
-    String(first?.hash || "") === String(second?.hash || "")
-  );
-}
-
-function isPreviousDefaultPasswordHash(passwordConfig) {
-  return previousDefaultPasswordHashes.some((previous) => samePasswordConfig(passwordConfig, previous));
 }
 
 function writeAuthConfig(config) {
@@ -327,11 +386,11 @@ function loadAuthConfig() {
       : envHash && envSalt
         ? {
             algorithm: "pbkdf2-sha256",
-            iterations: Number.isFinite(envIterations) && envIterations > 0 ? envIterations : defaultPasswordHash.iterations,
+            iterations: Number.isFinite(envIterations) && envIterations > 0 ? envIterations : passwordHashIterations,
             salt: envSalt,
             hash: envHash
           }
-        : defaultPasswordHash,
+        : newPasswordHash(crypto.randomBytes(32).toString("hex")),
     sessionSecret: process.env.COTIZADOR_SESSION_SECRET || crypto.randomBytes(32).toString("hex")
   };
 
@@ -342,10 +401,6 @@ function loadAuthConfig() {
       password: stored.password?.hash ? stored.password : envConfig.password,
       sessionSecret: String(stored.sessionSecret || envConfig.sessionSecret)
     };
-    if (isPreviousDefaultPasswordHash(resolved.password)) {
-      resolved.password = envConfig.password;
-      writeAuthConfig(resolved);
-    }
     return resolved;
   } catch {
     writeAuthConfig(envConfig);
@@ -605,7 +660,7 @@ function expiredSessionCookie() {
 
 function verifyCredentials(username, password) {
   if (String(username || "") !== authConfig.username) return false;
-  const passwordConfig = authConfig.password || defaultPasswordHash;
+  const passwordConfig = authConfig.password;
   const candidate = hashPassword(password, passwordConfig.salt, passwordConfig.iterations);
   return timingSafeTextEqual(candidate, passwordConfig.hash);
 }
@@ -2744,6 +2799,21 @@ function warehouseDispatchLookupKey(value) {
     .trim();
 }
 
+function warehouseDispatchHasConsumableMarker(value) {
+  return /(?:^|\s)\/?\s*consumible$/i.test(String(value || "").trim());
+}
+
+function warehouseDispatchLookupKeys(value) {
+  const key = warehouseDispatchLookupKey(value);
+  const withoutConsumableMarker = key.replace(/\s*\/?\s*consumible$/i, "").trim();
+  return [...new Set([key, withoutConsumableMarker].filter(Boolean))];
+}
+
+function warehouseDispatchItemIsConsumable(item) {
+  return String(item?.itemType || "").trim().toLowerCase() === "consumible"
+    || warehouseDispatchHasConsumableMarker(item?.name);
+}
+
 function warehouseDispatchQuantity(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return 0;
@@ -2757,7 +2827,7 @@ function warehouseAvailableForDispatch(state, itemId) {
   (state.movements || []).forEach((movement) => {
     if (String(movement?.itemId || "") !== String(item.id || "")) return;
     const quantity = warehouseDispatchQuantity(movement?.quantity);
-    if (["salida", "taller", "renta", "perdido"].includes(movement?.type)) reserved += quantity;
+    if (["salida", "consumo", "taller", "renta", "perdido"].includes(movement?.type)) reserved += quantity;
     if (["ingreso_evento", "devolucion_taller", "devolucion_renta", "recuperado"].includes(movement?.type)) reserved -= quantity;
   });
   return Math.max(0, warehouseDispatchQuantity(item.quantity) - Math.max(0, reserved));
@@ -2786,7 +2856,8 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
   const existingSourceMovements = state.movements.filter(
     (movement) => String(movement?.sourceDocumentId || "") === documentId
   );
-  const existingOutgoing = existingSourceMovements.filter((movement) => movement.type === "salida");
+  const dispatchMovementTypes = new Set(["salida", "consumo", "compra"]);
+  const existingOutgoing = existingSourceMovements.filter((movement) => dispatchMovementTypes.has(movement.type));
   const hasRegisteredReturn = existingSourceMovements.some((movement) => movement.type === "ingreso_evento");
   const now = new Date().toISOString();
   const sourceFileFields = {
@@ -2812,14 +2883,29 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
         received: true,
         updated: false,
         locked: true,
-        movementCount: existingOutgoing.length
+        movementCount: existingOutgoing.length,
+        mappedQuantity: existingOutgoing
+          .filter((movement) => ["salida", "consumo"].includes(movement.type))
+          .reduce((total, movement) => total + warehouseDispatchQuantity(movement.quantity), 0),
+        unmappedQuantity: existingOutgoing
+          .filter((movement) => movement.sourceUnmatched)
+          .reduce((total, movement) => total + warehouseDispatchQuantity(movement.quantity), 0),
+        consumedQuantity: existingOutgoing
+          .filter((movement) => movement.type === "consumo")
+          .reduce((total, movement) => total + warehouseDispatchQuantity(movement.quantity), 0),
+        purchaseQuantity: existingOutgoing
+          .filter((movement) => movement.type === "compra")
+          .reduce((total, movement) => total + warehouseDispatchQuantity(movement.quantity), 0)
       }
     };
   }
 
   if (existingOutgoing.length) {
     state.movements = state.movements.filter(
-      (movement) => !(movement.type === "salida" && String(movement?.sourceDocumentId || "") === documentId)
+      (movement) => !(
+        dispatchMovementTypes.has(movement.type)
+        && String(movement?.sourceDocumentId || "") === documentId
+      )
     );
   }
 
@@ -2827,10 +2913,10 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
   const itemsById = new Map(activeItems.map((item) => [String(item.id || ""), item]));
   const itemsByName = new Map();
   activeItems.forEach((item) => {
-    const key = warehouseDispatchLookupKey(item.name);
-    if (!key) return;
-    if (!itemsByName.has(key)) itemsByName.set(key, []);
-    itemsByName.get(key).push(item);
+    warehouseDispatchLookupKeys(item.name).forEach((key) => {
+      if (!itemsByName.has(key)) itemsByName.set(key, []);
+      itemsByName.get(key).push(item);
+    });
   });
 
   const eventName = String(dispatch.name || "Evento por definir").trim() || "Evento por definir";
@@ -2865,6 +2951,8 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
   };
   let mappedQuantity = 0;
   let unmappedQuantity = 0;
+  let consumedQuantity = 0;
+  let purchaseQuantity = 0;
   let lineIndex = 0;
 
   (Array.isArray(dispatch.items) ? dispatch.items : []).slice(0, 5000).forEach((line) => {
@@ -2873,8 +2961,12 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
     if (!remaining) return;
     const requestedIds = Array.isArray(line?.warehouseItemIds) ? line.warehouseItemIds.map(String) : [];
     const requestedItems = requestedIds.map((id) => itemsById.get(id)).filter(Boolean);
-    const fallbackItems = itemsByName.get(warehouseDispatchLookupKey(description)) || [];
+    const fallbackItems = warehouseDispatchLookupKeys(description)
+      .flatMap((key) => itemsByName.get(key) || []);
     const candidates = [...new Map([...requestedItems, ...fallbackItems].map((item) => [String(item.id), item])).values()];
+    const consumable = line?.consumable === true
+      || warehouseDispatchHasConsumableMarker(description)
+      || candidates.some(warehouseDispatchItemIsConsumable);
 
     candidates.forEach((item) => {
       if (remaining <= 0) return;
@@ -2885,6 +2977,7 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
       state.movements.push({
         id: warehouseDispatchMovementId(),
         ...commonFields,
+        type: consumable ? "consumo" : "salida",
         itemId: String(item.id || ""),
         itemName: String(item.name || description),
         quantity,
@@ -2895,6 +2988,7 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
         createdAt: now
       });
       mappedQuantity += quantity;
+      if (consumable) consumedQuantity += quantity;
       remaining -= quantity;
     });
 
@@ -2903,10 +2997,16 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
       state.movements.push({
         id: warehouseDispatchMovementId(),
         ...commonFields,
+        type: consumable ? "compra" : "salida",
         itemId: "",
         itemName: description,
         quantity: remaining,
-        notes: [commonFields.notes, "Cantidad no descontada: no estaba disponible en el inventario de bodega."].filter(Boolean).join(" "),
+        notes: [
+          commonFields.notes,
+          consumable
+            ? "Cantidad pendiente de comprar: el inventario consumible no era suficiente."
+            : "Cantidad no descontada: no estaba disponible en el inventario de bodega."
+        ].filter(Boolean).join(" "),
         sourceCategory: String(line?.category || "Equipo"),
         sourceRequestedName: description,
         sourceLineKey: `${warehouseDispatchLookupKey(description)}-${lineIndex}`,
@@ -2914,6 +3014,7 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
         createdAt: now
       });
       unmappedQuantity += remaining;
+      if (consumable) purchaseQuantity += remaining;
     }
   });
 
@@ -2929,7 +3030,9 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
       locked: false,
       movementCount: lineIndex,
       mappedQuantity,
-      unmappedQuantity
+      unmappedQuantity,
+      consumedQuantity,
+      purchaseQuantity
     }
   };
 }
@@ -3035,9 +3138,27 @@ function serveStatic(request, response, pathname) {
       return;
     }
 
-    const contentType = mimeTypes[path.extname(filePath).toLocaleLowerCase("es-GT")] || "application/octet-stream";
-    response.writeHead(200, { "Content-Type": contentType });
-    response.end(data);
+    const extension = path.extname(filePath).toLocaleLowerCase("es-GT");
+    const contentType = mimeTypes[extension] || "application/octet-stream";
+    const responseData = requestedPath === "/index.html"
+      ? Buffer.from(
+          data
+            .toString("utf8")
+            .replace(
+              /(equipment-inventory\.js|equipment\.js|inventory\.js)\?v=[^"'&<>\s]+/g,
+              `$1?v=${warehouseAssetVersion}`
+            ),
+          "utf8"
+        )
+      : data;
+    const headers = { "Content-Type": contentType };
+    if (requestedPath === "/index.html" || ["equipment-inventory.js", "equipment.js", "inventory.js"].some(
+      (asset) => requestedPath === `/${asset}`
+    )) {
+      headers["Cache-Control"] = "no-store";
+    }
+    response.writeHead(200, headers);
+    response.end(responseData);
   });
 }
 
@@ -3287,14 +3408,21 @@ server.on("error", (error) => {
   process.exitCode = 1;
 });
 
-server.listen(port, host, () => {
-  const visibleHost = host === "0.0.0.0" ? "localhost" : host;
-  console.log(`Cotizador Live Productions listo en http://${visibleHost}:${port}/index.html`);
-  console.log(`PDFs: ${pdfDir}`);
-  console.log(`Cuadros de equipo: ${equipmentPdfDir}`);
-  console.log(`SQLite: ${dbPath}`);
-  console.log(`Respaldos SQLite: ${backupDir}`);
+if (process.env.WAREHOUSE_MIGRATION_ONLY === "1") {
+  db.close();
+  console.log("Migración de inventario verificada.");
+} else {
+  server.listen(port, host, () => {
+    const visibleHost = host === "0.0.0.0" ? "localhost" : host;
+    console.log(`Cotizador Live Productions listo en http://${visibleHost}:${port}/index.html`);
+    console.log(`PDFs: ${pdfDir}`);
+    console.log(`Cuadros de equipo: ${equipmentPdfDir}`);
+    console.log(`SQLite: ${dbPath}`);
+    console.log(`Respaldos SQLite: ${backupDir}`);
 
-  const browserPath = findBrowserExecutable();
-  if (browserPath) getPdfEngine(browserPath).catch(() => {});
-});
+    if (process.env.DISABLE_PDF_WARMUP !== "1") {
+      const browserPath = findBrowserExecutable();
+      if (browserPath) getPdfEngine(browserPath).catch(() => {});
+    }
+  });
+}

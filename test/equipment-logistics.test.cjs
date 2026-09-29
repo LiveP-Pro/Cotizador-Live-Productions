@@ -121,6 +121,60 @@ test("consumables are excluded from transfer candidates", () => {
   assert.deepEqual(JSON.parse(JSON.stringify(result)), ["Luz LED"]);
 });
 
+test("explicit warehouse item type applies consumption even before the display suffix is present", () => {
+  const context = createEquipmentContext();
+  const result = evaluate(context, `(() => {
+    applyEquipmentWarehouseInventoryPayload({
+      savedAt: "2026-09-28T08:00:00.000Z",
+      state: {
+        updatedAt: "2026-09-28T08:00:00.000Z",
+        items: [{ id: "humo", name: "Galon liquido de humo", itemType: "consumible", category: "Efectos", quantity: 10 }],
+        movements: [{ id: "uso", itemId: "humo", type: "consumo", quantity: 6, dateTime: "2026-09-28T07:00" }]
+      }
+    });
+    const record = equipmentWarehouseInventoryState.records[0];
+    const dispatch = equipmentWarehouseDispatchItems({
+      sections: [{ title: "Efectos", items: [[2, "Galon liquido de humo"]] }]
+    })[0];
+    return { available: record.available, consumable: record.consumable, dispatchConsumable: dispatch.consumable };
+  })()`);
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), {
+    available: 4,
+    consumable: true,
+    dispatchConsumable: true
+  });
+});
+
+test("requirement summary uses the consumed warehouse balance and requests purchase", () => {
+  const context = createEquipmentContext();
+  const result = evaluate(context, `(() => {
+    applyEquipmentWarehouseInventoryPayload({
+      savedAt: "2026-09-28T09:00:00.000Z",
+      state: {
+        updatedAt: "2026-09-28T09:00:00.000Z",
+        items: [{ id: "humo", name: "Galon liquido de humo / consumible", itemType: "consumible", category: "EFECTOS ESPECIALES", quantity: 3 }],
+        movements: [{ id: "uso", itemId: "humo", type: "consumo", quantity: 2, dateTime: "2026-09-28T08:00" }]
+      }
+    });
+    equipmentState.events = [{
+      id: "evento-a",
+      active: true,
+      sections: [{ title: "EFECTOS ESPECIALES", items: [[2, "Galon liquido de humo"]] }]
+    }];
+    const row = equipmentRowsSummary().find((entry) => entry.type === "item");
+    return {
+      description: row.description,
+      available: equipmentInventoryAvailableValueFor(row),
+      action: equipmentProcurementActionFor(row),
+      html: tableForEquipmentInventory([row], false)
+    };
+  })()`);
+  assert.equal(result.description, "Galon liquido de humo / consumible");
+  assert.equal(result.available, 1);
+  assert.equal(result.action, "COMPRA");
+  assert.match(result.html, /equipment-action-buy">COMPRA<\/td>/);
+});
+
 test("shortage report shows purchase and rent actions without merging different equipment", () => {
   const context = createEquipmentContext();
   const html = evaluate(context, `tableForEquipmentRentalReport([
@@ -580,6 +634,17 @@ test("automatic summary reproduces screenshot dates and both exact current conso
     const serviceId = Object.keys(equipmentServices).find((id) =>
       /sunday funday - bateria acustica opcion a/.test(normalizeEquipmentKey(equipmentServices[id].name)));
     if (!serviceId) throw new Error("Current Sunday Funday variant not found");
+    applyEquipmentWarehouseInventoryPayload({
+      savedAt: "2026-09-28T10:00:00.000Z",
+      state: {
+        updatedAt: "2026-09-28T10:00:00.000Z",
+        items: [
+          { id: "console-test", name: "Consola X32 mesa digital con cable ac", category: "CONSOLAS", itemType: "equipo", quantity: 2 },
+          { id: "router-test", name: "Router con cargador y funda", category: "CONSOLAS", itemType: "equipo", quantity: 2 }
+        ],
+        movements: []
+      }
+    });
     const snapshot = captureEquipmentEventSnapshotForServiceIds([serviceId]);
     equipmentState.events = [
       { ...snapshot, id: "a", active: true, place: "A", name: "BODA", date: "2026-09-25", setupAt: "2026-09-25T07:00", equipmentInAt: "2026-09-26T03:00" },
