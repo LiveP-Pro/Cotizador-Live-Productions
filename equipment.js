@@ -1,4 +1,5 @@
 const equipmentCatalog = window.requerimientoEquipoCatalog || { services: {}, groups: [] };
+const equipmentCatalogBaseVersion = String(equipmentCatalog.version || "");
 const equipmentServices = equipmentCatalog.services;
 const equipmentServiceGroups = equipmentCatalog.groups;
 const equipmentInventoryCatalog = window.requerimientoEquipoInventory || { categories: [] };
@@ -3101,7 +3102,8 @@ function applyEquipmentCatalogOverrides(payload) {
 async function loadEquipmentCatalogOverrides(force = false) {
   if (equipmentCatalogEditorState.loadingPromise) return equipmentCatalogEditorState.loadingPromise;
   if (equipmentCatalogEditorState.loaded && !force) return null;
-  equipmentCatalogEditorState.loadingPromise = fetch("/api/cuadros-equipo/catalogo", {
+  const catalogUrl = `/api/cuadros-equipo/catalogo?baseVersion=${encodeURIComponent(equipmentCatalogBaseVersion)}`;
+  equipmentCatalogEditorState.loadingPromise = fetch(catalogUrl, {
     credentials: "same-origin",
     cache: "no-store"
   })
@@ -3203,6 +3205,7 @@ function equipmentCatalogEditorPayload(draft = equipmentCatalogEditorState.draft
     };
   });
   return {
+    baseCatalogVersion: equipmentCatalogBaseVersion,
     serviceId: draft.mode === "create" ? uniqueEquipmentCatalogServiceId(draft.name) : draft.serviceId,
     name: String(draft.name || "").trim(),
     mainSections,

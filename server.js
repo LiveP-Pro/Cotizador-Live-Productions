@@ -45,7 +45,7 @@ const equipmentCatalogOverridesPath = path.join(dataDir, "catalogo-requerimiento
 const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requerimiento-equipo-anterior.json");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20260928-02";
+const warehouseAssetVersion = "20260929-catalogo-drive-01";
 const whatsappConfig = {
   apiVersion: process.env.WHATSAPP_API_VERSION || "v23.0",
   phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
@@ -229,8 +229,16 @@ async function restoreWarehouseInventory(response) {
 
 ensureWarehouseInventoryStorage();
 
-function emptyEquipmentCatalogOverrides() {
-  return { version: 1, savedAt: "", services: {} };
+function emptyEquipmentCatalogOverrides(baseCatalogVersion = "") {
+  return { version: 2, baseCatalogVersion, savedAt: "", services: {} };
+}
+
+function normalizeEquipmentBaseCatalogVersion(value) {
+  const version = String(value || "").trim();
+  if (!version || !/^[a-z0-9][a-z0-9._-]{0,119}$/i.test(version)) {
+    throw new Error("La versión del catálogo base no es válida.");
+  }
+  return version;
 }
 
 function normalizeEquipmentCatalogItems(items, label = "categoría") {
@@ -284,6 +292,7 @@ function normalizeEquipmentCatalogAudioOptions(audioOptions) {
 }
 
 function normalizeEquipmentCatalogOverride(payload) {
+  const baseCatalogVersion = normalizeEquipmentBaseCatalogVersion(payload?.baseCatalogVersion);
   const serviceId = String(payload?.serviceId || "").trim();
   if (!/^[a-z0-9][a-z0-9-]{0,159}$/i.test(serviceId)) {
     throw new Error("El tipo de servicio no es válido.");
@@ -296,6 +305,7 @@ function normalizeEquipmentCatalogOverride(payload) {
     throw new Error("Seleccione una categoría válida para publicar el servicio.");
   }
   return {
+    baseCatalogVersion,
     serviceId,
     createOnly: payload?.createOnly === true,
     service: {
@@ -311,7 +321,8 @@ function normalizeEquipmentCatalogOverride(payload) {
 function readEquipmentCatalogOverridesFile(filePath) {
   const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
   return {
-    version: 1,
+    version: 2,
+    baseCatalogVersion: String(parsed?.baseCatalogVersion || ""),
     savedAt: String(parsed?.savedAt || ""),
     services: parsed?.services && typeof parsed.services === "object" && !Array.isArray(parsed.services)
       ? parsed.services
@@ -331,6 +342,13 @@ function readEquipmentCatalogOverrides() {
   return emptyEquipmentCatalogOverrides();
 }
 
+function readEquipmentCatalogOverridesForVersion(baseCatalogVersion) {
+  const requestedVersion = String(baseCatalogVersion || "").trim();
+  const stored = readEquipmentCatalogOverrides();
+  if (!requestedVersion || stored.baseCatalogVersion === requestedVersion) return stored;
+  return emptyEquipmentCatalogOverrides(requestedVersion);
+}
+
 async function writeEquipmentCatalogOverrides(data) {
   const temporaryPath = `${equipmentCatalogOverridesPath}.tmp-${process.pid}-${Date.now()}`;
   if (fs.existsSync(equipmentCatalogOverridesPath)) {
@@ -348,14 +366,15 @@ async function saveEquipmentCatalogOverride(payload, response) {
     errorResponse(response, 400, error.message);
     return;
   }
-  const stored = readEquipmentCatalogOverrides();
+  const stored = readEquipmentCatalogOverridesForVersion(normalized.baseCatalogVersion);
   if (normalized.createOnly && stored.services[normalized.serviceId]) {
     errorResponse(response, 409, "Ya existe un servicio con ese nombre. Cambie el nombre y vuelva a publicarlo.");
     return;
   }
   const savedAt = new Date().toISOString();
   const next = {
-    version: 1,
+    version: 2,
+    baseCatalogVersion: normalized.baseCatalogVersion,
     savedAt,
     services: {
       ...stored.services,
@@ -3339,7 +3358,7 @@ async function handleRequest(request, response) {
 
     if (request.method === "GET" && url.pathname === "/api/cuadros-equipo/catalogo") {
       if (!requireAuth(request, response)) return;
-      jsonResponse(response, 200, readEquipmentCatalogOverrides());
+      jsonResponse(response, 200, readEquipmentCatalogOverridesForVersion(url.searchParams.get("baseVersion")));
       return;
     }
 

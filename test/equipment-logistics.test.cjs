@@ -533,18 +533,39 @@ test("backline-only uses source sections, excludes audio and preserves choices o
   assert.deepEqual(result.all, ["Teclado de prueba", "Monitor de prueba"]);
 });
 
-test("Sunday Funday option is available for all current variants, not other services", () => {
+test("Sunday Funday option is available for all workbook variants, not other services", () => {
   const context = createEquipmentContext();
   vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "equipment-catalog.js"), "utf8"), context);
   const result = plain(evaluate(context, `(() => {
-    const services = Object.values(window.requerimientoEquipoCatalog.services).filter((item) => /sunday\\s+funday/i.test(item.name));
+    const catalog = window.requerimientoEquipoCatalog;
+    const group = catalog.groups.find((item) => item.label === "SUNDAY FUNDAY");
+    const services = group.serviceIds.map((id) => catalog.services[id]);
     return { count: services.length,
       all: services.every((item) => equipmentEventIsSundayFunday({ serviceName: item.name })),
       other: equipmentEventIsSundayFunday({ serviceName: "DJ Privado", serviceIds: ["dj-privado"] }) };
   })()`));
-  assert.ok(result.count >= 9);
+  assert.equal(result.count, 5);
   assert.equal(result.all, true);
   assert.equal(result.other, false);
+});
+
+test("catalog is generated only from the current authorized workbook", () => {
+  const context = createEquipmentContext();
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "equipment-catalog.js"), "utf8"), context);
+  const catalog = plain(context.window.requerimientoEquipoCatalog);
+  assert.equal(catalog.version, "20260929-catalogo-drive-01");
+  assert.equal(catalog.source.spreadsheetId, "1aFozg79pW7PkefUJMJXx1Leu14VZFwcqN3aUa3_Dc-Q");
+  assert.equal(Object.keys(catalog.services).length, 61);
+  assert.deepEqual(catalog.groups.map((group) => group.label), [
+    "SUNDAY FUNDAY", "DJ", "NOVALOOPS", "SAXOFONIC", "AUDIO",
+    "ESTUARDO REYNA", "CEREMONIA", "COCTEL", "ESTRUCTURAS EN L",
+    "CUADRILATERO", "PISTA DE BAILE", "PANTALLA LED", "TARIMA"
+  ]);
+  const zeroItems = Object.values(catalog.services)
+    .flatMap((service) => service.mainSections)
+    .flatMap((section) => section.items)
+    .filter(([quantity]) => quantity === 0);
+  assert.equal(zeroItems.length, 17);
 });
 
 test("purchase report contains only COMPRA; rent report contains only RENTA", () => {
@@ -615,10 +636,10 @@ test("JSON round trip retains backline preference, all route events and empty se
 });
 
 
-test("all current Sunday variants build nonempty synchronized plans using the unchanged current catalogs", () => {
+test("all authorized Sunday variants build nonempty synchronized plans", () => {
   const context = createEquipmentContext(true);
   const results = plain(evaluate(context, `(() => {
-    const ids = Object.keys(equipmentServices).filter((id) => /sunday\\s+funday/i.test(equipmentServices[id].name));
+    const ids = equipmentServiceGroups.find((group) => group.label === "SUNDAY FUNDAY").serviceIds;
     return ids.map((serviceId) => {
       const snapshot = captureEquipmentEventSnapshotForServiceIds([serviceId]);
       equipmentState.events = [
@@ -638,7 +659,7 @@ test("all current Sunday variants build nonempty synchronized plans using the un
         noConsumables: all.every((item) => !equipmentRowIsConsumable(item)) };
     });
   })()`));
-  assert.ok(results.length >= 9);
+  assert.equal(results.length, 5);
   results.forEach((result) => {
     assert.ok(result.count > 0, result.serviceId);
     assert.ok(result.summaryCount > 0, result.serviceId);
