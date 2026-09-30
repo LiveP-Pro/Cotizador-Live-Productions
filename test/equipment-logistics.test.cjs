@@ -70,6 +70,54 @@ test("separated events reuse equipment instead of adding both quantities", () =>
   assert.equal(quantity, 5);
 });
 
+test("a custom service is restored in its selected category with zero quantities intact", () => {
+  const context = createEquipmentContext();
+  const result = evaluate(context, `(() => {
+    equipmentServiceGroups.push({ label: "DJ", serviceIds: [] });
+    const changed = applyEquipmentCatalogServiceOverride("dj-personalizado", {
+      name: "DJ PERSONALIZADO",
+      custom: true,
+      groupId: "dj",
+      updatedAt: "2026-09-29T10:00:00.000Z",
+      mainSections: [{
+        id: "consola",
+        title: "CONSOLA",
+        items: [[0, "Consola X32 mesa digital con cable ac"]]
+      }],
+      audioOptions: {}
+    });
+    return {
+      changed,
+      name: equipmentServices["dj-personalizado"].name,
+      quantity: equipmentServices["dj-personalizado"].mainSections[0].items[0][0],
+      groupServices: equipmentServiceGroups[0].serviceIds
+    };
+  })()`);
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), {
+    changed: true,
+    name: "DJ PERSONALIZADO",
+    quantity: 0,
+    groupServices: ["dj-personalizado"]
+  });
+});
+
+test("restoring a custom service repeatedly does not duplicate it in the category", () => {
+  const context = createEquipmentContext();
+  const count = evaluate(context, `(() => {
+    equipmentServiceGroups.push({ label: "PANTALLA LED", serviceIds: [] });
+    const override = {
+      name: "PANTALLA PERSONALIZADA",
+      custom: true,
+      groupId: "pantalla-led",
+      mainSections: [{ title: "VIDEO", items: [[1, "Modulo de pantalla led"]] }]
+    };
+    applyEquipmentCatalogServiceOverride("pantalla-personalizada", override);
+    applyEquipmentCatalogServiceOverride("pantalla-personalizada", override);
+    return equipmentServiceGroups[0].serviceIds.filter((id) => id === "pantalla-personalizada").length;
+  })()`);
+  assert.equal(count, 1);
+});
+
 test("consumables accumulate across events and are classified for purchase", () => {
   const context = createEquipmentContext();
   const result = evaluate(context, `(() => {

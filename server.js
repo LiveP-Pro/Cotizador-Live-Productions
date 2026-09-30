@@ -288,12 +288,21 @@ function normalizeEquipmentCatalogOverride(payload) {
   if (!/^[a-z0-9][a-z0-9-]{0,159}$/i.test(serviceId)) {
     throw new Error("El tipo de servicio no es válido.");
   }
+  const name = String(payload?.name || "").trim();
+  if (!name || name.length > 240) throw new Error("El nombre del tipo de servicio no es válido.");
+  const custom = payload?.custom === true;
+  const groupId = String(payload?.groupId || "").trim();
+  if (custom && !/^[a-z0-9][a-z0-9-]{0,159}$/i.test(groupId)) {
+    throw new Error("Seleccione una categoría válida para publicar el servicio.");
+  }
   return {
     serviceId,
+    createOnly: payload?.createOnly === true,
     service: {
-      name: String(payload?.name || "").trim().slice(0, 240),
+      name,
       mainSections: normalizeEquipmentCatalogSections(payload?.mainSections),
       audioOptions: normalizeEquipmentCatalogAudioOptions(payload?.audioOptions),
+      ...(custom ? { custom: true, groupId } : {}),
       updatedAt: new Date().toISOString()
     }
   };
@@ -340,6 +349,10 @@ async function saveEquipmentCatalogOverride(payload, response) {
     return;
   }
   const stored = readEquipmentCatalogOverrides();
+  if (normalized.createOnly && stored.services[normalized.serviceId]) {
+    errorResponse(response, 409, "Ya existe un servicio con ese nombre. Cambie el nombre y vuelva a publicarlo.");
+    return;
+  }
   const savedAt = new Date().toISOString();
   const next = {
     version: 1,

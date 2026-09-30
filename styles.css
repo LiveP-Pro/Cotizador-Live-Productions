@@ -673,6 +673,24 @@ body {
   gap: 10px;
 }
 
+.equipment-service-management {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: -6px;
+}
+
+.equipment-service-management button {
+  min-height: 46px;
+  padding: 0 18px;
+  color: #ffffff;
+  background: #111111;
+  border: 1px solid #111111;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .equipment-service-menu {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2954,6 +2972,74 @@ body {
   padding-right: 4px;
 }
 
+.equipment-catalog-creator-step {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: #f7f8fa;
+}
+
+.equipment-catalog-step-number {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: #111111;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.equipment-catalog-creator-step label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.equipment-catalog-creator-step input,
+.equipment-catalog-creator-step select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: #ffffff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.equipment-catalog-creator-guide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 2px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.equipment-catalog-creator-guide strong {
+  color: var(--ink);
+}
+
+.equipment-catalog-creator-destination {
+  margin-top: 2px;
+  border-color: #bb8d39;
+  background: #fff8eb;
+}
+
 .equipment-catalog-category {
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -3018,6 +3104,17 @@ body {
   gap: 8px;
 }
 
+.equipment-catalog-grid-heading {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 42px;
+  gap: 10px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
 .equipment-catalog-item {
   display: grid;
   grid-template-columns: 110px minmax(0, 1fr) 42px;
@@ -3035,6 +3132,7 @@ body {
 
 .equipment-catalog-item > button,
 .equipment-catalog-add-item > button,
+.equipment-catalog-add-row,
 .equipment-catalog-editor-panel > footer button {
   min-height: 40px;
   padding: 8px 12px;
@@ -3047,6 +3145,13 @@ body {
   font-weight: 900;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+.equipment-catalog-add-row {
+  justify-self: start;
+  color: #ffffff;
+  border-color: #111111;
+  background: #111111;
 }
 
 .equipment-catalog-item > button {
@@ -3116,6 +3221,10 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .equipment-catalog-grid-heading {
+    display: none;
+  }
+
   .equipment-category-library button,
   .equipment-catalog-item > button {
     width: 100%;
@@ -3138,6 +3247,19 @@ body {
   .equipment-catalog-editor-panel > footer > div,
   .equipment-catalog-editor-panel > footer button {
     width: 100%;
+  }
+
+  .equipment-catalog-editor-panel > footer > span {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+
+  .equipment-catalog-editor-panel > footer > span:empty {
+    display: none;
+  }
+
+  .equipment-catalog-creator-step {
+    grid-template-columns: 1fr;
   }
 }
 

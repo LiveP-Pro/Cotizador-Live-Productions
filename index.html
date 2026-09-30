@@ -6,12 +6,12 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260923-trasiegos-01" />
+    <link rel="stylesheet" href="styles.css?v=20260929-creador-servicios-01" />
     <link rel="stylesheet" href="warehouse-inventory.css?v=20260902-03" />
     <script src="app.js?v=20260814-01" defer></script>
     <script src="equipment-catalog.js?v=20260821-04" defer></script>
     <script src="equipment-inventory.js?v=20260822-01" defer></script>
-    <script src="equipment.js?v=20260923-resumen-automatico-02" defer></script>
+    <script src="equipment.js?v=20260929-creador-servicios-01" defer></script>
     <script src="inventory.js?v=20260902-03" defer></script>
   </head>
   <body>
@@ -262,6 +262,9 @@
               </select>
               <div id="equipmentServicePicker" class="equipment-service-picker"></div>
             </label>
+            <div class="equipment-field-wide equipment-service-management">
+              <button id="equipmentCreateServiceTemplateButton" type="button">Generar Nuevo Cuadro de Servicio</button>
+            </div>
             <div id="equipmentDjAudioOptions" class="equipment-field-wide equipment-audio-options is-hidden">
               <span data-audio-options-label>Tipo de audio</span>
               <button type="button" data-dj-audio-type="qsc">AUDIO QSC</button>
@@ -281,9 +284,7 @@
 
           <div class="equipment-actions">
             <button id="equipmentSavePdfButton" type="button">Guardar PDF + JSON bodega</button>
-            <button id="equipmentSaveRentPdfButton" type="button">Generar Resumen de Renta</button>
-            <button id="equipmentGeneratePurchaseReportButton" type="button">Generar Informe de Compra</button>
-            <button id="equipmentOpenEditableButton" type="button">Abrir JSON editable</button>
+            <button id="equipmentOpenEditableButton" type="button">Importar archivo JSON</button>
             <input id="equipmentEditableFileInput" class="is-hidden" type="file" accept=".json,application/json" />
             <span id="equipmentSaveStatus" role="status"></span>
           </div>
@@ -292,9 +293,7 @@
             <button id="equipmentReviewWindowButton" type="button" class="is-active">Revisión de equipo</button>
             <button id="equipmentSummaryWindowButton" type="button">Resumen de Equipo</button>
             <button id="equipmentTransferWindowButton" type="button">Trasegar equipo</button>
-            <button id="equipmentRemoveWindowButton" type="button">Eliminar</button>
-            <button id="equipmentClearAllButton" type="button">Limpiar todo 0</button>
-            <button id="equipmentUndoDeleteButton" type="button" disabled>Regresar</button>
+            <button id="equipmentClearAllButton" type="button">Limpiar todos</button>
           </div>
 
           <div class="equipment-window-shell">
