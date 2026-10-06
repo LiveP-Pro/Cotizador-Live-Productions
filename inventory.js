@@ -3,7 +3,7 @@
   const PREVIOUS_STORAGE_KEY = "liveWarehouseInventoryStateV2";
   const LEGACY_STORAGE_KEY = "liveWarehouseInventoryStateV1";
   const API_PATH = "/api/inventario-bodega";
-  const MODULE_PATH = "/warehouse-module.html?v=20260928-02";
+  const MODULE_PATH = "/warehouse-module.html?v=20261006-import-review-01";
   const movementLabels = {
     salida: "Salida de bodega",
     ingreso_evento: "Ingreso de evento",
@@ -23,6 +23,16 @@
   let saveTimer = null;
   let persistenceMode = "local";
   let dialogContext = null;
+  let importReview = null;
+  let readingImport = false;
+  let serverSavedAt = "";
+  let changeRevision = 0;
+  let warehouseDirty = false;
+  let activeServerSaves = 0;
+  let remoteRefreshPromise = null;
+  let warehouseChannel = null;
+  let serverSaveQueue = Promise.resolve();
+  let restoringWarehouse = false;
   const signaturePads = {};
   const elements = {};
 
@@ -191,9 +201,16 @@
       name: normalizeText(item?.name) || "Equipo sin nombre",
       itemType: itemTypeFor(item),
       sourceKey: inventorySourceKey(item, index),
+      ...(Array.isArray(item?.descriptionAliases) ? { descriptionAliases:
+        [...new Set(item.descriptionAliases.map(normalizeText).filter(Boolean))] } : {}),
       sourceRow: normalizeNumber(item?.sourceRow),
       quantity: normalizeNumber(item?.quantity),
       notes: normalizeText(item?.notes),
+      ...(item?.importSource ? { importSource: {
+        fileName: normalizeText(item.importSource.fileName),
+        description: normalizeText(item.importSource.description),
+        location: normalizeText(item.importSource.location)
+      } } : {}),
       archived: Boolean(item?.archived),
       createdAt: item?.createdAt || now,
       updatedAt: item?.updatedAt || now
@@ -388,23 +405,37 @@
     const data = await response.json();
     if (!data?.state?.items?.length) return null;
     persistenceMode = "server";
+    serverSavedAt = data.savedAt || "";
     return normalizeState(data.state);
+  }
+
+  async function enqueueWarehouseWrite(task) {
+    activeServerSaves += 1;
+    const save = serverSaveQueue.then(task);
+    serverSaveQueue = save.catch(() => {});
+    try {
+      return await save;
+    } finally { activeServerSaves -= 1; }
   }
 
   async function persistServerState(options = {}) {
     if (!isHttpPage()) return false;
-    const response = await fetch(API_PATH, {
-      method: "PUT",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        state,
-        setAsInitial: options.setAsInitial === true
-      })
+    const revision = changeRevision;
+    const snapshot = JSON.parse(JSON.stringify(state));
+    return enqueueWarehouseWrite(async () => {
+      const response = await fetch(API_PATH, {
+        method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: snapshot, setAsInitial: options.setAsInitial === true,
+          ...(serverSavedAt ? { expectedSavedAt: serverSavedAt } : {}) })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "No se pudo guardar en servidor");
+      persistenceMode = "server";
+      serverSavedAt = payload.savedAt || serverSavedAt;
+      if (revision === changeRevision) warehouseDirty = false;
+      announceSavedWarehouse(payload);
+      return true;
     });
-    if (!response.ok) throw new Error("No se pudo guardar en servidor");
-    persistenceMode = "server";
-    return true;
   }
 
   function setStatus(message, tone = "neutral") {
@@ -439,20 +470,24 @@
 
   async function saveState(options = {}) {
     if (!state) return false;
+    warehouseDirty = true;
     state.updatedAt = new Date().toISOString();
     saveLocalState();
     try {
       await persistServerState(options);
       if (!options.silent) setStatus("Cambios guardados en servidor.", "success");
       return true;
-    } catch {
+    } catch (error) {
       persistenceMode = "local";
-      if (!options.silent) setStatus("Cambios guardados en este navegador.", "warning");
+      setStatus(`${error.message}. Los cambios están pendientes en este navegador. Exporte un respaldo antes de recargar para conservarlos.`, "warning");
       return false;
     }
   }
 
   function scheduleSave() {
+    changeRevision += 1;
+    warehouseDirty = true;
+    state.updatedAt = new Date().toISOString();
     saveLocalState();
     window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(() => saveState({ silent: true }), 500);
@@ -1239,13 +1274,14 @@
       version: 1,
       updatedAt: state.updatedAt,
       publishedAt,
-      savedAt: publishedAt,
+      savedAt: warehouseDirty ? publishedAt : serverSavedAt || state.updatedAt || publishedAt,
       state,
       items: activeItems().map((item) => {
         const stats = statsForItem(item);
         return {
           id: item.id,
           sourceKey: item.sourceKey || warehouseCanonicalKey(item.name),
+          descriptionAliases: item.descriptionAliases || [],
           name: item.name,
           category: item.category,
           itemType: item.itemType,
@@ -1262,6 +1298,59 @@
     };
     window.LIVE_WAREHOUSE_AVAILABILITY = payload;
     document.dispatchEvent(new CustomEvent("live:warehouse-inventory-updated", { detail: payload }));
+  }
+
+  function announceSavedWarehouse(payload) {
+    if (!payload?.state) return;
+    try { warehouseChannel?.postMessage(payload); } catch {}
+    // Send the current local view; a newer edit may have happened during this save.
+    publishWarehouseAvailability();
+  }
+
+  function canRefreshWarehouse() {
+    const field = document.activeElement;
+    return !warehouseDirty && !activeServerSaves && !restoringWarehouse && !importReview && !readingImport && !dialogContext
+      && !(elements.root?.contains(field) && field?.matches("input, textarea, [contenteditable='true']"));
+  }
+
+  function applyRemoteWarehouse(payload) {
+    if (!canRefreshWarehouse() || !payload?.state?.items?.length || !payload.savedAt) return false;
+    if (serverSavedAt && Date.parse(payload.savedAt) <= Date.parse(serverSavedAt)) return false;
+    state = normalizeState(payload.state);
+    serverSavedAt = payload.savedAt;
+    persistenceMode = "server";
+    saveLocalState();
+    renderAll();
+    return true;
+  }
+
+  async function refreshWarehouseFromServer() {
+    if (!isHttpPage() || !canRefreshWarehouse()) return false;
+    if (remoteRefreshPromise) return remoteRefreshPromise;
+    remoteRefreshPromise = fetch(API_PATH, { credentials: "same-origin", cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => applyRemoteWarehouse(payload))
+      .catch(() => false)
+      .finally(() => { remoteRefreshPromise = null; });
+    return remoteRefreshPromise;
+  }
+
+  function initWarehouseSync() {
+    if (typeof window.BroadcastChannel === "function") {
+      warehouseChannel = new window.BroadcastChannel("live-warehouse-inventory");
+      warehouseChannel.addEventListener("message", (event) => applyRemoteWarehouse(event.data));
+    }
+    const page = elements.root.closest("[data-page]");
+    const visible = () => (!page || page.classList.contains("is-active")) && !document.hidden;
+    const refresh = () => { if (visible()) refreshWarehouseFromServer(); };
+    window.addEventListener("focus", refresh);
+    window.addEventListener("storage", (event) => { if (event.key === STORAGE_KEY) refresh(); });
+    document.addEventListener("visibilitychange", refresh);
+    elements.root.addEventListener("focusout", () => window.setTimeout(refresh, 0));
+    if (page && typeof MutationObserver === "function") {
+      new MutationObserver(refresh).observe(page, { attributes: true, attributeFilter: ["class"] });
+    }
+    window.setInterval(refresh, 5000);
   }
 
   function renderAll() {
@@ -1369,7 +1458,13 @@
         addAuditMovement(item, previousTotal, totalReal, `Cambio de cantidad registrada: ${reason}`);
       }
     } else if (field === "name") {
+      const previousName = item.name;
       item.name = normalizeText(target.value) || item.name;
+      if (item.name !== previousName) {
+        item.descriptionAliases = [...new Set([...(item.descriptionAliases || []), previousName])]
+          .filter((name) => name && name !== item.name);
+        item.itemType = itemTypeFor(item);
+      }
     }
 
     item.updatedAt = new Date().toISOString();
@@ -1825,8 +1920,8 @@
       state.workshopDraft = state.workshopDraft.filter((line) => line.itemId !== item.id);
       closeDialog();
       renderAll();
-      await saveState({ silent: true });
-      setStatus(`Equipo eliminado: ${item.name}.`, "success");
+      const savedOnServer = await saveState({ silent: true });
+      if (savedOnServer) setStatus(`Equipo eliminado: ${item.name}.`, "success");
       return;
     }
     const quantity = normalizeNumber(elements.dialogBody.querySelector("#dialogQuantity")?.value);
@@ -2093,10 +2188,7 @@
       const savedOnServer = await saveState({ silent: true });
       const totalQuantity = lines.reduce((sum, line) => sum + normalizeNumber(line.quantity), 0);
       const successMessage = options.successMessage || `${totalQuantity} unidades enviadas a taller.`;
-      setStatus(
-        savedOnServer ? successMessage : `${successMessage} El servidor no respondió; el cambio quedó guardado en este navegador.`,
-        savedOnServer ? "success" : "warning"
-      );
+      if (savedOnServer) setStatus(successMessage, "success");
       return true;
     } finally {
       setWorkshopSubmitting(false);
@@ -2479,35 +2571,205 @@
   }
 
   async function importBackup(file) {
-    if (!file) return;
+    if (!file || readingImport || importReview) return;
+    readingImport = true;
     try {
-      const payload = JSON.parse(await file.text());
-      const imported = normalizeState(payload.state || payload);
-      if (!imported.items.length) throw new Error("El archivo no tiene inventario.");
-      state = imported;
-      await saveState({ setAsInitial: true });
-      renderAll();
-      setStatus("Inventario importado y guardado como libro inicial.", "success");
+      if (file.size > 15 * 1024 * 1024) throw new Error("El archivo supera el límite de 15 MB.");
+      setStatus(`Leyendo ${file.name} para comparar descripciones...`, "neutral");
+      let imported;
+      let warnings = [];
+      const restore = /\.json$/i.test(file.name);
+      if (restore) {
+        const payload = JSON.parse(await file.text());
+        imported = payload.state || payload;
+        if (!Array.isArray(imported.items) || !imported.items.length) throw new Error("El respaldo no contiene inventario.");
+        if (!Array.isArray(imported.movements)) throw new Error("El respaldo no contiene sus bitácoras. Use un respaldo exportado de esta aplicación.");
+      } else {
+        if (!/\.(xlsx|pdf)$/i.test(file.name)) throw new Error("Use Excel .xlsx, PDF con texto o respaldo .json. Para .xls, guárdelo como .xlsx.");
+        if (!isHttpPage()) throw new Error("Abra la aplicación desde su servidor para leer archivos Excel o PDF.");
+        const response = await fetch(`${API_PATH}/importar-archivo`, {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": file.type || "application/octet-stream", "X-File-Name": encodeURIComponent(file.name) },
+          body: file
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "No se pudo leer el archivo.");
+        imported = payload;
+        warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+      }
+      if (!window.WarehouseImportReview) throw new Error("Actualice la página para cargar el comparador de descripciones.");
+      const plan = window.WarehouseImportReview.prepare(state, imported, { mode: restore ? "restore" : "merge" });
+      importReview = { plan, fileName: file.name, warnings, baseline: JSON.stringify({ ...state, updatedAt: "" }), busy: false };
+      elements.importError.textContent = "";
+      renderImportReview();
+      elements.importDialog.showModal();
+      setStatus("Revise las descripciones en la ventana de importación.", "neutral");
     } catch (error) {
       setStatus(`No se pudo importar el respaldo: ${error.message}`, "warning");
     } finally {
+      readingImport = false;
       elements.importInput.value = "";
     }
   }
 
+  function closeImportReview() {
+    if (importReview?.busy) return;
+    importReview = null;
+    elements.importDialog.close();
+    setStatus("Importación cancelada. El inventario no cambió.", "neutral");
+  }
+
+  function renderImportReview() {
+    if (!importReview) return;
+    const { plan, fileName, warnings, busy } = importReview;
+    const pending = plan.rows.filter((row) => !row.decision).length;
+    const variants = plan.rows.filter((row) => ["variant", "ambiguous", "duplicate"].includes(row.status));
+    const newRows = plan.rows.filter((row) => row.status === "new");
+    const exact = plan.rows.filter((row) => row.status === "exact").length;
+    elements.importSummary.textContent = `${fileName} · Equipos: ${plan.rows.length} · Coincidencias: ${exact} · Nuevos: ${newRows.length} · Por resolver: ${pending}`;
+    elements.importApplyButton.disabled = busy || pending > 0;
+    elements.importApplyButton.textContent = busy ? "Guardando..." : "Importar y guardar";
+    elements.importCancelButton.disabled = busy;
+    elements.importCloseButton.disabled = busy;
+    const actionLabels = { "imported-name": "Usar descripción del archivo", "keep-name": "Conservar descripción actual", add: "Agregar por separado", skip: "Omitir fila" };
+    const cards = variants.map((row) => {
+      const decisionLabel = row.decision ? actionLabels[row.decision.action] : "Elija una acción";
+      const candidates = row.candidates.map((candidate) => {
+        const changes = [...candidate.difference.removed.map((word) => `<span class="warehouse-diff-removed">− ${escapeHtml(word)}</span>`),
+          ...candidate.difference.added.map((word) => `<span class="warehouse-diff-added">+ ${escapeHtml(word)}</span>`)].join(" ");
+        const unavailable = plan.mode === "merge" && plan.rows.some((other) => other !== row && other.decision?.targetId === candidate.id);
+        return `<div class="warehouse-import-candidate">
+          <div><small>Descripción actual · ${escapeHtml(candidate.category)}</small><strong>${escapeHtml(candidate.name)}</strong>
+            <span>Cantidad registrada: ${escapeHtml(candidate.quantity)} → ${escapeHtml(row.item.quantity)}</span></div>
+          <div class="warehouse-import-differences">${changes || "Variación de escritura, acentos o formato."}</div>
+          <div class="warehouse-import-actions">
+            ${["imported-name", "keep-name"].map((action) => `<button type="button" class="warehouse-row-button" data-import-row="${row.index}" data-import-action="${action}" data-import-target="${escapeHtml(candidate.id)}" aria-pressed="${row.decision?.action === action && row.decision.targetId === candidate.id}" ${busy || unavailable ? "disabled" : ""}>${actionLabels[action]}</button>`).join("")}
+          </div>${unavailable ? "<small>Este equipo ya se actualiza con otra fila.</small>" : ""}
+        </div>`;
+      }).join("");
+      const separateLabel = plan.mode === "restore" ? "Conservar como viene en el respaldo" : actionLabels.add;
+      return `<article class="warehouse-import-row ${row.decision ? "is-resolved" : ""}" data-import-review-row="${row.index}">
+        <header><strong>${row.status === "duplicate" ? "Fila repetida" : row.status === "ambiguous" ? "Varias coincidencias posibles" : "Descripción diferente"}</strong><span>${escapeHtml(decisionLabel)}</span></header>
+        <div class="warehouse-import-incoming"><small>Descripción en el archivo · ${escapeHtml(row.item.sourceLocation || row.item.category || "Sin categoría")}</small>
+          <strong>${escapeHtml(row.item.name)}</strong><span>Cantidad del archivo: ${escapeHtml(row.item.quantity)}</span></div>
+        ${candidates}<div class="warehouse-import-actions">
+          <button type="button" class="warehouse-row-button" data-import-row="${row.index}" data-import-action="add" aria-pressed="${row.decision?.action === "add"}" ${busy ? "disabled" : ""}>${separateLabel}</button>
+          ${plan.mode === "merge" ? `<button type="button" class="warehouse-row-button" data-import-row="${row.index}" data-import-action="skip" aria-pressed="${row.decision?.action === "skip"}" ${busy ? "disabled" : ""}>Omitir fila</button>` : ""}
+        </div>
+      </article>`;
+    }).join("");
+    const simpleVariants = variants.filter((row) => !row.decision && row.candidates.length === 1 && row.status === "variant").length > 1;
+    elements.importBody.innerHTML = `
+      <p class="warehouse-import-explanation">${plan.mode === "restore"
+        ? "Este respaldo JSON reemplazará el inventario y las bitácoras actuales. Puede conservar el nombre actual de los equipos que tengan variantes."
+        : "Las cantidades del archivo reemplazan las registradas; no se suman. Se conservan las bitácoras y los equipos que no aparecen en el archivo."}
+        ${variants.length ? "El último clic que resuelva las diferencias importa y guarda automáticamente." : "Revise el resumen y pulse Importar y guardar."}</p>
+      ${warnings.length ? `<details class="warehouse-import-warnings" open><summary>${warnings.length} observaciones del archivo · revisar antes de importar</summary><ul>${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul></details>` : ""}
+      ${simpleVariants ? `<div class="warehouse-import-bulk"><span>Resolver variantes con una sola coincidencia:</span>
+        <button type="button" class="warehouse-row-button" data-import-bulk="keep-name" ${busy ? "disabled" : ""}>Conservar todas las actuales</button>
+        <button type="button" class="warehouse-row-button" data-import-bulk="imported-name" ${busy ? "disabled" : ""}>Usar todas las del archivo</button></div>` : ""}
+      ${cards}
+      ${newRows.length ? `<details class="warehouse-import-new" ${variants.length ? "" : "open"}><summary>${newRows.length} equipos nuevos para agregar</summary><ul>${newRows.map((row) => `<li><strong>${escapeHtml(row.item.name)}</strong><span>${escapeHtml(row.item.category || "SIN CATEGORIA")} · Cantidad: ${escapeHtml(row.item.quantity)}</span></li>`).join("")}</ul></details>` : ""}`;
+  }
+
+  async function resolveImportChoice(event) {
+    if (!importReview || importReview.busy) return;
+    const button = event.target.closest("[data-import-action], [data-import-bulk]");
+    if (!button || button.disabled) return;
+    const { plan } = importReview;
+    elements.importError.textContent = "";
+    try {
+      if (button.dataset.importBulk) {
+        for (const row of plan.rows) {
+          if (row.decision || row.status !== "variant" || row.candidates.length !== 1) continue;
+          // Leave collisions for an explicit decision instead of overwriting another row.
+          if (plan.mode === "merge" && plan.rows.some((other) => other !== row && other.decision?.targetId === row.candidates[0].id)) continue;
+          window.WarehouseImportReview.decide(plan, row.index, button.dataset.importBulk, row.candidates[0].id);
+        }
+      } else window.WarehouseImportReview.decide(plan, Number(button.dataset.importRow), button.dataset.importAction, button.dataset.importTarget || null);
+      const lastIndex = button.dataset.importRow;
+      renderImportReview();
+      if (!plan.rows.some((row) => !row.decision)) await applyImportReview();
+      else {
+        const next = plan.rows.find((row) => !row.decision);
+        const nextButton = elements.importBody.querySelector(`[data-import-row="${next?.index ?? lastIndex}"]`);
+        nextButton?.focus({ preventScroll: true });
+        nextButton?.closest("article")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    } catch (error) { elements.importError.textContent = error.message; }
+  }
+
+  async function applyImportReview() {
+    if (!importReview || importReview.busy) return;
+    const review = importReview;
+    try {
+      if (JSON.stringify({ ...state, updatedAt: "" }) !== review.baseline) throw new Error("El inventario cambió mientras revisaba. Cancele y vuelva a importar para comparar los datos actuales.");
+      const result = window.WarehouseImportReview.finalize(review.plan, { createId: () => uid("import") });
+      const next = normalizeState(result);
+      review.busy = true;
+      window.clearTimeout(saveTimer);
+      elements.importError.textContent = "";
+      renderImportReview();
+      if (isHttpPage()) {
+        await enqueueWarehouseWrite(async () => {
+          const response = await fetch(API_PATH, {
+            method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ state: next, setAsInitial: true,
+              ...(serverSavedAt ? { expectedSavedAt: serverSavedAt } : {}) })
+          });
+          if (!response.ok) {
+            const failure = await response.json().catch(() => ({}));
+            throw new Error(failure.error || "No se pudo guardar en el servidor. Reintente la importación.");
+          }
+          const saved = await response.json();
+          serverSavedAt = saved.savedAt || serverSavedAt;
+          review.savedPayload = saved;
+          persistenceMode = "server";
+        });
+      } else persistenceMode = "local";
+      state = next;
+      warehouseDirty = false;
+      saveLocalState();
+      renderAll();
+      if (review.savedPayload) announceSavedWarehouse(review.savedPayload);
+      const updated = review.plan.rows.filter((row) => row.decision.targetId).length;
+      const added = review.plan.rows.filter((row) => row.decision.action === "add").length;
+      const skipped = review.plan.rows.filter((row) => row.decision.action === "skip").length;
+      importReview = null;
+      elements.importDialog.close();
+      setStatus(isHttpPage()
+        ? `Importación guardada: ${updated} equipos actualizados, ${added} agregados${skipped ? `, ${skipped} omitidos` : ""}.`
+        : "Importación guardada solo en este navegador.", isHttpPage() ? "success" : "warning");
+    } catch (error) {
+      review.busy = false;
+      renderImportReview();
+      elements.importError.textContent = error.message;
+      setStatus("La importación no se guardó. El inventario actual se conserva.", "warning");
+    }
+  }
+
   async function resetSeed() {
+    if (restoringWarehouse) return;
     const ok = window.confirm("¿Restaurar el inventario inicial del libro? Esto reemplaza movimientos y ediciones actuales.");
     if (!ok) return;
+    restoringWarehouse = true;
+    window.clearTimeout(saveTimer);
+    elements.root.inert = true;
     try {
       if (isHttpPage()) {
-        const response = await fetch(`${API_PATH}/restaurar`, {
-          method: "POST",
-          credentials: "same-origin"
+        await enqueueWarehouseWrite(async () => {
+          const response = await fetch(`${API_PATH}/restaurar`, {
+            method: "POST",
+            credentials: "same-origin"
+          });
+          if (!response.ok) throw new Error("No se pudo restaurar en el servidor");
+          const payload = await response.json();
+          state = normalizeState(payload.state);
+          serverSavedAt = payload.savedAt || serverSavedAt;
+          warehouseDirty = false;
+          try { warehouseChannel?.postMessage(payload); } catch {}
+          persistenceMode = "server";
         });
-        if (!response.ok) throw new Error("No se pudo restaurar en el servidor");
-        const payload = await response.json();
-        state = normalizeState(payload.state);
-        persistenceMode = "server";
       } else {
         state = seedState();
       }
@@ -2516,6 +2778,9 @@
       setStatus("Inventario restaurado desde el libro inicial.", "success");
     } catch (error) {
       setStatus(`No se pudo restaurar el inventario: ${error.message}`, "warning");
+    } finally {
+      restoringWarehouse = false;
+      elements.root.inert = false;
     }
   }
 
@@ -2525,6 +2790,14 @@
     elements.saveNowButton.addEventListener("click", () => saveState());
     elements.exportButton.addEventListener("click", exportBackup);
     elements.importInput.addEventListener("change", (event) => importBackup(event.target.files?.[0]));
+    elements.importBody.addEventListener("click", resolveImportChoice);
+    elements.importApplyButton.addEventListener("click", applyImportReview);
+    elements.importCloseButton.addEventListener("click", closeImportReview);
+    elements.importCancelButton.addEventListener("click", closeImportReview);
+    elements.importDialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      closeImportReview();
+    });
     elements.resetSeedButton.addEventListener("click", resetSeed);
     elements.generateRentalPdfButton.addEventListener("click", generateRentalPdf);
     elements.printWorkshopReportButton.addEventListener("click", printWorkshopReport);
@@ -2625,6 +2898,13 @@
       saveNowButton: root.querySelector("#warehouseSaveNowButton"),
       exportButton: root.querySelector("#warehouseExportButton"),
       importInput: root.querySelector("#warehouseImportInput"),
+      importDialog: root.querySelector("#warehouseImportDialog"),
+      importSummary: root.querySelector("#warehouseImportSummary"),
+      importBody: root.querySelector("#warehouseImportBody"),
+      importError: root.querySelector("#warehouseImportError"),
+      importCloseButton: root.querySelector("#warehouseImportCloseButton"),
+      importCancelButton: root.querySelector("#warehouseImportCancelButton"),
+      importApplyButton: root.querySelector("#warehouseImportApplyButton"),
       resetSeedButton: root.querySelector("#warehouseResetSeedButton"),
       windowButtons: [...root.querySelectorAll("[data-warehouse-window]")],
       views: [...root.querySelectorAll("[data-warehouse-view]")],
@@ -2692,17 +2972,13 @@
     setStatus("Esperando acceso al inventario...", "neutral");
     await waitForAuthenticatedApp();
     await loadState();
+    initWarehouseSync();
     renderAll();
     switchWindow(activeWindow);
   }
 
   document.addEventListener("live:warehouse-server-updated", (event) => {
-    if (!event.detail?.state?.items?.length) return;
-    state = normalizeState(event.detail.state);
-    persistenceMode = "server";
-    saveLocalState();
-    if (elements.root) {
-      renderAll();
+    if (elements.root && applyRemoteWarehouse(event.detail)) {
       setStatus("Cuadro recibido desde Requerimiento de equipo.", "success");
     }
   });

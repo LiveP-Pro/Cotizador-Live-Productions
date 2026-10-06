@@ -1,0 +1,320 @@
+.equipment-service-management {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+#equipmentServiceImportStatus {
+  flex-basis: 100%;
+  font-size: 13px;
+  color: #475569;
+}
+
+.equipment-service-import-dialog {
+  width: min(1040px, calc(100vw - 36px));
+  max-width: none;
+  max-height: calc(100dvh - 36px);
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  color: #111827;
+  background: #fff;
+  box-shadow: 0 24px 80px #0005;
+}
+
+.equipment-service-import-dialog::backdrop {
+  background: #0f172ab3;
+}
+
+.equipment-service-import-shell {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 38px);
+}
+
+.equipment-service-import-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.equipment-service-import-header > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.equipment-service-import-header h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.equipment-service-import-header p:last-child {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.equipment-service-import-header > button {
+  min-width: 42px;
+  min-height: 42px;
+  padding: 4px 12px;
+  font-size: 24px;
+}
+
+.equipment-service-import-content {
+  overflow: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+  padding: 20px 24px;
+}
+
+.equipment-service-import-summary {
+  margin: 0 0 15px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.equipment-service-import-notice {
+  padding: 12px 15px;
+  margin: 0 0 18px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.equipment-service-import-notice.is-warning {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.equipment-service-import-notice.is-error {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.equipment-service-import-notice ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.equipment-service-import-bulk,
+.equipment-service-import-card {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  margin: 0 0 18px;
+  padding: 16px;
+}
+
+.equipment-service-import-bulk {
+  background: #f8fafc;
+}
+
+.equipment-service-import-card h3 {
+  margin: 0 0 14px;
+  font-size: 16px;
+}
+
+.equipment-service-import-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 15px;
+}
+
+.equipment-service-import-fields label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.equipment-service-import-fields input,
+.equipment-service-import-fields select {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 42px;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+  font-weight: 400;
+}
+
+.equipment-service-import-new-category {
+  grid-column: 1 / -1;
+}
+
+.equipment-service-import-fields [hidden] {
+  display: none;
+}
+
+.equipment-service-import-bulk button {
+  min-height: 42px;
+}
+
+.equipment-service-import-section {
+  margin-top: 16px;
+}
+
+.equipment-service-import-section h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.equipment-service-import-table-wrap {
+  width: 100%;
+  overflow: auto;
+}
+
+.equipment-service-import-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.equipment-service-import-table th,
+.equipment-service-import-table td {
+  padding: 9px 10px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: top;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.equipment-service-import-table th {
+  background: #f8fafc;
+  color: #111827;
+}
+
+.equipment-service-import-table .equipment-service-import-quantity {
+  width: 70px;
+  text-align: center;
+}
+
+.equipment-service-import-source {
+  margin-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
+}
+
+.equipment-service-import-source summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.equipment-service-import-notes {
+  margin: 10px 0 0;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.equipment-service-import-footer {
+  flex: none;
+  padding: 14px 24px 18px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.equipment-service-import-footer p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.equipment-service-import-footer p:empty {
+  display: none;
+}
+
+.equipment-service-import-footer p[data-error="true"] {
+  color: #b91c1c;
+}
+
+.equipment-service-import-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.equipment-service-import-footer-actions button {
+  min-height: 42px;
+}
+
+#equipmentServiceImportSaveButton {
+  background: #111;
+  color: #fff;
+}
+
+.equipment-service-import-dialog button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+@media (max-width: 600px) {
+  .equipment-service-import-dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    border-radius: 10px;
+  }
+
+  .equipment-service-import-shell {
+    max-height: calc(100dvh - 18px);
+  }
+
+  .equipment-service-import-header,
+  .equipment-service-import-content,
+  .equipment-service-import-footer {
+    padding: 14px;
+  }
+
+  .equipment-service-import-header h2 {
+    font-size: 20px;
+  }
+
+  .equipment-service-import-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-service-import-card,
+  .equipment-service-import-bulk {
+    padding: 12px;
+  }
+
+  .equipment-service-import-footer-actions button {
+    flex: 1 1 140px;
+  }
+}
+
+@media print {
+  .equipment-service-import-dialog {
+    display: none !important;
+  }
+}
+.equipment-imported-note-row td {
+  white-space: pre-wrap;
+  font-size: 0.85em;
+  color: #333;
+}
+
+.equipment-imported-source-row td {
+  font-size: 0.8em;
+}

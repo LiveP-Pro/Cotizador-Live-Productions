@@ -7,6 +7,8 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { spawn, spawnSync } = require("node:child_process");
 const { DatabaseSync } = require("node:sqlite");
+const { parseInventoryFile } = require("./warehouse-import.cjs");
+const { parseServiceFile, verifyServiceImport } = require("./equipment-service-import.cjs");
 
 const rootDir = __dirname;
 const port = Number.parseInt(process.env.PORT || "8787", 10);
@@ -43,9 +45,14 @@ const warehouseInventoryOverrideInitialPath = process.env.WAREHOUSE_INITIAL_STAT
   : "";
 const equipmentCatalogOverridesPath = path.join(dataDir, "catalogo-requerimiento-equipo.json");
 const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requerimiento-equipo-anterior.json");
+const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20260929-catalogo-drive-01";
+const warehouseAssetVersion = "20261006-service-import-01";
+const maxWarehouseImportBytes = 15 * 1024 * 1024;
+let activeWarehouseImports = 0;
+const equipmentServiceImportPreviews = new Map();
+const maxServicePreviewBytes = 64 * 1024 * 1024;
 const whatsappConfig = {
   apiVersion: process.env.WHATSAPP_API_VERSION || "v23.0",
   phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
@@ -204,6 +211,10 @@ async function persistWarehouseInventory(normalized, setAsInitial = false) {
 }
 
 async function saveWarehouseInventory(payload, response) {
+  if (typeof payload?.expectedSavedAt === "string" && payload.expectedSavedAt !== readWarehouseInventory().savedAt) {
+    errorResponse(response, 409, "El inventario cambió en otra pestaña o equipo. Conserve sus cambios y vuelva a comparar con el inventario actual antes de guardar.");
+    return;
+  }
   let normalized;
   try {
     normalized = normalizeWarehouseInventoryPayload({
@@ -230,7 +241,7 @@ async function restoreWarehouseInventory(response) {
 ensureWarehouseInventoryStorage();
 
 function emptyEquipmentCatalogOverrides(baseCatalogVersion = "") {
-  return { version: 2, baseCatalogVersion, savedAt: "", services: {} };
+  return { version: 3, baseCatalogVersion, savedAt: "", services: {}, groups: {}, imports: {} };
 }
 
 function normalizeEquipmentBaseCatalogVersion(value) {
@@ -267,7 +278,9 @@ function normalizeEquipmentCatalogSections(sections) {
     if (!title || title.length > 200) throw new Error(`El nombre de la categoría ${index + 1} no es válido.`);
     const normalized = {
       title,
-      items: normalizeEquipmentCatalogItems(section?.items, title)
+      items: normalizeEquipmentCatalogItems(section?.items, title),
+      ...(Array.isArray(section.notes) ? { notes: section.notes.map((note) => String(note)) } : {}),
+      ...(Array.isArray(section.rows) ? { rows: section.rows } : {})
     };
     const id = String(section?.id || "").trim();
     if (id) normalized.id = id.slice(0, 160);
@@ -321,25 +334,24 @@ function normalizeEquipmentCatalogOverride(payload) {
 function readEquipmentCatalogOverridesFile(filePath) {
   const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
   return {
-    version: 2,
+    version: 3,
     baseCatalogVersion: String(parsed?.baseCatalogVersion || ""),
     savedAt: String(parsed?.savedAt || ""),
     services: parsed?.services && typeof parsed.services === "object" && !Array.isArray(parsed.services)
       ? parsed.services
-      : {}
+      : {},
+    groups: parsed?.groups && typeof parsed.groups === "object" && !Array.isArray(parsed.groups) ? parsed.groups : {},
+    imports: parsed?.imports && typeof parsed.imports === "object" && !Array.isArray(parsed.imports) ? parsed.imports : {}
   };
 }
 
 function readEquipmentCatalogOverrides() {
-  for (const candidate of [equipmentCatalogOverridesPath, equipmentCatalogOverridesBackupPath]) {
-    if (!fs.existsSync(candidate)) continue;
-    try {
-      return readEquipmentCatalogOverridesFile(candidate);
-    } catch (error) {
-      console.warn(`No se pudo leer ${path.basename(candidate)}: ${error.message}`);
-    }
+  if (!fs.existsSync(equipmentCatalogOverridesPath)) return emptyEquipmentCatalogOverrides();
+  try {
+    return readEquipmentCatalogOverridesFile(equipmentCatalogOverridesPath);
+  } catch {
+    throw new Error("El catálogo actual no se puede leer. Revise el archivo del servidor antes de guardar servicios.");
   }
-  return emptyEquipmentCatalogOverrides();
 }
 
 function readEquipmentCatalogOverridesForVersion(baseCatalogVersion) {
@@ -372,8 +384,11 @@ async function saveEquipmentCatalogOverride(payload, response) {
     return;
   }
   const savedAt = new Date().toISOString();
+  const previous = stored.services[normalized.serviceId];
+  if (previous?.importSource) normalized.service.importSource = previous.importSource;
   const next = {
-    version: 2,
+    ...stored,
+    version: 3,
     baseCatalogVersion: normalized.baseCatalogVersion,
     savedAt,
     services: {
@@ -387,6 +402,248 @@ async function saveEquipmentCatalogOverride(payload, response) {
     service: normalized.service,
     savedAt
   });
+}
+
+function equipmentImportSlug(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 140);
+}
+
+function currentEquipmentBaseCatalog() {
+  const source = fs.readFileSync(path.join(rootDir, "equipment-catalog.js"), "utf8");
+  return JSON.parse(source.replace(/^\s*window\.requerimientoEquipoCatalog\s*=\s*/, "").replace(/;\s*$/, ""));
+}
+
+function currentEquipmentImportCatalog(version) {
+  if (!fs.existsSync(equipmentCatalogOverridesPath)) return emptyEquipmentCatalogOverrides(version);
+  // A newly supplied file is compared with the current catalog, never a backup.
+  const current = readEquipmentCatalogOverridesFile(equipmentCatalogOverridesPath);
+  return current.baseCatalogVersion === version ? current : emptyEquipmentCatalogOverrides(version);
+}
+
+function equipmentImportBookKey(fileName) {
+  return String(fileName || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function equipmentImportBookServices(catalog, bookKey) {
+  return Object.fromEntries(Object.entries(catalog.services || {})
+    .filter(([, service]) => service?.importSource?.bookKey === bookKey));
+}
+
+function equipmentImportOwner(request) {
+  return crypto.createHash("sha256").update(parseCookies(request).cotizador_session || "").digest("hex");
+}
+
+function pruneEquipmentImportPreviews() {
+  for (const [token, preview] of equipmentServiceImportPreviews) {
+    if (preview.expiresAt < Date.now()) equipmentServiceImportPreviews.delete(token);
+  }
+}
+
+async function previewEquipmentServiceFile(request, response) {
+  if (activeWarehouseImports >= 2) {
+    errorResponse(response, 429, "Ya se están leyendo otros archivos. Intente de nuevo en unos segundos.");
+    return;
+  }
+  activeWarehouseImports += 1;
+  try {
+    let fileName;
+    try { fileName = decodeURIComponent(String(request.headers["x-file-name"] || "")); }
+    catch { throw new Error("El nombre del archivo no es válido."); }
+    if (!/\.(xlsx|pdf)$/i.test(fileName) || fileName.length > 250) throw new Error("Seleccione un archivo Excel .xlsx o PDF con texto.");
+    if (Number(request.headers["content-length"] || 0) > maxWarehouseImportBytes) {
+      errorResponse(response, 413, "El archivo supera el límite de 15 MB.");
+      return;
+    }
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of request) {
+      size += chunk.length;
+      if (size > maxWarehouseImportBytes) {
+        errorResponse(response, 413, "El archivo supera el límite de 15 MB.");
+        return;
+      }
+      chunks.push(chunk);
+    }
+    if (!size) throw new Error("El archivo está vacío.");
+    const buffer = Buffer.concat(chunks);
+    const preview = await parseServiceFile(buffer, {
+      fileName, mimeType: String(request.headers["content-type"] || "").split(";")[0]
+    });
+    const base = currentEquipmentBaseCatalog();
+    const current = currentEquipmentImportCatalog(base.version);
+    const replaced = equipmentImportBookServices(current, equipmentImportBookKey(fileName));
+    pruneEquipmentImportPreviews();
+    const bytes = size + Buffer.byteLength(JSON.stringify(preview));
+    const used = [...equipmentServiceImportPreviews.values()].reduce((sum, entry) => sum + entry.bytes, 0);
+    if (response.destroyed) return;
+    const pending = [...equipmentServiceImportPreviews.values()].filter((entry) => !entry.completed).length;
+    if (used + bytes > maxServicePreviewBytes || pending >= 8) {
+      errorResponse(response, 429, "Hay varios archivos en revisión. Termine una importación e intente de nuevo.");
+      return;
+    }
+    const importToken = crypto.randomBytes(32).toString("base64url");
+    equipmentServiceImportPreviews.set(importToken, {
+      preview, buffer, bytes, owner: equipmentImportOwner(request),
+      importId: crypto.randomUUID(), expiresAt: Date.now() + 20 * 60 * 1000,
+      baseVersion: base.version, replacementFingerprint: JSON.stringify(replaced)
+    });
+    jsonResponse(response, 200, {
+      ...preview, importToken,
+      replaces: { count: Object.keys(replaced).length, serviceNames: Object.values(replaced).map((service) => service.name) }
+    });
+  } catch (error) {
+    errorResponse(response, 400, error.message || "No se pudo leer el archivo de servicios.");
+  } finally { activeWarehouseImports -= 1; }
+}
+
+async function saveImportedEquipmentServices(payload, request, response) {
+  pruneEquipmentImportPreviews();
+  const entry = equipmentServiceImportPreviews.get(String(payload?.importToken || ""));
+  if (!entry || entry.owner !== equipmentImportOwner(request)) {
+    errorResponse(response, 410, "La revisión del archivo venció. Vuelva a importarlo para comparar la fuente actual.");
+    return;
+  }
+  const decisions = payload?.services;
+  const decisionFingerprint = JSON.stringify(decisions);
+  if (entry.completed) {
+    if (decisionFingerprint !== entry.decisionFingerprint) {
+      errorResponse(response, 409, "Este archivo ya se guardó con otra selección. Vuelva a importarlo para cambiarla.");
+    } else jsonResponse(response, 200, entry.completed);
+    return;
+  }
+  try {
+    const base = currentEquipmentBaseCatalog();
+    if (payload?.baseCatalogVersion !== base.version || entry.baseVersion !== base.version) {
+      errorResponse(response, 409, "El catálogo cambió mientras revisaba. Actualice la página y vuelva a importar el archivo.");
+      return;
+    }
+    const verification = await verifyServiceImport(entry.preview);
+    if (!verification?.complete || entry.preview.verification?.complete !== true) {
+      errorResponse(response, 422, "No se puede guardar: hay celdas o cantidades pendientes de interpretar. Revise las observaciones y corrija el archivo.");
+      return;
+    }
+    const sourceServices = entry.preview.services;
+    if (!Array.isArray(decisions) || decisions.length !== sourceServices.length || !decisions.length) {
+      throw new Error("Debe indicar el destino de todos los servicios del archivo.");
+    }
+    const chosen = new Map();
+    for (const decision of decisions) {
+      if (!Number.isInteger(decision?.index) || decision.index < 0 || decision.index >= sourceServices.length || chosen.has(decision.index)) {
+        throw new Error("La selección de servicios no es válida.");
+      }
+      chosen.set(decision.index, decision);
+    }
+    const current = currentEquipmentImportCatalog(base.version);
+    const bookKey = equipmentImportBookKey(entry.preview.source.fileName);
+    const replaced = equipmentImportBookServices(current, bookKey);
+    if (JSON.stringify(replaced) !== entry.replacementFingerprint) {
+      errorResponse(response, 409, "Otro usuario actualizó este mismo libro. Vuelva a importarlo para comparar la versión actual.");
+      return;
+    }
+    const next = JSON.parse(JSON.stringify(current));
+    const removedServiceIds = Object.keys(replaced);
+    removedServiceIds.forEach((id) => delete next.services[id]);
+    const groups = new Map((base.groups || []).map((group) => [
+      equipmentImportSlug(group.id || group.label), { ...group, id: equipmentImportSlug(group.id || group.label) }
+    ]));
+    Object.entries(next.groups).forEach(([id, group]) => groups.set(id, { ...group, id }));
+    const imported = {};
+    const reservedIds = new Set([...Object.keys(base.services || {}), ...Object.keys(next.services)]);
+    const importedAt = new Date().toISOString();
+    for (const [index, sourceService] of sourceServices.entries()) {
+      const decision = chosen.get(index);
+      const name = String(decision.name || "").trim();
+      if (!name || name.length > 240) throw new Error("Escriba un nombre de servicio de hasta 240 caracteres.");
+      let groupId = String(decision.groupId || "").trim();
+      if (decision.groupLabel !== undefined) {
+        if (groupId) throw new Error("Elija una categoría existente o una nueva.");
+        const label = String(decision.groupLabel || "").trim();
+        groupId = equipmentImportSlug(label);
+        if (!label || label.length > 200 || !groupId) throw new Error("Escriba un nombre válido para la nueva categoría.");
+        if (!groups.has(groupId)) {
+          const group = { id: groupId, label, serviceIds: [] };
+          next.groups[groupId] = group;
+          groups.set(groupId, group);
+        }
+      }
+      if (!groups.has(groupId)) throw new Error("Seleccione una categoría existente o cree una nueva.");
+      const baseId = equipmentImportSlug(name) || "servicio";
+      let serviceId = baseId, suffix = 2;
+      while (reservedIds.has(serviceId)) serviceId = baseId + "-" + suffix++;
+      reservedIds.add(serviceId);
+      const validatedSections = normalizeEquipmentCatalogSections(sourceService.mainSections);
+      const mainSections = validatedSections.map((section, sectionIndex) => ({
+        ...section, id: entry.importId + "-s" + index + "-" + sectionIndex,
+        notes: sourceService.mainSections[sectionIndex].notes || [],
+        rows: sourceService.mainSections[sectionIndex].rows || []
+      }));
+      if (!mainSections.some((section) => section.items.length)) throw new Error("Cada servicio debe incluir al menos una línea de equipo con cantidad válida.");
+      imported[serviceId] = {
+        name, mainSections, audioOptions: {}, custom: true, groupId, updatedAt: importedAt,
+        importSource: { importId: entry.importId, bookKey, fileName: entry.preview.source.fileName,
+          sourceName: sourceService.name, sourceRefs: sourceService.sourceRefs || [],
+          sourceFileUrl: "/api/cuadros-equipo/fuentes/" + entry.importId }
+      };
+      next.services[serviceId] = imported[serviceId];
+    }
+    for (const [id, group] of Object.entries(next.groups)) {
+      group.serviceIds = Object.entries(next.services).filter(([, service]) => service.groupId === id).map(([serviceId]) => serviceId);
+    }
+    const format = entry.preview.source.format === "pdf" ? "pdf" : "xlsx";
+    const sha256 = crypto.createHash("sha256").update(entry.buffer).digest("hex");
+    next.imports[entry.importId] = {
+      id: entry.importId, fileName: entry.preview.source.fileName, format, sha256, importedAt,
+      serviceIds: Object.keys(imported), verification
+    };
+    next.savedAt = importedAt;
+    next.version = 3;
+    await fsp.mkdir(equipmentServiceSourcesDir, { recursive: true });
+    for (const [fileName, contents] of [
+      [entry.importId + "." + format, entry.buffer],
+      [entry.importId + ".json", JSON.stringify({ ...entry.preview, verification, sha256, importedAt }, null, 2)]
+    ]) {
+      const target = path.join(equipmentServiceSourcesDir, fileName);
+      const temporary = target + ".tmp-" + process.pid;
+      await fsp.writeFile(temporary, contents, { mode: 0o600 });
+      await fsp.rename(temporary, target);
+    }
+    await writeEquipmentCatalogOverrides(next);
+    const result = { groups: next.groups, services: imported, removedServiceIds,
+      importId: entry.importId, savedAt: importedAt,
+      sourceFileUrl: "/api/cuadros-equipo/fuentes/" + entry.importId };
+    entry.completed = result;
+    entry.decisionFingerprint = decisionFingerprint;
+    entry.buffer = null;
+    entry.preview = null;
+    entry.bytes = Buffer.byteLength(JSON.stringify(result));
+    jsonResponse(response, 200, result);
+  } catch (error) {
+    errorResponse(response, 400, error.message || "No se pudo guardar el servicio importado.");
+  }
+}
+
+function downloadEquipmentServiceSource(importId, response) {
+  if (!/^[a-f0-9-]{36}$/i.test(importId)) {
+    errorResponse(response, 404, "No se encontró el archivo de origen.");
+    return;
+  }
+  const source = readEquipmentCatalogOverrides().imports[importId];
+  if (!source || !["xlsx", "pdf"].includes(source.format)) {
+    errorResponse(response, 404, "No se encontró el archivo de origen.");
+    return;
+  }
+  const target = path.join(equipmentServiceSourcesDir, importId + "." + source.format);
+  if (!fs.existsSync(target)) {
+    errorResponse(response, 404, "No se encontró el archivo de origen.");
+    return;
+  }
+  response.writeHead(200, {
+    "Content-Type": source.format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "Content-Disposition": "attachment; filename*=UTF-8''" + encodeURIComponent(source.fileName),
+    "Cache-Control": "no-store"
+  });
+  fs.createReadStream(target).pipe(response);
 }
 
 const authConfigPath = path.join(dataDir, "cotizador-auth.json");
@@ -2467,6 +2724,45 @@ async function readJsonBody(request) {
   return JSON.parse((await readRequestBody(request)) || "{}");
 }
 
+async function previewWarehouseFile(request, response) {
+  if (activeWarehouseImports >= 2) {
+    errorResponse(response, 429, "Ya se están leyendo otros archivos. Intente de nuevo en unos segundos.");
+    return;
+  }
+  activeWarehouseImports += 1;
+  try {
+    let fileName;
+    try { fileName = decodeURIComponent(String(request.headers["x-file-name"] || "")); }
+    catch { throw new Error("El nombre del archivo no es válido."); }
+    if (!/\.(xlsx|pdf)$/i.test(fileName) || fileName.length > 250) {
+      throw new Error("Seleccione un archivo Excel .xlsx o un PDF con texto.");
+    }
+    if (Number(request.headers["content-length"] || 0) > maxWarehouseImportBytes) {
+      errorResponse(response, 413, "El archivo supera el límite de 15 MB.");
+      return;
+    }
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of request) {
+      size += chunk.length;
+      if (size > maxWarehouseImportBytes) {
+        errorResponse(response, 413, "El archivo supera el límite de 15 MB.");
+        return;
+      }
+      chunks.push(chunk);
+    }
+    if (!size) throw new Error("El archivo está vacío.");
+    const preview = await parseInventoryFile(Buffer.concat(chunks), {
+      fileName, mimeType: String(request.headers["content-type"] || "").split(";")[0]
+    });
+    jsonResponse(response, 200, preview);
+  } catch (error) {
+    errorResponse(response, 400, error.message || "No se pudo leer el inventario del archivo.");
+  } finally {
+    activeWarehouseImports -= 1;
+  }
+}
+
 async function readFormBody(request) {
   const body = await readRequestBody(request);
   return Object.fromEntries(new URLSearchParams(body));
@@ -2859,14 +3155,18 @@ function warehouseDispatchQuantity(value) {
 function warehouseAvailableForDispatch(state, itemId) {
   const item = (state.items || []).find((entry) => String(entry?.id || "") === String(itemId || ""));
   if (!item || item.archived) return 0;
-  let reserved = 0;
+  const buckets = { out: 0, consumed: 0, workshop: 0, rented: 0, lost: 0 };
+  const changes = { salida: ["out", 1], ingreso_evento: ["out", -1], consumo: ["consumed", 1],
+    taller: ["workshop", 1], devolucion_taller: ["workshop", -1], renta: ["rented", 1],
+    devolucion_renta: ["rented", -1], perdido: ["lost", 1], recuperado: ["lost", -1] };
   (state.movements || []).forEach((movement) => {
     if (String(movement?.itemId || "") !== String(item.id || "")) return;
     const quantity = warehouseDispatchQuantity(movement?.quantity);
-    if (["salida", "consumo", "taller", "renta", "perdido"].includes(movement?.type)) reserved += quantity;
-    if (["ingreso_evento", "devolucion_taller", "devolucion_renta", "recuperado"].includes(movement?.type)) reserved -= quantity;
+    const change = changes[movement?.type];
+    if (change) buckets[change[0]] += change[1] * quantity;
   });
-  return Math.max(0, warehouseDispatchQuantity(item.quantity) - Math.max(0, reserved));
+  const reserved = Object.values(buckets).reduce((sum, quantity) => sum + Math.max(0, quantity), 0);
+  return Math.max(0, warehouseDispatchQuantity(item.quantity) - reserved);
 }
 
 function warehouseDispatchMovementId() {
@@ -2949,7 +3249,8 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
   const itemsById = new Map(activeItems.map((item) => [String(item.id || ""), item]));
   const itemsByName = new Map();
   activeItems.forEach((item) => {
-    warehouseDispatchLookupKeys(item.name).forEach((key) => {
+    const descriptions = [item.name, item.sourceKey, ...(Array.isArray(item.descriptionAliases) ? item.descriptionAliases : [])];
+    [...new Set(descriptions.flatMap(warehouseDispatchLookupKeys))].forEach((key) => {
       if (!itemsByName.has(key)) itemsByName.set(key, []);
       itemsByName.get(key).push(item);
     });
@@ -2997,9 +3298,18 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
     if (!remaining) return;
     const requestedIds = Array.isArray(line?.warehouseItemIds) ? line.warehouseItemIds.map(String) : [];
     const requestedItems = requestedIds.map((id) => itemsById.get(id)).filter(Boolean);
-    const fallbackItems = warehouseDispatchLookupKeys(description)
+    const descriptionKeys = warehouseDispatchLookupKeys(description);
+    const fallbackItems = descriptionKeys
       .flatMap((key) => itemsByName.get(key) || []);
-    const candidates = [...new Map([...requestedItems, ...fallbackItems].map((item) => [String(item.id), item])).values()];
+    const category = warehouseDispatchLookupKey(line?.category);
+    let candidates = [...new Map([...requestedItems, ...fallbackItems].map((item) => [String(item.id), item])).values()];
+    const sameCategory = candidates.filter((item) => warehouseDispatchLookupKey(item.category) === category);
+    if (sameCategory.length) candidates = sameCategory;
+    const matchesDescription = (name) => warehouseDispatchLookupKeys(name).some((key) => descriptionKeys.includes(key));
+    const matchRank = (item) => matchesDescription(item.name) ? 0 : matchesDescription(item.sourceKey) ? 1
+      : (Array.isArray(item.descriptionAliases) ? item.descriptionAliases : []).some(matchesDescription) ? 2 : 3;
+    const bestRank = Math.min(...candidates.map(matchRank));
+    candidates = candidates.filter((item) => matchRank(item) === bestRank);
     const consumable = line?.consumable === true
       || warehouseDispatchHasConsumableMarker(description)
       || candidates.some(warehouseDispatchItemIsConsumable);
@@ -3241,6 +3551,12 @@ async function handleRequest(request, response) {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/inventario-bodega/importar-archivo") {
+      if (!requireAuth(request, response)) return;
+      await previewWarehouseFile(request, response);
+      return;
+    }
+
     if (request.method === "PUT" && url.pathname === "/api/inventario-bodega") {
       if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
@@ -3366,6 +3682,38 @@ async function handleRequest(request, response) {
       if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
       await enqueueSave(() => saveEquipmentCatalogOverride(payload, response));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cuadros-equipo/importar-archivo") {
+      if (!requireAuth(request, response)) return;
+      await previewEquipmentServiceFile(request, response);
+      return;
+    }
+
+    const cancelServiceImport = url.pathname.match(/^\/api\/cuadros-equipo\/importar-archivo\/([A-Za-z0-9_-]{43})$/);
+    if (request.method === "DELETE" && cancelServiceImport) {
+      if (!requireAuth(request, response)) return;
+      const entry = equipmentServiceImportPreviews.get(cancelServiceImport[1]);
+      if (entry && !entry.completed && entry.owner === equipmentImportOwner(request)) {
+        equipmentServiceImportPreviews.delete(cancelServiceImport[1]);
+      }
+      response.writeHead(204);
+      response.end();
+      return;
+    }
+
+    if (request.method === "PUT" && url.pathname === "/api/cuadros-equipo/importar-servicios") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => saveImportedEquipmentServices(payload, request, response));
+      return;
+    }
+
+    const equipmentSourceMatch = url.pathname.match(/^\/api\/cuadros-equipo\/fuentes\/([a-f0-9-]{36})$/i);
+    if (request.method === "GET" && equipmentSourceMatch) {
+      if (!requireAuth(request, response)) return;
+      downloadEquipmentServiceSource(equipmentSourceMatch[1], response);
       return;
     }
 

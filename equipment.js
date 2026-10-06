@@ -14,8 +14,10 @@ const equipmentWarehouseInventoryState = {
   records: [],
   recordsById: new Map(),
   recordsByLookupKey: new Map(),
+  recordsByStableKey: new Map(),
   refreshPromise: null,
-  refreshTimer: null
+  refreshTimer: null,
+  broadcastChannel: null
 };
 
 const equipmentState = {
@@ -113,11 +115,48 @@ function equipmentInventoryCanonicalKey(value) {
   return equipmentInventoryAliases[key] || key;
 }
 
+function equipmentWarehouseRecordLookupKeys(item, staticItem = null) {
+  return [...new Set([
+    item?.name,
+    item?.sourceKey,
+    ...(Array.isArray(item?.descriptionAliases) ? item.descriptionAliases : []),
+    staticItem?.description
+  ].map(equipmentInventoryCanonicalKey).filter(Boolean))];
+}
+
+function equipmentWarehouseRecordsForDescription(description, category = "") {
+  const key = equipmentInventoryCanonicalKey(description);
+  let records = equipmentWarehouseInventoryState.recordsByLookupKey.get(key) || [];
+  const categoryKey = normalizeEquipmentKey(category);
+  const sameCategory = categoryKey ? records.filter((record) => normalizeEquipmentKey(record.item?.category) === categoryKey) : [];
+  if (sameCategory.length) records = sameCategory;
+  const currentNames = records.filter((record) => equipmentInventoryCanonicalKey(record.item?.name) === key);
+  if (currentNames.length) return currentNames;
+  const sourceKeys = records.filter((record) => equipmentInventoryCanonicalKey(record.item?.sourceKey) === key);
+  return sourceKeys.length ? sourceKeys : records;
+}
+
+function equipmentWarehouseRecordIdentity(record) {
+  return record?.inventoryIdentity || equipmentInventoryCanonicalKey(record?.item?.sourceKey || record?.item?.name);
+}
+
+function equipmentInventoryIdentityForDescription(description, category = "") {
+  const key = equipmentInventoryCanonicalKey(description);
+  // Stored transfer identities are already stable source keys. A different
+  // item acquiring that visible name must not reinterpret saved selections.
+  if (!category && equipmentWarehouseInventoryState.recordsByStableKey.has(key)) return key;
+  const records = equipmentWarehouseRecordsForDescription(description, category);
+  const identities = [...new Set(records.map(equipmentWarehouseRecordIdentity))];
+  return identities.length === 1 ? identities[0] : key;
+}
+
 function equipmentDescriptionEndsWithConsumable(value) {
   return /(?:^|\s)consumible$/.test(normalizeEquipmentKey(value));
 }
 
 function equipmentRowIsConsumable(row) {
+  const currentType = String(row?.inventorySourceItem?.warehouseRecord?.item?.itemType || row?.item?.itemType || "").trim().toLowerCase();
+  if (["equipo", "consumible"].includes(currentType)) return currentType === "consumible";
   if ([
     row?.itemType,
     row?.inventorySourceItem?.itemType,
@@ -422,7 +461,7 @@ function normalizeEquipmentTransferLegSelections(value) {
     String(legKey || ""),
     (Array.isArray(selections) ? selections : [])
       .map((selection) => ({
-        identity: equipmentInventoryCanonicalKey(selection?.identity),
+        identity: equipmentInventoryIdentityForDescription(selection?.identity),
         quantity: Math.max(0, Math.floor(Number(selection?.quantity) || 0))
       }))
       .filter((selection) => selection.identity && selection.quantity > 0)
@@ -454,7 +493,7 @@ function equipmentEventBacklineQuantities(event) {
     if (!/\bback\s*line\b/.test(normalizeEquipmentKey(section.title))) return;
     (section.items || []).forEach((rawItem) => {
       const item = normalizeEquipmentItem(rawItem);
-      const identity = equipmentInventoryCanonicalKey(item.description);
+      const identity = equipmentInventoryIdentityForDescription(item.description, section.title);
       if (identity) quantities.set(identity, (quantities.get(identity) || 0) + Math.max(0, Number(item.quantity) || 0));
     });
   });
@@ -619,7 +658,9 @@ function equipmentHasConfiguredTransferRoutes(events = activeEquipmentEvents()) 
 }
 
 function equipmentSummaryRowIdentity(row) {
-  return equipmentInventoryCanonicalKey(row?.inventorySourceItem?.description || row?.description || row?.key);
+  const record = equipmentWarehouseInventoryRecordFor(row);
+  return equipmentWarehouseRecordIdentity(record)
+    || equipmentInventoryIdentityForDescription(row?.inventorySourceItem?.description || row?.description || row?.key, row?.categoryTitle || "");
 }
 
 function equipmentTransferSelectedQuantity(route, from, to, identity) {
@@ -934,6 +975,7 @@ function normalizeEquipmentItem(item) {
     id: item.id || "",
     quantity: item.quantity,
     description: item.description,
+    ...(Number.isInteger(item.sourceItemIndex) ? { sourceItemIndex: item.sourceItemIndex } : {}),
     editable: item.editable !== false,
     manual: Boolean(item.manual)
   };
@@ -948,6 +990,7 @@ function editableEquipmentItems(section, sectionKey) {
         id,
         quantity: override.quantity ?? quantity,
         description: override.description ?? description,
+        ...(Array.isArray(section.rows) ? { sourceItemIndex: itemIndex } : {}),
         editable: true,
         manual: false
       };
@@ -1012,7 +1055,7 @@ function selectedEquipmentSections() {
         title: hasMultipleServices ? `${service.name} / ${section.title}` : section.title,
         items: editableEquipmentItems(section, sectionKey)
       };
-    }).filter((section) => section.items.length);
+    }).filter((section) => section.items.length || section.rows?.length || section.notes?.length);
   });
   const manualMainSection = manualMainSectionsForTable();
   const selectedExtrasSections = services.flatMap((service) => {
@@ -1046,7 +1089,43 @@ function selectedEquipmentSections() {
 }
 
 function warehousePdfSections() {
-  return selectedEquipmentSections();
+  return equipmentLiveSectionsForDisplay(selectedEquipmentSections());
+}
+
+function equipmentSourceRowsForItems(rows, items) {
+  const indices = new Set(items.map((item, index) => Number.isInteger(item.sourceItemIndex) ? item.sourceItemIndex : index));
+  let itemIndex = -1;
+  return rows.flatMap((row) => {
+    if (row.type === "item") itemIndex = Number.isInteger(row.sourceItemIndex) ? row.sourceItemIndex : itemIndex + 1;
+    return indices.has(Math.max(0, itemIndex))
+      ? [{ ...row, ...(row.type === "item" ? { sourceItemIndex: itemIndex } : {}) }] : [];
+  });
+}
+
+function equipmentLiveSectionsForDisplay(sections) {
+  if (!equipmentWarehouseInventoryState.loaded) return sections;
+  return (Array.isArray(sections) ? sections : []).flatMap((section) => {
+    if (!section?.items?.length) return [{ ...section, items: [] }];
+    const displayed = [];
+    section.items.forEach((rawItem) => {
+      const item = normalizeEquipmentItem(rawItem);
+      const record = equipmentWarehouseInventoryRecordFor({ description: item.description, categoryTitle: section.title });
+      const title = String(record?.item?.category || section.title || "Equipo sin categoria");
+      let group = displayed.at(-1);
+      if (!group || group.title !== title) {
+        group = { ...section, title, items: [] };
+        displayed.push(group);
+      }
+      group.items.push({
+        ...(Array.isArray(rawItem) ? item : rawItem),
+        description: record?.item?.name || item.description
+      });
+    });
+    if (Array.isArray(section.rows)) {
+      displayed.forEach((group) => { group.rows = equipmentSourceRowsForItems(section.rows, group.items); });
+    }
+    return displayed;
+  });
 }
 
 function currentEquipmentEventDraft() {
@@ -1081,6 +1160,7 @@ function cloneEquipmentSnapshotItem(item, index = 0) {
     id: normalized.id || `snapshot-item-${index}`,
     quantity: Number(normalized.quantity) || 0,
     description: normalized.description || "",
+    ...(Number.isInteger(normalized.sourceItemIndex) ? { sourceItemIndex: normalized.sourceItemIndex } : {}),
     editable: normalized.editable !== false,
     manual: Boolean(normalized.manual)
   };
@@ -1094,6 +1174,9 @@ function cloneEquipmentSnapshotSections(sections = []) {
   return sections.map((section, index) => ({
     id: section.id || `snapshot-section-${index}`,
     title: section.title || "",
+    ...(Array.isArray(section.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
+    ...(Array.isArray(section.notes) ? { notes: [...section.notes] } : {}),
+    ...(section.importSource ? { importSource: { ...section.importSource } } : {}),
     items: cloneEquipmentSnapshotItems(section.items || [])
   }));
 }
@@ -1354,7 +1437,9 @@ function equipmentRowsSummary() {
     const group = ensureGroup(category?.title, true);
     (Array.isArray(category?.items) ? category.items : []).forEach((item) => {
       const description = String(item?.description || "").trim();
-      const matchKey = equipmentInventoryCanonicalKey(description);
+      const matchKey = item?.warehouseRecord
+        ? equipmentWarehouseRecordIdentity(item.warehouseRecord)
+        : equipmentInventoryIdentityForDescription(description, category?.title);
       if (!matchKey) return;
       const row = {
         type: "item",
@@ -1367,9 +1452,11 @@ function equipmentRowsSummary() {
         categoryTitle: group.title,
         inventorySourceItem: item
       };
-      const lookupKeys = [description, item?.legacyDescription]
-        .map(equipmentInventoryCanonicalKey)
-        .filter(Boolean);
+      const lookupKeys = equipmentWarehouseRecordLookupKeys({
+        name: description,
+        sourceKey: item?.sourceKey,
+        descriptionAliases: [item?.legacyDescription, ...(item?.descriptionAliases || [])]
+      });
       [...new Set(lookupKeys)].forEach((lookupKey) => {
         if (!inventoryRowsByEquipmentKey.has(lookupKey)) inventoryRowsByEquipmentKey.set(lookupKey, []);
         inventoryRowsByEquipmentKey.get(lookupKey).push(row);
@@ -1388,7 +1475,10 @@ function equipmentRowsSummary() {
         const key = normalizeEquipmentKey(description);
         if (!key) return;
         const perEventQuantity = Number(quantity) || 0;
-        const inventoryRows = inventoryRowsByEquipmentKey.get(equipmentInventoryCanonicalKey(description)) || [];
+        const matchedRecords = equipmentWarehouseRecordsForDescription(description, categoryTitle);
+        const matchedIds = new Set(matchedRecords.map((record) => record.id));
+        const inventoryRows = (inventoryRowsByEquipmentKey.get(equipmentInventoryCanonicalKey(description)) || [])
+          .filter((row) => !equipmentWarehouseInventoryState.loaded || matchedIds.has(row.inventorySourceItem?.warehouseInventoryId));
         if (inventoryRows.length) {
           let remainingQuantity = perEventQuantity;
           inventoryRows.forEach((inventoryRow) => {
@@ -1459,9 +1549,7 @@ function equipmentTransferComparisonRows(rows = equipmentRowsSummary()) {
   const groups = new Map();
   rows.forEach((row) => {
     if (!row || row.type === "category") return;
-    const identity = equipmentInventoryCanonicalKey(
-      row.inventorySourceItem?.description || row.description || row.key
-    );
+    const identity = equipmentSummaryRowIdentity(row);
     if (!identity) return;
     let group = groups.get(identity);
     if (!group) {
@@ -1531,7 +1619,7 @@ function equipmentSetTransferLegSelections(route, from, to, selections) {
   route.legSelections = normalizeEquipmentTransferLegSelections(route.legSelections);
   route.legSelections[legKey] = (Array.isArray(selections) ? selections : [])
     .map((selection) => ({
-      identity: equipmentInventoryCanonicalKey(selection?.identity),
+      identity: equipmentInventoryIdentityForDescription(selection?.identity),
       quantity: Math.max(0, Math.floor(Number(selection?.quantity) || 0))
     }))
     .filter((selection) => selection.identity && selection.quantity > 0);
@@ -1998,7 +2086,7 @@ function bindEquipmentTransferLegEditors(host) {
     addButton?.addEventListener("click", () => {
       const { route, from, to } = context();
       if (!route || !from || !to) return;
-      const identity = equipmentInventoryCanonicalKey(select?.value);
+      const identity = equipmentInventoryIdentityForDescription(select?.value);
       const candidate = equipmentTransferCandidatesForLeg(route, from, to, equipmentTransferComparisonRows())
         .find((item) => item.identity === identity);
       if (!candidate) return;
@@ -2031,16 +2119,16 @@ function tableForEquipmentSections(sections, compact = false) {
   if (!sections.length) {
     return `<p class="equipment-empty">Seleccione un servicio para cargar el equipo.</p>`;
   }
-  const rows = sections
+  const rows = equipmentLiveSectionsForDisplay(sections)
     .map((section) => {
       const inventoryCategories = compact ? [] : equipmentInventoryCategoriesForSection(section);
       const sectionId = String(section.id || "");
       const expanded = !compact && equipmentState.expandedEquipmentSectionIds.has(sectionId);
-      const items = section.items
+      const itemMarkup = section.items
         .map((rawItem) => {
           const item = normalizeEquipmentItem(rawItem);
           if (!compact && item.editable && item.id) {
-            const recognized = equipmentRecognizedInventoryChoice(item.description);
+            const recognized = Boolean(section.importSource) || equipmentRecognizedInventoryChoice(item.description);
             const recognitionClass = recognized ? "" : " is-unrecognized";
             return `
               <tr class="equipment-service-item-row${recognitionClass}">
@@ -2062,8 +2150,30 @@ function tableForEquipmentSections(sections, compact = false) {
               <td class="equipment-service-description-cell">${escapeEquipmentHtml(item.description)}</td>
               ${compact ? "" : `<td class="equipment-row-action"></td>`}
             </tr>`;
-        })
-        .join("");
+        });
+      let items = itemMarkup.join("");
+      if (Array.isArray(section.rows) && section.rows.length) {
+        const bySource = new Map(section.items.map((item, index) => [Number.isInteger(item.sourceItemIndex) ? item.sourceItemIndex : index, index]));
+        const included = new Set();
+        let sourceIndex = -1;
+        items = section.rows.map((row) => {
+          if (row.type === "item") {
+            sourceIndex += 1;
+            const index = bySource.get(Number.isInteger(row.sourceItemIndex) ? row.sourceItemIndex : sourceIndex);
+            if (index === undefined) return "";
+            included.add(index);
+            const notes = (row.notes || []).map((note) => '<tr class="equipment-imported-note-row"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(note) + '</td></tr>').join("");
+            return itemMarkup[index] + notes;
+          }
+          const content = row.description || (row.cells || []).map((cell) => String(cell.value ?? "")).join(" · ");
+          return '<tr class="equipment-imported-note-row" data-source-row-type="' + escapeEquipmentHtml(row.type) + '"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(content) + '</td></tr>';
+        }).join("") + itemMarkup.filter((_, index) => !included.has(index)).join("");
+      } else if (Array.isArray(section.notes)) {
+        items += section.notes.map((note) => '<tr class="equipment-imported-note-row"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(note) + '</td></tr>').join("");
+      }
+      if (section.importSource?.sourceFileUrl) {
+        items += '<tr class="equipment-imported-source-row"><td colspan="' + (compact ? 2 : 3) + '"><a href="' + escapeEquipmentHtml(section.importSource.sourceFileUrl) + '" target="_blank" rel="noopener">Archivo original: ' + escapeEquipmentHtml(section.importSource.fileName) + '</a></td></tr>';
+      }
       if (compact) {
         return `
           <tr class="equipment-category-row">
@@ -2383,7 +2493,7 @@ function addEquipmentChoiceToSection(sectionId) {
   }
   const existing = (section.items || [])
     .map(normalizeEquipmentItem)
-    .find((item) => equipmentInventoryCanonicalKey(item.description) === equipmentInventoryCanonicalKey(description));
+    .find((item) => equipmentInventoryIdentityForDescription(item.description, section.title) === equipmentInventoryIdentityForDescription(description, section.title));
   if (existing?.id) {
     updateEquipmentItem(existing.id, "quantity", (Number(existing.quantity) || 0) + quantity);
   } else if (sectionId === "extras-manuales") {
@@ -2823,17 +2933,25 @@ function equipmentWarehousePayloadFingerprint(payload) {
       item?.itemType,
       item?.quantity,
       item?.notes,
-      item?.updatedAt
+      item?.updatedAt,
+      Boolean(item?.archived),
+      item?.sourceKey,
+      item?.descriptionAliases
     ]),
-    movementCount: movements.length,
-    lastMovementId: movements.at(-1)?.id || ""
+    movements: movements.map((movement) => [
+      movement?.id, movement?.itemId, movement?.type, movement?.quantity,
+      movement?.relatedMovementId, movement?.dateTime, movement?.date,
+      movement?.createdAt, movement?.updatedAt, movement?.reference,
+      movement?.sourceEventName, movement?.repair, movement?.sparePart,
+      movement?.notes, movement?.description, movement?.responsible
+    ])
   });
 }
 
 function applyEquipmentWarehouseInventoryPayload(payload) {
   const state = payload?.state || payload;
   if (!state || !Array.isArray(state.items)) return false;
-  const freshness = Date.parse(payload?.savedAt || state?.updatedAt || "") || 0;
+  const freshness = Date.parse(payload?.savedAt || payload?.publishedAt || state?.updatedAt || "") || 0;
   if (
     equipmentWarehouseInventoryState.loaded &&
     freshness > 0 &&
@@ -2847,12 +2965,23 @@ function applyEquipmentWarehouseInventoryPayload(payload) {
   }
 
   const movements = Array.isArray(state.movements) ? state.movements : [];
+  const seenIds = new Set();
   const records = state.items
-    .filter((item) => item && !item.archived)
+    .filter((item) => {
+      if (!item || item.archived) return false;
+      const id = String(item.id || "");
+      if (id && seenIds.has(id)) return false;
+      if (id) seenIds.add(id);
+      return true;
+    })
     .map((item) => {
       const stats = equipmentWarehouseMovementStats(item.id, movements);
       const physical = equipmentWarehouseNumber(item.quantity);
-      const staticItem = equipmentInventoryStaticItemsByWarehouseId.get(String(item.id || "")) || null;
+      const staticCandidate = equipmentInventoryStaticItemsByWarehouseId.get(String(item.id || "")) || null;
+      const currentKeys = equipmentWarehouseRecordLookupKeys(item);
+      const staticItem = !item.sourceKey || currentKeys.includes(equipmentInventoryCanonicalKey(staticCandidate?.description))
+        ? staticCandidate
+        : null;
       const automaticObservation = equipmentWarehouseAutomaticObservation(stats);
       const inventoryNote = String(item.notes || "").trim();
       const noteAlreadyVisible = inventoryNote && automaticObservation.includes(inventoryNote);
@@ -2872,11 +3001,19 @@ function applyEquipmentWarehouseInventoryPayload(payload) {
 
   const recordsById = new Map();
   const recordsByLookupKey = new Map();
+  const recordsByStableKey = new Map();
   records.forEach((record) => {
+    const key = equipmentInventoryCanonicalKey(record.item?.sourceKey || record.item?.name);
+    if (!recordsByStableKey.has(key)) recordsByStableKey.set(key, []);
+    recordsByStableKey.get(key).push(record);
+  });
+  records.forEach((record) => {
+    const key = equipmentInventoryCanonicalKey(record.item?.sourceKey || record.item?.name);
+    record.inventoryIdentity = record.id && recordsByStableKey.get(key).length > 1
+      ? equipmentInventoryCanonicalKey(`inventario-bodega-${record.id}`)
+      : key;
     if (record.id) recordsById.set(record.id, record);
-    [record.item?.name, record.staticItem?.description]
-      .map(equipmentInventoryCanonicalKey)
-      .filter(Boolean)
+    equipmentWarehouseRecordLookupKeys(record.item, record.staticItem)
       .forEach((lookupKey) => {
         if (!recordsByLookupKey.has(lookupKey)) recordsByLookupKey.set(lookupKey, []);
         const matches = recordsByLookupKey.get(lookupKey);
@@ -2890,6 +3027,7 @@ function applyEquipmentWarehouseInventoryPayload(payload) {
   equipmentWarehouseInventoryState.records = records;
   equipmentWarehouseInventoryState.recordsById = recordsById;
   equipmentWarehouseInventoryState.recordsByLookupKey = recordsByLookupKey;
+  equipmentWarehouseInventoryState.recordsByStableKey = recordsByStableKey;
   invalidateEquipmentRentalPreview();
   return true;
 }
@@ -2910,6 +3048,8 @@ function equipmentInventorySummaryCategories() {
     category.items.push({
       description: String(record.item?.name || "Equipo sin nombre"),
       legacyDescription: record.staticItem?.description || "",
+      sourceKey: record.item?.sourceKey || "",
+      descriptionAliases: [...(Array.isArray(record.item?.descriptionAliases) ? record.item.descriptionAliases : [])],
       value: record.physical,
       sourceQuantity: String(record.physical),
       itemType: record.consumable ? "consumible" : "equipo",
@@ -2939,6 +3079,13 @@ function equipmentInventoryChoiceMap() {
       if (key && !choices.has(key)) choices.set(key, { description, category: category.title });
     });
   });
+  if (equipmentWarehouseInventoryState.loaded) {
+    equipmentWarehouseInventoryState.records.forEach((record) => {
+      equipmentWarehouseRecordLookupKeys(record.item, record.staticItem).forEach((key) => {
+        if (!choices.has(key)) choices.set(key, { description: record.item.name, category: record.item.category });
+      });
+    });
+  }
   return choices;
 }
 
@@ -2958,7 +3105,7 @@ function equipmentCategoryMatchKey(value) {
 function equipmentInventoryCategoriesForSection(section) {
   const categories = equipmentInventoryChoiceCategories();
   const sectionKeys = new Set((section?.items || [])
-    .map((item) => equipmentInventoryCanonicalKey(normalizeEquipmentItem(item).description))
+    .map((item) => equipmentInventoryIdentityForDescription(normalizeEquipmentItem(item).description, section?.title))
     .filter(Boolean));
   const titleParts = String(section?.title || "")
     .split("/")
@@ -2967,17 +3114,17 @@ function equipmentInventoryCategoriesForSection(section) {
   const matches = categories.filter((category) => {
     const categoryKey = equipmentCategoryMatchKey(category.title);
     const titleMatches = titleParts.some((titleKey) => titleKey === categoryKey || titleKey.includes(categoryKey) || categoryKey.includes(titleKey));
-    const itemMatches = category.items.some((description) => sectionKeys.has(equipmentInventoryCanonicalKey(description)));
+    const itemMatches = category.items.some((description) => sectionKeys.has(equipmentInventoryIdentityForDescription(description, category.title)));
     return titleMatches || itemMatches;
   });
   return matches.length ? matches : categories;
 }
 
 function equipmentInventoryOptionsHtml(categories, selectedDescription = "") {
-  const selectedKey = equipmentInventoryCanonicalKey(selectedDescription);
+  const selectedKey = equipmentInventoryIdentityForDescription(selectedDescription);
   return categories.map((category) => {
     const options = category.items.map((description) => {
-      const selected = equipmentInventoryCanonicalKey(description) === selectedKey ? " selected" : "";
+      const selected = equipmentInventoryIdentityForDescription(description, category.title) === selectedKey ? " selected" : "";
       return `<option value="${escapeEquipmentHtml(description)}"${selected}>${escapeEquipmentHtml(description)}</option>`;
     }).join("");
     return `<optgroup label="${escapeEquipmentHtml(category.title)}">${options}</optgroup>`;
@@ -3047,7 +3194,7 @@ function applyEquipmentCatalogServiceOverride(serviceId, override) {
   if (!override || typeof override !== "object") return false;
   const custom = override.custom === true;
   const targetGroup = custom ? equipmentCatalogGroupById(override.groupId) : equipmentCatalogGroupForService(serviceId);
-  let service = equipmentServices[serviceId];
+  let service = Object.prototype.hasOwnProperty.call(equipmentServices, serviceId) ? equipmentServices[serviceId] : null;
   if (!service && custom && targetGroup) {
     service = {
       name: String(override.name || "Nuevo servicio").trim(),
@@ -3067,6 +3214,9 @@ function applyEquipmentCatalogServiceOverride(serviceId, override) {
       ...(section?.id ? { id: String(section.id) } : {}),
       ...(section?.audioVariant ? { audioVariant: true } : {}),
       title: String(section?.title || `Categoría ${index + 1}`),
+      ...(Array.isArray(section?.notes) ? { notes: [...section.notes] } : {}),
+      ...(Array.isArray(section?.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
+      ...(override.importSource ? { importSource: { ...override.importSource } } : {}),
       items: cloneEquipmentCatalogItems(section?.items).map((item) => [item.quantity, item.description])
     }));
   }
@@ -3086,12 +3236,36 @@ function applyEquipmentCatalogServiceOverride(serviceId, override) {
     service.groupId = equipmentCatalogGroupId(targetGroup);
   }
   service.catalogUpdatedAt = override.updatedAt || "";
+  if (override.importSource) service.importSource = { ...override.importSource };
   return true;
 }
 
 function applyEquipmentCatalogOverrides(payload) {
   const services = payload?.services && typeof payload.services === "object" ? payload.services : {};
   let changed = false;
+  const groups = Array.isArray(payload?.groups) ? payload.groups : Object.values(payload?.groups || {});
+  groups.forEach((group) => {
+    const id = equipmentCatalogGroupId(group);
+    if (!id || !String(group?.label || "").trim()) return;
+    if (!equipmentCatalogGroupById(id)) {
+      equipmentServiceGroups.push({ id, label: String(group.label), serviceIds: [] });
+      changed = true;
+    }
+  });
+  const removed = new Set(payload?.removedServiceIds || []);
+  if (payload?.baseCatalogVersion) {
+    Object.entries(equipmentServices).forEach(([id, service]) => {
+      if (service.importSource && !services[id]) removed.add(id);
+    });
+  }
+  removed.forEach((id) => {
+    if (services[id]) return;
+    delete equipmentServices[id];
+    equipmentServiceGroups.forEach((group) => { group.serviceIds = (group.serviceIds || []).filter((value) => value !== id); });
+    equipmentState.selectedServiceIds.delete(id);
+    if (equipmentState.selectedServiceId === id) equipmentState.selectedServiceId = "";
+    changed = true;
+  });
   Object.entries(services).forEach(([serviceId, override]) => {
     changed = applyEquipmentCatalogServiceOverride(serviceId, override) || changed;
   });
@@ -3135,6 +3309,7 @@ function equipmentCatalogDraftForService(serviceId) {
     serviceId,
     name: baseService.name,
     custom: baseService.custom === true,
+    ...(baseService.importSource ? { importSource: { ...baseService.importSource } } : {}),
     groupId: baseService.groupId || equipmentCatalogGroupId(serviceGroup),
     audioType,
     sections: (resolvedService.mainSections || []).map((section, index) => {
@@ -3146,6 +3321,8 @@ function equipmentCatalogDraftForService(serviceId) {
         baseTitle: baseSection.title || section.title || "",
         audioVariant: Boolean(baseSection.audioVariant || section.audioVariant),
         title: String(section.title || `Categoría ${index + 1}`),
+        ...(Array.isArray(section.notes) ? { notes: [...section.notes] } : {}),
+        ...(Array.isArray(section.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
         items: cloneEquipmentCatalogItems(section.items)
       };
     })
@@ -3169,7 +3346,7 @@ function equipmentCatalogEditorValidation(draft = equipmentCatalogEditorState.dr
       if (!description) {
         return { ok: false, message: `Escriba el nombre del equipo ${itemIndex + 1} en ${section.title}.` };
       }
-      if (!equipmentRecognizedInventoryChoice(description)) {
+      if (!draft.importSource && !equipmentRecognizedInventoryChoice(description)) {
         return { ok: false, message: `No se reconoce "${description}" en ${section.title}. Seleccione el nombre exacto del inventario.` };
       }
       const quantity = Number(item.quantity);
@@ -3201,6 +3378,8 @@ function equipmentCatalogEditorPayload(draft = equipmentCatalogEditorState.draft
     return {
       ...(section.sourceId ? { id: section.sourceId } : {}),
       title: String(section.title || "").trim(),
+      ...(Array.isArray(section.notes) ? { notes: [...section.notes] } : {}),
+      ...(Array.isArray(section.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
       items
     };
   });
@@ -3372,7 +3551,7 @@ function bindEquipmentCatalogEditorInputs() {
       const description = String(choice?.value || "").trim();
       if (!section || !description) return;
       const quantity = Math.max(0, Number(quantityInput?.value || 0) || 0);
-      const existing = section.items.find((item) => equipmentInventoryCanonicalKey(item.description) === equipmentInventoryCanonicalKey(description));
+      const existing = section.items.find((item) => equipmentInventoryIdentityForDescription(item.description, section.title) === equipmentInventoryIdentityForDescription(description, section.title));
       if (existing) existing.quantity += quantity;
       else section.items.push({ id: `catalog-item-${Date.now()}`, quantity, description });
       renderEquipmentCatalogEditor();
@@ -3536,19 +3715,22 @@ async function initEquipmentCatalogSync() {
 }
 
 function equipmentWarehouseInventoryRecordFor(row) {
-  const directId = row?.inventorySourceItem?.warehouseInventoryId
-    || equipmentInventoryWarehouseIdByRowKey.get(row?.key);
+  const explicitId = row?.inventorySourceItem?.warehouseInventoryId;
+  if (explicitId) return equipmentWarehouseInventoryState.recordsById.get(String(explicitId)) || null;
+  const directId = equipmentInventoryWarehouseIdByRowKey.get(row?.key);
   if (directId && equipmentWarehouseInventoryState.recordsById.has(String(directId))) {
     return equipmentWarehouseInventoryState.recordsById.get(String(directId));
   }
   const lookupKeys = [
     row?.inventorySourceItem?.description,
     row?.inventorySourceItem?.legacyDescription,
+    row?.inventorySourceItem?.sourceKey,
+    ...(Array.isArray(row?.inventorySourceItem?.descriptionAliases) ? row.inventorySourceItem.descriptionAliases : []),
     row?.description,
     row?.key
   ].map(equipmentInventoryCanonicalKey).filter(Boolean);
   for (const lookupKey of lookupKeys) {
-    const matches = equipmentWarehouseInventoryState.recordsByLookupKey.get(lookupKey) || [];
+    const matches = equipmentWarehouseRecordsForDescription(lookupKey, row?.categoryTitle || row?.category || "");
     if (matches.length === 1) return matches[0];
   }
   return null;
@@ -3593,8 +3775,8 @@ function defaultInventoryValueFor(row) {
 function inventoryValueFor(row) {
   const warehouseRecord = equipmentWarehouseInventoryRecordFor(row);
   if (warehouseRecord) return warehouseRecord.available;
-  if (equipmentState.inventory.has(row.key)) return equipmentState.inventory.get(row.key);
   if (equipmentWarehouseInventoryState.loaded) return 0;
+  if (equipmentState.inventory.has(row.key)) return equipmentState.inventory.get(row.key);
   return defaultInventoryValueFor(row);
 }
 
@@ -3862,7 +4044,7 @@ function tableForEquipmentInventory(rows, editable = true) {
           <td>
             ${
               editable
-                ? `<input class="equipment-inventory-input${warehouseRecord ? " is-warehouse-synced" : ""}" type="text" inputmode="decimal" value="${escapeEquipmentHtml(inventory)}" aria-label="Inventario físico de ${escapeEquipmentHtml(row.description)}" ${warehouseRecord ? 'readonly aria-readonly="true" title="Sincronizado con Contabilidad de equipo"' : ""} />`
+                ? `<input class="equipment-inventory-input${warehouseRecord ? " is-warehouse-synced" : ""}" type="text" inputmode="decimal" value="${escapeEquipmentHtml(inventory)}" aria-label="Inventario físico de ${escapeEquipmentHtml(row.description)}" ${equipmentWarehouseInventoryState.loaded ? 'readonly aria-readonly="true" title="Sincronizado con Contabilidad de equipo"' : ""} />`
                 : escapeEquipmentHtml(inventory)
             }
           </td>
@@ -3914,7 +4096,7 @@ function consolidateEquipmentRentalRows(summaryRows, events) {
   const groups = new Map();
   (Array.isArray(summaryRows) ? summaryRows : []).forEach((row) => {
     if (!row || row.type === "category") return;
-    const identity = equipmentInventoryCanonicalKey(row.inventorySourceItem?.description || row.description || row.key);
+    const identity = equipmentSummaryRowIdentity(row);
     if (!identity) return;
     let group = groups.get(identity);
     if (!group) {
@@ -4178,6 +4360,24 @@ async function initEquipmentWarehouseInventorySync() {
       refreshEquipmentWarehouseInventory();
     }
   });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && (!requirementPage || requirementPage.classList.contains("is-active"))) {
+      refreshEquipmentWarehouseInventory();
+    }
+  });
+  window.addEventListener("hashchange", () => {
+    if (window.location.hash === "#requerimiento-equipo") refreshEquipmentWarehouseInventory();
+  });
+  window.addEventListener("storage", (event) => {
+    if (!event.key || event.key.startsWith("liveWarehouse")) refreshEquipmentWarehouseInventory();
+  });
+  if (typeof window.BroadcastChannel === "function" && !equipmentWarehouseInventoryState.broadcastChannel) {
+    const channel = new window.BroadcastChannel("live-warehouse-inventory");
+    channel.addEventListener("message", (event) => {
+      if (applyEquipmentWarehouseInventoryPayload(event.data)) renderEquipmentModule();
+    });
+    equipmentWarehouseInventoryState.broadcastChannel = channel;
+  }
   equipmentWarehouseInventoryState.refreshTimer = window.setInterval(() => {
     if (!requirementPage || requirementPage.classList.contains("is-active")) {
       refreshEquipmentWarehouseInventory();
@@ -4688,7 +4888,7 @@ function clearEquipmentWorkingArea() {
 
 function renderEquipmentPdfPreview() {
   const service = currentEquipmentService();
-  const sections = selectedEquipmentSections();
+  const sections = warehousePdfSections();
   const events = equipmentPdfEvents();
   const summaryEvents = activeEquipmentEvents();
   const place = eventSummaryText(events, "place", "Lugar por definir");
@@ -4966,28 +5166,31 @@ function equipmentWarehouseDispatchItems(event) {
       const quantity = Math.max(0, Number(item.quantity) || 0);
       const description = String(item.description || "").trim();
       if (!description || quantity <= 0) return;
-      const key = equipmentInventoryCanonicalKey(description);
+      const key = equipmentInventoryIdentityForDescription(description, section.title);
+      const matches = equipmentWarehouseRecordsForDescription(description, section.title);
       let group = groups.get(key);
       if (!group) {
         group = {
-          description,
-          category: section.title || "Equipo",
+          description: matches.length === 1 ? matches[0].item.name || description : description,
+          category: matches.length === 1 ? matches[0].item.category || section.title || "Equipo" : section.title || "Equipo",
           quantity: 0,
           warehouseItemIds: [],
-          consumable: equipmentDescriptionEndsWithConsumable(description)
+          consumable: matches.length ? matches.some((record) => record.consumable) : equipmentDescriptionEndsWithConsumable(description)
         };
         groups.set(key, group);
       }
+      group.warehouseItemIds = [...new Set([...group.warehouseItemIds, ...matches.map((record) => record.id).filter(Boolean)])];
       group.quantity += quantity;
     });
   });
 
   groups.forEach((group) => {
-    const matches = equipmentWarehouseInventoryState.recordsByLookupKey.get(
-      equipmentInventoryCanonicalKey(group.description)
-    ) || [];
-    group.warehouseItemIds = [...new Set(matches.map((record) => record.id).filter(Boolean))];
-    group.consumable = group.consumable || matches.some((record) => record.consumable);
+    const matches = group.warehouseItemIds.map((id) => equipmentWarehouseInventoryState.recordsById.get(id)).filter(Boolean);
+    if (matches.length === 1) {
+      group.description = matches[0].item.name || group.description;
+      group.category = matches[0].item.category || group.category;
+    }
+    group.consumable = matches.length ? matches.some((record) => record.consumable) : group.consumable;
   });
   return [...groups.values()];
 }
@@ -5561,6 +5764,16 @@ function initEquipmentModule() {
     closeEquipmentLogisticsDecision();
   });
   initEquipmentCatalogSync();
+  window.EquipmentServiceImport?.init({
+    groups: () => equipmentServiceGroups.map((group) => ({ id: equipmentCatalogGroupId(group), label: group.label })),
+    baseVersion: () => equipmentCatalogBaseVersion,
+    beforeOpen: () => loadEquipmentCatalogOverrides(true),
+    onSaved: (payload) => {
+      applyEquipmentCatalogOverrides(payload);
+      populateNativeEquipmentServiceSelect();
+      renderEquipmentModule();
+    }
+  });
   renderEquipmentModule();
   if (typeof window.requestAnimationFrame === "function") {
     window.requestAnimationFrame(renderEquipmentModule);
@@ -5571,6 +5784,9 @@ function initEquipmentModule() {
 }
 
 document.addEventListener("live:warehouse-inventory-updated", (event) => {
+  if (applyEquipmentWarehouseInventoryPayload(event.detail)) renderEquipmentModule();
+});
+document.addEventListener("live:warehouse-server-updated", (event) => {
   if (applyEquipmentWarehouseInventoryPayload(event.detail)) renderEquipmentModule();
 });
 if (window.LIVE_WAREHOUSE_AVAILABILITY) {

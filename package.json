@@ -3,10 +3,21 @@
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "start": "node --no-warnings server.js",
-    "start:web": "NODE_ENV=production HOST=0.0.0.0 node --no-warnings server.js"
+    "start:web": "NODE_ENV=production HOST=0.0.0.0 node --no-warnings server.js",
+    "test": "node --test test/*.test.cjs"
+  },
+  "dependencies": {
+    "exceljs": "4.4.0",
+    "pdfjs-dist": "6.4.299",
+    "unzipper": "0.12.5"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   }
 }

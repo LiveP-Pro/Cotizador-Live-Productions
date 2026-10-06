@@ -7,12 +7,15 @@
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
     <link rel="stylesheet" href="styles.css?v=20260929-catalogo-drive-01" />
-    <link rel="stylesheet" href="warehouse-inventory.css?v=20260902-03" />
+    <link rel="stylesheet" href="warehouse-inventory.css?v=20261006-import-review-01" />
+    <link rel="stylesheet" href="equipment-service-import.css?v=20261006-service-import-01" />
     <script src="app.js?v=20260814-01" defer></script>
     <script src="equipment-catalog.js?v=20260929-catalogo-drive-01" defer></script>
     <script src="equipment-inventory.js?v=20260822-01" defer></script>
-    <script src="equipment.js?v=20260929-catalogo-drive-01" defer></script>
-    <script src="inventory.js?v=20260902-03" defer></script>
+    <script src="equipment-service-import.js?v=20261006-service-import-01" defer></script>
+    <script src="equipment.js?v=20261006-service-import-01" defer></script>
+    <script src="warehouse-import-review.js?v=20261006-warehouse-sync-01" defer></script>
+    <script src="inventory.js?v=20261006-warehouse-sync-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -264,6 +267,9 @@
             </label>
             <div class="equipment-field-wide equipment-service-management">
               <button id="equipmentCreateServiceTemplateButton" type="button">Generar Nuevo Cuadro de Servicio</button>
+              <button id="equipmentImportServiceFileButton" type="button">Importar archivo Excel / PDF</button>
+              <input id="equipmentServiceImportFileInput" class="is-hidden" type="file" accept=".xlsx,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf" />
+              <span id="equipmentServiceImportStatus" role="status"></span>
             </div>
             <div id="equipmentDjAudioOptions" class="equipment-field-wide equipment-audio-options is-hidden">
               <span data-audio-options-label>Tipo de audio</span>
@@ -550,6 +556,28 @@
                 <button id="equipmentLogisticsCancelButton" type="button">Cancelar</button>
                 <button id="equipmentLogisticsRentButton" type="button">Rentar</button>
                 <button id="equipmentLogisticsTransferButton" type="button">Trasegar</button>
+              </footer>
+            </section>
+          </dialog>
+
+          <dialog id="equipmentServiceImportDialog" class="equipment-service-import-dialog no-print" aria-labelledby="equipmentServiceImportTitle" aria-describedby="equipmentServiceImportDescription">
+            <section class="equipment-service-import-shell">
+              <header class="equipment-service-import-header">
+                <div>
+                  <p class="eyebrow">Nuevos tipos de servicio</p>
+                  <h2 id="equipmentServiceImportTitle">Importar archivo</h2>
+                  <p id="equipmentServiceImportDescription">Revise el contenido y elija dónde guardar cada servicio.</p>
+                </div>
+                <button id="equipmentServiceImportCloseButton" type="button" aria-label="Cerrar importación">×</button>
+              </header>
+              <div id="equipmentServiceImportContent" class="equipment-service-import-content"></div>
+              <footer class="equipment-service-import-footer">
+                <p id="equipmentServiceImportDialogStatus" role="status" aria-live="polite"></p>
+                <div class="equipment-service-import-footer-actions">
+                  <button id="equipmentServiceImportChooseButton" type="button">Elegir otro archivo</button>
+                  <button id="equipmentServiceImportCancelButton" type="button">Cancelar</button>
+                  <button id="equipmentServiceImportSaveButton" type="button" disabled>Guardar servicios</button>
+                </div>
               </footer>
             </section>
           </dialog>

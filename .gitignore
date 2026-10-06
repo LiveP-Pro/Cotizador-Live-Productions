@@ -11,6 +11,8 @@ respaldo-cotizaciones/
 cotizador-auth.json
 cotizador-servidor.log
 inventario-bodega*.json
+catalogo-requerimiento-equipo*.json
+fuentes-requerimiento-equipo/
 
 # Paquetes generados o copiados
 dist/

@@ -12,9 +12,11 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY package.json ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 COPY index.html app.js styles.css equipment-catalog.js equipment-inventory.js equipment.js server.js platform-server.js README.md ./
-COPY warehouse-module.html warehouse-inventory.css inventory.js inventory-initial-state.json ./
+COPY warehouse-module.html warehouse-inventory.css inventory.js inventory-initial-state.json warehouse-import.cjs warehouse-import-review.js ./
+COPY equipment-service-import.cjs equipment-service-import.js equipment-service-import.css ./
 COPY assets ./assets
 COPY luxury/package.json luxury/server.js ./luxury/
 COPY luxury/lib ./luxury/lib

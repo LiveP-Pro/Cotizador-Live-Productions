@@ -16,7 +16,7 @@
             <button id="warehouseExportButton" class="secondary-button" type="button">Exportar respaldo</button>
             <label class="secondary-button warehouse-import-button">
               Importar respaldo
-              <input id="warehouseImportInput" class="is-hidden" type="file" accept="application/json,.json" />
+              <input id="warehouseImportInput" class="is-hidden" type="file" accept=".json,.xlsx,.pdf,application/json,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
             </label>
             <button id="warehouseResetSeedButton" class="secondary-button" type="button">Restaurar libro inicial</button>
             <button class="is-active" type="button" data-warehouse-window="inventory">Inventario</button>
@@ -270,6 +270,25 @@
               <div id="warehouseLogList" class="warehouse-log-list"></div>
             </section>
           </section>
+
+          <dialog id="warehouseImportDialog" class="warehouse-dialog warehouse-import-dialog" aria-labelledby="warehouseImportTitle">
+            <div class="warehouse-dialog-card">
+              <header>
+                <div>
+                  <p class="eyebrow">Contabilidad de equipo</p>
+                  <h2 id="warehouseImportTitle">Revisar importación</h2>
+                </div>
+                <button id="warehouseImportCloseButton" type="button" aria-label="Cancelar importación">×</button>
+              </header>
+              <p id="warehouseImportSummary" class="warehouse-import-summary" role="status" aria-live="polite"></p>
+              <div id="warehouseImportBody" class="warehouse-import-body"></div>
+              <p id="warehouseImportError" class="warehouse-import-error" role="alert"></p>
+              <footer>
+                <button id="warehouseImportCancelButton" class="secondary-button" type="button">Cancelar</button>
+                <button id="warehouseImportApplyButton" class="primary-button" type="button">Importar y guardar</button>
+              </footer>
+            </div>
+          </dialog>
 
           <dialog id="warehouseActionDialog" class="warehouse-dialog">
             <form method="dialog" class="warehouse-dialog-card">
