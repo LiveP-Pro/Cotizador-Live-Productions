@@ -460,7 +460,8 @@ body {
 }
 
 .equipment-event-actions button,
-.equipment-manual-extra-form button {
+.equipment-manual-extra-form button,
+.equipment-bulk-extras button {
   min-height: 46px;
   padding: 0 18px;
   color: #ffffff;
@@ -908,6 +909,22 @@ body {
   display: grid;
   gap: 22px;
   margin-top: 24px;
+}
+
+.equipment-bulk-extras { border-top: 1px solid #d5dbe6; padding-top: 12px; }
+.equipment-bulk-extras summary { cursor: pointer; font-weight: 700; }
+.equipment-bulk-extras-controls { display: flex; align-items: end; gap: 12px; margin-top: 12px; }
+.equipment-bulk-extras-controls label { display: grid; gap: 6px; }
+.equipment-bulk-extras-controls input { width: 160px; }
+.equipment-bulk-extras p { color: #596579; font-size: 13px; }
+.equipment-bulk-extras-rows { display: grid; gap: 10px; margin: 12px 0; }
+.equipment-bulk-extra-row { display: grid; grid-template-columns: 28px 110px minmax(0, 1fr); align-items: end; gap: 12px; }
+.equipment-bulk-extra-row > span { align-self: center; font-weight: 700; }
+.equipment-bulk-extra-row label { display: grid; gap: 6px; min-width: 0; }
+.equipment-bulk-extra-row input { width: 100%; }
+@media (max-width: 600px) {
+  .equipment-bulk-extras-controls { flex-wrap: wrap; }
+  .equipment-bulk-extra-row { grid-template-columns: 24px 80px minmax(0, 1fr); gap: 8px; }
 }
 
 .equipment-manual-controls {

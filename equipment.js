@@ -140,6 +140,42 @@ function equipmentWarehouseRecordIdentity(record) {
   return record?.inventoryIdentity || equipmentInventoryCanonicalKey(record?.item?.sourceKey || record?.item?.name);
 }
 
+function equipmentWarehouseRecordsForItem(item, section = {}) {
+  if (item?.warehouseInventoryId) {
+    const record = equipmentWarehouseInventoryState.recordsById.get(String(item.warehouseInventoryId));
+    return record ? [record] : [];
+  }
+  const records = equipmentWarehouseRecordsForDescription(item?.description, item?.inventoryCategory || section.inventoryCategory || section.title || "");
+  return section.manualSection && records.length > 1 ? [] : records;
+}
+
+function equipmentItemInventoryMetadata(item) {
+  return {
+    ...(item?.warehouseInventoryId ? { warehouseInventoryId: String(item.warehouseInventoryId) } : {}),
+    ...(item?.inventoryCategory ? { inventoryCategory: String(item.inventoryCategory) } : {})
+  };
+}
+
+function equipmentFallbackCategoryMap(additionalSections = []) {
+  const categories = new Map();
+  const sections = [...additionalSections, ...activeEquipmentEvents().flatMap((event) =>
+    equipmentState.events.length ? sectionsForEquipmentEvent(event) : selectedEquipmentSections())];
+  sections.forEach((section) => (section.items || []).forEach((rawItem) => {
+    const item = normalizeEquipmentItem(rawItem);
+    const key = equipmentInventoryCanonicalKey(item.description);
+    if (!categories.has(key)) categories.set(key, new Set());
+    categories.get(key).add(normalizeEquipmentKey(item.inventoryCategory || section.inventoryCategory || section.title));
+  }));
+  return categories;
+}
+
+function equipmentFallbackIdentityForItem(item, section, categories) {
+  if (item.warehouseInventoryId) return `inventario-bodega-${item.warehouseInventoryId}`;
+  const key = equipmentInventoryCanonicalKey(item.description);
+  const category = normalizeEquipmentKey(item.inventoryCategory || section.inventoryCategory || section.title);
+  return categories.get(key)?.size > 1 ? `fuente-equipo:${encodeURIComponent(category).toLowerCase()}:${encodeURIComponent(key).toLowerCase()}` : key;
+}
+
 function equipmentInventoryIdentityForDescription(description, category = "") {
   const key = equipmentInventoryCanonicalKey(description);
   // Stored transfer identities are already stable source keys. A different
@@ -488,12 +524,15 @@ function equipmentTransferBacklineOnly(route, from, to) {
 
 function equipmentEventBacklineQuantities(event) {
   const quantities = new Map();
+  const categories = equipmentFallbackCategoryMap(sectionsForEquipmentEvent(event));
   // Use only the event's current sections, never a historical equipment list.
   sectionsForEquipmentEvent(event).forEach((section) => {
     if (!/\bback\s*line\b/.test(normalizeEquipmentKey(section.title))) return;
     (section.items || []).forEach((rawItem) => {
       const item = normalizeEquipmentItem(rawItem);
-      const identity = equipmentInventoryIdentityForDescription(item.description, section.title);
+      const records = equipmentWarehouseRecordsForItem(item, section);
+      const identity = records.length === 1 ? equipmentWarehouseRecordIdentity(records[0])
+        : equipmentFallbackIdentityForItem(item, section, categories);
       if (identity) quantities.set(identity, (quantities.get(identity) || 0) + Math.max(0, Number(item.quantity) || 0));
     });
   });
@@ -660,6 +699,7 @@ function equipmentHasConfiguredTransferRoutes(events = activeEquipmentEvents()) 
 function equipmentSummaryRowIdentity(row) {
   const record = equipmentWarehouseInventoryRecordFor(row);
   return equipmentWarehouseRecordIdentity(record)
+    || (row?.warehouseInventoryId ? `inventario-bodega-${row.warehouseInventoryId}` : row?.matchKey)
     || equipmentInventoryIdentityForDescription(row?.inventorySourceItem?.description || row?.description || row?.key, row?.categoryTitle || "");
 }
 
@@ -975,6 +1015,7 @@ function normalizeEquipmentItem(item) {
     id: item.id || "",
     quantity: item.quantity,
     description: item.description,
+    ...equipmentItemInventoryMetadata(item),
     ...(Number.isInteger(item.sourceItemIndex) ? { sourceItemIndex: item.sourceItemIndex } : {}),
     editable: item.editable !== false,
     manual: Boolean(item.manual)
@@ -990,6 +1031,7 @@ function editableEquipmentItems(section, sectionKey) {
         id,
         quantity: override.quantity ?? quantity,
         description: override.description ?? description,
+        ...equipmentItemInventoryMetadata(override),
         ...(Array.isArray(section.rows) ? { sourceItemIndex: itemIndex } : {}),
         editable: true,
         manual: false
@@ -1006,7 +1048,7 @@ function manualMainSectionsForTable() {
     ? [
         {
           id: "equipo-manual",
-          title: "Equipo agregado manualmente",
+          title: "Extras",
           manualSection: true,
           items: equipmentState.manualMainItems.map((item) => ({
             ...item,
@@ -1020,7 +1062,7 @@ function manualMainSectionsForTable() {
     .filter((section) => section.title || section.items.length)
     .map((section) => ({
       id: section.id,
-      title: section.title || "Equipo agregado manualmente",
+      title: normalizeEquipmentKey(section.title) === "equipo agregado manualmente" ? "Extras" : section.title || "Extras",
       manualSection: true,
       items: section.items.map((item) => ({
         ...item,
@@ -1032,14 +1074,26 @@ function manualMainSectionsForTable() {
 }
 
 function ensureManualMainSection() {
-  if (!equipmentState.manualMainSections.length) {
+  const subtitleInput = equipmentQuery("#equipmentManualSubtitle");
+  const pendingTitle = subtitleInput?.value.trim() || "";
+  if (pendingTitle && equipmentState.manualMainSections.at(-1)?.title !== pendingTitle) {
     equipmentState.manualMainSections.push({
       id: `manual-section-${Date.now()}-${equipmentManualSectionCounter++}`,
-      title: "Equipo agregado manualmente",
+      title: pendingTitle,
       items: []
     });
   }
-  return equipmentState.manualMainSections[equipmentState.manualMainSections.length - 1];
+  if (pendingTitle && subtitleInput) subtitleInput.value = "";
+  if (!equipmentState.manualMainSections.length) {
+    equipmentState.manualMainSections.push({
+      id: `manual-section-${Date.now()}-${equipmentManualSectionCounter++}`,
+      title: "Extras",
+      items: []
+    });
+  }
+  const section = equipmentState.manualMainSections[equipmentState.manualMainSections.length - 1];
+  if (normalizeEquipmentKey(section.title) === "equipo agregado manualmente") section.title = "Extras";
+  return section;
 }
 
 function selectedEquipmentSections() {
@@ -1052,6 +1106,7 @@ function selectedEquipmentSections() {
       return {
         ...section,
         id: sectionKey,
+        inventoryCategory: section.inventoryCategory || section.title,
         title: hasMultipleServices ? `${service.name} / ${section.title}` : section.title,
         items: editableEquipmentItems(section, sectionKey)
       };
@@ -1066,6 +1121,7 @@ function selectedEquipmentSections() {
         return {
           ...extra,
           id: sectionKey,
+          inventoryCategory: extra.inventoryCategory || extra.title,
           title: hasMultipleServices ? `${service.name} / ${extra.title}` : extra.title,
           items: editableEquipmentItems(extra, sectionKey)
         };
@@ -1076,7 +1132,8 @@ function selectedEquipmentSections() {
     ? [
         {
           id: "extras-manuales",
-          title: "Extras manuales",
+          title: "Extras",
+          manualSection: true,
           items: equipmentState.manualExtras.map((extra) => ({
             ...extra,
             editable: true,
@@ -1085,7 +1142,7 @@ function selectedEquipmentSections() {
         }
       ]
     : [];
-  return [...mainSections, ...manualMainSection, ...selectedExtrasSections, ...manualExtrasSection];
+  return [...mainSections, ...selectedExtrasSections, ...manualExtrasSection, ...manualMainSection];
 }
 
 function warehousePdfSections() {
@@ -1109,8 +1166,9 @@ function equipmentLiveSectionsForDisplay(sections) {
     const displayed = [];
     section.items.forEach((rawItem) => {
       const item = normalizeEquipmentItem(rawItem);
-      const record = equipmentWarehouseInventoryRecordFor({ description: item.description, categoryTitle: section.title });
-      const title = String(record?.item?.category || section.title || "Equipo sin categoria");
+      const records = equipmentWarehouseRecordsForItem(item, section);
+      const record = records.length === 1 ? records[0] : null;
+      const title = String((section.manualSection ? section.title : record?.item?.category) || section.title || "Equipo sin categoria");
       let group = displayed.at(-1);
       if (!group || group.title !== title) {
         group = { ...section, title, items: [] };
@@ -1160,6 +1218,7 @@ function cloneEquipmentSnapshotItem(item, index = 0) {
     id: normalized.id || `snapshot-item-${index}`,
     quantity: Number(normalized.quantity) || 0,
     description: normalized.description || "",
+    ...equipmentItemInventoryMetadata(normalized),
     ...(Number.isInteger(normalized.sourceItemIndex) ? { sourceItemIndex: normalized.sourceItemIndex } : {}),
     editable: normalized.editable !== false,
     manual: Boolean(normalized.manual)
@@ -1174,6 +1233,8 @@ function cloneEquipmentSnapshotSections(sections = []) {
   return sections.map((section, index) => ({
     id: section.id || `snapshot-section-${index}`,
     title: section.title || "",
+    ...(section.manualSection ? { manualSection: true } : {}),
+    ...(section.inventoryCategory ? { inventoryCategory: section.inventoryCategory } : {}),
     ...(Array.isArray(section.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
     ...(Array.isArray(section.notes) ? { notes: [...section.notes] } : {}),
     ...(section.importSource ? { importSource: { ...section.importSource } } : {}),
@@ -1413,6 +1474,7 @@ function equipmentRowsSummary() {
   const inventoryRowsByEquipmentKey = new Map();
   const itemRows = [];
   const events = activeEquipmentEvents();
+  const fallbackCategories = equipmentFallbackCategoryMap();
   const ensureGroup = (title, alwaysVisible = false) => {
     const categoryTitle = String(title || "Equipo sin categoria").trim() || "Equipo sin categoria";
     const categoryKey = normalizeEquipmentKey(categoryTitle) || `categoria-${groups.length + 1}`;
@@ -1471,13 +1533,16 @@ function equipmentRowsSummary() {
       const categoryTitle = String(section.title || "Equipo sin categoria").trim() || "Equipo sin categoria";
       const group = ensureGroup(categoryTitle);
       section.items.forEach((rawItem) => {
-        const { quantity, description } = normalizeEquipmentItem(rawItem);
-        const key = normalizeEquipmentKey(description);
+        const item = normalizeEquipmentItem(rawItem);
+        const { quantity, description } = item;
+        const key = equipmentInventoryCanonicalKey(description);
         if (!key) return;
         const perEventQuantity = Number(quantity) || 0;
-        const matchedRecords = equipmentWarehouseRecordsForDescription(description, categoryTitle);
+        const matchedRecords = equipmentWarehouseRecordsForItem(item, section);
         const matchedIds = new Set(matchedRecords.map((record) => record.id));
-        const inventoryRows = (inventoryRowsByEquipmentKey.get(equipmentInventoryCanonicalKey(description)) || [])
+        const inventoryRows = (item.warehouseInventoryId
+          ? itemRows.filter((row) => row.inventorySourceItem?.warehouseInventoryId === item.warehouseInventoryId)
+          : inventoryRowsByEquipmentKey.get(equipmentInventoryCanonicalKey(description)) || [])
           .filter((row) => !equipmentWarehouseInventoryState.loaded || matchedIds.has(row.inventorySourceItem?.warehouseInventoryId));
         if (inventoryRows.length) {
           let remainingQuantity = perEventQuantity;
@@ -1502,20 +1567,25 @@ function equipmentRowsSummary() {
           }
           return;
         }
-        let row = rowsByEquipmentKey.get(key);
+        const sourceCategory = item.inventoryCategory || section.inventoryCategory || categoryTitle;
+        const fallbackGroup = ensureGroup(sourceCategory);
+        const fallbackKey = equipmentFallbackIdentityForItem(item, section, fallbackCategories);
+        let row = rowsByEquipmentKey.get(fallbackKey);
         if (!row) {
           row = {
             type: "item",
-            key,
+            key: fallbackKey,
+            matchKey: fallbackKey,
+            ...equipmentItemInventoryMetadata(item),
             quantity: 0,
             description,
             eventQuantities: new Map(),
-            categoryKey: group.key,
-            categoryTitle: group.title
+            categoryKey: fallbackGroup.key,
+            categoryTitle: fallbackGroup.title
           };
-          rowsByEquipmentKey.set(key, row);
+          rowsByEquipmentKey.set(fallbackKey, row);
           itemRows.push(row);
-          group.rows.push(row);
+          fallbackGroup.rows.push(row);
         }
         row.eventQuantities.set(
           event.id,
@@ -2133,7 +2203,7 @@ function tableForEquipmentSections(sections, compact = false) {
             return `
               <tr class="equipment-service-item-row${recognitionClass}">
                 <td class="equipment-qty equipment-service-quantity-cell">
-                  <input class="equipment-line-quantity" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="quantity" type="number" min="0" step="1" value="${escapeEquipmentHtml(item.quantity)}" />
+                  <input class="equipment-line-quantity" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="quantity" type="number" min="${item.manual ? "1" : "0"}" step="1" value="${escapeEquipmentHtml(item.quantity)}" />
                 </td>
                 <td class="equipment-service-description-cell">
                   <input class="equipment-line-description${recognitionClass}" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="description" type="text" list="equipmentInventoryNameOptions" value="${escapeEquipmentHtml(item.description)}" aria-invalid="${recognized ? "false" : "true"}" />
@@ -2378,6 +2448,11 @@ function updateEquipmentItem(itemId, field, value) {
   const target = manualMain || manualExtra;
   const nextValue = field === "quantity" ? Number(value || 0) || 0 : String(value || "");
   if (target) {
+    if (field === "quantity" && (!Number.isInteger(nextValue) || nextValue < 1)) return;
+    if (field === "description") {
+      delete target.warehouseInventoryId;
+      delete target.inventoryCategory;
+    }
     target[field] = nextValue;
     return;
   }
@@ -2538,6 +2613,12 @@ function bindEquipmentSectionInputs() {
   const host = equipmentQuery("#equipmentMainTable");
   if (!host) return;
   host.querySelectorAll("[data-equipment-item-id]").forEach((input) => {
+    const itemId = input.dataset.equipmentItemId;
+    const item = selectedEquipmentSections().flatMap((section) => section.items).find((item) => item.id === itemId);
+    if (input.dataset.equipmentField === "description" && item?.manual) {
+      bindEquipmentExtraNameInput(input, itemId);
+      return;
+    }
     input.addEventListener("input", (event) => {
       updateEquipmentItem(input.dataset.equipmentItemId, input.dataset.equipmentField, event.target.value);
       updateEquipmentRecognitionState(input);
@@ -2578,21 +2659,12 @@ function addManualMainEquipmentItem() {
   const quantityInput = equipmentQuery("#equipmentManualMainQuantity");
   const descriptionInput = equipmentQuery("#equipmentManualMainDescription");
   const status = equipmentQuery("#equipmentSaveStatus");
-  const description = descriptionInput?.value.trim() || "";
-  const quantity = Number(quantityInput?.value || 0) || 0;
-  if (!description) {
-    if (status) status.textContent = "Escriba el nombre del equipo antes de agregarlo.";
-    return;
-  }
-  const manualSection = ensureManualMainSection();
-  manualSection.items.push({
-    id: `manual-main-${Date.now()}-${equipmentManualMainCounter++}`,
-    quantity,
-    description
-  });
+  const extra = equipmentExtraFromInputs(quantityInput, descriptionInput);
+  if (!extra) return;
+  appendEquipmentExtraItems([extra]);
   if (descriptionInput) descriptionInput.value = "";
   if (quantityInput) quantityInput.value = "1";
-  if (status) status.textContent = `Equipo agregado: ${description}`;
+  if (status) status.textContent = `Extra agregado: ${extra.description}`;
   renderEquipmentModule();
 }
 
@@ -2660,7 +2732,7 @@ function renderManualEquipmentExtras() {
   const host = equipmentQuery("#equipmentManualExtrasList");
   if (!host) return;
   if (!equipmentState.manualExtras.length) {
-    host.innerHTML = `<p class="equipment-empty">Aún no hay extras manuales agregados.</p>`;
+    host.innerHTML = `<p class="equipment-empty">Los extras agregados aparecen al final del cuadro del servicio.</p>`;
     return;
   }
   host.innerHTML = equipmentState.manualExtras
@@ -2670,7 +2742,7 @@ function renderManualEquipmentExtras() {
         <article class="equipment-extra-line equipment-extra-line-editable${recognized ? "" : " is-unrecognized"}">
           <label>
             Cantidad
-            <input data-manual-extra-id="${escapeEquipmentHtml(extra.id)}" data-equipment-field="quantity" type="number" min="0" step="1" value="${escapeEquipmentHtml(extra.quantity)}" />
+            <input data-manual-extra-id="${escapeEquipmentHtml(extra.id)}" data-equipment-field="quantity" type="number" min="1" step="1" value="${escapeEquipmentHtml(extra.quantity)}" />
           </label>
           <label>
             Equipo extra
@@ -2682,6 +2754,10 @@ function renderManualEquipmentExtras() {
     })
     .join("");
   host.querySelectorAll("[data-manual-extra-id]").forEach((input) => {
+    if (input.dataset.equipmentField === "description") {
+      bindEquipmentExtraNameInput(input, input.dataset.manualExtraId);
+      return;
+    }
     input.addEventListener("input", (event) => {
       updateEquipmentItem(input.dataset.manualExtraId, input.dataset.equipmentField, event.target.value);
       if (input.dataset.equipmentField === "description") {
@@ -2707,20 +2783,12 @@ function addManualEquipmentExtra() {
   const quantityInput = equipmentQuery("#equipmentExtraQuantity");
   const descriptionInput = equipmentQuery("#equipmentExtraDescription");
   const status = equipmentQuery("#equipmentSaveStatus");
-  const description = descriptionInput?.value.trim() || "";
-  const quantity = Number(quantityInput?.value || 0) || 0;
-  if (!description) {
-    if (status) status.textContent = "Escriba el nombre del extra antes de agregarlo.";
-    return;
-  }
-  equipmentState.manualExtras.push({
-    id: `manual-extra-${Date.now()}-${equipmentExtraCounter++}`,
-    quantity,
-    description
-  });
+  const extra = equipmentExtraFromInputs(quantityInput, descriptionInput);
+  if (!extra) return;
+  appendEquipmentExtraItems([extra]);
   if (descriptionInput) descriptionInput.value = "";
   if (quantityInput) quantityInput.value = "1";
-  if (status) status.textContent = `Extra agregado: ${description}`;
+  if (status) status.textContent = `Extra agregado: ${extra.description}`;
   renderEquipmentModule();
 }
 
@@ -3069,6 +3137,160 @@ function equipmentInventoryChoiceCategories() {
         .filter(Boolean)
     }))
     .filter((category) => category.items.length);
+}
+
+function equipmentExtraNameChoices() {
+  const choices = [];
+  const keys = new Set();
+  equipmentInventorySummaryCategories().forEach((category) => {
+    (category.items || []).forEach((item) => {
+      const name = String(item.description || "").trim();
+      const id = item.warehouseInventoryId || `source:${normalizeEquipmentKey(category.title)}:${equipmentInventoryCanonicalKey(name)}`;
+      if (!name || keys.has(id)) return;
+      keys.add(id);
+      choices.push({
+        id, name, category: category.title,
+        ...(item.warehouseInventoryId ? { warehouseInventoryId: item.warehouseInventoryId } : {}),
+        sourceKey: item.sourceKey || name,
+        aliases: item.descriptionAliases || [],
+        itemType: item.itemType || "equipo"
+      });
+    });
+  });
+  // Current service cells also remain selectable when warehouse stock is absent.
+  Object.values(equipmentServices).forEach((service) => {
+    [...(service.mainSections || []), ...(service.extras || [])].forEach((section) => {
+      if (!service.importSource && !section.importSource) return;
+      (section.items || []).forEach((rawItem) => {
+        const { description } = normalizeEquipmentItem(rawItem);
+        const name = String(description || "").trim();
+        if (!name || equipmentWarehouseRecordsForDescription(name, section.title).length) return;
+        const id = `source:${normalizeEquipmentKey(section.title)}:${equipmentInventoryCanonicalKey(name)}`;
+        if (keys.has(id)) return;
+        keys.add(id);
+        choices.push({ id, name, category: section.title, sourceKey: name });
+      });
+    });
+  });
+  return choices;
+}
+
+function equipmentExtraChoiceForInput(input) {
+  if (!input) return null;
+  const choices = equipmentExtraNameChoices();
+  const selected = choices.find((choice) => choice.id === input.dataset.equipmentChoiceId && choice.name === input.value.trim());
+  if (selected) return selected;
+  const key = equipmentInventoryCanonicalKey(input.value);
+  const exact = choices.filter((choice) => [choice.name, choice.sourceKey, ...(choice.aliases || [])].some((name) => equipmentInventoryCanonicalKey(name) === key));
+  return key && exact.length === 1 ? exact[0] : null;
+}
+
+function equipmentExtraChoiceMetadata(choice) {
+  return {
+    description: choice.name,
+    ...(choice.warehouseInventoryId ? { warehouseInventoryId: choice.warehouseInventoryId } : {}),
+    inventoryCategory: choice.category || "Equipo sin categoria"
+  };
+}
+
+function equipmentExtraFromInputs(quantityInput, descriptionInput, rowLabel = "") {
+  const status = equipmentQuery("#equipmentSaveStatus");
+  const quantity = Number(quantityInput?.value);
+  const choice = equipmentExtraChoiceForInput(descriptionInput);
+  if (!Number.isInteger(quantity) || quantity < 1 || !choice) {
+    if (status) status.textContent = `${rowLabel}${!Number.isInteger(quantity) || quantity < 1 ? "Ingrese una cantidad entera mayor que cero." : "Seleccione un equipo de las coincidencias para evitar nombres duplicados o incorrectos."}`;
+    (!Number.isInteger(quantity) || quantity < 1 ? quantityInput : descriptionInput)?.focus();
+    return null;
+  }
+  return { quantity, ...equipmentExtraChoiceMetadata(choice) };
+}
+
+function appendEquipmentExtraItems(items) {
+  const section = ensureManualMainSection();
+  items.forEach((item) => {
+    const existing = section.items.find((entry) => item.warehouseInventoryId
+      ? entry.warehouseInventoryId === item.warehouseInventoryId
+      : !entry.warehouseInventoryId && normalizeEquipmentKey(entry.inventoryCategory) === normalizeEquipmentKey(item.inventoryCategory)
+        && equipmentInventoryCanonicalKey(entry.description) === equipmentInventoryCanonicalKey(item.description));
+    if (existing) existing.quantity = (Number(existing.quantity) || 0) + item.quantity;
+    else section.items.push({ id: `manual-main-${Date.now()}-${equipmentManualMainCounter++}`, ...item });
+  });
+}
+
+function bindEquipmentExtraNameInput(input, itemId = "") {
+  if (!input || !window.EquipmentNamePicker) return;
+  const original = input.value;
+  let committed = original;
+  window.EquipmentNamePicker.attach(input, {
+    getChoices: equipmentExtraNameChoices,
+    onSelect: (choice) => {
+      committed = choice.name;
+      if (!itemId) return;
+      const metadata = equipmentExtraChoiceMetadata(choice);
+      updateEquipmentItem(itemId, "description", metadata.description);
+      updateEquipmentItem(itemId, "inventoryCategory", metadata.inventoryCategory);
+      if (metadata.warehouseInventoryId) updateEquipmentItem(itemId, "warehouseInventoryId", metadata.warehouseInventoryId);
+      updateEquipmentRecognitionState(input);
+      refreshEquipmentSummaryAndPreview();
+    }
+  });
+  if (itemId) input.addEventListener("blur", () => {
+    // Keep the committed item until the user explicitly chooses a new match.
+    if (input.value !== committed) {
+      input.value = committed;
+      const status = equipmentQuery("#equipmentSaveStatus");
+      if (status) status.textContent = "Seleccione una coincidencia para cambiar el equipo del extra.";
+    }
+  });
+}
+
+function bindEquipmentExtraNamePickers() {
+  ["#equipmentManualMainDescription", "#equipmentExtraDescription"].forEach((selector) => bindEquipmentExtraNameInput(equipmentQuery(selector)));
+  equipmentQuery("#equipmentBulkExtrasRows")?.querySelectorAll("[data-equipment-bulk-description]").forEach((input) => bindEquipmentExtraNameInput(input));
+}
+
+function prepareEquipmentBulkExtras() {
+  const count = Number(equipmentQuery("#equipmentBulkExtraCount")?.value);
+  const status = equipmentQuery("#equipmentSaveStatus");
+  if (!Number.isInteger(count) || count < 1 || count > 100) {
+    if (status) status.textContent = "Ingrese entre 1 y 100 filas de extras.";
+    return;
+  }
+  const host = equipmentQuery("#equipmentBulkExtrasRows");
+  if (!host) return;
+  const previous = [...host.querySelectorAll("[data-equipment-bulk-description]")].map((input, index) => ({
+    name: input.value, id: input.dataset.equipmentChoiceId || "",
+    quantity: host.querySelector(`[data-equipment-bulk-quantity="${index}"]`)?.value || "1"
+  }));
+  if (previous.slice(count).some((row) => row.name.trim())) {
+    if (status) status.textContent = "Hay equipos escritos en las filas que intenta quitar. Vacíe esas filas antes de reducir el número.";
+    return;
+  }
+  host.innerHTML = Array.from({ length: count }, (_, index) => {
+    const row = previous[index] || { quantity: "1", name: "", id: "" };
+    return `<div class="equipment-bulk-extra-row"><span>${index + 1}</span><label>Cantidad<input type="number" min="1" step="1" data-equipment-bulk-quantity="${index}" value="${escapeEquipmentHtml(row.quantity)}" /></label><label>Equipo extra<input type="text" autocomplete="off" placeholder="Escriba y seleccione un equipo" data-equipment-bulk-description="${index}" data-equipment-choice-id="${escapeEquipmentHtml(row.id)}" value="${escapeEquipmentHtml(row.name)}" /></label></div>`;
+  }).join("");
+  equipmentQuery("#equipmentAddBulkExtrasButton")?.classList.remove("is-hidden");
+  bindEquipmentExtraNamePickers();
+}
+
+function addEquipmentBulkExtras() {
+  const host = equipmentQuery("#equipmentBulkExtrasRows");
+  const inputs = [...(host?.querySelectorAll("[data-equipment-bulk-description]") || [])];
+  if (!inputs.length || inputs.length > 100) return;
+  const extras = [];
+  for (const [index, input] of inputs.entries()) {
+    const extra = equipmentExtraFromInputs(host.querySelector(`[data-equipment-bulk-quantity="${index}"]`), input, `Fila ${index + 1}: `);
+    if (!extra) return;
+    extras.push(extra);
+  }
+  appendEquipmentExtraItems(extras);
+  inputs.forEach((input) => window.EquipmentNamePicker?.attach(input, { getChoices: equipmentExtraNameChoices }).detach());
+  host.innerHTML = "";
+  equipmentQuery("#equipmentAddBulkExtrasButton")?.classList.add("is-hidden");
+  const status = equipmentQuery("#equipmentSaveStatus");
+  if (status) status.textContent = `${extras.length} extras agregados. Sus cantidades se suman al equipo del resumen.`;
+  renderEquipmentModule();
 }
 
 function equipmentInventoryChoiceMap() {
@@ -3715,7 +3937,7 @@ async function initEquipmentCatalogSync() {
 }
 
 function equipmentWarehouseInventoryRecordFor(row) {
-  const explicitId = row?.inventorySourceItem?.warehouseInventoryId;
+  const explicitId = row?.warehouseInventoryId || row?.inventorySourceItem?.warehouseInventoryId;
   if (explicitId) return equipmentWarehouseInventoryState.recordsById.get(String(explicitId)) || null;
   const directId = equipmentInventoryWarehouseIdByRowKey.get(row?.key);
   if (directId && equipmentWarehouseInventoryState.recordsById.has(String(directId))) {
@@ -4969,6 +5191,7 @@ function renderEquipmentModule() {
       : "Seleccione exactamente un tipo de servicio para editar su cuadro";
   }
   renderEquipmentInventoryNameOptions();
+  bindEquipmentExtraNamePickers();
   renderDjAudioOptions();
   renderEquipmentServicePicker();
   renderEquipmentEvents();
@@ -5160,20 +5383,25 @@ function currentEquipmentEditableEvent() {
 function equipmentWarehouseDispatchItems(event) {
   const groups = new Map();
   const sections = event?.sections?.length ? event.sections : selectedEquipmentSections();
+  const categories = equipmentFallbackCategoryMap(sections);
   sections.forEach((section) => {
     (section.items || []).forEach((rawItem) => {
       const item = normalizeEquipmentItem(rawItem);
       const quantity = Math.max(0, Number(item.quantity) || 0);
       const description = String(item.description || "").trim();
       if (!description || quantity <= 0) return;
-      const key = equipmentInventoryIdentityForDescription(description, section.title);
-      const matches = equipmentWarehouseRecordsForDescription(description, section.title);
+      const matches = equipmentWarehouseRecordsForItem(item, section);
+      const unresolved = Boolean(section.manualSection && matches.length !== 1);
+      const key = matches.length === 1 ? equipmentWarehouseRecordIdentity(matches[0])
+        : `${unresolved ? "sin-coincidencia-" : ""}${equipmentFallbackIdentityForItem(item, section, categories)}`;
       let group = groups.get(key);
       if (!group) {
         group = {
           description: matches.length === 1 ? matches[0].item.name || description : description,
-          category: matches.length === 1 ? matches[0].item.category || section.title || "Equipo" : section.title || "Equipo",
+          category: matches.length === 1 ? matches[0].item.category || section.title || "Equipo" : item.inventoryCategory || section.inventoryCategory || section.title || "Equipo",
           quantity: 0,
+          ...(item.warehouseInventoryId ? { warehouseInventoryId: item.warehouseInventoryId } : {}),
+          ...(unresolved ? { inventoryMatchUnresolved: true } : {}),
           warehouseItemIds: [],
           consumable: matches.length ? matches.some((record) => record.consumable) : equipmentDescriptionEndsWithConsumable(description)
         };
@@ -5706,8 +5934,11 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentAddEventButton")?.addEventListener("click", addEquipmentEvent);
   equipmentQuery("#equipmentSaveWindowButton")?.addEventListener("click", saveCurrentEquipmentWindow);
   equipmentQuery("#equipmentAddMainItemButton")?.addEventListener("click", addManualMainEquipmentItem);
+  bindEquipmentExtraNamePickers();
+  equipmentQuery("#equipmentPrepareBulkExtrasButton")?.addEventListener("click", prepareEquipmentBulkExtras);
+  equipmentQuery("#equipmentAddBulkExtrasButton")?.addEventListener("click", addEquipmentBulkExtras);
   equipmentQuery("#equipmentManualMainDescription")?.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
+    if (event.key === "Enter" && !event.defaultPrevented) {
       event.preventDefault();
       addManualMainEquipmentItem();
     }
@@ -5721,7 +5952,7 @@ function initEquipmentModule() {
   });
   equipmentQuery("#equipmentAddExtraButton")?.addEventListener("click", addManualEquipmentExtra);
   equipmentQuery("#equipmentExtraDescription")?.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
+    if (event.key === "Enter" && !event.defaultPrevented) {
       event.preventDefault();
       addManualEquipmentExtra();
     }

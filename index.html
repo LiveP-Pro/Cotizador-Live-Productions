@@ -6,14 +6,16 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20260929-catalogo-drive-01" />
+    <link rel="stylesheet" href="styles.css?v=20261007-extras-01" />
     <link rel="stylesheet" href="warehouse-inventory.css?v=20261006-import-review-01" />
     <link rel="stylesheet" href="equipment-service-import.css?v=20261006-service-import-01" />
+    <link rel="stylesheet" href="equipment-name-picker.css?v=20261007-extras-01" />
     <script src="app.js?v=20260814-01" defer></script>
     <script src="equipment-catalog.js?v=20260929-catalogo-drive-01" defer></script>
     <script src="equipment-inventory.js?v=20260822-01" defer></script>
     <script src="equipment-service-import.js?v=20261006-service-import-01" defer></script>
-    <script src="equipment.js?v=20261006-service-import-01" defer></script>
+    <script src="equipment-name-picker.js?v=20261007-extras-01" defer></script>
+    <script src="equipment.js?v=20261007-extras-01" defer></script>
     <script src="warehouse-import-review.js?v=20261006-warehouse-sync-01" defer></script>
     <script src="inventory.js?v=20261006-warehouse-sync-01" defer></script>
   </head>
@@ -316,21 +318,31 @@
               <div class="equipment-manual-extra-form equipment-manual-item-form">
                 <label>
                   Cantidad
-                  <input id="equipmentManualMainQuantity" type="number" min="0" step="1" value="1" />
+                  <input id="equipmentManualMainQuantity" type="number" min="1" step="1" value="1" />
                 </label>
                 <label>
                   Equipo
-                  <input id="equipmentManualMainDescription" type="text" list="equipmentInventoryNameOptions" autocomplete="off" placeholder="Seleccione o escriba el nombre exacto" />
+                  <input id="equipmentManualMainDescription" type="text" autocomplete="off" placeholder="Escriba y seleccione un equipo" />
                 </label>
                 <button id="equipmentAddMainItemButton" type="button">Agregar equipo</button>
               </div>
               <div class="equipment-manual-extra-form equipment-manual-subtitle-form">
                 <label>
                   Subtítulo
-                  <input id="equipmentManualSubtitle" type="text" autocomplete="off" placeholder="Ej. VIDEO, AUDIO, ILUMINACIÓN" />
+                  <input id="equipmentManualSubtitle" type="text" autocomplete="off" placeholder="Extras o un subtítulo personalizado" />
                 </label>
                 <button id="equipmentAddSubtitleButton" type="button">Agregar subtítulo</button>
               </div>
+              <details id="equipmentBulkExtras" class="equipment-bulk-extras">
+                <summary>Agregar varios extras</summary>
+                <div class="equipment-bulk-extras-controls">
+                  <label>Filas de extras (1 a 100)<input id="equipmentBulkExtraCount" type="number" min="1" max="100" step="1" value="1" /></label>
+                  <button id="equipmentPrepareBulkExtrasButton" type="button">Preparar filas</button>
+                </div>
+                <p>Seleccione cada equipo y su cantidad. Se sumarán al equipo correspondiente en el resumen.</p>
+                <div id="equipmentBulkExtrasRows" class="equipment-bulk-extras-rows"></div>
+                <button id="equipmentAddBulkExtrasButton" type="button" class="is-hidden">Agregar equipos</button>
+              </details>
             </div>
             <section id="equipmentMainPanel" class="equipment-panel">
               <div class="equipment-section-title">
@@ -350,17 +362,17 @@
               </div>
               <div id="equipmentPredefinedExtras" class="equipment-extra-grid"></div>
               <div class="equipment-section-title equipment-subsection-title">
-                <span>Extras manuales</span>
-                <small>sin límite de extras agregados</small>
+                <span>Extras</span>
+                <small>se suman al equipo del resumen</small>
               </div>
               <div class="equipment-manual-extra-form">
                 <label>
                   Cantidad
-                  <input id="equipmentExtraQuantity" type="number" min="0" step="1" value="1" />
+                  <input id="equipmentExtraQuantity" type="number" min="1" step="1" value="1" />
                 </label>
                 <label>
                   Equipo extra
-                  <input id="equipmentExtraDescription" type="text" list="equipmentInventoryNameOptions" autocomplete="off" placeholder="Seleccione o escriba el nombre exacto" />
+                  <input id="equipmentExtraDescription" type="text" list="equipmentInventoryNameOptions" autocomplete="off" placeholder="Escriba y seleccione un equipo" />
                 </label>
                 <button id="equipmentAddExtraButton" type="button">Agregar extra</button>
               </div>

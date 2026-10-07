@@ -48,7 +48,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261006-service-import-01";
+const warehouseAssetVersion = "20261007-extras-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -3296,13 +3296,15 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
     const description = String(line?.description || "Equipo sin nombre").trim() || "Equipo sin nombre";
     let remaining = warehouseDispatchQuantity(line?.quantity);
     if (!remaining) return;
-    const requestedIds = Array.isArray(line?.warehouseItemIds) ? line.warehouseItemIds.map(String) : [];
+    const boundId = String(line?.warehouseInventoryId || "").trim();
+    const requestedIds = boundId ? [boundId] : Array.isArray(line?.warehouseItemIds) ? line.warehouseItemIds.map(String) : [];
     const requestedItems = requestedIds.map((id) => itemsById.get(id)).filter(Boolean);
     const descriptionKeys = warehouseDispatchLookupKeys(description);
     const fallbackItems = descriptionKeys
       .flatMap((key) => itemsByName.get(key) || []);
     const category = warehouseDispatchLookupKey(line?.category);
-    let candidates = [...new Map([...requestedItems, ...fallbackItems].map((item) => [String(item.id), item])).values()];
+    let candidates = line?.inventoryMatchUnresolved === true ? []
+      : [...new Map((requestedIds.length ? requestedItems : fallbackItems).map((item) => [String(item.id), item])).values()];
     const sameCategory = candidates.filter((item) => warehouseDispatchLookupKey(item.category) === category);
     if (sameCategory.length) candidates = sameCategory;
     const matchesDescription = (name) => warehouseDispatchLookupKeys(name).some((key) => descriptionKeys.includes(key));
@@ -3491,14 +3493,14 @@ function serveStatic(request, response, pathname) {
           data
             .toString("utf8")
             .replace(
-              /(equipment-inventory\.js|equipment\.js|inventory\.js)\?v=[^"'&<>\s]+/g,
+              /(equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment\.js|inventory\.js)\?v=[^"'&<>\s]+/g,
               `$1?v=${warehouseAssetVersion}`
             ),
           "utf8"
         )
       : data;
     const headers = { "Content-Type": contentType };
-    if (requestedPath === "/index.html" || ["equipment-inventory.js", "equipment.js", "inventory.js"].some(
+    if (requestedPath === "/index.html" || ["equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js"].some(
       (asset) => requestedPath === `/${asset}`
     )) {
       headers["Cache-Control"] = "no-store";
