@@ -175,7 +175,13 @@
       const viewportLeft = viewport?.offsetLeft || 0;
       const viewportBottom = viewportTop + viewportHeight;
       const viewportRight = viewportLeft + viewportWidth;
-      if (rectangle.bottom < viewportTop || rectangle.top > viewportBottom || rectangle.right < viewportLeft || rectangle.left > viewportRight) { close(); return; }
+      const popupRectangle = popup.getBoundingClientRect();
+      const intersects = (bounds) => bounds.bottom >= viewportTop && bounds.top <= viewportBottom && bounds.right >= viewportLeft && bounds.left <= viewportRight;
+      const nearby = rectangle.bottom >= viewportTop - 150 && rectangle.top <= viewportBottom + 150
+        && rectangle.right >= viewportLeft - 150 && rectangle.left <= viewportRight + 150;
+      // Mobile browsers can pan the visual viewport toward a touched option.
+      // Keep the visible choices available even if their input moves just outside it.
+      if (!intersects(rectangle) && (!nearby || !intersects(popupRectangle))) { close(); return; }
       const margin = 8;
       const width = Math.min(Math.max(rectangle.width, 220), Math.max(0, viewportWidth - margin * 2));
       const left = Math.max(viewportLeft + margin, Math.min(rectangle.left, viewportRight - width - margin));
@@ -186,13 +192,11 @@
       popup.style.width = width + "px";
       popup.style.left = left + "px";
       popup.style.maxHeight = Math.min(300, available) + "px";
-      if (openAbove) {
-        popup.style.top = "auto";
-        popup.style.bottom = Math.max(margin, (window.innerHeight || document.documentElement.clientHeight) - rectangle.top + 4) + "px";
-      } else {
-        popup.style.bottom = "auto";
-        popup.style.top = Math.max(viewportTop + margin, rectangle.bottom + 4) + "px";
-      }
+      const height = popup.getBoundingClientRect().height;
+      const desiredTop = openAbove ? rectangle.top - height - 4 : rectangle.bottom + 4;
+      const top = Math.max(viewportTop + margin, Math.min(desiredTop, viewportBottom - height - margin));
+      popup.style.bottom = "auto";
+      popup.style.top = top + "px";
     }
 
     function render() {
