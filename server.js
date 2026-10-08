@@ -48,7 +48,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261007-extras-02";
+const warehouseAssetVersion = "20261007-extras-decisions-03";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -3152,6 +3152,14 @@ function warehouseDispatchQuantity(value) {
   return Math.max(0, Math.round(number));
 }
 
+function warehouseDispatchProcurementChoice(value) {
+  return ["save", "rent", "purchase"].includes(value) ? value : "";
+}
+
+function warehouseDispatchProcurementAction(choice) {
+  return { save: "GUARDAR", rent: "RENTA", purchase: "COMPRA" }[choice] || "";
+}
+
 function warehouseAvailableForDispatch(state, itemId) {
   const item = (state.items || []).find((entry) => String(entry?.id || "") === String(itemId || ""));
   if (!item || item.archived) return 0;
@@ -3221,7 +3229,7 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
         locked: true,
         movementCount: existingOutgoing.length,
         mappedQuantity: existingOutgoing
-          .filter((movement) => ["salida", "consumo"].includes(movement.type))
+          .filter((movement) => ["salida", "consumo"].includes(movement.type) && !movement.sourceUnmatched && movement.itemId)
           .reduce((total, movement) => total + warehouseDispatchQuantity(movement.quantity), 0),
         unmappedQuantity: existingOutgoing
           .filter((movement) => movement.sourceUnmatched)
@@ -3296,6 +3304,38 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
     const description = String(line?.description || "Equipo sin nombre").trim() || "Equipo sin nombre";
     let remaining = warehouseDispatchQuantity(line?.quantity);
     if (!remaining) return;
+    const procurementChoice = warehouseDispatchProcurementChoice(line?.procurementChoice);
+    const procurementAction = warehouseDispatchProcurementAction(procurementChoice);
+    if (procurementChoice) {
+      // An external decision is a requested event line, never warehouse stock.
+      // Even a matching name or ID must wait for a normal dispatch after the
+      // user has recorded the actual purchase in inventory.
+      lineIndex += 1;
+      const choiceNotes = {
+        save: "Equipo guardado tal cual, sin descontar inventario ni asignar renta o compra.",
+        rent: "Equipo solicitado para renta, sin descontar inventario de bodega.",
+        purchase: "Compra pendiente: guarde el equipo y su cantidad real en inventario para reflejarlo en Requerimiento de Equipo."
+      };
+      state.movements.push({
+        id: warehouseDispatchMovementId(),
+        ...commonFields,
+        type: procurementChoice === "purchase" ? "compra" : "salida",
+        itemId: "",
+        itemName: description,
+        quantity: remaining,
+        procurementChoice,
+        procurementAction,
+        notes: [commonFields.notes, choiceNotes[procurementChoice]].filter(Boolean).join(" "),
+        sourceCategory: String(line?.category || "Equipo"),
+        sourceRequestedName: description,
+        sourceLineKey: `${warehouseDispatchLookupKey(description)}-${lineIndex}`,
+        sourceUnmatched: true,
+        createdAt: now
+      });
+      unmappedQuantity += remaining;
+      if (procurementChoice === "purchase") purchaseQuantity += remaining;
+      return;
+    }
     const boundId = String(line?.warehouseInventoryId || "").trim();
     const requestedIds = boundId ? [boundId] : Array.isArray(line?.warehouseItemIds) ? line.warehouseItemIds.map(String) : [];
     const requestedItems = requestedIds.map((id) => itemsById.get(id)).filter(Boolean);

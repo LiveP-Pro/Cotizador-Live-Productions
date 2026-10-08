@@ -6,18 +6,18 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20261007-extras-02" />
+    <link rel="stylesheet" href="styles.css?v=20261007-extras-decisions-03" />
     <link rel="stylesheet" href="warehouse-inventory.css?v=20261006-import-review-01" />
     <link rel="stylesheet" href="equipment-service-import.css?v=20261006-service-import-01" />
     <link rel="stylesheet" href="equipment-name-picker.css?v=20261007-extras-02" />
     <script src="app.js?v=20260814-01" defer></script>
     <script src="equipment-catalog.js?v=20260929-catalogo-drive-01" defer></script>
-    <script src="equipment-inventory.js?v=20260822-01" defer></script>
+    <script src="equipment-inventory.js?v=20261007-extras-decisions-03" defer></script>
     <script src="equipment-service-import.js?v=20261006-service-import-01" defer></script>
     <script src="equipment-name-picker.js?v=20261007-extras-02" defer></script>
-    <script src="equipment.js?v=20261007-extras-02" defer></script>
+    <script src="equipment.js?v=20261007-extras-decisions-03" defer></script>
     <script src="warehouse-import-review.js?v=20261006-warehouse-sync-01" defer></script>
-    <script src="inventory.js?v=20261006-warehouse-sync-01" defer></script>
+    <script src="inventory.js?v=20261007-extras-decisions-03" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -339,7 +339,7 @@
                   <label>Filas de extras (1 a 100)<input id="equipmentBulkExtraCount" type="number" min="1" max="100" step="1" value="1" /></label>
                   <button id="equipmentPrepareBulkExtrasButton" type="button">Preparar filas</button>
                 </div>
-                <p>Seleccione cada equipo y su cantidad. Se sumarán al equipo correspondiente en el resumen.</p>
+                <p>Escriba cada equipo y su cantidad. Puede eliminar las filas que no necesite.</p>
                 <div id="equipmentBulkExtrasRows" class="equipment-bulk-extras-rows"></div>
                 <button id="equipmentAddBulkExtrasButton" type="button" class="is-hidden">Agregar equipos</button>
               </details>
@@ -549,6 +549,34 @@
             </div>
             </div>
           </div>
+
+          <dialog id="equipmentUnknownItemDialog" class="equipment-logistics-dialog equipment-unknown-item-dialog no-print" aria-labelledby="equipmentUnknownItemTitle" aria-describedby="equipmentUnknownItemDescription">
+            <section class="equipment-logistics-modal">
+              <header>
+                <div>
+                  <p class="eyebrow">Equipo extra</p>
+                  <h2 id="equipmentUnknownItemTitle">No reconozco este equipo en mi base de datos</h2>
+                </div>
+                <button id="equipmentUnknownItemCloseButton" type="button" aria-label="Cerrar">X</button>
+              </header>
+              <div class="equipment-logistics-content">
+                <strong id="equipmentUnknownItemName"></strong>
+                <p id="equipmentUnknownItemQuantity"></p>
+                <p id="equipmentUnknownItemDescription">¿Cómo deseas continuar?</p>
+                <ul class="equipment-unknown-item-options">
+                  <li><strong>Guardar:</strong> conserva el equipo tal como lo escribiste en el requerimiento.</li>
+                  <li><strong>Renta:</strong> guarda el extra y lo incluye en el reporte de renta.</li>
+                  <li><strong>Comprar:</strong> abre Contabilidad de Equipo. Debes guardar el equipo y la cantidad real en inventario para que se refleje en Requerimiento de Equipo.</li>
+                </ul>
+              </div>
+              <footer>
+                <button id="equipmentUnknownItemCancelButton" type="button">Cancelar</button>
+                <button type="button" data-equipment-unknown-choice="save">Guardar</button>
+                <button type="button" data-equipment-unknown-choice="rent">Renta</button>
+                <button type="button" data-equipment-unknown-choice="purchase">Comprar</button>
+              </footer>
+            </section>
+          </dialog>
 
           <dialog id="equipmentLogisticsDialog" class="equipment-logistics-dialog no-print" aria-labelledby="equipmentLogisticsDialogTitle">
             <section class="equipment-logistics-modal">

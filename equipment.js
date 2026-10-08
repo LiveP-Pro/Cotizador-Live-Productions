@@ -67,6 +67,8 @@ let equipmentManualSectionCounter = 1;
 let equipmentExtraCounter = 1;
 let equipmentTransferRouteCounter = 1;
 let equipmentLogisticsDecision = null;
+let equipmentUnknownItemDecision = null;
+let equipmentExtraEntryBusy = false;
 
 const EQUIPMENT_TRANSFER_BUFFER_MINUTES = 120;
 
@@ -152,8 +154,17 @@ function equipmentWarehouseRecordsForItem(item, section = {}) {
 function equipmentItemInventoryMetadata(item) {
   return {
     ...(item?.warehouseInventoryId ? { warehouseInventoryId: String(item.warehouseInventoryId) } : {}),
-    ...(item?.inventoryCategory ? { inventoryCategory: String(item.inventoryCategory) } : {})
+    ...(item?.inventoryCategory ? { inventoryCategory: String(item.inventoryCategory) } : {}),
+    ...(["save", "rent", "purchase"].includes(item?.procurementChoice) ? { procurementChoice: item.procurementChoice } : {})
   };
+}
+
+function equipmentPendingProcurementChoice(item) {
+  const choice = item?.procurementChoice;
+  if (!["save", "rent", "purchase"].includes(choice)) return "";
+  if (choice === "rent") return choice;
+  const records = equipmentWarehouseRecordsForItem(item);
+  return records.length === 1 || (!equipmentWarehouseInventoryState.loaded && equipmentRecognizedInventoryChoice(item?.description)) ? "" : choice;
 }
 
 function equipmentFallbackCategoryMap(additionalSections = []) {
@@ -170,6 +181,8 @@ function equipmentFallbackCategoryMap(additionalSections = []) {
 }
 
 function equipmentFallbackIdentityForItem(item, section, categories) {
+  const choice = equipmentPendingProcurementChoice(item);
+  if (choice) return `extra-${choice}:${equipmentInventoryCanonicalKey(item.description)}`;
   if (item.warehouseInventoryId) return `inventario-bodega-${item.warehouseInventoryId}`;
   const key = equipmentInventoryCanonicalKey(item.description);
   const category = normalizeEquipmentKey(item.inventoryCategory || section.inventoryCategory || section.title);
@@ -209,6 +222,9 @@ function equipmentRowIsConsumable(row) {
 }
 
 function equipmentProcurementActionFor(row) {
+  if (row?.procurementChoice === "save") return "GUARDAR";
+  if (row?.procurementChoice === "rent") return "RENTA";
+  if (row?.procurementChoice === "purchase") return "COMPRA";
   return equipmentRowIsConsumable(row) ? "COMPRA" : "RENTA";
 }
 
@@ -697,6 +713,7 @@ function equipmentHasConfiguredTransferRoutes(events = activeEquipmentEvents()) 
 }
 
 function equipmentSummaryRowIdentity(row) {
+  if (row?.procurementChoice) return row.matchKey || `extra-${row.procurementChoice}:${equipmentInventoryCanonicalKey(row.description)}`;
   const record = equipmentWarehouseInventoryRecordFor(row);
   return equipmentWarehouseRecordIdentity(record)
     || (row?.warehouseInventoryId ? `inventario-bodega-${row.warehouseInventoryId}` : row?.matchKey)
@@ -1166,7 +1183,7 @@ function equipmentLiveSectionsForDisplay(sections) {
     const displayed = [];
     section.items.forEach((rawItem) => {
       const item = normalizeEquipmentItem(rawItem);
-      const records = equipmentWarehouseRecordsForItem(item, section);
+      const records = equipmentPendingProcurementChoice(item) ? [] : equipmentWarehouseRecordsForItem(item, section);
       const record = records.length === 1 ? records[0] : null;
       const title = String((section.manualSection ? section.title : record?.item?.category) || section.title || "Equipo sin categoria");
       let group = displayed.at(-1);
@@ -1540,7 +1557,8 @@ function equipmentRowsSummary() {
         const perEventQuantity = Number(quantity) || 0;
         const matchedRecords = equipmentWarehouseRecordsForItem(item, section);
         const matchedIds = new Set(matchedRecords.map((record) => record.id));
-        const inventoryRows = (item.warehouseInventoryId
+        const procurementChoice = equipmentPendingProcurementChoice(item);
+        const inventoryRows = (procurementChoice ? [] : item.warehouseInventoryId
           ? itemRows.filter((row) => row.inventorySourceItem?.warehouseInventoryId === item.warehouseInventoryId)
           : inventoryRowsByEquipmentKey.get(equipmentInventoryCanonicalKey(description)) || [])
           .filter((row) => !equipmentWarehouseInventoryState.loaded || matchedIds.has(row.inventorySourceItem?.warehouseInventoryId));
@@ -1577,6 +1595,7 @@ function equipmentRowsSummary() {
             key: fallbackKey,
             matchKey: fallbackKey,
             ...equipmentItemInventoryMetadata(item),
+            procurementChoice,
             quantity: 0,
             description,
             eventQuantities: new Map(),
@@ -1618,7 +1637,7 @@ function equipmentRowsSummary() {
 function equipmentTransferComparisonRows(rows = equipmentRowsSummary()) {
   const groups = new Map();
   rows.forEach((row) => {
-    if (!row || row.type === "category") return;
+    if (!row || row.type === "category" || row.procurementChoice) return;
     const identity = equipmentSummaryRowIdentity(row);
     if (!identity) return;
     let group = groups.get(identity);
@@ -2416,6 +2435,7 @@ function addEquipmentEvent() {
 }
 
 function refreshEquipmentSummaryAndPreview() {
+  syncActiveEquipmentEvent();
   if (equipmentQuery("#equipmentInventoryTable")) {
     equipmentQuery("#equipmentInventoryTable").innerHTML = tableForEquipmentInventory(equipmentFilterSummaryRows(equipmentRowsSummary()), true);
   }
@@ -2452,6 +2472,7 @@ function updateEquipmentItem(itemId, field, value) {
     if (field === "description") {
       delete target.warehouseInventoryId;
       delete target.inventoryCategory;
+      if (equipmentInventoryCanonicalKey(target.description) !== equipmentInventoryCanonicalKey(nextValue)) delete target.procurementChoice;
     }
     target[field] = nextValue;
     return;
@@ -2655,17 +2676,15 @@ function bindEquipmentSectionInputs() {
   });
 }
 
-function addManualMainEquipmentItem() {
+async function addManualMainEquipmentItem() {
   const quantityInput = equipmentQuery("#equipmentManualMainQuantity");
   const descriptionInput = equipmentQuery("#equipmentManualMainDescription");
   const status = equipmentQuery("#equipmentSaveStatus");
-  const extra = equipmentExtraFromInputs(quantityInput, descriptionInput);
-  if (!extra) return;
-  appendEquipmentExtraItems([extra]);
-  if (descriptionInput) descriptionInput.value = "";
-  if (quantityInput) quantityInput.value = "1";
-  if (status) status.textContent = `Extra agregado: ${extra.description}`;
-  renderEquipmentModule();
+  await addEquipmentExtraBatch([{ quantityInput, descriptionInput }], (extras) => {
+    if (descriptionInput) descriptionInput.value = "";
+    if (quantityInput) quantityInput.value = "1";
+    if (status) status.textContent = `Extra agregado: ${extras[0].description}`;
+  });
 }
 
 function addManualEquipmentSubtitle() {
@@ -2779,17 +2798,15 @@ function renderManualEquipmentExtras() {
   });
 }
 
-function addManualEquipmentExtra() {
+async function addManualEquipmentExtra() {
   const quantityInput = equipmentQuery("#equipmentExtraQuantity");
   const descriptionInput = equipmentQuery("#equipmentExtraDescription");
   const status = equipmentQuery("#equipmentSaveStatus");
-  const extra = equipmentExtraFromInputs(quantityInput, descriptionInput);
-  if (!extra) return;
-  appendEquipmentExtraItems([extra]);
-  if (descriptionInput) descriptionInput.value = "";
-  if (quantityInput) quantityInput.value = "1";
-  if (status) status.textContent = `Extra agregado: ${extra.description}`;
-  renderEquipmentModule();
+  await addEquipmentExtraBatch([{ quantityInput, descriptionInput }], (extras) => {
+    if (descriptionInput) descriptionInput.value = "";
+    if (quantityInput) quantityInput.value = "1";
+    if (status) status.textContent = `Extra agregado: ${extras[0].description}`;
+  });
 }
 
 const equipmentDefaultInventory = new Map();
@@ -3193,28 +3210,127 @@ function equipmentExtraChoiceMetadata(choice) {
   };
 }
 
-function equipmentExtraFromInputs(quantityInput, descriptionInput, rowLabel = "") {
+async function equipmentExtraFromInputs(quantityInput, descriptionInput, rowLabel = "") {
   const status = equipmentQuery("#equipmentSaveStatus");
   const quantity = Number(quantityInput?.value);
+  const description = String(descriptionInput?.value || "").trim();
   const choice = equipmentExtraChoiceForInput(descriptionInput);
-  if (!Number.isInteger(quantity) || quantity < 1 || !choice) {
-    if (status) status.textContent = `${rowLabel}${!Number.isInteger(quantity) || quantity < 1 ? "Ingrese una cantidad entera mayor que cero." : "Seleccione un equipo de las coincidencias para evitar nombres duplicados o incorrectos."}`;
+  if (!Number.isInteger(quantity) || quantity < 1 || !description) {
+    if (status) status.textContent = `${rowLabel}${!Number.isInteger(quantity) || quantity < 1 ? "Ingrese una cantidad entera mayor que cero." : "Escriba el nombre del equipo o elimine esta fila."}`;
     (!Number.isInteger(quantity) || quantity < 1 ? quantityInput : descriptionInput)?.focus();
     return null;
   }
-  return { quantity, ...equipmentExtraChoiceMetadata(choice) };
+  if (equipmentRecognizedInventoryChoice(description)) {
+    if (!choice) {
+      if (status) status.textContent = `${rowLabel}Seleccione una coincidencia para identificar el equipo en inventario.`;
+      descriptionInput?.focus();
+      return null;
+    }
+    return { quantity, ...equipmentExtraChoiceMetadata(choice) };
+  }
+  const extra = { quantity, description, inventoryCategory: choice?.category || "Extras manuales" };
+  const procurementChoice = await requestEquipmentUnknownChoice(extra);
+  return procurementChoice ? { ...extra, procurementChoice } : null;
+}
+
+function requestEquipmentUnknownChoice(extra) {
+  const dialog = equipmentQuery("#equipmentUnknownItemDialog");
+  if (!dialog || equipmentUnknownItemDecision) return Promise.resolve(null);
+  equipmentQuery("#equipmentUnknownItemName").textContent = extra.description;
+  equipmentQuery("#equipmentUnknownItemQuantity").textContent = `Cantidad: ${extra.quantity}`;
+  return new Promise((resolve) => {
+    equipmentUnknownItemDecision = { resolve };
+    dialog.showModal();
+  });
+}
+
+function resolveEquipmentUnknownDecision(choice = null) {
+  const pending = equipmentUnknownItemDecision;
+  if (!pending) return;
+  equipmentUnknownItemDecision = null;
+  equipmentQuery("#equipmentUnknownItemDialog")?.close();
+  pending.resolve(["save", "rent", "purchase"].includes(choice) ? choice : null);
+}
+
+function sendEquipmentPurchaseRequest(items) {
+  const purchases = new Map();
+  items.filter((item) => item.procurementChoice === "purchase").forEach((item) => {
+    const key = equipmentInventoryCanonicalKey(item.description);
+    const entry = purchases.get(key) || { description: item.description, quantity: 0 };
+    entry.quantity += Number(item.quantity) || 0;
+    purchases.set(key, entry);
+  });
+  if (purchases.size) document.dispatchEvent(new CustomEvent("live:warehouse-purchase-request", {
+    detail: { items: [...purchases.values()], returnPage: "requerimiento-equipo" }
+  }));
+}
+
+async function addEquipmentExtraBatch(inputs, onAdded) {
+  if (equipmentExtraEntryBusy) return false;
+  equipmentExtraEntryBusy = true;
+  try {
+    const extras = [];
+    for (const input of inputs) {
+      const extra = await equipmentExtraFromInputs(input.quantityInput, input.descriptionInput, input.rowLabel || "");
+      if (!extra) return false;
+      extras.push(extra);
+    }
+    appendEquipmentExtraItems(extras);
+    onAdded?.(extras);
+    renderEquipmentModule();
+    sendEquipmentPurchaseRequest(extras);
+    return true;
+  } finally {
+    equipmentExtraEntryBusy = false;
+  }
+}
+
+async function resolveEquipmentPendingExtraChoices() {
+  const items = [
+    ...equipmentState.manualMainItems,
+    ...equipmentState.manualMainSections.flatMap((section) => section.items || []),
+    ...equipmentState.manualExtras,
+    ...[...equipmentState.sectionAddedItems.values()].flat()
+  ];
+  const purchases = [];
+  const decisions = [];
+  for (const item of items) {
+    if (!String(item.description || "").trim() || equipmentRecognizedInventoryChoice(item.description) || item.procurementChoice) continue;
+    const choice = await requestEquipmentUnknownChoice(item);
+    if (!choice) return null;
+    decisions.push({ item, choice });
+    if (choice === "purchase") purchases.push(item);
+  }
+  decisions.forEach(({ item, choice }) => { item.procurementChoice = choice; });
+  syncActiveEquipmentEvent();
+  return purchases;
+}
+
+async function saveCurrentEquipmentWindowWithExtraChoices() {
+  if (equipmentExtraEntryBusy) return false;
+  equipmentExtraEntryBusy = true;
+  try {
+    const purchases = await resolveEquipmentPendingExtraChoices();
+    if (!purchases) return false;
+    const saved = saveCurrentEquipmentWindow();
+    if (saved) sendEquipmentPurchaseRequest(purchases);
+    return saved;
+  } finally {
+    equipmentExtraEntryBusy = false;
+  }
 }
 
 function appendEquipmentExtraItems(items) {
   const section = ensureManualMainSection();
   items.forEach((item) => {
-    const existing = section.items.find((entry) => item.warehouseInventoryId
+    const existing = section.items.find((entry) => (entry.procurementChoice || "") === (item.procurementChoice || "") && (item.warehouseInventoryId
       ? entry.warehouseInventoryId === item.warehouseInventoryId
       : !entry.warehouseInventoryId && normalizeEquipmentKey(entry.inventoryCategory) === normalizeEquipmentKey(item.inventoryCategory)
-        && equipmentInventoryCanonicalKey(entry.description) === equipmentInventoryCanonicalKey(item.description));
+        && equipmentInventoryCanonicalKey(entry.description) === equipmentInventoryCanonicalKey(item.description)));
     if (existing) existing.quantity = (Number(existing.quantity) || 0) + item.quantity;
     else section.items.push({ id: `manual-main-${Date.now()}-${equipmentManualMainCounter++}`, ...item });
   });
+  syncActiveEquipmentEvent();
 }
 
 function bindEquipmentExtraNameInput(input, itemId = "") {
@@ -3235,11 +3351,11 @@ function bindEquipmentExtraNameInput(input, itemId = "") {
     }
   });
   if (itemId) input.addEventListener("blur", () => {
-    // Keep the committed item until the user explicitly chooses a new match.
     if (input.value !== committed) {
-      input.value = committed;
-      const status = equipmentQuery("#equipmentSaveStatus");
-      if (status) status.textContent = "Seleccione una coincidencia para cambiar el equipo del extra.";
+      committed = input.value;
+      updateEquipmentItem(itemId, "description", committed);
+      updateEquipmentRecognitionState(input);
+      refreshEquipmentSummaryAndPreview();
     }
   });
 }
@@ -3258,39 +3374,66 @@ function prepareEquipmentBulkExtras() {
   }
   const host = equipmentQuery("#equipmentBulkExtrasRows");
   if (!host) return;
-  const previous = [...host.querySelectorAll("[data-equipment-bulk-description]")].map((input, index) => ({
-    name: input.value, id: input.dataset.equipmentChoiceId || "",
-    quantity: host.querySelector(`[data-equipment-bulk-quantity="${index}"]`)?.value || "1"
+  const previous = [...host.querySelectorAll(".equipment-bulk-extra-row")].map((row) => ({
+    name: row.querySelector("[data-equipment-bulk-description]")?.value || "",
+    id: row.querySelector("[data-equipment-bulk-description]")?.dataset.equipmentChoiceId || "",
+    quantity: row.querySelector("[data-equipment-bulk-quantity]")?.value || "1"
   }));
   if (previous.slice(count).some((row) => row.name.trim())) {
     if (status) status.textContent = "Hay equipos escritos en las filas que intenta quitar. Vacíe esas filas antes de reducir el número.";
     return;
   }
+  host.querySelectorAll("[data-equipment-bulk-description]").forEach(detachEquipmentExtraNamePicker);
   host.innerHTML = Array.from({ length: count }, (_, index) => {
     const row = previous[index] || { quantity: "1", name: "", id: "" };
-    return `<div class="equipment-bulk-extra-row"><span>${index + 1}</span><label>Cantidad<input type="number" min="1" step="1" data-equipment-bulk-quantity="${index}" value="${escapeEquipmentHtml(row.quantity)}" /></label><label>Equipo extra<input type="text" autocomplete="off" placeholder="Escriba y seleccione un equipo" data-equipment-bulk-description="${index}" data-equipment-choice-id="${escapeEquipmentHtml(row.id)}" value="${escapeEquipmentHtml(row.name)}" /></label></div>`;
+    return `<div class="equipment-bulk-extra-row"><span>${index + 1}</span><label>Cantidad<input type="number" min="1" step="1" data-equipment-bulk-quantity="${index}" value="${escapeEquipmentHtml(row.quantity)}" /></label><label>Equipo extra<input type="text" autocomplete="off" placeholder="Escriba un equipo o seleccione una coincidencia" data-equipment-bulk-description="${index}" data-equipment-choice-id="${escapeEquipmentHtml(row.id)}" value="${escapeEquipmentHtml(row.name)}" /></label><button class="equipment-bulk-extra-remove" type="button" data-remove-equipment-bulk-row aria-label="Eliminar fila ${index + 1}">Eliminar</button></div>`;
   }).join("");
   equipmentQuery("#equipmentAddBulkExtrasButton")?.classList.remove("is-hidden");
   bindEquipmentExtraNamePickers();
+  host.querySelectorAll("[data-remove-equipment-bulk-row]").forEach((button) => {
+    button.addEventListener("click", () => removeEquipmentBulkExtraRow(button.closest(".equipment-bulk-extra-row")));
+  });
 }
 
-function addEquipmentBulkExtras() {
+function detachEquipmentExtraNamePicker(input) {
+  if (input && window.EquipmentNamePicker) window.EquipmentNamePicker.attach(input, { getChoices: equipmentExtraNameChoices }).detach();
+}
+
+function renumberEquipmentBulkExtraRows(host) {
+  const rows = [...(host?.querySelectorAll(".equipment-bulk-extra-row") || [])];
+  rows.forEach((row, index) => {
+    row.querySelector("span").textContent = index + 1;
+    row.querySelector("[data-equipment-bulk-quantity]").dataset.equipmentBulkQuantity = String(index);
+    row.querySelector("[data-equipment-bulk-description]").dataset.equipmentBulkDescription = String(index);
+    row.querySelector("[data-remove-equipment-bulk-row]")?.setAttribute("aria-label", `Eliminar fila ${index + 1}`);
+  });
+  const countInput = equipmentQuery("#equipmentBulkExtraCount");
+  if (countInput) countInput.value = String(rows.length);
+  equipmentQuery("#equipmentAddBulkExtrasButton")?.classList.toggle("is-hidden", !rows.length);
+}
+
+function removeEquipmentBulkExtraRow(row) {
+  if (!row || equipmentExtraEntryBusy) return;
+  detachEquipmentExtraNamePicker(row.querySelector("[data-equipment-bulk-description]"));
+  row.remove();
+  renumberEquipmentBulkExtraRows(equipmentQuery("#equipmentBulkExtrasRows"));
+}
+
+async function addEquipmentBulkExtras() {
   const host = equipmentQuery("#equipmentBulkExtrasRows");
-  const inputs = [...(host?.querySelectorAll("[data-equipment-bulk-description]") || [])];
-  if (!inputs.length || inputs.length > 100) return;
-  const extras = [];
-  for (const [index, input] of inputs.entries()) {
-    const extra = equipmentExtraFromInputs(host.querySelector(`[data-equipment-bulk-quantity="${index}"]`), input, `Fila ${index + 1}: `);
-    if (!extra) return;
-    extras.push(extra);
-  }
-  appendEquipmentExtraItems(extras);
-  inputs.forEach((input) => window.EquipmentNamePicker?.attach(input, { getChoices: equipmentExtraNameChoices }).detach());
-  host.innerHTML = "";
-  equipmentQuery("#equipmentAddBulkExtrasButton")?.classList.add("is-hidden");
-  const status = equipmentQuery("#equipmentSaveStatus");
-  if (status) status.textContent = `${extras.length} extras agregados. Sus cantidades se suman al equipo del resumen.`;
-  renderEquipmentModule();
+  const rows = [...(host?.querySelectorAll(".equipment-bulk-extra-row") || [])];
+  if (!rows.length || rows.length > 100) return;
+  await addEquipmentExtraBatch(rows.map((row, index) => ({
+    quantityInput: row.querySelector("[data-equipment-bulk-quantity]"),
+    descriptionInput: row.querySelector("[data-equipment-bulk-description]"),
+    rowLabel: `Fila ${index + 1}: `
+  })), (extras) => {
+    host.querySelectorAll("[data-equipment-bulk-description]").forEach(detachEquipmentExtraNamePicker);
+    host.innerHTML = "";
+    renumberEquipmentBulkExtraRows(host);
+    const status = equipmentQuery("#equipmentSaveStatus");
+    if (status) status.textContent = `${extras.length} extras agregados. Sus cantidades se suman al equipo del resumen.`;
+  });
 }
 
 function equipmentInventoryChoiceMap() {
@@ -3937,6 +4080,7 @@ async function initEquipmentCatalogSync() {
 }
 
 function equipmentWarehouseInventoryRecordFor(row) {
+  if (row?.procurementChoice) return null;
   const explicitId = row?.warehouseInventoryId || row?.inventorySourceItem?.warehouseInventoryId;
   if (explicitId) return equipmentWarehouseInventoryState.recordsById.get(String(explicitId)) || null;
   const directId = equipmentInventoryWarehouseIdByRowKey.get(row?.key);
@@ -3959,6 +4103,7 @@ function equipmentWarehouseInventoryRecordFor(row) {
 }
 
 function equipmentInventoryAvailableValueFor(row) {
+  if (row?.procurementChoice) return 0;
   const record = equipmentWarehouseInventoryRecordFor(row);
   if (record) return record.available;
   return equipmentInventoryNumber(inventoryValueFor(row));
@@ -3995,6 +4140,7 @@ function defaultInventoryValueFor(row) {
 }
 
 function inventoryValueFor(row) {
+  if (row?.procurementChoice) return 0;
   const warehouseRecord = equipmentWarehouseInventoryRecordFor(row);
   if (warehouseRecord) return warehouseRecord.available;
   if (equipmentWarehouseInventoryState.loaded) return 0;
@@ -5040,7 +5186,7 @@ function saveCurrentEquipmentWindow() {
   return true;
 }
 
-function saveEquipmentWindowById(eventId) {
+async function saveEquipmentWindowById(eventId) {
   const event = equipmentState.events.find((item) => item.id === eventId);
   const status = equipmentQuery("#equipmentSaveStatus");
   if (!event) {
@@ -5048,11 +5194,11 @@ function saveEquipmentWindowById(eventId) {
     return false;
   }
   if (equipmentState.selectedEventId !== eventId) loadEquipmentEvent(eventId);
-  return saveCurrentEquipmentWindow();
+  return saveCurrentEquipmentWindowWithExtraChoices();
 }
 
 async function saveEquipmentEventPdf(eventId) {
-  if (!saveEquipmentWindowById(eventId)) return;
+  if (!(await saveEquipmentWindowById(eventId))) return;
   await saveEquipmentPdf("full");
 }
 
@@ -5390,9 +5536,10 @@ function equipmentWarehouseDispatchItems(event) {
       const quantity = Math.max(0, Number(item.quantity) || 0);
       const description = String(item.description || "").trim();
       if (!description || quantity <= 0) return;
-      const matches = equipmentWarehouseRecordsForItem(item, section);
+      const procurementChoice = equipmentPendingProcurementChoice(item);
+      const matches = procurementChoice ? [] : equipmentWarehouseRecordsForItem(item, section);
       const unresolved = Boolean(section.manualSection && matches.length !== 1);
-      const key = matches.length === 1 ? equipmentWarehouseRecordIdentity(matches[0])
+      const key = procurementChoice ? `extra-${procurementChoice}:${equipmentInventoryCanonicalKey(description)}` : matches.length === 1 ? equipmentWarehouseRecordIdentity(matches[0])
         : `${unresolved ? "sin-coincidencia-" : ""}${equipmentFallbackIdentityForItem(item, section, categories)}`;
       let group = groups.get(key);
       if (!group) {
@@ -5400,7 +5547,8 @@ function equipmentWarehouseDispatchItems(event) {
           description: matches.length === 1 ? matches[0].item.name || description : description,
           category: matches.length === 1 ? matches[0].item.category || section.title || "Equipo" : item.inventoryCategory || section.inventoryCategory || section.title || "Equipo",
           quantity: 0,
-          ...(item.warehouseInventoryId ? { warehouseInventoryId: item.warehouseInventoryId } : {}),
+          ...(item.warehouseInventoryId && !procurementChoice ? { warehouseInventoryId: item.warehouseInventoryId } : {}),
+          ...(procurementChoice ? { procurementChoice, procurementAction: equipmentProcurementActionFor({ procurementChoice }) } : {}),
           ...(unresolved ? { inventoryMatchUnresolved: true } : {}),
           warehouseItemIds: [],
           consumable: matches.length ? matches.some((record) => record.consumable) : equipmentDescriptionEndsWithConsumable(description)
@@ -5653,6 +5801,14 @@ async function saveEquipmentPdfOnlyCopyToComputer(data, savedLabel, directoryHan
 
 async function saveEquipmentPdf(mode = "full") {
   const status = equipmentQuery("#equipmentSaveStatus");
+  if (equipmentExtraEntryBusy) return;
+  const purchases = await resolveEquipmentPendingExtraChoices();
+  if (!purchases) return;
+  if (purchases.length) {
+    renderEquipmentModule();
+    sendEquipmentPurchaseRequest(purchases);
+    return;
+  }
   if (mode === "full" && !currentEquipmentService()) {
     if (status) status.textContent = "Seleccione un servicio antes de guardar.";
     return;
@@ -5932,7 +6088,7 @@ function initEquipmentModule() {
     });
   });
   equipmentQuery("#equipmentAddEventButton")?.addEventListener("click", addEquipmentEvent);
-  equipmentQuery("#equipmentSaveWindowButton")?.addEventListener("click", saveCurrentEquipmentWindow);
+  equipmentQuery("#equipmentSaveWindowButton")?.addEventListener("click", saveCurrentEquipmentWindowWithExtraChoices);
   equipmentQuery("#equipmentAddMainItemButton")?.addEventListener("click", addManualMainEquipmentItem);
   bindEquipmentExtraNamePickers();
   equipmentQuery("#equipmentPrepareBulkExtrasButton")?.addEventListener("click", prepareEquipmentBulkExtras);
@@ -5993,6 +6149,15 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentLogisticsDialog")?.addEventListener("cancel", (event) => {
     event.preventDefault();
     closeEquipmentLogisticsDecision();
+  });
+  document.querySelectorAll("[data-equipment-unknown-choice]").forEach((button) => {
+    button.addEventListener("click", () => resolveEquipmentUnknownDecision(button.dataset.equipmentUnknownChoice));
+  });
+  equipmentQuery("#equipmentUnknownItemCloseButton")?.addEventListener("click", () => resolveEquipmentUnknownDecision());
+  equipmentQuery("#equipmentUnknownItemCancelButton")?.addEventListener("click", () => resolveEquipmentUnknownDecision());
+  equipmentQuery("#equipmentUnknownItemDialog")?.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    resolveEquipmentUnknownDecision();
   });
   initEquipmentCatalogSync();
   window.EquipmentServiceImport?.init({

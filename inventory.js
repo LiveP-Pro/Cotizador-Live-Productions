@@ -23,6 +23,11 @@
   let saveTimer = null;
   let persistenceMode = "local";
   let dialogContext = null;
+  let warehouseReady = false;
+  let purchaseRequests = [];
+  let purchaseDraftId = "";
+  let purchaseNotice = null;
+  let purchaseReturnPage = "requerimiento-equipo";
   let importReview = null;
   let readingImport = false;
   let serverSavedAt = "";
@@ -231,6 +236,41 @@
     return attachment?.dataUrl || attachment?.url || "";
   }
 
+  function normalizeProcurementChoice(value) {
+    const choice = normalizeText(value).toLowerCase();
+    return ["save", "rent", "purchase"].includes(choice) ? choice : "";
+  }
+
+  function procurementAction(movement) {
+    const action = { save: "GUARDAR", rent: "RENTA", purchase: "COMPRA" }[
+      normalizeProcurementChoice(movement?.procurementChoice)
+    ];
+    const savedAction = normalizeText(movement?.procurementAction).toUpperCase();
+    return action || (["GUARDAR", "RENTA", "COMPRA"].includes(savedAction) ? savedAction : "");
+  }
+
+  function isPendingProcurement(movement) {
+    return Boolean(movement?.sourceUnmatched && !movement?.itemId && procurementAction(movement));
+  }
+
+  function movementDisplayLabel(movement) {
+    return isPendingProcurement(movement) && ["salida", "compra"].includes(movement.type)
+      ? procurementAction(movement)
+      : movementLabels[movement.type];
+  }
+
+  function movementUnmappedNote(movement) {
+    if (isPendingProcurement(movement)) {
+      const action = procurementAction(movement);
+      if (action === "GUARDAR") return "Guardado tal cual, sin coincidencia en inventario. No se descontó equipo de bodega.";
+      if (action === "RENTA") return "Renta solicitada. No se descontó equipo de bodega.";
+      return "Compra pendiente: guarda la cantidad real comprada en inventario. No se descontó equipo de bodega.";
+    }
+    if (movement.type === "compra") return "No descontado: consumible pendiente de comprar.";
+    if (movement.sourceUnmatched) return "No descontado: requiere renta o no estaba disponible.";
+    return "";
+  }
+
   function normalizeMovement(movement, index = 0) {
     let type = movement?.type;
     if (type === "danado") type = "taller";
@@ -273,6 +313,8 @@
       sourceRequestedName: normalizeText(movement?.sourceRequestedName),
       sourceLineKey: normalizeText(movement?.sourceLineKey),
       sourceUnmatched: Boolean(movement?.sourceUnmatched),
+      procurementChoice: normalizeProcurementChoice(movement?.procurementChoice),
+      procurementAction: procurementAction(movement),
       dateTime: normalizeText(movement?.dateTime) || `${movement?.date || todayInputValue()}T00:00`,
       createdAt: movement?.createdAt || new Date().toISOString()
     };
@@ -444,6 +486,92 @@
     elements.status.dataset.tone = tone;
   }
 
+  function renderPurchaseRequests() {
+    if (!warehouseReady || (!purchaseRequests.length && !purchaseNotice)) return;
+    if (!purchaseNotice) {
+      const panel = elements.newName.closest(".warehouse-panel");
+      if (!panel) return;
+      purchaseNotice = document.createElement("div");
+      purchaseNotice.className = "warehouse-selected-equipment";
+      purchaseNotice.setAttribute("aria-live", "polite");
+      const form = panel.querySelector(".warehouse-form-grid");
+      panel.insertBefore(purchaseNotice, form || elements.addItemButton);
+      purchaseNotice.addEventListener("click", (event) => {
+        const prepareButton = event.target.closest("[data-warehouse-purchase-prepare]");
+        if (prepareButton) preparePurchaseDraft(prepareButton.dataset.warehousePurchasePrepare);
+        if (event.target.closest("[data-warehouse-purchase-return]")) {
+          window.location.hash = purchaseReturnPage;
+        }
+      });
+    }
+    purchaseNotice.innerHTML = purchaseRequests.length
+      ? `<p><strong>Compra solicitada desde Requerimiento de Equipo</strong></p>
+          <p>Guarda este equipo en inventario para que el cambio se refleje en Requerimiento de Equipo.</p>
+          <p>La cantidad comienza en 0. Escribe la cantidad real comprada antes de agregar el equipo.</p>
+          <ul>${purchaseRequests.map((item) => `
+            <li>${escapeHtml(item.description)} — ${escapeHtml(item.quantity)} unidades requeridas
+              <button class="warehouse-row-button" type="button" data-warehouse-purchase-prepare="${escapeHtml(item.id)}"${item.id === purchaseDraftId ? " disabled" : ""}>${item.id === purchaseDraftId ? "En el formulario" : "Preparar"}</button>
+            </li>`).join("")}</ul>
+          <p>Los demás equipos permanecen pendientes hasta que los agregues al inventario.</p>`
+      : `<p><strong>Equipos guardados en inventario.</strong></p>
+          <p>Las cantidades registradas ya se reflejan en Requerimiento de Equipo.</p>
+          <button class="warehouse-row-button" type="button" data-warehouse-purchase-return>Volver a Requerimiento de Equipo</button>`;
+  }
+
+  function preparePurchaseDraft(id) {
+    if (!warehouseReady) return;
+    const item = purchaseRequests.find((request) => request.id === id);
+    if (!item) return;
+    purchaseDraftId = item.id;
+    switchWindow("inventory");
+    elements.newName.value = item.description;
+    elements.newCategory.value = "";
+    elements.newQuantity.value = "0";
+    elements.newNotes.value = `Compra solicitada desde Requerimiento de Equipo. Cantidad requerida: ${item.quantity}. Registra la cantidad real comprada y guarda este equipo en inventario para que el cambio se refleje en Requerimiento de Equipo.`;
+    renderPurchaseRequests();
+    setStatus("Guarda este equipo en inventario para que el cambio se refleje en Requerimiento de Equipo.", "warning");
+    window.requestAnimationFrame(() => {
+      elements.newName.scrollIntoView?.({ block: "center", behavior: "smooth" });
+      elements.newQuantity.focus();
+    });
+  }
+
+  function receivePurchaseRequest(payload) {
+    const items = (Array.isArray(payload?.items) ? payload.items : [])
+      .map((item) => ({
+        id: uid("purchase-request"),
+        description: normalizeText(item?.description),
+        quantity: normalizeNumber(item?.quantity)
+      }))
+      .filter((item) => item.description);
+    if (!items.length) return false;
+    purchaseRequests.push(...items);
+    purchaseReturnPage = "requerimiento-equipo";
+    activeWindow = "inventory";
+    window.location.hash = "contabilidad-equipo";
+    if (warehouseReady) {
+      if (!purchaseDraftId) preparePurchaseDraft(purchaseRequests[0].id);
+      else {
+        switchWindow("inventory");
+        renderPurchaseRequests();
+      }
+    }
+    return true;
+  }
+
+  function completePurchaseDraft(name) {
+    const request = purchaseRequests.find((item) => item.id === purchaseDraftId);
+    if (!request) return;
+    if (warehouseCanonicalKey(request.description) !== warehouseCanonicalKey(name)) {
+      preparePurchaseDraft(request.id);
+      return;
+    }
+    purchaseRequests = purchaseRequests.filter((item) => item.id !== purchaseDraftId);
+    purchaseDraftId = "";
+    if (purchaseRequests.length) preparePurchaseDraft(purchaseRequests[0].id);
+    else renderPurchaseRequests();
+  }
+
   async function loadState() {
     try {
       const serverState = await loadServerState();
@@ -533,7 +661,7 @@
 
   function movementLifecycleRecords(outgoingType, returnType) {
     const outgoingMovements = state.movements
-      .filter((movement) => movement.type === outgoingType)
+      .filter((movement) => movement.type === outgoingType && !(outgoingType === "salida" && isPendingProcurement(movement)))
       .slice()
       .sort((first, second) => movementChronologyKey(first).localeCompare(movementChronologyKey(second)));
     const records = outgoingMovements.map((movement) => ({
@@ -929,7 +1057,7 @@
         const sourceEntry = entries.find((entry) => entry.sourceType === "requerimiento-equipo") || null;
         const name = sourceEntry?.sourceEventName || sourceEntry?.reference || groupKey;
         const eventRecords = lifecycleByGroup.get(groupKey) || [];
-        const outgoing = entries.filter((entry) => entry.type === "salida").reduce((sum, entry) => sum + entry.quantity, 0);
+        const outgoing = entries.filter((entry) => entry.type === "salida" && !isPendingProcurement(entry)).reduce((sum, entry) => sum + entry.quantity, 0);
         const incoming = entries.filter((entry) => entry.type === "ingreso_evento").reduce((sum, entry) => sum + entry.quantity, 0);
         const consumed = entries.filter((entry) => entry.type === "consumo").reduce((sum, entry) => sum + entry.quantity, 0);
         const purchase = entries.filter((entry) => entry.type === "compra").reduce((sum, entry) => sum + entry.quantity, 0);
@@ -942,14 +1070,10 @@
             (entry) => `
               <div>
                 <span>${escapeHtml(displayDateTime(entry))}</span>
-                <strong>${escapeHtml(movementLabels[entry.type])}</strong>
+                <strong>${escapeHtml(movementDisplayLabel(entry))}</strong>
                 <p>${escapeHtml(entry.quantity)} x ${escapeHtml(movementItemName(entry))}</p>
                 ${entry.responsible ? `<small>Responsable: ${escapeHtml(entry.responsible)}</small>` : ""}
-                ${entry.type === "compra"
-                  ? '<small class="warehouse-unmapped-note">No descontado: consumible pendiente de comprar.</small>'
-                  : entry.sourceUnmatched
-                    ? '<small class="warehouse-unmapped-note">No descontado: requiere renta o no estaba disponible.</small>'
-                    : ""}
+                ${movementUnmappedNote(entry) ? `<small class="warehouse-unmapped-note">${escapeHtml(movementUnmappedNote(entry))}</small>` : ""}
                 ${entry.attachment ? `<a href="${escapeHtml(attachmentHref(entry.attachment))}" download="${escapeHtml(entry.attachment.name)}">Ver archivo: ${escapeHtml(entry.attachment.name)}</a>` : ""}
               </div>
             `
@@ -1213,7 +1337,7 @@
     const term = normalizeText(elements.logSearch.value).toLowerCase();
     if (!term) return true;
     return [
-      movementLabels[movement.type],
+      movementDisplayLabel(movement),
       movementItemName(movement),
       movement.responsible,
       movement.reference,
@@ -1249,7 +1373,7 @@
         return `
           <article class="warehouse-log-entry">
             <div>
-              <span class="warehouse-log-type">${escapeHtml(movementLabels[movement.type])}</span>
+              <span class="warehouse-log-type">${escapeHtml(movementDisplayLabel(movement))}</span>
               <strong>${escapeHtml(movementItemName(movement))}</strong>
               <small>${escapeHtml(displayDateTime(movement))} · ${escapeHtml(adjustment)}</small>
             </div>
@@ -1480,6 +1604,13 @@
       elements.newName.focus();
       return;
     }
+    const purchaseDraft = purchaseRequests.find((request) => request.id === purchaseDraftId);
+    if (purchaseDraft && warehouseCanonicalKey(purchaseDraft.description) === warehouseCanonicalKey(name)
+        && normalizeNumber(elements.newQuantity.value) <= 0) {
+      setStatus("Escribe la cantidad real comprada, mayor a 0, antes de guardar este equipo en inventario.", "warning");
+      elements.newQuantity.focus();
+      return;
+    }
 
     const now = new Date().toISOString();
     const item = {
@@ -1521,6 +1652,7 @@
     scheduleSave();
     renderAll();
     setStatus("Equipo agregado al inventario.", "success");
+    completePurchaseDraft(name);
   }
 
   function addSubtitle() {
@@ -1597,6 +1729,8 @@
       sourceRequestedName: normalizeText(payload.sourceRequestedName),
       sourceLineKey: normalizeText(payload.sourceLineKey),
       sourceUnmatched: Boolean(payload.sourceUnmatched),
+      procurementChoice: normalizeProcurementChoice(payload.procurementChoice),
+      procurementAction: procurementAction(payload),
       createdAt: new Date().toISOString()
     });
     return true;
@@ -1901,7 +2035,9 @@
           sourceCategory: movement.sourceCategory,
           sourceRequestedName: movement.sourceRequestedName,
           sourceLineKey: movement.sourceLineKey,
-          sourceUnmatched: movement.sourceUnmatched
+          sourceUnmatched: movement.sourceUnmatched,
+          procurementChoice: movement.procurementChoice,
+          procurementAction: movement.procurementAction
         });
       });
       closeDialog();
@@ -2369,7 +2505,7 @@
         (entry) => `
           <tr>
             <td>${escapeHtml(displayDateTime(entry))}</td>
-            <td>${escapeHtml(movementLabels[entry.type])}</td>
+            <td>${escapeHtml(movementDisplayLabel(entry))}${movementUnmappedNote(entry) ? `<br /><small>${escapeHtml(movementUnmappedNote(entry))}</small>` : ""}</td>
             <td>${escapeHtml(entry.quantity)}</td>
             <td>${escapeHtml(movementItemName(entry))}</td>
             <td>${escapeHtml(entry.responsible)}</td>
@@ -2975,7 +3111,14 @@
     initWarehouseSync();
     renderAll();
     switchWindow(activeWindow);
+    warehouseReady = true;
+    if (purchaseRequests.length) preparePurchaseDraft(purchaseRequests[0].id);
   }
+
+  document.addEventListener("live:warehouse-purchase-request", (event) => {
+    receivePurchaseRequest(event.detail);
+  });
+  window.prepareWarehousePurchase = receivePurchaseRequest;
 
   document.addEventListener("live:warehouse-server-updated", (event) => {
     if (elements.root && applyRemoteWarehouse(event.detail)) {
