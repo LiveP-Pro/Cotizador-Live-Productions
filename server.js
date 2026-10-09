@@ -9,6 +9,7 @@ const { spawn, spawnSync } = require("node:child_process");
 const { DatabaseSync } = require("node:sqlite");
 const { parseInventoryFile } = require("./warehouse-import.cjs");
 const { parseServiceFile, verifyServiceImport } = require("./equipment-service-import.cjs");
+const { applyStockIngress, prepareWarehouseSave, nextWarehouseTimestamp } = require("./warehouse-ledger.cjs");
 
 const rootDir = __dirname;
 const port = Number.parseInt(process.env.PORT || "8787", 10);
@@ -48,7 +49,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261007-extras-decisions-03";
+const warehouseAssetVersion = "20261008-stock-ingress-04";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -187,14 +188,23 @@ async function writeWarehouseInventoryFile(filePath, normalized) {
   await fsp.rename(temporaryPath, filePath);
 }
 
-async function writeWarehouseInventory(normalized) {
+function warehouseAuditActor(request) {
+  if (!request) return { id: "server", username: "Servidor", name: "Servidor" };
+  const username = authenticatedUser(request);
+  return { id: equipmentImportOwner(request), username, name: username };
+}
+
+async function writeWarehouseInventory(normalized, context = {}) {
+  const current = readWarehouseInventory();
+  const audited = prepareWarehouseSave(current, normalized.state, context);
+  Object.assign(normalized, audited);
   if (fs.existsSync(warehouseInventoryPath)) {
     await fsp.copyFile(warehouseInventoryPath, warehouseInventoryBackupPath);
   }
   await writeWarehouseInventoryFile(warehouseInventoryPath, normalized);
 }
 
-async function persistWarehouseInventory(normalized, setAsInitial = false) {
+async function persistWarehouseInventory(normalized, setAsInitial = false, context = {}) {
   if (setAsInitial && fs.existsSync(warehouseInventoryPath)) {
     const datasetId = warehouseInventoryDatasetId(normalized);
     if (datasetId) {
@@ -204,13 +214,11 @@ async function persistWarehouseInventory(normalized, setAsInitial = false) {
       }
     }
   }
-  if (setAsInitial) {
-    await writeWarehouseInventoryFile(warehouseInventoryPrivateInitialPath, normalized);
-  }
-  await writeWarehouseInventory(normalized);
+  await writeWarehouseInventory(normalized, context);
+  if (setAsInitial) await writeWarehouseInventoryFile(warehouseInventoryPrivateInitialPath, normalized);
 }
 
-async function saveWarehouseInventory(payload, response) {
+async function saveWarehouseInventory(payload, response, request) {
   if (typeof payload?.expectedSavedAt === "string" && payload.expectedSavedAt !== readWarehouseInventory().savedAt) {
     errorResponse(response, 409, "El inventario cambió en otra pestaña o equipo. Conserve sus cambios y vuelva a comparar con el inventario actual antes de guardar.");
     return;
@@ -227,15 +235,38 @@ async function saveWarehouseInventory(payload, response) {
   }
 
   const setAsInitial = payload?.setAsInitial === true;
-  await persistWarehouseInventory(normalized, setAsInitial);
+  await persistWarehouseInventory(normalized, setAsInitial, {
+    actor: warehouseAuditActor(request), source: setAsInitial ? "importacion-inventario" : "contabilidad-equipo"
+  });
   jsonResponse(response, 200, { ...normalized, initialSaved: setAsInitial });
 }
 
-async function restoreWarehouseInventory(response) {
+async function restoreWarehouseInventory(response, request) {
   const initial = readWarehouseInventoryInitial();
   const restored = { state: initial.state, savedAt: new Date().toISOString() };
-  await writeWarehouseInventory(restored);
+  await writeWarehouseInventory(restored, { actor: warehouseAuditActor(request), source: "restauracion-inventario" });
   jsonResponse(response, 200, restored);
+}
+
+async function ingressEquipmentStock(payload, request, response) {
+  try {
+    const current = readWarehouseInventory();
+    const actor = warehouseAuditActor(request);
+    const timestamp = nextWarehouseTimestamp(current.savedAt);
+    const result = applyStockIngress(current, payload, { actor, timestamp });
+    if (result.duplicate) {
+      jsonResponse(response, 200, { ...current, receipt: result.receipt });
+      return;
+    }
+    const saved = { state: result.state, savedAt: timestamp };
+    await writeWarehouseInventory(saved, {
+      actor, source: "requerimiento-equipo", requestId: result.storedReceipt.requestId,
+      event: result.storedReceipt.event, stockReceipt: result.storedReceipt, ingressChanges: result.changes
+    });
+    jsonResponse(response, 200, { ...saved, receipt: result.receipt });
+  } catch (error) {
+    errorResponse(response, error.statusCode || 400, error.message || "No se pudo registrar el ingreso del equipo.");
+  }
 }
 
 ensureWarehouseInventoryStorage();
@@ -3189,7 +3220,7 @@ function warehouseDispatchDateTime(dispatch, savedAt) {
   return String(savedAt || new Date().toISOString()).slice(0, 16);
 }
 
-async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
+async function receiveEquipmentBoardInWarehouse(editableData, fileData, request) {
   const dispatch = editableData?.mode === "full" ? editableData?.warehouseDispatch : null;
   const documentId = String(dispatch?.id || "").trim().slice(0, 240);
   if (!documentId) return { warehouseInventory: null, warehouseReceipt: null };
@@ -3219,7 +3250,7 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
     ));
     state.updatedAt = now;
     const saved = { state, savedAt: now };
-    await writeWarehouseInventory(saved);
+    await writeWarehouseInventory(saved, { actor: warehouseAuditActor(request), source: "requerimiento-equipo" });
     return {
       warehouseInventory: saved,
       warehouseReceipt: {
@@ -3408,7 +3439,7 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData) {
 
   state.updatedAt = now;
   const saved = { state, savedAt: now };
-  await writeWarehouseInventory(saved);
+  await writeWarehouseInventory(saved, { actor: warehouseAuditActor(request), source: "requerimiento-equipo" });
   return {
     warehouseInventory: saved,
     warehouseReceipt: {
@@ -3485,7 +3516,7 @@ async function saveEquipmentBoard(payload, request, response) {
     jsonFileName,
     pdfUrl: publicPath,
     jsonUrl: jsonPath
-  });
+  }, request);
 
   jsonResponse(response, 200, {
     fileName,
@@ -3599,16 +3630,23 @@ async function handleRequest(request, response) {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/inventario-bodega/ingresos-desde-equipo") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => ingressEquipmentStock(payload, request, response));
+      return;
+    }
+
     if (request.method === "PUT" && url.pathname === "/api/inventario-bodega") {
       if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
-      await enqueueSave(() => saveWarehouseInventory(payload, response));
+      await enqueueSave(() => saveWarehouseInventory(payload, response, request));
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/api/inventario-bodega/restaurar") {
       if (!requireAuth(request, response)) return;
-      await enqueueSave(() => restoreWarehouseInventory(response));
+      await enqueueSave(() => restoreWarehouseInventory(response, request));
       return;
     }
 

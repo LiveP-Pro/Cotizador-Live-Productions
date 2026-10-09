@@ -38,6 +38,57 @@
   color: #a24d00;
 }
 
+.warehouse-movement-help,
+.warehouse-history-count {
+  margin: 8px 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.warehouse-history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.warehouse-history-entry {
+  align-items: start;
+}
+
+.warehouse-history-entry details {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.warehouse-history-entry summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.warehouse-history-entry dl {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr);
+  gap: 6px 12px;
+  font-size: 13px;
+}
+
+.warehouse-history-entry dt {
+  font-weight: 700;
+}
+
+.warehouse-history-entry dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+[data-warehouse-view="movements"] .warehouse-form-grid [hidden] {
+  display: none;
+}
+
 .warehouse-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(140px, 1fr));
@@ -82,7 +133,7 @@
   z-index: 5;
   top: 0;
   display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-columns: repeat(10, minmax(0, 1fr));
   gap: 8px;
   padding: 10px 0;
   background: var(--page);

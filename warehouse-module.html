@@ -23,6 +23,7 @@
             <button type="button" data-warehouse-window="events">Fuera / Eventos</button>
             <button type="button" data-warehouse-window="workshop">Taller</button>
             <button type="button" data-warehouse-window="rental">Renta PDF</button>
+            <button type="button" data-warehouse-window="movements">Movimientos</button>
             <button type="button" data-warehouse-window="logs">Bitácoras</button>
           </nav>
 
@@ -238,6 +239,85 @@
             </section>
           </section>
 
+          <section class="warehouse-view" data-warehouse-view="movements">
+            <section class="warehouse-panel" aria-labelledby="warehouseMovementTitle">
+              <div class="section-heading">
+                <span id="warehouseMovementTitle">Registrar movimiento</span>
+                <small>ingresos, salidas, taller, extravíos y bajas</small>
+              </div>
+              <form id="warehouseMovementForm">
+                <div class="warehouse-form-grid">
+                  <label class="warehouse-field-wide">
+                    Equipo
+                    <select id="warehouseMovementItem" required><option value="">Seleccione un equipo</option></select>
+                  </label>
+                  <label>
+                    Tipo de movimiento
+                    <select id="warehouseMovementType" required>
+                      <option value="ingreso">Ingreso / compra recibida</option>
+                      <option value="salida">Salida a evento</option>
+                      <option value="ingreso_evento">Devolución de evento</option>
+                      <option value="taller">Salida a taller</option>
+                      <option value="devolucion_taller">Regreso de taller</option>
+                      <option value="renta">Salida en renta</option>
+                      <option value="devolucion_renta">Devolución de renta</option>
+                      <option value="perdido">Extravío</option>
+                      <option value="recuperado">Recuperación de extravío</option>
+                      <option value="baja">Baja definitiva</option>
+                    </select>
+                  </label>
+                  <label>
+                    Cantidad
+                    <input id="warehouseMovementQuantity" type="number" min="1" step="1" value="1" required />
+                  </label>
+                  <label>
+                    Fecha y hora
+                    <input id="warehouseMovementDateTime" type="datetime-local" required />
+                  </label>
+                  <label>
+                    Responsable
+                    <input id="warehouseMovementResponsible" type="text" autocomplete="off" required />
+                  </label>
+                  <label id="warehouseMovementRelatedLabel" class="warehouse-field-wide" hidden>
+                    Ubicación / movimiento relacionado
+                    <select id="warehouseMovementRelated"><option value="">Disponible en bodega</option></select>
+                  </label>
+                  <label class="warehouse-field-wide">
+                    Motivo / evento / detalle
+                    <textarea id="warehouseMovementReason" rows="2" required placeholder="Describa la compra, el evento, la falla o el motivo de la baja"></textarea>
+                  </label>
+                </div>
+                <p id="warehouseMovementHelp" class="warehouse-movement-help" aria-live="polite"></p>
+                <p id="warehouseMovementMessage" class="warehouse-status" role="status" aria-live="polite"></p>
+                <button id="warehouseMovementSaveButton" class="primary-button" type="submit">Registrar y guardar movimiento</button>
+              </form>
+            </section>
+            <section class="warehouse-panel" aria-labelledby="warehouseHistoryTitle">
+              <div class="section-heading">
+                <span id="warehouseHistoryTitle">Historial automático</span>
+                <small>registro permanente de cambios guardados en servidor</small>
+              </div>
+              <p class="warehouse-movement-help">Cada ingreso, edición, salida, taller, extravío y baja queda registrado con fecha y usuario. Este historial es de consulta.</p>
+              <div class="warehouse-filter-grid warehouse-log-filter-grid">
+                <label>
+                  Buscar movimiento
+                  <input id="warehouseHistorySearch" type="search" autocomplete="off" placeholder="Equipo, usuario, motivo o evento" />
+                </label>
+                <label>
+                  Tipo de cambio
+                  <select id="warehouseHistoryType"><option value="all">Todos</option></select>
+                </label>
+              </div>
+              <p id="warehouseHistoryCount" class="warehouse-history-count" role="status"></p>
+              <div id="warehouseHistoryList" class="warehouse-log-list"></div>
+              <div class="warehouse-history-pagination">
+                <button id="warehouseHistoryPrevious" class="secondary-button" type="button">Anterior</button>
+                <span id="warehouseHistoryPage"></span>
+                <button id="warehouseHistoryNext" class="secondary-button" type="button">Siguiente</button>
+              </div>
+            </section>
+          </section>
+
           <section class="warehouse-view" data-warehouse-view="logs">
             <section class="warehouse-panel" aria-labelledby="warehouseLogTitle">
               <div class="section-heading">
@@ -254,6 +334,7 @@
                   <select id="warehouseLogTypeFilter">
                     <option value="all">Todos</option>
                     <option value="salida">Salida de bodega</option>
+                    <option value="ingreso">Ingreso / compra recibida</option>
                     <option value="ingreso_evento">Ingreso de eventos</option>
                     <option value="consumo">Consumo en evento</option>
                     <option value="compra">Compra necesaria</option>
@@ -264,6 +345,7 @@
                     <option value="perdido">Diferencias / perdido</option>
                     <option value="recuperado">Recuperado</option>
                     <option value="ajuste">Ajuste de conteo</option>
+                    <option value="baja">Baja definitiva</option>
                   </select>
                 </label>
               </div>

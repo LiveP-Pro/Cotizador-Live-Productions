@@ -6,8 +6,8 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20261007-extras-decisions-03" />
-    <link rel="stylesheet" href="warehouse-inventory.css?v=20261006-import-review-01" />
+    <link rel="stylesheet" href="styles.css?v=20261008-stock-ingress-04" />
+    <link rel="stylesheet" href="warehouse-inventory.css?v=20261008-stock-ingress-04" />
     <link rel="stylesheet" href="equipment-service-import.css?v=20261006-service-import-01" />
     <link rel="stylesheet" href="equipment-name-picker.css?v=20261007-extras-02" />
     <script src="app.js?v=20260814-01" defer></script>
@@ -15,9 +15,9 @@
     <script src="equipment-inventory.js?v=20261007-extras-decisions-03" defer></script>
     <script src="equipment-service-import.js?v=20261006-service-import-01" defer></script>
     <script src="equipment-name-picker.js?v=20261007-extras-02" defer></script>
-    <script src="equipment.js?v=20261007-extras-decisions-03" defer></script>
+    <script src="equipment.js?v=20261008-stock-ingress-04" defer></script>
     <script src="warehouse-import-review.js?v=20261006-warehouse-sync-01" defer></script>
-    <script src="inventory.js?v=20261007-extras-decisions-03" defer></script>
+    <script src="inventory.js?v=20261008-stock-ingress-04" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -564,7 +564,7 @@
                 <p id="equipmentUnknownItemQuantity"></p>
                 <p id="equipmentUnknownItemDescription">¿Cómo deseas continuar?</p>
                 <ul class="equipment-unknown-item-options">
-                  <li><strong>Guardar:</strong> conserva el equipo tal como lo escribiste en el requerimiento.</li>
+                  <li><strong>Guardar:</strong> confirma que ya lo compraste. La cantidad del extra ingresa automáticamente al inventario de Contabilidad de Equipo y queda registrada en el historial.</li>
                   <li><strong>Renta:</strong> guarda el extra y lo incluye en el reporte de renta.</li>
                   <li><strong>Comprar:</strong> abre Contabilidad de Equipo. Debes guardar el equipo y la cantidad real en inventario para que se refleje en Requerimiento de Equipo.</li>
                 </ul>

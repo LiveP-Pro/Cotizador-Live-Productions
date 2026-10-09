@@ -3,8 +3,9 @@
   const PREVIOUS_STORAGE_KEY = "liveWarehouseInventoryStateV2";
   const LEGACY_STORAGE_KEY = "liveWarehouseInventoryStateV1";
   const API_PATH = "/api/inventario-bodega";
-  const MODULE_PATH = "/warehouse-module.html?v=20261006-import-review-01";
+  const MODULE_PATH = "/warehouse-module.html?v=20261008-movimientos-01";
   const movementLabels = {
+    ingreso: "Ingreso / compra recibida",
     salida: "Salida de bodega",
     ingreso_evento: "Ingreso de evento",
     consumo: "Consumo en evento",
@@ -15,7 +16,8 @@
     devolucion_renta: "Devolución de renta",
     ajuste: "Ajuste de conteo",
     perdido: "Equipo perdido",
-    recuperado: "Equipo recuperado"
+    recuperado: "Equipo recuperado",
+    baja: "Baja definitiva"
   };
 
   let state = null;
@@ -38,6 +40,9 @@
   let warehouseChannel = null;
   let serverSaveQueue = Promise.resolve();
   let restoringWarehouse = false;
+  let historyPage = 1;
+  let manualMovementPendingSave = false;
+  const HISTORY_PAGE_SIZE = 50;
   const signaturePads = {};
   const elements = {};
 
@@ -281,9 +286,11 @@
       itemId: normalizeText(movement?.itemId),
       itemName: normalizeText(movement?.itemName),
       quantity: normalizeNumber(movement?.quantity),
-      previousQuantity: Number.isFinite(Number(movement?.previousQuantity))
+      previousQuantity: movement?.previousQuantity !== null && movement?.previousQuantity !== undefined && Number.isFinite(Number(movement.previousQuantity))
         ? normalizeNumber(movement.previousQuantity)
         : null,
+      newQuantity: movement?.newQuantity !== null && movement?.newQuantity !== undefined && Number.isFinite(Number(movement.newQuantity))
+        ? normalizeNumber(movement.newQuantity) : null,
       date: movement?.date || todayInputValue(),
       responsible: normalizeText(movement?.responsible),
       reference: normalizeText(movement?.reference),
@@ -357,7 +364,9 @@
         ? window.LIVE_WAREHOUSE_INITIAL_MOVEMENTS
         : []).map(normalizeMovement),
       rentalDraft: [],
-      workshopDraft: []
+      workshopDraft: [],
+      auditEntries: [],
+      equipmentStockReceipts: []
     };
   }
 
@@ -382,7 +391,9 @@
       items: items.map(normalizeItem),
       movements: movements.map(normalizeMovement),
       rentalDraft: rentalDraft.map(normalizeRentalDraftLine),
-      workshopDraft: workshopDraft.map(normalizeWorkshopDraftLine)
+      workshopDraft: workshopDraft.map(normalizeWorkshopDraftLine),
+      auditEntries: Array.isArray(base.auditEntries) ? JSON.parse(JSON.stringify(base.auditEntries)) : [],
+      equipmentStockReceipts: Array.isArray(base.equipmentStockReceipts) ? JSON.parse(JSON.stringify(base.equipmentStockReceipts)) : []
     };
   }
 
@@ -471,11 +482,22 @@
           ...(serverSavedAt ? { expectedSavedAt: serverSavedAt } : {}) })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "No se pudo guardar en servidor");
+      if (!response.ok) {
+        const error = new Error(payload.error || "No se pudo guardar en servidor");
+        error.status = response.status;
+        throw error;
+      }
       persistenceMode = "server";
       serverSavedAt = payload.savedAt || serverSavedAt;
       if (revision === changeRevision) warehouseDirty = false;
+      if (payload.state) {
+        state.auditEntries = Array.isArray(payload.state.auditEntries) ? payload.state.auditEntries : state.auditEntries || [];
+        state.equipmentStockReceipts = Array.isArray(payload.state.equipmentStockReceipts) ? payload.state.equipmentStockReceipts : state.equipmentStockReceipts || [];
+        saveLocalState();
+        renderWarehouseHistory();
+      }
       announceSavedWarehouse(payload);
+      renderPurchaseRequests();
       return true;
     });
   }
@@ -513,8 +535,8 @@
               <button class="warehouse-row-button" type="button" data-warehouse-purchase-prepare="${escapeHtml(item.id)}"${item.id === purchaseDraftId ? " disabled" : ""}>${item.id === purchaseDraftId ? "En el formulario" : "Preparar"}</button>
             </li>`).join("")}</ul>
           <p>Los demás equipos permanecen pendientes hasta que los agregues al inventario.</p>`
-      : `<p><strong>Equipos guardados en inventario.</strong></p>
-          <p>Las cantidades registradas ya se reflejan en Requerimiento de Equipo.</p>
+      : `<p><strong>${warehouseDirty ? "Guardando equipos en inventario..." : "Equipos guardados en inventario."}</strong></p>
+          <p>${warehouseDirty ? "Esperando confirmación del servidor." : "Las cantidades registradas ya se reflejan en Requerimiento de Equipo."}</p>
           <button class="warehouse-row-button" type="button" data-warehouse-purchase-return>Volver a Requerimiento de Equipo</button>`;
   }
 
@@ -601,13 +623,19 @@
     warehouseDirty = true;
     state.updatedAt = new Date().toISOString();
     saveLocalState();
+    setStatus("Guardando cambios en servidor...", "neutral");
     try {
       await persistServerState(options);
-      if (!options.silent) setStatus("Cambios guardados en servidor.", "success");
+      if (!warehouseDirty) setStatus("Cambios guardados en servidor.", "success");
+      else setStatus("Guardando los cambios más recientes...", "neutral");
       return true;
     } catch (error) {
       persistenceMode = "local";
       setStatus(`${error.message}. Los cambios están pendientes en este navegador. Exporte un respaldo antes de recargar para conservarlos.`, "warning");
+      if (error.status !== 409 && isHttpPage()) {
+        window.clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(() => { if (warehouseDirty) saveState({ silent: true }); }, 5000);
+      }
       return false;
     }
   }
@@ -617,8 +645,23 @@
     warehouseDirty = true;
     state.updatedAt = new Date().toISOString();
     saveLocalState();
+    setStatus("Guardando cambios en servidor...", "neutral");
     window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(() => saveState({ silent: true }), 500);
+  }
+
+  async function flushWarehouseInventoryChanges() {
+    if (!warehouseReady || !state) throw new Error("El inventario todavía está cargando. Espere a que termine antes de registrar el ingreso.");
+    if (!isHttpPage()) throw new Error("Abra la aplicación desde su servidor para guardar el inventario.");
+    window.clearTimeout(saveTimer);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await serverSaveQueue;
+      if (!warehouseDirty && !activeServerSaves) return { savedAt: serverSavedAt };
+      if (!(await saveState({ silent: true }))) throw new Error("No se guardaron los cambios pendientes del inventario. Resuelva el aviso antes de registrar otro ingreso.");
+    }
+    await serverSaveQueue;
+    if (warehouseDirty || activeServerSaves) throw new Error("El inventario sigue recibiendo cambios. Termine de editar y vuelva a intentar el ingreso.");
+    return { savedAt: serverSavedAt };
   }
 
   function activeItems() {
@@ -1469,12 +1512,193 @@
     const refresh = () => { if (visible()) refreshWarehouseFromServer(); };
     window.addEventListener("focus", refresh);
     window.addEventListener("storage", (event) => { if (event.key === STORAGE_KEY) refresh(); });
+    window.addEventListener("online", () => { if (warehouseDirty) saveState({ silent: true }); });
     document.addEventListener("visibilitychange", refresh);
     elements.root.addEventListener("focusout", () => window.setTimeout(refresh, 0));
     if (page && typeof MutationObserver === "function") {
       new MutationObserver(refresh).observe(page, { attributes: true, attributeFilter: ["class"] });
     }
     window.setInterval(refresh, 5000);
+  }
+
+  function manualRelatedRecords(itemId, type) {
+    const pairs = {
+      ingreso_evento: [["salida", "ingreso_evento"]],
+      devolucion_taller: [["taller", "devolucion_taller"]],
+      devolucion_renta: [["renta", "devolucion_renta"]],
+      recuperado: [["perdido", "recuperado"]],
+      perdido: [["salida", "ingreso_evento"], ["taller", "devolucion_taller"], ["renta", "devolucion_renta"]],
+      baja: [["salida", "ingreso_evento"], ["taller", "devolucion_taller"], ["renta", "devolucion_renta"], ["perdido", "recuperado"]]
+    };
+    return (pairs[type] || []).flatMap(([outgoing, returned]) => movementLifecycleRecords(outgoing, returned))
+      .filter((record) => record.movement.itemId === itemId && record.remainingQuantity > 0);
+  }
+
+  function renderManualMovementContext() {
+    if (!elements.movementRelated || !state) return;
+    const item = itemById(elements.movementItem.value);
+    const type = elements.movementType.value;
+    const records = manualRelatedRecords(item?.id || "", type);
+    const current = elements.movementRelated.value;
+    const needsReturn = ["ingreso_evento", "devolucion_taller", "devolucion_renta", "recuperado"].includes(type);
+    elements.movementRelatedLabel.hidden = !needsReturn && !["perdido", "baja"].includes(type);
+    elements.movementRelated.innerHTML = [
+      `<option value="">${needsReturn ? "Seleccione el movimiento pendiente" : "Disponible en bodega"}</option>`,
+      ...records.map((record) => `<option value="${escapeHtml(record.movement.id)}">${escapeHtml(movementLabels[record.movement.type])} · ${escapeHtml(displayDateTime(record.movement))} · ${escapeHtml(record.movement.reference || "Sin evento")} · ${escapeHtml(record.remainingQuantity)} pendientes</option>`)
+    ].join("");
+    elements.movementRelated.value = records.some((record) => record.movement.id === current) ? current : "";
+    const stats = item ? statsForItem(item) : null;
+    const instructions = {
+      ingreso: "El ingreso suma la cantidad al inventario registrado una sola vez.",
+      baja: "La baja retira la cantidad del inventario registrado. Si ya estaba fuera, en taller o extraviada, seleccione ese movimiento para descontarla una sola vez.",
+      perdido: "Seleccione dónde estaba el equipo. Un extravío desde evento, taller o renta cambia su ubicación sin descontarlo dos veces.",
+      ingreso_evento: "Seleccione la salida que devuelve. Solo puede devolver la cantidad pendiente.",
+      devolucion_taller: "Seleccione la salida a taller que regresa.",
+      devolucion_renta: "Seleccione la renta que devuelve.",
+      recuperado: "Seleccione el extravío que recupera. La recuperación no vuelve a sumar equipo al inventario registrado."
+    };
+    elements.movementHelp.textContent = `${stats ? `Registrado: ${item.quantity} · Disponible en bodega: ${stats.physical}. ` : ""}${instructions[type] || "La salida utiliza únicamente la cantidad disponible en bodega."}`;
+  }
+
+  function renderManualMovementItems() {
+    if (!elements.movementItem || !state) return;
+    const current = elements.movementItem.value;
+    const items = activeItems();
+    elements.movementItem.innerHTML = ['<option value="">Seleccione un equipo</option>',
+      ...items.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)} · ${escapeHtml(item.category)}</option>`)
+    ].join("");
+    elements.movementItem.value = items.some((item) => item.id === current) ? current : "";
+    renderManualMovementContext();
+  }
+
+  function movementSourceFields(movement) {
+    const fields = {};
+    ["sourceType", "sourceDocumentId", "sourceEventId", "sourceEventName", "sourceEventPlace", "sourcePlanner",
+      "sourceEventDate", "sourceExpectedReturnAt", "sourcePdfUrl", "sourceJsonUrl", "sourceFileName", "sourceJsonFileName",
+      "sourceCategory", "sourceRequestedName", "sourceLineKey", "sourceUnmatched", "procurementChoice", "procurementAction"]
+      .forEach((key) => { if (movement?.[key] !== undefined) fields[key] = movement[key]; });
+    return fields;
+  }
+
+  function applyManualWarehouseMovement(payload) {
+    const item = itemById(payload.itemId);
+    const type = normalizeText(payload.type);
+    const quantity = normalizeNumber(payload.quantity);
+    const responsible = normalizeText(payload.responsible);
+    const reason = normalizeText(payload.reason);
+    const dateTime = normalizeText(payload.dateTime);
+    if (!item || item.archived) throw new Error("Seleccione un equipo activo del inventario.");
+    if (!["ingreso", "salida", "ingreso_evento", "taller", "devolucion_taller", "renta", "devolucion_renta", "perdido", "recuperado", "baja"].includes(type)) throw new Error("Seleccione un tipo de movimiento válido.");
+    if (!quantity || !Number.isInteger(Number(payload.quantity))) throw new Error("La cantidad debe ser un número entero mayor a 0.");
+    if (type === "renta" && isConsumableItem(item)) throw new Error("Los consumibles se compran; no se registran en renta.");
+    if (!responsible || !reason || !dateTime || !Number.isFinite(new Date(dateTime).getTime())) throw new Error("Complete fecha y hora, responsable y motivo del movimiento.");
+    const record = manualRelatedRecords(item.id, type).find((entry) => entry.movement.id === payload.relatedMovementId);
+    const requiresRecord = ["ingreso_evento", "devolucion_taller", "devolucion_renta", "recuperado"].includes(type);
+    if ((requiresRecord || payload.relatedMovementId) && !record) throw new Error("Seleccione un movimiento pendiente del equipo.");
+    if (record && quantity > record.remainingQuantity) throw new Error(`Solo quedan ${record.remainingQuantity} unidades pendientes en ese movimiento.`);
+    if (!record && type !== "ingreso" && quantity > statsForItem(item).physical) throw new Error(`Solo hay ${statsForItem(item).physical} unidades disponibles en bodega.`);
+    if (type === "baja" && quantity > normalizeNumber(item.quantity)) throw new Error("La baja supera la cantidad registrada del equipo.");
+    const base = { itemId: item.id, quantity, dateTime, responsible, notes: reason, reference: record?.movement.reference || reason,
+      ...(record ? movementSourceFields(record.movement) : {}) };
+    if (record && ["perdido", "baja"].includes(type)) {
+      const transferType = { salida: "ingreso_evento", taller: "devolucion_taller", renta: "devolucion_renta", perdido: "recuperado" }[record.movement.type];
+      if (!addMovement({ ...base, type: transferType, relatedMovementId: record.movement.id,
+        notes: `${reason}. Traslado a ${movementLabels[type]} desde ${movementLabels[record.movement.type]}; sin recepción física en bodega.` })) throw new Error("No se pudo trasladar el movimiento pendiente.");
+    }
+    if (!addMovement({ ...base, type, ...(requiresRecord ? { relatedMovementId: record.movement.id } : {}) })) throw new Error("No se pudo registrar el movimiento.");
+    return true;
+  }
+
+  async function registerManualMovement(event) {
+    event?.preventDefault();
+    const button = elements.movementSaveButton;
+    if (button.disabled) return;
+    try {
+      if (!manualMovementPendingSave) {
+        applyManualWarehouseMovement({ itemId: elements.movementItem.value, type: elements.movementType.value,
+          quantity: elements.movementQuantity.value, dateTime: elements.movementDateTime.value,
+          responsible: elements.movementResponsible.value, reason: elements.movementReason.value,
+          relatedMovementId: elements.movementRelated.value });
+        manualMovementPendingSave = true;
+        scheduleSave();
+        renderAll();
+      }
+      button.disabled = true;
+      elements.movementMessage.textContent = "Guardando movimiento en servidor...";
+      elements.movementMessage.dataset.tone = "neutral";
+      [...elements.movementForm.querySelectorAll("input, select, textarea")].forEach((field) => { field.disabled = true; });
+      await flushWarehouseInventoryChanges();
+      manualMovementPendingSave = false;
+      elements.movementQuantity.value = "1";
+      elements.movementReason.value = "";
+      elements.movementDateTime.value = dateTimeLocalValue();
+      button.textContent = "Registrar y guardar movimiento";
+      elements.movementMessage.textContent = "Movimiento guardado. El inventario y el historial se actualizaron.";
+      elements.movementMessage.dataset.tone = "success";
+      [...elements.movementForm.querySelectorAll("input, select, textarea")].forEach((field) => { field.disabled = false; });
+      renderManualMovementContext();
+    } catch (error) {
+      elements.movementMessage.textContent = error.message;
+      elements.movementMessage.dataset.tone = "warning";
+      if (manualMovementPendingSave) button.textContent = "Reintentar guardar el movimiento";
+    } finally { button.disabled = false; }
+  }
+
+  function auditActionLabel(action) {
+    return movementLabels[action] || { alta: "Alta de equipo", cambio_cantidad: "Cambio de cantidad", edicion: "Edición de equipo",
+      archivado: "Equipo archivado", reactivado: "Equipo reactivado", eliminacion: "Eliminación de equipo",
+      edicion_movimiento: "Edición de movimiento", eliminacion_bitacora: "Eliminación de bitácora" }[action] || normalizeText(action).replaceAll("_", " ");
+  }
+
+  function auditQuantityLabel(value) {
+    return value !== null && value !== undefined && Number.isFinite(Number(value)) ? String(Number(value)) : "—";
+  }
+
+  function auditDetails(entry) {
+    const labels = { name: "Nombre", description: "Descripción", category: "Categoría", quantity: "Cantidad", notes: "Observaciones",
+      archived: "Archivado", type: "Movimiento", responsible: "Responsable", reference: "Evento / referencia", dateTime: "Fecha y hora",
+      repair: "Falla", sparePart: "Repuesto", itemType: "Tipo de equipo", procurementAction: "Acción solicitada" };
+    return Object.keys(labels).filter((key) => entry.before?.[key] !== entry.after?.[key] && (entry.before?.[key] !== undefined || entry.after?.[key] !== undefined))
+      .map((key) => `<dt>${labels[key]}</dt><dd>${escapeHtml(entry.before?.[key] ?? "—")} → ${escapeHtml(entry.after?.[key] ?? "—")}</dd>`).join("");
+  }
+
+  function renderWarehouseHistory() {
+    if (!elements.historyList || !state) return;
+    const entries = Array.isArray(state.auditEntries) ? state.auditEntries : [];
+    const selectedType = elements.historyType.value || "all";
+    const actions = [...new Set(entries.map((entry) => normalizeText(entry.action)).filter(Boolean))];
+    elements.historyType.innerHTML = ['<option value="all">Todos</option>', ...actions.map((action) => `<option value="${escapeHtml(action)}">${escapeHtml(auditActionLabel(action))}</option>`)].join("");
+    elements.historyType.value = actions.includes(selectedType) ? selectedType : "all";
+    const search = warehouseCanonicalKey(elements.historySearch.value);
+    const filtered = entries.filter((entry) => (elements.historyType.value === "all" || entry.action === elements.historyType.value)
+      && (!search || warehouseCanonicalKey([entry.description, entry.category, entry.action, auditActionLabel(entry.action), entry.actor?.name,
+        entry.actor?.username, entry.after?.responsible, entry.after?.notes, entry.after?.reference, entry.event?.name, entry.source].join(" ")).includes(search)))
+      .slice().sort((first, second) => normalizeText(second.timestamp).localeCompare(normalizeText(first.timestamp)));
+    const pageCount = Math.max(1, Math.ceil(filtered.length / HISTORY_PAGE_SIZE));
+    historyPage = Math.max(1, Math.min(historyPage, pageCount));
+    const start = (historyPage - 1) * HISTORY_PAGE_SIZE;
+    const pageEntries = filtered.slice(start, start + HISTORY_PAGE_SIZE);
+    elements.historyCount.textContent = `${filtered.length} registros${filtered.length ? ` · Mostrando ${start + 1}–${start + pageEntries.length}` : ""}`;
+    elements.historyPage.textContent = `Página ${historyPage} de ${pageCount}`;
+    elements.historyPrevious.disabled = historyPage <= 1;
+    elements.historyNext.disabled = historyPage >= pageCount;
+    elements.historyList.innerHTML = pageEntries.length ? pageEntries.map((entry) => {
+      const details = auditDetails(entry);
+      const hasInventoryQuantity = entry.previousQuantity !== undefined && entry.previousQuantity !== null
+        || entry.newQuantity !== undefined && entry.newQuantity !== null;
+      const hasMovementQuantity = entry.quantity !== undefined && entry.quantity !== null;
+      const timestamp = new Date(entry.timestamp);
+      const date = Number.isFinite(timestamp.getTime()) ? timestamp.toLocaleString("es-GT", { timeZone: "America/Guatemala" }) : normalizeText(entry.timestamp);
+      return `<article class="warehouse-log-entry warehouse-history-entry">
+        <div><span class="warehouse-log-type">${escapeHtml(auditActionLabel(entry.action))}</span>
+          <strong>${escapeHtml(entry.description || entry.after?.itemName || entry.after?.name || "Cambio de inventario")}</strong>
+          <small>${escapeHtml(date)} · Usuario: ${escapeHtml(entry.actor?.name || entry.actor?.username || "Sin usuario registrado")}</small>
+          ${hasInventoryQuantity || hasMovementQuantity ? `<p>${hasInventoryQuantity ? `Inventario: ${escapeHtml(auditQuantityLabel(entry.previousQuantity))} → ${escapeHtml(auditQuantityLabel(entry.newQuantity))}` : ""}${hasMovementQuantity ? `${hasInventoryQuantity ? " · " : ""}Cantidad del movimiento: ${escapeHtml(auditQuantityLabel(entry.quantity))}` : ""}</p>` : ""}
+          ${entry.after?.notes ? `<p>Motivo: ${escapeHtml(entry.after.notes)}</p>` : ""}
+          ${entry.after?.responsible ? `<small>Responsable: ${escapeHtml(entry.after.responsible)}</small>` : ""}
+          ${entry.event?.name || entry.source ? `<small>Origen: ${escapeHtml(entry.event?.name || entry.source)}</small>` : ""}
+        </div>${details ? `<details><summary>Ver detalle del cambio</summary><dl>${details}</dl></details>` : ""}</article>`;
+    }).join("") : `<p class="warehouse-empty">${entries.length ? "No hay cambios guardados que coincidan con estos filtros." : "Los cambios nuevos aparecerán aquí al guardarse en servidor. Las bitácoras previas siguen disponibles en Bitácoras."}</p>`;
   }
 
   function renderAll() {
@@ -1488,6 +1712,8 @@
     renderRentalDraft();
     renderRentedBoard();
     renderLog();
+    renderManualMovementItems();
+    renderWarehouseHistory();
     publishWarehouseAvailability();
   }
 
@@ -1594,7 +1820,7 @@
     item.updatedAt = new Date().toISOString();
     scheduleSave();
     renderAll();
-    setStatus("Cambio guardado.", "success");
+    setStatus("Cambio registrado. Guardando en servidor...", "neutral");
   }
 
   function addNewItem() {
@@ -1651,7 +1877,7 @@
     elements.newNotes.value = "";
     scheduleSave();
     renderAll();
-    setStatus("Equipo agregado al inventario.", "success");
+    setStatus("Equipo registrado. Guardando en servidor...", "neutral");
     completePurchaseDraft(name);
   }
 
@@ -1668,7 +1894,7 @@
     scheduleSave();
     renderCategoryFilter();
     renderInventoryTable();
-    setStatus("Subtítulo agregado. Ya puede agregar equipo en esa categoría.", "success");
+    setStatus("Subtítulo agregado. Guardando en servidor...", "neutral");
   }
 
   function movementReducesPhysical(type) {
@@ -1684,6 +1910,11 @@
       return false;
     }
     const stats = item ? statsForItem(item) : null;
+    if (["ingreso", "baja"].includes(payload.type) && !item) return false;
+    if (payload.type === "baja" && quantity > stats.physical) {
+      setStatus("La baja supera el equipo disponible. Seleccione el movimiento relacionado si estaba fuera, en taller o extraviado.", "warning");
+      return false;
+    }
     if (item && movementReducesPhysical(payload.type) && quantity > stats.physical) {
       const ok = window.confirm(
         `Total físico en bodega: ${stats.physical}. ¿Desea registrar ${quantity} y dejar faltante?`
@@ -1691,6 +1922,10 @@
       if (!ok) return false;
     }
 
+    const previousQuantity = item && ["ingreso", "baja"].includes(payload.type) ? normalizeNumber(item.quantity) : null;
+    if (payload.type === "ingreso") item.quantity = previousQuantity + quantity;
+    if (payload.type === "baja") item.quantity = previousQuantity - quantity;
+    if (previousQuantity !== null) item.updatedAt = new Date().toISOString();
     const dateTime = normalizeText(payload.dateTime || payload.date) || dateTimeLocalValue();
     state.movements.push({
       id: uid("movement"),
@@ -1698,7 +1933,8 @@
       itemId: item?.id || "",
       itemName: item?.name || normalizeText(payload.itemName),
       quantity,
-      previousQuantity: null,
+      previousQuantity,
+      newQuantity: previousQuantity !== null ? normalizeNumber(item.quantity) : null,
       date: dateTime.slice(0, 10) || todayInputValue(),
       dateTime,
       responsible: normalizeText(payload.responsible),
@@ -2044,7 +2280,7 @@
       switchWindow("events");
       scheduleSave();
       renderAll();
-      setStatus("Devolución completa del cuadro registrada.", "success");
+      setStatus("Devolución registrada. Guardando en servidor...", "neutral");
       return;
     }
     const item = itemById(dialogContext.itemId);
@@ -2157,7 +2393,7 @@
     closeDialog();
     scheduleSave();
     renderAll();
-    setStatus("Movimiento guardado.", "success");
+    setStatus("Movimiento registrado. Guardando en servidor...", "neutral");
   }
 
   function updateRentalDraftField(target) {
@@ -2204,7 +2440,7 @@
     elements.workshopBulkQuantity.value = "1";
     scheduleSave();
     renderWorkshopDraft();
-    setStatus("Equipo agregado a la lista múltiple. Use Enviar lista a taller para registrar la salida.", "success");
+    setStatus("Equipo agregado a la lista múltiple. Guardando lista; use Enviar lista a taller para registrar la salida.", "neutral");
   }
 
   function updateWorkshopDraftField(target) {
@@ -2489,7 +2725,7 @@
     elements.rentalDate.value = dateTimeLocalValue();
     scheduleSave();
     renderAll();
-    setStatus("Renta registrada. Use la ventana abierta para guardar como PDF.", "success");
+    setStatus("Renta registrada. Guardando en servidor; use la ventana abierta para guardar como PDF.", "neutral");
   }
 
   function printEventPdf(groupKey) {
@@ -2681,6 +2917,19 @@
     const ok = window.confirm("¿Eliminar esta bitácora? El inventario se recalculará automáticamente.");
     if (!ok) return;
 
+    if (["ingreso", "baja"].includes(movement.type)) {
+      const item = itemById(movement.itemId);
+      if (item) {
+        const correctedQuantity = normalizeNumber(item.quantity) + (movement.type === "ingreso" ? -1 : 1) * normalizeNumber(movement.quantity);
+        if (correctedQuantity < statsForItem(item).reserved) {
+          setStatus("No se puede quitar este ingreso: la cantidad está comprometida en movimientos posteriores. Corrija primero esos movimientos.", "warning");
+          return;
+        }
+        item.quantity = correctedQuantity;
+        item.updatedAt = new Date().toISOString();
+      }
+    }
+
     if (movement.type === "ajuste" && movement.previousQuantity !== null) {
       const item = itemById(movement.itemId);
       if (item) {
@@ -2691,7 +2940,7 @@
     state.movements = state.movements.filter((entry) => entry.id !== id);
     scheduleSave();
     renderAll();
-    setStatus("Bitácora eliminada.", "success");
+    setStatus("Corrección registrada. Guardando en servidor...", "neutral");
   }
 
   function exportBackup() {
@@ -2863,7 +3112,7 @@
           persistenceMode = "server";
         });
       } else persistenceMode = "local";
-      state = next;
+      state = review.savedPayload?.state ? normalizeState(review.savedPayload.state) : next;
       warehouseDirty = false;
       saveLocalState();
       renderAll();
@@ -2947,6 +3196,14 @@
     elements.addWorkshopDraftButton.addEventListener("click", addWorkshopDraftLine);
     elements.registerWorkshopDraftButton.addEventListener("click", registerWorkshopDraft);
     elements.clearWorkshopDraftButton.addEventListener("click", clearWorkshopDraft);
+    elements.movementForm.addEventListener("submit", registerManualMovement);
+    [elements.movementItem, elements.movementType].forEach((input) => input.addEventListener("change", renderManualMovementContext));
+    [elements.historySearch, elements.historyType].forEach((input) => {
+      input.addEventListener("input", () => { historyPage = 1; renderWarehouseHistory(); });
+      input.addEventListener("change", () => { historyPage = 1; renderWarehouseHistory(); });
+    });
+    elements.historyPrevious.addEventListener("click", () => { historyPage -= 1; renderWarehouseHistory(); });
+    elements.historyNext.addEventListener("click", () => { historyPage += 1; renderWarehouseHistory(); });
 
     elements.windowButtons.forEach((button) => {
       button.addEventListener("click", () => switchWindow(button.dataset.warehouseWindow));
@@ -3087,6 +3344,25 @@
       logSearch: root.querySelector("#warehouseLogSearch"),
       logTypeFilter: root.querySelector("#warehouseLogTypeFilter"),
       logList: root.querySelector("#warehouseLogList"),
+      movementForm: root.querySelector("#warehouseMovementForm"),
+      movementItem: root.querySelector("#warehouseMovementItem"),
+      movementType: root.querySelector("#warehouseMovementType"),
+      movementQuantity: root.querySelector("#warehouseMovementQuantity"),
+      movementDateTime: root.querySelector("#warehouseMovementDateTime"),
+      movementResponsible: root.querySelector("#warehouseMovementResponsible"),
+      movementReason: root.querySelector("#warehouseMovementReason"),
+      movementRelated: root.querySelector("#warehouseMovementRelated"),
+      movementRelatedLabel: root.querySelector("#warehouseMovementRelatedLabel"),
+      movementHelp: root.querySelector("#warehouseMovementHelp"),
+      movementMessage: root.querySelector("#warehouseMovementMessage"),
+      movementSaveButton: root.querySelector("#warehouseMovementSaveButton"),
+      historySearch: root.querySelector("#warehouseHistorySearch"),
+      historyType: root.querySelector("#warehouseHistoryType"),
+      historyCount: root.querySelector("#warehouseHistoryCount"),
+      historyList: root.querySelector("#warehouseHistoryList"),
+      historyPage: root.querySelector("#warehouseHistoryPage"),
+      historyPrevious: root.querySelector("#warehouseHistoryPrevious"),
+      historyNext: root.querySelector("#warehouseHistoryNext"),
       dialog: root.querySelector("#warehouseActionDialog"),
       dialogTitle: root.querySelector("#warehouseDialogTitle"),
       dialogBody: root.querySelector("#warehouseDialogBody"),
@@ -3102,6 +3378,7 @@
     if (!collectElements()) return;
     elements.rentalDate.value = dateTimeLocalValue();
     elements.workshopBulkDateTime.value = dateTimeLocalValue();
+    elements.movementDateTime.value = dateTimeLocalValue();
     initSignaturePad("workshopWarehouse", elements.workshopWarehouseSignature);
     initSignaturePad("workshopShop", elements.workshopShopSignature);
     bindEvents();
@@ -3119,6 +3396,7 @@
     receivePurchaseRequest(event.detail);
   });
   window.prepareWarehousePurchase = receivePurchaseRequest;
+  window.flushWarehouseInventoryChanges = flushWarehouseInventoryChanges;
 
   document.addEventListener("live:warehouse-server-updated", (event) => {
     if (elements.root && applyRemoteWarehouse(event.detail)) {

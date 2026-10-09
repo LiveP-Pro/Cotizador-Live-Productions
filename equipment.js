@@ -28,6 +28,8 @@ const equipmentState = {
   selectedExtraIds: new Set(),
   manualMainItems: [],
   manualMainSections: [],
+  documentSections: [],
+  documentServiceName: "",
   manualExtras: [],
   itemOverrides: new Map(),
   sectionAddedItems: new Map(),
@@ -40,6 +42,9 @@ const equipmentState = {
   rentPreviewVisible: false,
   purchasePreviewVisible: false,
   rentalOverrides: new Map(),
+  pendingStockIngressRequest: null,
+  completedStockIngressBySourceId: new Map(),
+  stockIngressSaving: false,
   servicePickerOpen: false,
   summarySearchTerm: "",
   summaryTransferEnabled: false,
@@ -155,7 +160,13 @@ function equipmentItemInventoryMetadata(item) {
   return {
     ...(item?.warehouseInventoryId ? { warehouseInventoryId: String(item.warehouseInventoryId) } : {}),
     ...(item?.inventoryCategory ? { inventoryCategory: String(item.inventoryCategory) } : {}),
-    ...(["save", "rent", "purchase"].includes(item?.procurementChoice) ? { procurementChoice: item.procurementChoice } : {})
+    ...(["save", "rent", "purchase"].includes(item?.procurementChoice) ? { procurementChoice: item.procurementChoice } : {}),
+    ...(Array.isArray(item?.inventoryIngressReceipts) && item.inventoryIngressReceipts.length ? {
+      inventoryIngressReceipts: item.inventoryIngressReceipts.map((receipt) => ({
+        requestId: String(receipt.requestId || ""), itemId: String(receipt.itemId || ""),
+        quantity: Math.max(0, Number(receipt.quantity) || 0), index: Number(receipt.index) || 0
+      }))
+    } : {})
   };
 }
 
@@ -163,6 +174,7 @@ function equipmentPendingProcurementChoice(item) {
   const choice = item?.procurementChoice;
   if (!["save", "rent", "purchase"].includes(choice)) return "";
   if (choice === "rent") return choice;
+  if (choice === "save" && item?.inventoryIngressReceipts?.length) return "";
   const records = equipmentWarehouseRecordsForItem(item);
   return records.length === 1 || (!equipmentWarehouseInventoryState.loaded && equipmentRecognizedInventoryChoice(item?.description)) ? "" : choice;
 }
@@ -890,7 +902,14 @@ function equipmentServicesLabel(services = currentEquipmentServices(), fallback 
 
 function currentEquipmentService() {
   const services = currentEquipmentServices();
-  if (!services.length) return null;
+  if (!services.length) return equipmentState.documentSections.length ? {
+    id: "document-import",
+    serviceId: "",
+    name: equipmentState.documentServiceName || "Cuadro importado",
+    documentOnly: true,
+    mainSections: equipmentState.documentSections,
+    extras: []
+  } : null;
   if (services.length === 1) return services[0];
   return {
     id: "multiple-services",
@@ -1115,7 +1134,7 @@ function ensureManualMainSection() {
 
 function selectedEquipmentSections() {
   const services = currentEquipmentServices();
-  if (!services.length) return [];
+  if (!services.length && !equipmentState.documentSections.length) return [];
   const hasMultipleServices = services.length > 1;
   const mainSections = services.flatMap((service) => {
     return (service.mainSections || []).map((section, index) => {
@@ -1159,7 +1178,46 @@ function selectedEquipmentSections() {
         }
       ]
     : [];
-  return [...mainSections, ...selectedExtrasSections, ...manualExtrasSection, ...manualMainSection];
+  return [...mainSections, ...equipmentDocumentSectionsForTable(), ...selectedExtrasSections, ...manualExtrasSection, ...manualMainSection];
+}
+
+function equipmentDocumentSectionsForTable() {
+  return equipmentState.documentSections.map((section) => ({
+    ...section,
+    documentSection: true,
+    items: [
+      ...(section.items || []).filter((item) => !equipmentState.removedItemIds.has(item.id))
+        .map((item) => ({ ...normalizeEquipmentItem(item), editable: true, manual: false })),
+      ...cloneEquipmentSnapshotItems(equipmentState.sectionAddedItems.get(section.id) || [])
+        .map((item) => ({ ...item, editable: true, manual: true }))
+    ]
+  }));
+}
+
+function equipmentDocumentSectionsForEvent(event = {}) {
+  let sections;
+  if (Array.isArray(event.documentSections)) sections = event.documentSections;
+  else if (!equipmentNormalizeServiceIds(event.serviceIds?.length ? event.serviceIds : event.serviceId).length) {
+    const manualIds = new Set((event.manualMainSections || []).map((section) => section.id).filter(Boolean));
+    if (event.manualMainItems?.length) manualIds.add("equipo-manual");
+    if (event.manualExtras?.length) manualIds.add("extras-manuales");
+    sections = (event.sections || []).filter((section) => !manualIds.has(section.id));
+  } else sections = [];
+  return cloneEquipmentSnapshotSections(sections).map((section, sectionIndex) => {
+    const id = sections[sectionIndex]?.id || `document-section-${sectionIndex}`;
+    return {
+      ...section,
+      id,
+      documentSection: true,
+      items: section.items.map((item, itemIndex) => ({
+        ...item,
+        id: sections[sectionIndex]?.items?.[itemIndex]?.id || `${id}-document-item-${itemIndex}`,
+        ...(Array.isArray(section.rows) && !Number.isInteger(item.sourceItemIndex) ? { sourceItemIndex: itemIndex } : {}),
+        editable: true,
+        manual: false
+      }))
+    };
+  });
 }
 
 function warehousePdfSections() {
@@ -1179,6 +1237,7 @@ function equipmentSourceRowsForItems(rows, items) {
 function equipmentLiveSectionsForDisplay(sections) {
   if (!equipmentWarehouseInventoryState.loaded) return sections;
   return (Array.isArray(sections) ? sections : []).flatMap((section) => {
+    if (section.documentSection) return [{ ...section, items: [...(section.items || [])] }];
     if (!section?.items?.length) return [{ ...section, items: [] }];
     const displayed = [];
     section.items.forEach((rawItem) => {
@@ -1251,6 +1310,7 @@ function cloneEquipmentSnapshotSections(sections = []) {
     id: section.id || `snapshot-section-${index}`,
     title: section.title || "",
     ...(section.manualSection ? { manualSection: true } : {}),
+    ...(section.documentSection ? { documentSection: true } : {}),
     ...(section.inventoryCategory ? { inventoryCategory: section.inventoryCategory } : {}),
     ...(Array.isArray(section.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
     ...(Array.isArray(section.notes) ? { notes: [...section.notes] } : {}),
@@ -1284,7 +1344,9 @@ function captureEquipmentEventSnapshot() {
   return {
     serviceIds,
     serviceId: serviceIds[0] || "",
-    serviceName: equipmentServicesLabel(services, ""),
+    serviceName: equipmentServicesLabel(services, equipmentState.documentServiceName),
+    documentSections: cloneEquipmentSnapshotSections(equipmentState.documentSections),
+    documentServiceName: equipmentState.documentServiceName,
     djAudioType: equipmentState.djAudioType,
     selectedExtraIds: [...equipmentState.selectedExtraIds],
     manualMainItems: cloneEquipmentSnapshotItems(equipmentState.manualMainItems),
@@ -1320,6 +1382,9 @@ function restoreEquipmentEventSnapshot(event) {
     ? event.serviceIds
     : event.serviceId;
   setEquipmentServiceSelection(restoredServiceIds);
+  equipmentState.documentSections = equipmentDocumentSectionsForEvent(event);
+  equipmentState.documentServiceName = equipmentState.documentSections.length
+    ? event.documentServiceName || event.serviceName || "Cuadro importado" : "";
   equipmentState.djAudioType = event.djAudioType || "qsc";
   equipmentState.selectedExtraIds = new Set(event.selectedExtraIds || []);
   equipmentState.manualMainItems = cloneEquipmentSnapshotItems(event.manualMainItems || []);
@@ -1365,13 +1430,16 @@ function syncActiveEquipmentEvent() {
 }
 
 function sectionsForEquipmentEvent(event) {
-  if (event?.sections?.length) return cloneEquipmentSnapshotSections(event.sections);
+  if (event?.sections?.length || Array.isArray(event?.documentSections)) {
+    return cloneEquipmentSnapshotSections(event.sections || event.documentSections);
+  }
   return selectedEquipmentSections();
 }
 
 function loadEquipmentEvent(eventId) {
   const event = equipmentState.events.find((item) => item.id === eventId);
   if (!event) return;
+  if (equipmentState.documentSections.length && equipmentState.selectedEventId !== eventId) syncActiveEquipmentEvent();
   equipmentState.selectedEventId = event.id;
   restoreEquipmentEventSnapshot(event);
   populateEquipmentEventFields(event);
@@ -2257,6 +2325,15 @@ function tableForEquipmentSections(sections, compact = false) {
           const content = row.description || (row.cells || []).map((cell) => String(cell.value ?? "")).join(" · ");
           return '<tr class="equipment-imported-note-row" data-source-row-type="' + escapeEquipmentHtml(row.type) + '"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(content) + '</td></tr>';
         }).join("") + itemMarkup.filter((_, index) => !included.has(index)).join("");
+        if (section.documentSection && Array.isArray(section.notes)) {
+          const representedNotes = new Set(section.rows.flatMap((row) => [
+            row.description,
+            ...(row.notes || []),
+            ...(row.cells || []).map((cell) => String(cell.value ?? ""))
+          ]).filter(Boolean));
+          items += section.notes.filter((note) => !representedNotes.has(note))
+            .map((note) => '<tr class="equipment-imported-note-row"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(note) + '</td></tr>').join("");
+        }
       } else if (Array.isArray(section.notes)) {
         items += section.notes.map((note) => '<tr class="equipment-imported-note-row"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(note) + '</td></tr>').join("");
       }
@@ -2399,7 +2476,7 @@ function addEquipmentEvent() {
   const draft = currentEquipmentEventDraft();
   const status = equipmentQuery("#equipmentSaveStatus");
   const serviceIds = selectedEquipmentServiceIds();
-  if (!serviceIds.length) {
+  if (!serviceIds.length && !equipmentState.documentSections.length) {
     if (status) status.textContent = "Seleccione el tipo de servicio antes de crear una ventana.";
     return;
   }
@@ -2451,6 +2528,8 @@ function refreshEquipmentSummaryAndPreview() {
 }
 
 function updateEquipmentItem(itemId, field, value) {
+  const documentItem = equipmentState.documentSections.flatMap((section) => section.items || [])
+    .find((item) => item.id === itemId);
   let manualMain = equipmentState.manualMainItems.find((item) => item.id === itemId);
   if (!manualMain) {
     for (const section of equipmentState.manualMainSections) {
@@ -2465,14 +2544,20 @@ function updateEquipmentItem(itemId, field, value) {
     }
   }
   const manualExtra = equipmentState.manualExtras.find((item) => item.id === itemId);
-  const target = manualMain || manualExtra;
+  const target = documentItem || manualMain || manualExtra;
   const nextValue = field === "quantity" ? Number(value || 0) || 0 : String(value || "");
   if (target) {
-    if (field === "quantity" && (!Number.isInteger(nextValue) || nextValue < 1)) return;
+    if (field === "quantity" && (!Number.isInteger(nextValue) || nextValue < (documentItem ? 0 : 1)
+      || (documentItem && !Number.isFinite(Number(value))))) return;
     if (field === "description") {
       delete target.warehouseInventoryId;
       delete target.inventoryCategory;
-      if (equipmentInventoryCanonicalKey(target.description) !== equipmentInventoryCanonicalKey(nextValue)) delete target.procurementChoice;
+      if (equipmentInventoryCanonicalKey(target.description) !== equipmentInventoryCanonicalKey(nextValue)) {
+        delete target.procurementChoice;
+        delete target.inventoryIngressReceipts;
+        delete target.stockIngressSourceId;
+        delete target.pendingProcurementChoice;
+      }
     }
     target[field] = nextValue;
     return;
@@ -3226,11 +3311,24 @@ async function equipmentExtraFromInputs(quantityInput, descriptionInput, rowLabe
       descriptionInput?.focus();
       return null;
     }
-    return { quantity, ...equipmentExtraChoiceMetadata(choice) };
+    const recorded = equipmentState.completedStockIngressBySourceId.get(descriptionInput?.dataset?.stockIngressSourceId);
+    const sameRecordedItem = recorded && choice.warehouseInventoryId === recorded.item.itemId;
+    return { quantity, ...equipmentExtraChoiceMetadata(choice), ...(sameRecordedItem ? {
+      procurementChoice: "save", inventoryIngressReceipts: [recorded.receipt]
+    } : {}) };
   }
   const extra = { quantity, description, inventoryCategory: choice?.category || "Extras manuales" };
   const procurementChoice = await requestEquipmentUnknownChoice(extra);
-  return procurementChoice ? { ...extra, procurementChoice } : null;
+  if (!procurementChoice) return null;
+  if (procurementChoice === "save" && descriptionInput?.dataset) {
+    const fingerprint = JSON.stringify([description, quantity, extra.inventoryCategory, equipmentState.selectedEventId || equipmentState.draftWarehouseDispatchId]);
+    if (descriptionInput.dataset.stockIngressFingerprint !== fingerprint) {
+      descriptionInput.dataset.stockIngressFingerprint = fingerprint;
+      descriptionInput.dataset.stockIngressSourceId = createEquipmentWarehouseDispatchId();
+    }
+    extra.stockIngressSourceId = descriptionInput.dataset.stockIngressSourceId;
+  }
+  return { ...extra, procurementChoice };
 }
 
 function requestEquipmentUnknownChoice(extra) {
@@ -3252,6 +3350,80 @@ function resolveEquipmentUnknownDecision(choice = null) {
   pending.resolve(["save", "rent", "purchase"].includes(choice) ? choice : null);
 }
 
+async function postPendingEquipmentStockIngress() {
+  const pending = equipmentState.pendingStockIngressRequest;
+  if (!pending) return null;
+  equipmentState.stockIngressSaving = true;
+  const root = equipmentQuery("#requerimientoEquipoPage");
+  const previousInert = root?.inert || false;
+  if (root) root.inert = true;
+  const status = equipmentQuery("#equipmentSaveStatus");
+  if (status) status.textContent = "Registrando el nuevo ingreso en Contabilidad de Equipo...";
+  try {
+    if (typeof window.flushWarehouseInventoryChanges === "function") await window.flushWarehouseInventoryChanges();
+    const response = await fetch("/api/inventario-bodega/ingresos-desde-equipo", {
+      method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId: pending.requestId, items: pending.items, event: pending.event })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if ([400, 413].includes(response.status)) equipmentState.pendingStockIngressRequest = null;
+      throw new Error(payload.error || "No se pudo confirmar el ingreso. Vuelve a intentar; se conservará la misma operación para evitar duplicados.");
+    }
+    const received = payload.receipt;
+    if (!payload.state || received?.requestId !== pending.requestId || !Array.isArray(received.items)
+        || received.items.length !== pending.items.length || received.items.some((entry, index) => (
+          !entry.itemId || Number(entry.quantity) !== pending.items[index].quantity
+        ))) {
+      throw new Error("El servidor no confirmó todas las líneas del ingreso. Vuelve a intentar la misma operación.");
+    }
+    pending.sourceIds.forEach((sourceId, index) => {
+      const item = received.items[index];
+      equipmentState.completedStockIngressBySourceId.set(sourceId, {
+        item,
+        receipt: { requestId: received.requestId, itemId: item.itemId, quantity: item.quantity, index }
+      });
+    });
+    equipmentState.pendingStockIngressRequest = null;
+    applyEquipmentWarehouseInventoryPayload(payload);
+    document.dispatchEvent(new CustomEvent("live:warehouse-server-updated", { detail: payload }));
+    return payload;
+  } finally {
+    equipmentState.stockIngressSaving = false;
+    if (root) root.inert = previousInert;
+  }
+}
+
+async function reconcilePendingEquipmentStockIngress() {
+  if (equipmentState.pendingStockIngressRequest) await postPendingEquipmentStockIngress();
+}
+
+async function registerSavedEquipmentExtras(items) {
+  await reconcilePendingEquipmentStockIngress();
+  const saved = items.filter((item) => item.procurementChoice === "save" && !item.inventoryIngressReceipts?.length);
+  if (!saved.length) return items;
+  saved.forEach((item) => { item.stockIngressSourceId ||= createEquipmentWarehouseDispatchId(); });
+  const unrecorded = saved.filter((item) => !equipmentState.completedStockIngressBySourceId.has(item.stockIngressSourceId));
+  if (unrecorded.length) {
+    const draft = currentEquipmentEventDraft();
+    equipmentState.pendingStockIngressRequest = {
+      requestId: createEquipmentWarehouseDispatchId(),
+      sourceIds: unrecorded.map((item) => item.stockIngressSourceId),
+      items: unrecorded.map((item) => ({ description: item.description, quantity: Number(item.quantity), category: item.inventoryCategory || "Extras manuales" })),
+      event: { id: equipmentState.selectedEventId || equipmentState.draftWarehouseDispatchId, name: draft.name, place: draft.place, date: draft.date }
+    };
+    await postPendingEquipmentStockIngress();
+  }
+  saved.forEach((item) => {
+    const recorded = equipmentState.completedStockIngressBySourceId.get(item.stockIngressSourceId);
+    if (!recorded) throw new Error("Falta la confirmación del ingreso de equipo.");
+    item.warehouseInventoryId = recorded.item.itemId;
+    item.inventoryCategory = recorded.item.category;
+    item.inventoryIngressReceipts = [recorded.receipt];
+  });
+  return items;
+}
+
 function sendEquipmentPurchaseRequest(items) {
   const purchases = new Map();
   items.filter((item) => item.procurementChoice === "purchase").forEach((item) => {
@@ -3269,39 +3441,76 @@ async function addEquipmentExtraBatch(inputs, onAdded) {
   if (equipmentExtraEntryBusy) return false;
   equipmentExtraEntryBusy = true;
   try {
+    await reconcilePendingEquipmentStockIngress();
     const extras = [];
     for (const input of inputs) {
       const extra = await equipmentExtraFromInputs(input.quantityInput, input.descriptionInput, input.rowLabel || "");
       if (!extra) return false;
       extras.push(extra);
     }
+    await registerSavedEquipmentExtras(extras);
     appendEquipmentExtraItems(extras);
     onAdded?.(extras);
+    inputs.forEach(({ descriptionInput }) => {
+      if (descriptionInput?.dataset) {
+        delete descriptionInput.dataset.stockIngressSourceId;
+        delete descriptionInput.dataset.stockIngressFingerprint;
+      }
+    });
     renderEquipmentModule();
     sendEquipmentPurchaseRequest(extras);
     return true;
+  } catch (error) {
+    const status = equipmentQuery("#equipmentSaveStatus");
+    if (status) { status.textContent = error.message || "No se pudo guardar el extra y su ingreso en bodega."; status.classList?.add("is-error"); }
+    return false;
   } finally {
     equipmentExtraEntryBusy = false;
   }
 }
 
 async function resolveEquipmentPendingExtraChoices() {
+  await reconcilePendingEquipmentStockIngress();
   const items = [
     ...equipmentState.manualMainItems,
     ...equipmentState.manualMainSections.flatMap((section) => section.items || []),
     ...equipmentState.manualExtras,
+    ...equipmentState.documentSections.flatMap((section) => section.items || [])
+      .filter((item) => !equipmentState.removedItemIds.has(item.id)),
     ...[...equipmentState.sectionAddedItems.values()].flat()
   ];
   const purchases = [];
   const decisions = [];
   for (const item of items) {
-    if (!String(item.description || "").trim() || equipmentRecognizedInventoryChoice(item.description) || item.procurementChoice) continue;
-    const choice = await requestEquipmentUnknownChoice(item);
+    const recorded = equipmentState.completedStockIngressBySourceId.get(item.stockIngressSourceId);
+    if (recorded && equipmentInventoryCanonicalKey(item.description) === equipmentInventoryCanonicalKey(recorded.item.description)
+        && (!item.warehouseInventoryId || item.warehouseInventoryId === recorded.item.itemId)
+        && (!item.inventoryCategory || equipmentInventoryCanonicalKey(item.inventoryCategory) === equipmentInventoryCanonicalKey(recorded.item.category))) {
+      item.procurementChoice = "save";
+      item.warehouseInventoryId = recorded.item.itemId;
+      item.inventoryCategory = recorded.item.category;
+      item.inventoryIngressReceipts = [recorded.receipt];
+      delete item.pendingProcurementChoice;
+    }
+    if (!String(item.description || "").trim() || item.procurementChoice) continue;
+    if (!item.pendingProcurementChoice && equipmentRecognizedInventoryChoice(item.description)) continue;
+    const choice = item.pendingProcurementChoice || await requestEquipmentUnknownChoice(item);
     if (!choice) return null;
     decisions.push({ item, choice });
     if (choice === "purchase") purchases.push(item);
   }
-  decisions.forEach(({ item, choice }) => { item.procurementChoice = choice; });
+  const selected = decisions.map(({ item, choice }) => ({ ...item, procurementChoice: choice,
+    stockIngressSourceId: item.stockIngressSourceId || createEquipmentWarehouseDispatchId() }));
+  decisions.forEach(({ item, choice }, index) => {
+    item.stockIngressSourceId = selected[index].stockIngressSourceId;
+    item.pendingProcurementChoice = choice;
+  });
+  await registerSavedEquipmentExtras(selected);
+  decisions.forEach(({ item, choice }, index) => {
+    item.procurementChoice = choice;
+    Object.assign(item, equipmentItemInventoryMetadata(selected[index]));
+    delete item.pendingProcurementChoice;
+  });
   syncActiveEquipmentEvent();
   return purchases;
 }
@@ -3315,6 +3524,10 @@ async function saveCurrentEquipmentWindowWithExtraChoices() {
     const saved = saveCurrentEquipmentWindow();
     if (saved) sendEquipmentPurchaseRequest(purchases);
     return saved;
+  } catch (error) {
+    const status = equipmentQuery("#equipmentSaveStatus");
+    if (status) { status.textContent = error.message || "No se pudo guardar el ingreso en bodega."; status.classList?.add("is-error"); }
+    return false;
   } finally {
     equipmentExtraEntryBusy = false;
   }
@@ -3327,7 +3540,12 @@ function appendEquipmentExtraItems(items) {
       ? entry.warehouseInventoryId === item.warehouseInventoryId
       : !entry.warehouseInventoryId && normalizeEquipmentKey(entry.inventoryCategory) === normalizeEquipmentKey(item.inventoryCategory)
         && equipmentInventoryCanonicalKey(entry.description) === equipmentInventoryCanonicalKey(item.description)));
-    if (existing) existing.quantity = (Number(existing.quantity) || 0) + item.quantity;
+    if (existing) {
+      existing.quantity = (Number(existing.quantity) || 0) + item.quantity;
+      if (item.inventoryIngressReceipts?.length) existing.inventoryIngressReceipts = [
+        ...(existing.inventoryIngressReceipts || []), ...item.inventoryIngressReceipts
+      ];
+    }
     else section.items.push({ id: `manual-main-${Date.now()}-${equipmentManualMainCounter++}`, ...item });
   });
   syncActiveEquipmentEvent();
@@ -4817,6 +5035,8 @@ function resetEquipmentWindowDraft() {
   equipmentState.selectedExtraIds.clear();
   equipmentState.manualMainItems = [];
   equipmentState.manualMainSections = [];
+  equipmentState.documentSections = [];
+  equipmentState.documentServiceName = "";
   equipmentState.manualExtras = [];
   equipmentState.itemOverrides.clear();
   equipmentState.sectionAddedItems.clear();
@@ -5482,6 +5702,7 @@ function cleanEquipmentJsonFilePart(value, fallback = "Cuadro de Equipo.requerim
 }
 
 function cloneEquipmentEventForEditable(event, index = 0) {
+  const documentSections = equipmentDocumentSectionsForEvent(event || {});
   return {
     id: event?.id || `event-editable-${index}`,
     warehouseDispatchId: event?.warehouseDispatchId || "",
@@ -5496,6 +5717,8 @@ function cloneEquipmentEventForEditable(event, index = 0) {
     serviceIds: equipmentNormalizeServiceIds(event?.serviceIds?.length ? event.serviceIds : event?.serviceId),
     serviceId: equipmentNormalizeServiceIds(event?.serviceIds?.length ? event.serviceIds : event?.serviceId)[0] || "",
     serviceName: event?.serviceName || "",
+    documentSections,
+    documentServiceName: documentSections.length ? event?.documentServiceName || event?.serviceName || "Cuadro importado" : "",
     djAudioType: event?.djAudioType || "qsc",
     selectedExtraIds: Array.isArray(event?.selectedExtraIds) ? [...event.selectedExtraIds] : [],
     manualMainItems: cloneEquipmentSnapshotItems(event?.manualMainItems || []),
@@ -5510,7 +5733,7 @@ function cloneEquipmentEventForEditable(event, index = 0) {
       ? event.sectionAddedItems.map(([key, items]) => [String(key || ""), cloneEquipmentSnapshotItems(items || [])])
       : [],
     removedItemIds: Array.isArray(event?.removedItemIds) ? [...event.removedItemIds] : [],
-    sections: cloneEquipmentSnapshotSections(event?.sections || [])
+    sections: cloneEquipmentSnapshotSections(Array.isArray(event?.sections) ? event.sections : documentSections)
   };
 }
 
@@ -5528,7 +5751,7 @@ function currentEquipmentEditableEvent() {
 
 function equipmentWarehouseDispatchItems(event) {
   const groups = new Map();
-  const sections = event?.sections?.length ? event.sections : selectedEquipmentSections();
+  const sections = event ? sectionsForEquipmentEvent(event) : selectedEquipmentSections();
   const categories = equipmentFallbackCategoryMap(sections);
   sections.forEach((section) => {
     (section.items || []).forEach((rawItem) => {
@@ -5802,7 +6025,12 @@ async function saveEquipmentPdfOnlyCopyToComputer(data, savedLabel, directoryHan
 async function saveEquipmentPdf(mode = "full") {
   const status = equipmentQuery("#equipmentSaveStatus");
   if (equipmentExtraEntryBusy) return;
-  const purchases = await resolveEquipmentPendingExtraChoices();
+  let purchases;
+  try { purchases = await resolveEquipmentPendingExtraChoices(); }
+  catch (error) {
+    if (status) { status.textContent = error.message || "No se pudo confirmar el ingreso en bodega."; status.classList.add("is-error"); }
+    return;
+  }
   if (!purchases) return;
   if (purchases.length) {
     renderEquipmentModule();
@@ -5934,6 +6162,7 @@ function equipmentSimpleEntriesToMap(entries = []) {
 
 function importedEquipmentEvent(rawEvent, index = 0) {
   const serviceIds = equipmentNormalizeServiceIds(rawEvent?.serviceIds?.length ? rawEvent.serviceIds : rawEvent?.serviceId);
+  const documentSections = equipmentDocumentSectionsForEvent(rawEvent || {});
   return {
     ...cloneEquipmentEventForEditable({ ...rawEvent, serviceIds }, index),
     id: `event-${Date.now()}-${equipmentEventCounter++}`,
@@ -5948,7 +6177,9 @@ function importedEquipmentEvent(rawEvent, index = 0) {
     responsible: rawEvent?.responsible || "",
     serviceIds,
     serviceId: serviceIds[0] || "",
-    serviceName: rawEvent?.serviceName || equipmentServicesLabel(serviceIds.map(serviceWithEquipmentAudioOption).filter(Boolean), "Sin servicio")
+    serviceName: rawEvent?.serviceName || (documentSections.length
+      ? rawEvent?.documentServiceName || "Cuadro importado"
+      : equipmentServicesLabel(serviceIds.map(serviceWithEquipmentAudioOption).filter(Boolean), "Sin servicio"))
   };
 }
 
@@ -5968,7 +6199,7 @@ function importEquipmentEditablePayload(payload) {
       if (rawEvent?.id) idMap.set(String(rawEvent.id), importedEvent.id);
       return importedEvent;
     })
-    .filter((event) => event.serviceIds.length || event.sections.length);
+    .filter((event) => event.serviceIds.length || event.sections.length || event.documentSections.length);
   if (!events.length) throw new Error("El JSON no contiene una ventana editable válida.");
   const availableIds = new Set(events.map((event) => event.id));
   const mapRestoredTransferIds = (eventIds) => (Array.isArray(eventIds) ? eventIds : [])

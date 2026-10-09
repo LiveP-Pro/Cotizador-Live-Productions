@@ -91,6 +91,8 @@ test("inventory match bypasses the unknown dialog, while service-only names requ
   assert.equal(evaluate(context, "dialogCalls"), 1);
   assert.equal(sourceOnly.procurementChoice, "save");
   assert.equal(sourceOnly.description, serviceChoice.name);
+  assert.ok(sourceOnly.stockIngressSourceId, "new Save selections carry a stable ingress intent before registration");
+  assert.equal(Object.hasOwn(evaluate(context, "cloneEquipmentSnapshotItem({ procurementChoice: 'save', quantity: 2, description: 'Equipo sintético', stockIngressSourceId: 'synthetic-private-source' })"), "stockIngressSourceId"), false);
 });
 
 test("canceling or invalid quantities never adds an unknown extra", async () => {
@@ -206,7 +208,7 @@ test("canceling a later pending decision commits neither purchase intent nor sav
   assert.deepEqual(plain(context.dispatchedEvents[0].detail.items), [{ description: "Equipo sintético pendiente B", quantity: 3 }]);
 });
 
-test("same-name save, rent and purchase extras keep separate summary and report identities", () => {
+test("same-name legacy stored Save, rent and purchase extras keep separate summary and report identities", () => {
   const context = createContext();
   loadWarehouse(context);
   const result = evaluate(context, `(() => {
