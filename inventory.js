@@ -2955,9 +2955,11 @@
     window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   }
 
-  async function importBackup(file) {
+  async function importBackup(file, options = {}) {
     if (!file || readingImport || importReview) return;
     readingImport = true;
+    const worksheet = /\.xlsx$/i.test(file.name) ? String(options.worksheet || "") : "";
+    let worksheets = Array.isArray(options.worksheets) ? [...options.worksheets] : [];
     try {
       if (file.size > 15 * 1024 * 1024) throw new Error("El archivo supera el límite de 15 MB.");
       setStatus(`Leyendo ${file.name} para comparar descripciones...`, "neutral");
@@ -2974,27 +2976,61 @@
         if (!isHttpPage()) throw new Error("Abra la aplicación desde su servidor para leer archivos Excel o PDF.");
         const response = await fetch(`${API_PATH}/importar-archivo`, {
           method: "POST", credentials: "same-origin",
-          headers: { "Content-Type": file.type || "application/octet-stream", "X-File-Name": encodeURIComponent(file.name) },
+          headers: { "Content-Type": file.type || "application/octet-stream", "X-File-Name": encodeURIComponent(file.name),
+            ...(worksheet ? { "X-Inventory-Worksheet": encodeURIComponent(worksheet) } : {}) },
           body: file
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "No se pudo leer el archivo.");
         imported = payload;
         warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+        worksheets = Array.isArray(payload.worksheets)
+          ? [...new Set(payload.worksheets.filter((name) => typeof name === "string" && name.length))] : [];
       }
       if (!window.WarehouseImportReview) throw new Error("Actualice la página para cargar el comparador de descripciones.");
       const plan = window.WarehouseImportReview.prepare(state, imported, { mode: restore ? "restore" : "merge" });
-      importReview = { plan, fileName: file.name, warnings, baseline: JSON.stringify({ ...state, updatedAt: "" }), busy: false };
+      importReview = { plan, file, fileName: file.name, worksheet: String(imported.worksheet || worksheet), worksheets, warnings,
+        baseline: JSON.stringify({ ...state, updatedAt: "" }), busy: false };
       elements.importError.textContent = "";
       renderImportReview();
-      elements.importDialog.showModal();
+      elements.importBody.scrollTop = 0;
+      if (!elements.importDialog.open) elements.importDialog.showModal();
       setStatus("Revise las descripciones en la ventana de importación.", "neutral");
     } catch (error) {
       setStatus(`No se pudo importar el respaldo: ${error.message}`, "warning");
+      if (worksheets.length) {
+        importReview = { plan: null, file, fileName: file.name, worksheet, worksheets, warnings: [], busy: false };
+        renderImportReview();
+        elements.importBody.scrollTop = 0;
+        elements.importError.textContent = error.message;
+        if (!elements.importDialog.open) elements.importDialog.showModal();
+      }
     } finally {
       readingImport = false;
       elements.importInput.value = "";
     }
+  }
+
+  async function changeImportWorksheet(event) {
+    if (event.target.id !== "warehouseImportWorksheetSelect" || !importReview || importReview.busy || readingImport) return;
+    const review = importReview;
+    const worksheet = event.target.value;
+    if (worksheet === review.worksheet && review.plan) return;
+    // A different sheet is a new source review; previous row decisions never carry over.
+    importReview = null;
+    elements.importDialog.close();
+    elements.importError.textContent = "";
+    await importBackup(review.file, { worksheet, worksheets: review.worksheets });
+  }
+
+  function importWorksheetSelector(review) {
+    if (!review.worksheets?.length) return "";
+    return `<div class="warehouse-form-grid"><label class="warehouse-field-wide" for="warehouseImportWorksheetSelect">Hoja a importar
+      <select id="warehouseImportWorksheetSelect" ${review.busy ? "disabled" : ""}>
+        <option value="" ${review.worksheet ? "" : "selected"}>Todas las hojas</option>
+        ${review.worksheets.map((name) => `<option value="${escapeHtml(name)}" ${review.worksheet === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}
+      </select></label></div>
+      ${review.worksheets.length > 1 ? '<p class="warehouse-import-explanation">Este archivo tiene varias hojas. Si repiten los mismos equipos con cantidades de distintos estados, elija la hoja que desea importar para evitar duplicarlos. Al cambiar de hoja se vuelve a revisar el archivo y se descartan las decisiones anteriores.</p>' : ""}`;
   }
 
   function closeImportReview() {
@@ -3007,11 +3043,21 @@
   function renderImportReview() {
     if (!importReview) return;
     const { plan, fileName, warnings, busy } = importReview;
+    const worksheetSummary = importReview.worksheets?.length ? ` · ${importReview.worksheet ? `Hoja: ${importReview.worksheet}` : "Todas las hojas"}` : "";
+    if (!plan) {
+      elements.importSummary.textContent = `${fileName}${worksheetSummary} · No se pudo revisar esta hoja`;
+      elements.importApplyButton.disabled = true;
+      elements.importApplyButton.textContent = "Importar y guardar";
+      elements.importCancelButton.disabled = busy;
+      elements.importCloseButton.disabled = busy;
+      elements.importBody.innerHTML = `${importWorksheetSelector(importReview)}<p class="warehouse-import-explanation">Esta selección no está lista para importar. Elija otra hoja para volver a revisar el archivo o cancele la importación. El inventario no cambió.</p>`;
+      return;
+    }
     const pending = plan.rows.filter((row) => !row.decision).length;
     const variants = plan.rows.filter((row) => ["variant", "ambiguous", "duplicate"].includes(row.status));
     const newRows = plan.rows.filter((row) => row.status === "new");
     const exact = plan.rows.filter((row) => row.status === "exact").length;
-    elements.importSummary.textContent = `${fileName} · Equipos: ${plan.rows.length} · Coincidencias: ${exact} · Nuevos: ${newRows.length} · Por resolver: ${pending}`;
+    elements.importSummary.textContent = `${fileName}${worksheetSummary} · Equipos: ${plan.rows.length} · Coincidencias: ${exact} · Nuevos: ${newRows.length} · Por resolver: ${pending}`;
     elements.importApplyButton.disabled = busy || pending > 0;
     elements.importApplyButton.textContent = busy ? "Guardando..." : "Importar y guardar";
     elements.importCancelButton.disabled = busy;
@@ -3045,6 +3091,7 @@
     }).join("");
     const simpleVariants = variants.filter((row) => !row.decision && row.candidates.length === 1 && row.status === "variant").length > 1;
     elements.importBody.innerHTML = `
+      ${importWorksheetSelector(importReview)}
       <p class="warehouse-import-explanation">${plan.mode === "restore"
         ? "Este respaldo JSON reemplazará el inventario y las bitácoras actuales. Puede conservar el nombre actual de los equipos que tengan variantes."
         : "Las cantidades del archivo reemplazan las registradas; no se suman. Se conservan las bitácoras y los equipos que no aparecen en el archivo."}
@@ -3058,7 +3105,7 @@
   }
 
   async function resolveImportChoice(event) {
-    if (!importReview || importReview.busy) return;
+    if (!importReview?.plan || importReview.busy) return;
     const button = event.target.closest("[data-import-action], [data-import-bulk]");
     if (!button || button.disabled) return;
     const { plan } = importReview;
@@ -3085,7 +3132,7 @@
   }
 
   async function applyImportReview() {
-    if (!importReview || importReview.busy) return;
+    if (!importReview?.plan || importReview.busy) return;
     const review = importReview;
     try {
       if (JSON.stringify({ ...state, updatedAt: "" }) !== review.baseline) throw new Error("El inventario cambió mientras revisaba. Cancele y vuelva a importar para comparar los datos actuales.");
@@ -3176,6 +3223,7 @@
     elements.exportButton.addEventListener("click", exportBackup);
     elements.importInput.addEventListener("change", (event) => importBackup(event.target.files?.[0]));
     elements.importBody.addEventListener("click", resolveImportChoice);
+    elements.importBody.addEventListener("change", changeImportWorksheet);
     elements.importApplyButton.addEventListener("click", applyImportReview);
     elements.importCloseButton.addEventListener("click", closeImportReview);
     elements.importCancelButton.addEventListener("click", closeImportReview);

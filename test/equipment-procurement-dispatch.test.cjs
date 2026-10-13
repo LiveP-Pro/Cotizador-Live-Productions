@@ -16,6 +16,10 @@ function createDispatchHarness(items, movements = []) {
   };
   vm.createContext(context);
   const source = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
+  const actorStart = source.indexOf("function warehouseAuditActor(");
+  const actorEnd = source.indexOf("async function writeWarehouseInventory(", actorStart);
+  assert.ok(actorStart >= 0 && actorEnd > actorStart, "Warehouse audit actor must be present in the server.");
+  vm.runInContext(source.slice(actorStart, actorEnd), context, { filename: "server-audit-actor.js" });
   const start = source.indexOf("function warehouseDispatchLookupKey(");
   const end = source.indexOf("async function saveEquipmentBoard(", start);
   assert.ok(start >= 0 && end > start, "Dispatch functions must be present in the server.");

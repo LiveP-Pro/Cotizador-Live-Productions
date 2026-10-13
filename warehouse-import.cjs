@@ -114,7 +114,20 @@ function categoryHeading(cells, columns) {
   return value.length <= 160 ? value : "";
 }
 
-async function parseWorkbook(buffer, fileName) {
+function headerlessWorkbookColumns(cells) {
+  if (cells.length < 2 || quantity(cells[0].value) === null) return null;
+  if (quantity(cells[1].value) !== null || !/\p{Letter}/u.test(text(cells[1].value))) return null;
+  // A second isolated number might be an ordinal, model, price or another table.
+  if (cells.slice(2).some((cell) => quantity(cell.value) !== null)) return null;
+  return { quantity: cells[0].key, name: cells[1].key };
+}
+
+function incompleteWorkbookHeader(cells) {
+  if (cells.length < 2 || cells.some((cell) => quantity(cell.value) !== null)) return false;
+  return cells.some((cell) => ["name", "quantity"].includes(headerField(cell.value)));
+}
+
+async function parseWorkbook(buffer, fileName, worksheet = "") {
   const workbook = new ExcelJS.Workbook();
   try {
     // Read ZIP metadata before ExcelJS expands XML, then enforce the actual
@@ -142,9 +155,14 @@ async function parseWorkbook(buffer, fileName) {
   }
   const items = [];
   const warnings = [];
+  const worksheets = workbook.worksheets.map((sheet) => sheet.name);
+  if (worksheet && !worksheets.includes(worksheet)) throw invalid("La hoja seleccionada no existe en este Excel. Vuelva a elegir una hoja del archivo.");
   let rowCount = 0;
   for (const sheet of workbook.worksheets) {
+    if (worksheet && sheet.name !== worksheet) continue;
     let columns = null;
+    let inferredColumns = null;
+    let inferenceBlocked = false;
     let category = "Sin categoría";
     let sheetItems = 0;
     let hasContent = false;
@@ -164,18 +182,32 @@ async function parseWorkbook(buffer, fileName) {
       });
       if (!cells.length) return;
       hasContent = true;
-      const header = findHeader(cells, sourceLocation);
-      if (header) { columns = header; plainHeadingAllowed = true; return; }
+      const header = cells.some((cell) => quantity(cell.value) !== null) ? null : findHeader(cells, sourceLocation);
+      if (header) { columns = header; inferredColumns = null; inferenceBlocked = false; plainHeadingAllowed = true; return; }
+      if (!columns && incompleteWorkbookHeader(cells)) {
+        inferenceBlocked = true;
+        warnings.push(`${sourceLocation}: encabezados incompletos; indique «Cantidad» y «Descripción» o «Equipo». No se interpretan columnas de modelo, código o número de orden como cantidades; revise «${rowSummary(cells)}».`);
+        return;
+      }
       const single = cells.length === 1 ? cells[0] : null;
       const formattedHeading = single && (single.isHeading || /^[A-ZÁÉÍÓÚÑ\s/-]+$/.test(text(single.value)));
       const heading = (plainHeadingAllowed || formattedHeading) ? categoryHeading(cells, columns) : "";
       if (heading) {
         category = heading;
+        inferredColumns = null;
         warnings.push(`${sourceLocation}: se conservó «${heading}» como encabezado de categoría, sin asignarle una cantidad.`);
         return;
       }
       if (!columns) {
-        warnings.push(`${sourceLocation}: fila sin encabezados reconocibles de descripción y cantidad; revise «${rowSummary(cells)}».`);
+        const candidate = inferenceBlocked ? null : headerlessWorkbookColumns(cells);
+        if (candidate && (!inferredColumns || (candidate.quantity === inferredColumns.quantity && candidate.name === inferredColumns.name))) {
+          if (!inferredColumns) warnings.push(`${sourceLocation}: el cuadro no tiene encabezados. Se interpretó la primera columna ocupada como cantidad y la siguiente como descripción; revise que la cantidad no sea un número de orden antes de importar.`);
+          inferredColumns = candidate;
+          const item = readMappedRow(cells, inferredColumns, category, rowNumber, sourceLocation, warnings);
+          if (item) { items.push(item); sheetItems += 1; plainHeadingAllowed = false; }
+          return;
+        }
+        warnings.push(`${sourceLocation}: no se identificó una cantidad y descripción inequívocas. Use encabezados «Cantidad» y «Descripción», o un cuadro con la cantidad en la primera columna y el equipo en la siguiente, sin otras columnas numéricas; revise «${rowSummary(cells)}».`);
         return;
       }
       const item = readMappedRow(cells, columns, category, rowNumber, sourceLocation, warnings);
@@ -183,8 +215,8 @@ async function parseWorkbook(buffer, fileName) {
     });
     if (hasContent && !sheetItems) warnings.push(`Hoja «${sheet.name}»: no se identificaron artículos con una descripción y cantidad válidas.`);
   }
-  if (!items.length) throw invalid(`No se encontraron artículos en el Excel. Incluya encabezados «Descripción» o «Equipo» y «Cantidad», con cantidades numéricas explícitas.${warnings.length ? ` ${warnings.slice(0, 3).join(" ")}` : ""}`);
-  return { items, warnings, source: fileName };
+  if (!items.length) throw invalid(`No se encontraron artículos en el Excel. Incluya encabezados «Descripción» o «Equipo» y «Cantidad», o coloque la cantidad en la primera columna y el equipo en la siguiente. Use cantidades numéricas explícitas.${warnings.length ? ` ${warnings.slice(0, 3).join(" ")}` : ""}`);
+  return { items, warnings, source: fileName, worksheets, worksheet };
 }
 
 function positionedLines(textItems) {
@@ -333,14 +365,15 @@ async function parsePdf(buffer, fileName) {
   }
 }
 
-async function parseInventoryFile(buffer, { fileName = "inventario", mimeType = "" } = {}) {
+async function parseInventoryFile(buffer, { fileName = "inventario", mimeType = "", worksheet = "" } = {}) {
   if (!Buffer.isBuffer(buffer) && !(buffer instanceof Uint8Array)) throw invalid("No se recibió un archivo válido para importar.");
   if (!buffer.length) throw invalid("El archivo está vacío.");
   if (buffer.length > MAX_FILE_BYTES) throw invalid("El archivo supera el límite de 15 MB para importar inventario.");
   const source = text(fileName) || "inventario";
   const isExcel = /\.xlsx$/i.test(source) || mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   const isPdf = /\.pdf$/i.test(source) || mimeType === "application/pdf";
-  if (isExcel && !isPdf) return parseWorkbook(buffer, source);
+  if (typeof worksheet !== "string" || worksheet.length > 200) throw invalid("La hoja seleccionada no es válida.");
+  if (isExcel && !isPdf) return parseWorkbook(buffer, source, worksheet);
   if (isPdf && !isExcel) return parsePdf(buffer, source);
   throw invalid("Seleccione un archivo Excel .xlsx o un PDF digital. Los archivos .xls deben guardarse como .xlsx antes de importar.");
 }

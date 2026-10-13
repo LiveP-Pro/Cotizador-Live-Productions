@@ -49,7 +49,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261008-stock-ingress-04";
+const warehouseAssetVersion = "20261013-inventory-import-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -2763,8 +2763,12 @@ async function previewWarehouseFile(request, response) {
   activeWarehouseImports += 1;
   try {
     let fileName;
-    try { fileName = decodeURIComponent(String(request.headers["x-file-name"] || "")); }
-    catch { throw new Error("El nombre del archivo no es válido."); }
+    let worksheet;
+    try {
+      fileName = decodeURIComponent(String(request.headers["x-file-name"] || ""));
+      worksheet = decodeURIComponent(String(request.headers["x-inventory-worksheet"] || ""));
+    }
+    catch { throw new Error("El nombre del archivo o la hoja no es válido."); }
     if (!/\.(xlsx|pdf)$/i.test(fileName) || fileName.length > 250) {
       throw new Error("Seleccione un archivo Excel .xlsx o un PDF con texto.");
     }
@@ -2784,7 +2788,7 @@ async function previewWarehouseFile(request, response) {
     }
     if (!size) throw new Error("El archivo está vacío.");
     const preview = await parseInventoryFile(Buffer.concat(chunks), {
-      fileName, mimeType: String(request.headers["content-type"] || "").split(";")[0]
+      fileName, mimeType: String(request.headers["content-type"] || "").split(";")[0], worksheet
     });
     jsonResponse(response, 200, preview);
   } catch (error) {

@@ -11,9 +11,20 @@ repositorio. Docker instala las dependencias desde `package-lock.json`.
 
 En Excel, incluir columnas `Descripción` (o `Equipo`) y `Cantidad`; también se
 reconocen `Categoría` y `Observaciones`. Se leen todas las hojas y se conservan
-las cantidades cero. Un PDF digital debe contener una tabla legible con las
+las cantidades cero. También admite cuadros sin encabezados cuando la primera
+celda ocupada es una cantidad y la siguiente contiene la descripción, incluso
+con cantidad cero; la revisión indica que se detectó este orden. Si hay otras
+columnas numéricas, no se elige una cantidad diferente de forma automática.
+Un PDF digital debe contener una tabla legible con las
 descripciones y cantidades; los PDFs escaneados requieren convertirlos antes a
 texto o usar el Excel original. El límite por archivo es 15 MB.
+
+Para un libro con varias hojas, `Hoja a importar` permite elegir una hoja concreta
+o `Todas las hojas`. Si las hojas repiten equipos para mostrar estados distintos,
+seleccionar una sola evita crear filas duplicadas. Cambiar la hoja vuelve a leer
+el archivo y descarta las decisiones anteriores; no guarda cambios hasta aplicar
+la nueva revisión. Si una hoja no se puede interpretar, se puede elegir otra y
+el botón de guardar permanece deshabilitado.
 
 La ventana compara el archivo con el inventario actual y muestra variantes,
 números de modelo y coincidencias ambiguas. Un clic permite conservar el nombre
