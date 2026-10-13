@@ -1162,7 +1162,7 @@ function selectedEquipmentSections() {
           items: editableEquipmentItems(extra, sectionKey)
         };
       })
-      .filter((section) => section.items.length);
+      .filter((section) => section.items.length || section.rows?.length || section.notes?.length);
   });
   const manualExtrasSection = equipmentState.manualExtras.length
     ? [
@@ -1238,6 +1238,9 @@ function equipmentSourceRowsForItems(rows, items) {
 function equipmentLiveSectionsForDisplay(sections) {
   return (Array.isArray(sections) ? sections : []).flatMap((section) => {
     if (section.documentSection) return [{ ...section, items: [...(section.items || [])] }];
+    if (section.importSource?.authoritative) {
+      return [{ ...section, title: section.inventoryCategory || section.title, items: [...(section.items || [])] }];
+    }
     if (!section?.items?.length) return [{ ...section, items: [] }];
     const displayed = [];
     section.items.forEach((rawItem, itemIndex) => {
@@ -3780,22 +3783,22 @@ function renderEquipmentInventoryNameOptions() {
     .join("");
 }
 
-function cloneEquipmentCatalogItems(items = []) {
+function cloneEquipmentCatalogItems(items = [], preserveLiteral = false) {
   return (Array.isArray(items) ? items : []).map((item, index) => {
     const normalized = normalizeEquipmentItem(item);
     return {
       id: normalized.id || `catalog-item-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
       quantity: Math.max(0, Number(normalized.quantity) || 0),
-      description: String(normalized.description || "").trim()
+      description: preserveLiteral ? String(normalized.description || "") : String(normalized.description || "").trim()
     };
   });
 }
 
-function cloneEquipmentCatalogAudioOptions(audioOptions = {}) {
+function cloneEquipmentCatalogAudioOptions(audioOptions = {}, preserveLiteral = false) {
   return Object.fromEntries(Object.entries(audioOptions || {}).map(([key, option]) => [key, {
     ...option,
     label: String(option?.label || key),
-    items: cloneEquipmentCatalogItems(option?.items).map((item) => [item.quantity, item.description])
+    items: cloneEquipmentCatalogItems(option?.items, preserveLiteral).map((item) => [item.quantity, item.description])
   }]));
 }
 
@@ -3837,7 +3840,7 @@ function applyEquipmentCatalogServiceOverride(serviceId, override) {
   let service = Object.prototype.hasOwnProperty.call(equipmentServices, serviceId) ? equipmentServices[serviceId] : null;
   if (!service && custom && targetGroup) {
     service = {
-      name: String(override.name || "Nuevo servicio").trim(),
+      name: override.importSource?.authoritative ? String(override.name || "Nuevo servicio") : String(override.name || "Nuevo servicio").trim(),
       source: "Creado en Requerimiento de Equipo",
       mainSections: [],
       extras: [],
@@ -3847,23 +3850,26 @@ function applyEquipmentCatalogServiceOverride(serviceId, override) {
     equipmentServices[serviceId] = service;
   }
   if (!service) return false;
-  const overrideName = String(override.name || "").trim();
-  if (overrideName) service.name = overrideName;
+  const preserveLiteral = Boolean(override.importSource?.authoritative || service.importSource?.authoritative);
+  const overrideName = String(override.name || "");
+  if (overrideName.trim()) service.name = preserveLiteral ? overrideName : overrideName.trim();
   if (Array.isArray(override.mainSections) && override.mainSections.length) {
+    const sourceSections = new Map((service.mainSections || []).map((section) => [section.id, section]));
     service.mainSections = override.mainSections.map((section, index) => ({
       ...(section?.id ? { id: String(section.id) } : {}),
       ...(section?.audioVariant ? { audioVariant: true } : {}),
       title: String(section?.title || `Categoría ${index + 1}`),
       ...(Array.isArray(section?.notes) ? { notes: [...section.notes] } : {}),
       ...(Array.isArray(section?.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
-      ...(override.importSource ? { importSource: { ...override.importSource } } : {}),
-      items: cloneEquipmentCatalogItems(section?.items).map((item) => [item.quantity, item.description])
+      ...((section?.importSource || override.importSource || sourceSections.get(section?.id)?.importSource || service.importSource)
+        ? { importSource: { ...(section?.importSource || override.importSource || sourceSections.get(section?.id)?.importSource || service.importSource) } } : {}),
+      items: cloneEquipmentCatalogItems(section?.items, preserveLiteral || section?.importSource?.authoritative || sourceSections.get(section?.id)?.importSource?.authoritative).map((item) => [item.quantity, item.description])
     }));
   }
   if (override.audioOptions && typeof override.audioOptions === "object" && Object.keys(override.audioOptions).length) {
     service.audioOptions = {
       ...(service.audioOptions || {}),
-      ...cloneEquipmentCatalogAudioOptions(override.audioOptions)
+      ...cloneEquipmentCatalogAudioOptions(override.audioOptions, preserveLiteral)
     };
   }
   if (custom && targetGroup) {
@@ -3881,6 +3887,7 @@ function applyEquipmentCatalogServiceOverride(serviceId, override) {
 }
 
 function applyEquipmentCatalogOverrides(payload) {
+  if (payload?.baseCatalogVersion && equipmentCatalogBaseVersion && payload.baseCatalogVersion !== equipmentCatalogBaseVersion) return false;
   const services = payload?.services && typeof payload.services === "object" ? payload.services : {};
   let changed = false;
   const groups = Array.isArray(payload?.groups) ? payload.groups : Object.values(payload?.groups || {});
@@ -3895,7 +3902,7 @@ function applyEquipmentCatalogOverrides(payload) {
   const removed = new Set(payload?.removedServiceIds || []);
   if (payload?.baseCatalogVersion) {
     Object.entries(equipmentServices).forEach(([id, service]) => {
-      if (service.importSource && !services[id]) removed.add(id);
+      if (service.importSource && (service.custom || !service.importSource.authoritative) && !services[id]) removed.add(id);
     });
   }
   removed.forEach((id) => {
@@ -3963,7 +3970,8 @@ function equipmentCatalogDraftForService(serviceId) {
         title: String(section.title || `Categoría ${index + 1}`),
         ...(Array.isArray(section.notes) ? { notes: [...section.notes] } : {}),
         ...(Array.isArray(section.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
-        items: cloneEquipmentCatalogItems(section.items)
+        ...((section.importSource || baseService.importSource) ? { importSource: { ...(section.importSource || baseService.importSource) } } : {}),
+        items: cloneEquipmentCatalogItems(section.items, Boolean(section.importSource?.authoritative || baseService.importSource?.authoritative))
       };
     })
   };
@@ -4003,9 +4011,11 @@ function equipmentCatalogEditorValidation(draft = equipmentCatalogEditorState.dr
 
 function equipmentCatalogEditorPayload(draft = equipmentCatalogEditorState.draft) {
   const baseService = equipmentServices[draft.serviceId] || {};
-  const audioOptions = cloneEquipmentCatalogAudioOptions(baseService.audioOptions || {});
+  const preserveLiteral = Boolean(draft.importSource?.authoritative || baseService.importSource?.authoritative);
+  const audioOptions = cloneEquipmentCatalogAudioOptions(baseService.audioOptions || {}, preserveLiteral);
   const mainSections = draft.sections.map((section) => {
-    const items = section.items.map((item) => [Math.max(0, Number(item.quantity) || 0), String(item.description || "").trim()]);
+    const preserveSectionLiteral = preserveLiteral || section.importSource?.authoritative;
+    const items = section.items.map((item) => [Math.max(0, Number(item.quantity) || 0), preserveSectionLiteral ? String(item.description || "") : String(item.description || "").trim()]);
     if (section.audioVariant) {
       if (draft.audioType && audioOptions[draft.audioType]) audioOptions[draft.audioType].items = items;
       return {
@@ -4017,18 +4027,20 @@ function equipmentCatalogEditorPayload(draft = equipmentCatalogEditorState.draft
     }
     return {
       ...(section.sourceId ? { id: section.sourceId } : {}),
-      title: String(section.title || "").trim(),
+      title: preserveSectionLiteral ? String(section.title || "") : String(section.title || "").trim(),
       ...(Array.isArray(section.notes) ? { notes: [...section.notes] } : {}),
       ...(Array.isArray(section.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
+      ...(section.importSource ? { importSource: { ...section.importSource } } : {}),
       items
     };
   });
   return {
     baseCatalogVersion: equipmentCatalogBaseVersion,
     serviceId: draft.mode === "create" ? uniqueEquipmentCatalogServiceId(draft.name) : draft.serviceId,
-    name: String(draft.name || "").trim(),
+    name: preserveLiteral ? String(draft.name || "") : String(draft.name || "").trim(),
     mainSections,
     audioOptions,
+    ...(draft.importSource ? { importSource: { ...draft.importSource } } : {}),
     ...(draft.mode === "create" || draft.custom ? {
       custom: true,
       groupId: equipmentCatalogSlug(draft.groupId)

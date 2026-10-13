@@ -49,7 +49,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261013-equipment-categories-02";
+const warehouseAssetVersion = "20261013-servicios-archivo-03";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -283,35 +283,40 @@ function normalizeEquipmentBaseCatalogVersion(value) {
   return version;
 }
 
-function normalizeEquipmentCatalogItems(items, label = "categoría") {
+function normalizeEquipmentCatalogItems(items, label = "categoría", preserveLiteral = false) {
   if (!Array.isArray(items)) throw new Error(`Los equipos de ${label} no tienen un formato válido.`);
   if (items.length > 2000) throw new Error(`La categoría ${label} excede el límite de equipos.`);
   return items.map((item, index) => {
     const quantity = Number(Array.isArray(item) ? item[0] : item?.quantity);
-    const description = String(Array.isArray(item) ? item[1] : item?.description || "").trim();
+    const rawDescription = String(Array.isArray(item) ? item[1] : item?.description || "");
+    const description = preserveLiteral ? rawDescription : rawDescription.trim();
     if (!Number.isFinite(quantity) || quantity < 0 || quantity > 100000) {
       throw new Error(`La cantidad del equipo ${index + 1} en ${label} no es válida.`);
     }
-    if (!description || description.length > 500) {
+    if (!description.trim() || description.length > 500) {
       throw new Error(`El nombre del equipo ${index + 1} en ${label} no es válido.`);
     }
     return [quantity, description];
   });
 }
 
-function normalizeEquipmentCatalogSections(sections) {
+function normalizeEquipmentCatalogSections(sections, preserveLiteral = false) {
   if (!Array.isArray(sections) || !sections.length) {
     throw new Error("El cuadro debe incluir al menos una categoría.");
   }
   if (sections.length > 300) throw new Error("El cuadro excede el límite de categorías.");
   return sections.map((section, index) => {
-    const title = String(section?.title || "").trim();
-    if (!title || title.length > 200) throw new Error(`El nombre de la categoría ${index + 1} no es válido.`);
+    const preserveSectionLiteral = preserveLiteral || section?.importSource?.authoritative;
+    const rawTitle = String(section?.title || "");
+    const title = preserveSectionLiteral ? rawTitle : rawTitle.trim();
+    if (!title.trim() || title.length > 200) throw new Error(`El nombre de la categoría ${index + 1} no es válido.`);
     const normalized = {
       title,
-      items: normalizeEquipmentCatalogItems(section?.items, title),
+      items: normalizeEquipmentCatalogItems(section?.items, title, preserveSectionLiteral),
       ...(Array.isArray(section.notes) ? { notes: section.notes.map((note) => String(note)) } : {}),
-      ...(Array.isArray(section.rows) ? { rows: section.rows } : {})
+      ...(Array.isArray(section.rows) ? { rows: section.rows } : {}),
+      ...(section.importSource && typeof section.importSource === "object" && !Array.isArray(section.importSource)
+        ? { importSource: { ...section.importSource } } : {})
     };
     const id = String(section?.id || "").trim();
     if (id) normalized.id = id.slice(0, 160);
@@ -320,7 +325,7 @@ function normalizeEquipmentCatalogSections(sections) {
   });
 }
 
-function normalizeEquipmentCatalogAudioOptions(audioOptions) {
+function normalizeEquipmentCatalogAudioOptions(audioOptions, preserveLiteral = false) {
   if (!audioOptions || typeof audioOptions !== "object" || Array.isArray(audioOptions)) return {};
   const entries = Object.entries(audioOptions);
   if (entries.length > 20) throw new Error("El servicio excede el límite de opciones de audio.");
@@ -330,7 +335,7 @@ function normalizeEquipmentCatalogAudioOptions(audioOptions) {
     const label = String(option?.label || safeKey).trim().slice(0, 160);
     return [safeKey, {
       label,
-      items: normalizeEquipmentCatalogItems(option?.items, label)
+      items: normalizeEquipmentCatalogItems(option?.items, label, preserveLiteral)
     }];
   }));
 }
@@ -341,8 +346,10 @@ function normalizeEquipmentCatalogOverride(payload) {
   if (!/^[a-z0-9][a-z0-9-]{0,159}$/i.test(serviceId)) {
     throw new Error("El tipo de servicio no es válido.");
   }
-  const name = String(payload?.name || "").trim();
-  if (!name || name.length > 240) throw new Error("El nombre del tipo de servicio no es válido.");
+  const preserveLiteral = payload?.importSource?.authoritative === true;
+  const rawName = String(payload?.name || "");
+  const name = preserveLiteral ? rawName : rawName.trim();
+  if (!name.trim() || name.length > 240) throw new Error("El nombre del tipo de servicio no es válido.");
   const custom = payload?.custom === true;
   const groupId = String(payload?.groupId || "").trim();
   if (custom && !/^[a-z0-9][a-z0-9-]{0,159}$/i.test(groupId)) {
@@ -354,8 +361,10 @@ function normalizeEquipmentCatalogOverride(payload) {
     createOnly: payload?.createOnly === true,
     service: {
       name,
-      mainSections: normalizeEquipmentCatalogSections(payload?.mainSections),
-      audioOptions: normalizeEquipmentCatalogAudioOptions(payload?.audioOptions),
+      mainSections: normalizeEquipmentCatalogSections(payload?.mainSections, preserveLiteral),
+      audioOptions: normalizeEquipmentCatalogAudioOptions(payload?.audioOptions, preserveLiteral),
+      ...(payload?.importSource && typeof payload.importSource === "object" && !Array.isArray(payload.importSource)
+        ? { importSource: { ...payload.importSource } } : {}),
       ...(custom ? { custom: true, groupId } : {}),
       updatedAt: new Date().toISOString()
     }
@@ -3568,14 +3577,14 @@ function serveStatic(request, response, pathname) {
           data
             .toString("utf8")
             .replace(
-              /(equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment\.js|inventory\.js)\?v=[^"'&<>\s]+/g,
+              /(equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment\.js|inventory\.js)\?v=[^"'&<>\s]+/g,
               `$1?v=${warehouseAssetVersion}`
             ),
           "utf8"
         )
       : data;
     const headers = { "Content-Type": contentType };
-    if (requestedPath === "/index.html" || ["equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js"].some(
+    if (requestedPath === "/index.html" || ["equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js"].some(
       (asset) => requestedPath === `/${asset}`
     )) {
       headers["Cache-Control"] = "no-store";
