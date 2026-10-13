@@ -1225,7 +1225,8 @@ function warehousePdfSections() {
 }
 
 function equipmentSourceRowsForItems(rows, items) {
-  const indices = new Set(items.map((item, index) => Number.isInteger(item.sourceItemIndex) ? item.sourceItemIndex : index));
+  const indices = new Set(items.flatMap((item, index) => item.manual && !Number.isInteger(item.sourceItemIndex)
+    ? [] : [Number.isInteger(item.sourceItemIndex) ? item.sourceItemIndex : index]));
   let itemIndex = -1;
   return rows.flatMap((row) => {
     if (row.type === "item") itemIndex = Number.isInteger(row.sourceItemIndex) ? row.sourceItemIndex : itemIndex + 1;
@@ -1235,16 +1236,15 @@ function equipmentSourceRowsForItems(rows, items) {
 }
 
 function equipmentLiveSectionsForDisplay(sections) {
-  if (!equipmentWarehouseInventoryState.loaded) return sections;
   return (Array.isArray(sections) ? sections : []).flatMap((section) => {
     if (section.documentSection) return [{ ...section, items: [...(section.items || [])] }];
     if (!section?.items?.length) return [{ ...section, items: [] }];
     const displayed = [];
-    section.items.forEach((rawItem) => {
+    section.items.forEach((rawItem, itemIndex) => {
       const item = normalizeEquipmentItem(rawItem);
-      const records = equipmentPendingProcurementChoice(item) ? [] : equipmentWarehouseRecordsForItem(item, section);
+      const records = !equipmentWarehouseInventoryState.loaded || equipmentPendingProcurementChoice(item) ? [] : equipmentWarehouseRecordsForItem(item, section);
       const record = records.length === 1 ? records[0] : null;
-      const title = String((section.manualSection ? section.title : record?.item?.category) || section.title || "Equipo sin categoria");
+      const title = String((section.manualSection ? section.title : record?.item?.category || item.inventoryCategory || section.inventoryCategory) || section.title || "Equipo sin categoria");
       let group = displayed.at(-1);
       if (!group || group.title !== title) {
         group = { ...section, title, items: [] };
@@ -1252,14 +1252,44 @@ function equipmentLiveSectionsForDisplay(sections) {
       }
       group.items.push({
         ...(Array.isArray(rawItem) ? item : rawItem),
+        ...(Array.isArray(section.rows) && !item.manual && !Number.isInteger(item.sourceItemIndex) ? { sourceItemIndex: itemIndex } : {}),
         description: record?.item?.name || item.description
       });
     });
     if (Array.isArray(section.rows)) {
       displayed.forEach((group) => { group.rows = equipmentSourceRowsForItems(section.rows, group.items); });
     }
+    if (Array.isArray(section.notes)) {
+      const representedNotes = new Set((section.rows || []).flatMap((row) => [row.description, ...(row.notes || []),
+        ...(row.cells || []).map((cell) => String(cell.value ?? ""))]).filter(Boolean));
+      displayed.forEach((group, index) => { group.notes = index ? [] : section.notes.filter((note) => !representedNotes.has(note)); });
+    }
     return displayed;
   });
+}
+
+function equipmentDisplaySectionGroups(sections) {
+  const groups = [];
+  const byCategory = new Map();
+  equipmentLiveSectionsForDisplay(sections).forEach((section, index) => {
+    // Editable source fragments retain their own IDs and local row indices.
+    // Only the displayed category heading is shared between service fragments.
+    if (section.manualSection || section.documentSection) {
+      groups.push({ id: section.id || `equipment-display-section-${index}`, title: section.title, sections: [section] });
+      return;
+    }
+    const title = String((section.items?.length ? section.title : section.inventoryCategory || section.title)
+      || "Equipo sin categoria").trim();
+    const key = normalizeEquipmentKey(title);
+    let group = byCategory.get(key);
+    if (!group) {
+      group = { id: `equipment-display-category-${encodeURIComponent(key)}`, title, sections: [] };
+      byCategory.set(key, group);
+      groups.push(group);
+    }
+    group.sections.push(section);
+  });
+  return groups;
 }
 
 function currentEquipmentEventDraft() {
@@ -2272,83 +2302,90 @@ function bindEquipmentTransferLegEditors(host) {
   });
 }
 
+function equipmentSectionItemsHtml(section, compact = false, sourceLinks = new Set()) {
+  const itemMarkup = section.items
+    .map((rawItem) => {
+      const item = normalizeEquipmentItem(rawItem);
+      if (!compact && item.editable && item.id) {
+        const recognized = Boolean(section.importSource) || equipmentRecognizedInventoryChoice(item.description);
+        const recognitionClass = recognized ? "" : " is-unrecognized";
+        return `
+          <tr class="equipment-service-item-row${recognitionClass}">
+            <td class="equipment-qty equipment-service-quantity-cell">
+              <input class="equipment-line-quantity" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="quantity" type="number" min="${item.manual ? "1" : "0"}" step="1" value="${escapeEquipmentHtml(item.quantity)}" />
+            </td>
+            <td class="equipment-service-description-cell">
+              <input class="equipment-line-description${recognitionClass}" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="description" type="text" list="equipmentInventoryNameOptions" value="${escapeEquipmentHtml(item.description)}" aria-invalid="${recognized ? "false" : "true"}" />
+              <span class="equipment-name-warning${recognized ? " is-hidden" : ""}">Nombre no reconocido. Seleccione el nombre exacto del inventario.</span>
+            </td>
+            <td class="equipment-row-action">
+              <button class="equipment-row-remove" type="button" data-remove-equipment-item="${escapeEquipmentHtml(item.id)}" aria-label="Eliminar línea">X</button>
+            </td>
+          </tr>`;
+      }
+      return `
+        <tr>
+          <td class="equipment-qty equipment-service-quantity-cell">${escapeEquipmentHtml(item.quantity)}</td>
+          <td class="equipment-service-description-cell">${escapeEquipmentHtml(item.description)}</td>
+          ${compact ? "" : `<td class="equipment-row-action"></td>`}
+        </tr>`;
+    });
+  let items = itemMarkup.join("");
+  if (Array.isArray(section.rows) && section.rows.length) {
+    const bySource = new Map(section.items.flatMap((item, index) => item.manual && !Number.isInteger(item.sourceItemIndex)
+      ? [] : [[Number.isInteger(item.sourceItemIndex) ? item.sourceItemIndex : index, index]]));
+    const included = new Set();
+    let sourceIndex = -1;
+    items = section.rows.map((row) => {
+      if (row.type === "item") {
+        sourceIndex += 1;
+        const index = bySource.get(Number.isInteger(row.sourceItemIndex) ? row.sourceItemIndex : sourceIndex);
+        if (index === undefined) return "";
+        included.add(index);
+        const notes = (row.notes || []).map((note) => '<tr class="equipment-imported-note-row"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(note) + '</td></tr>').join("");
+        return itemMarkup[index] + notes;
+      }
+      const content = row.description || (row.cells || []).map((cell) => String(cell.value ?? "")).join(" · ");
+      return '<tr class="equipment-imported-note-row" data-source-row-type="' + escapeEquipmentHtml(row.type) + '"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(content) + '</td></tr>';
+    }).join("") + itemMarkup.filter((_, index) => !included.has(index)).join("");
+  }
+  if (Array.isArray(section.notes)) {
+    const representedNotes = new Set((section.rows || []).flatMap((row) => [row.description, ...(row.notes || []),
+      ...(row.cells || []).map((cell) => String(cell.value ?? ""))]).filter(Boolean));
+    items += section.notes.filter((note) => !representedNotes.has(note))
+      .map((note) => '<tr class="equipment-imported-note-row"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(note) + '</td></tr>').join("");
+  }
+  const sourceLink = `${section.importSource?.sourceFileUrl || ""}\0${section.importSource?.fileName || ""}`;
+  if (section.importSource?.sourceFileUrl && !sourceLinks.has(sourceLink)) {
+    sourceLinks.add(sourceLink);
+    items += '<tr class="equipment-imported-source-row"><td colspan="' + (compact ? 2 : 3) + '"><a href="' + escapeEquipmentHtml(section.importSource.sourceFileUrl) + '" target="_blank" rel="noopener">Archivo original: ' + escapeEquipmentHtml(section.importSource.fileName) + '</a></td></tr>';
+  }
+  return items;
+}
+
 function tableForEquipmentSections(sections, compact = false) {
   if (!sections.length) {
     return `<p class="equipment-empty">Seleccione un servicio para cargar el equipo.</p>`;
   }
-  const rows = equipmentLiveSectionsForDisplay(sections)
-    .map((section) => {
-      const inventoryCategories = compact ? [] : equipmentInventoryCategoriesForSection(section);
-      const sectionId = String(section.id || "");
+  const sourceLinks = new Set();
+  const rows = equipmentDisplaySectionGroups(sections)
+    .map((group) => {
+      const section = group.sections[0];
+      const sectionId = String(group.id || "");
+      const sourceSectionId = String(section.id || "");
+      const categorySection = { ...section, title: group.title, items: group.sections.flatMap((fragment) => fragment.items || []) };
+      const inventoryCategories = compact ? [] : equipmentInventoryCategoriesForSection(categorySection);
       const expanded = !compact && equipmentState.expandedEquipmentSectionIds.has(sectionId);
-      const itemMarkup = section.items
-        .map((rawItem) => {
-          const item = normalizeEquipmentItem(rawItem);
-          if (!compact && item.editable && item.id) {
-            const recognized = Boolean(section.importSource) || equipmentRecognizedInventoryChoice(item.description);
-            const recognitionClass = recognized ? "" : " is-unrecognized";
-            return `
-              <tr class="equipment-service-item-row${recognitionClass}">
-                <td class="equipment-qty equipment-service-quantity-cell">
-                  <input class="equipment-line-quantity" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="quantity" type="number" min="${item.manual ? "1" : "0"}" step="1" value="${escapeEquipmentHtml(item.quantity)}" />
-                </td>
-                <td class="equipment-service-description-cell">
-                  <input class="equipment-line-description${recognitionClass}" data-equipment-item-id="${escapeEquipmentHtml(item.id)}" data-equipment-field="description" type="text" list="equipmentInventoryNameOptions" value="${escapeEquipmentHtml(item.description)}" aria-invalid="${recognized ? "false" : "true"}" />
-                  <span class="equipment-name-warning${recognized ? " is-hidden" : ""}">Nombre no reconocido. Seleccione el nombre exacto del inventario.</span>
-                </td>
-                <td class="equipment-row-action">
-                  <button class="equipment-row-remove" type="button" data-remove-equipment-item="${escapeEquipmentHtml(item.id)}" aria-label="Eliminar línea">X</button>
-                </td>
-              </tr>`;
-          }
-          return `
-            <tr>
-              <td class="equipment-qty equipment-service-quantity-cell">${escapeEquipmentHtml(item.quantity)}</td>
-              <td class="equipment-service-description-cell">${escapeEquipmentHtml(item.description)}</td>
-              ${compact ? "" : `<td class="equipment-row-action"></td>`}
-            </tr>`;
-        });
-      let items = itemMarkup.join("");
-      if (Array.isArray(section.rows) && section.rows.length) {
-        const bySource = new Map(section.items.map((item, index) => [Number.isInteger(item.sourceItemIndex) ? item.sourceItemIndex : index, index]));
-        const included = new Set();
-        let sourceIndex = -1;
-        items = section.rows.map((row) => {
-          if (row.type === "item") {
-            sourceIndex += 1;
-            const index = bySource.get(Number.isInteger(row.sourceItemIndex) ? row.sourceItemIndex : sourceIndex);
-            if (index === undefined) return "";
-            included.add(index);
-            const notes = (row.notes || []).map((note) => '<tr class="equipment-imported-note-row"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(note) + '</td></tr>').join("");
-            return itemMarkup[index] + notes;
-          }
-          const content = row.description || (row.cells || []).map((cell) => String(cell.value ?? "")).join(" · ");
-          return '<tr class="equipment-imported-note-row" data-source-row-type="' + escapeEquipmentHtml(row.type) + '"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(content) + '</td></tr>';
-        }).join("") + itemMarkup.filter((_, index) => !included.has(index)).join("");
-        if (section.documentSection && Array.isArray(section.notes)) {
-          const representedNotes = new Set(section.rows.flatMap((row) => [
-            row.description,
-            ...(row.notes || []),
-            ...(row.cells || []).map((cell) => String(cell.value ?? ""))
-          ]).filter(Boolean));
-          items += section.notes.filter((note) => !representedNotes.has(note))
-            .map((note) => '<tr class="equipment-imported-note-row"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(note) + '</td></tr>').join("");
-        }
-      } else if (Array.isArray(section.notes)) {
-        items += section.notes.map((note) => '<tr class="equipment-imported-note-row"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(note) + '</td></tr>').join("");
-      }
-      if (section.importSource?.sourceFileUrl) {
-        items += '<tr class="equipment-imported-source-row"><td colspan="' + (compact ? 2 : 3) + '"><a href="' + escapeEquipmentHtml(section.importSource.sourceFileUrl) + '" target="_blank" rel="noopener">Archivo original: ' + escapeEquipmentHtml(section.importSource.fileName) + '</a></td></tr>';
-      }
+      const items = group.sections.map((fragment) => equipmentSectionItemsHtml(fragment, compact, sourceLinks)).join("");
       if (compact) {
         return `
           <tr class="equipment-category-row">
-            <td colspan="2">${escapeEquipmentHtml(section.title)}</td>
+            <td colspan="2">${escapeEquipmentHtml(group.title)}</td>
           </tr>
           ${items}`;
       }
       const categoryTitleEditor = section.manualSection
-        ? `<label>Nombre de la categoría<input data-equipment-manual-section-title="${escapeEquipmentHtml(sectionId)}" type="text" value="${escapeEquipmentHtml(section.title)}" /></label>`
+        ? `<label>Nombre de la categoría<input data-equipment-manual-section-title="${escapeEquipmentHtml(sectionId)}" type="text" value="${escapeEquipmentHtml(group.title)}" /></label>`
         : "";
       const categoryRemoveButton = section.manualSection
         ? `<button class="equipment-category-remove" type="button" data-remove-equipment-section="${escapeEquipmentHtml(sectionId)}">Eliminar categoría</button>`
@@ -2369,7 +2406,7 @@ function tableForEquipmentSections(sections, compact = false) {
                 Cantidad
                 <input data-equipment-category-quantity="${escapeEquipmentHtml(sectionId)}" type="number" min="0" step="1" value="1" />
               </label>
-              <button type="button" data-equipment-category-add="${escapeEquipmentHtml(sectionId)}">Agregar</button>
+              <button type="button" data-equipment-category-add="${escapeEquipmentHtml(sourceSectionId)}" data-equipment-category-display-id="${escapeEquipmentHtml(sectionId)}" data-equipment-category-title="${escapeEquipmentHtml(group.title)}">Agregar</button>
               ${categoryRemoveButton}
             </div>
           </td>
@@ -2378,7 +2415,7 @@ function tableForEquipmentSections(sections, compact = false) {
         <tr class="equipment-category-row">
           <td colspan="3">
             <button class="equipment-category-toggle" type="button" data-equipment-category-toggle="${escapeEquipmentHtml(sectionId)}" aria-expanded="${expanded ? "true" : "false"}">
-              <span>${escapeEquipmentHtml(section.title)}</span>
+              <span>${escapeEquipmentHtml(group.title)}</span>
               <small>${expanded ? "Ocultar opciones" : "Ver y elegir equipo"}</small>
               <b aria-hidden="true">${expanded ? "−" : "+"}</b>
             </button>
@@ -2659,12 +2696,12 @@ function equipmentManualSectionForId(sectionId) {
   return equipmentState.manualMainSections.find((section) => section.id === sectionId) || null;
 }
 
-function addEquipmentChoiceToSection(sectionId) {
+function addEquipmentChoiceToSection(sectionId, displaySectionId = sectionId, displayCategory = "") {
   const section = selectedEquipmentSections().find((entry) => entry.id === sectionId);
   const select = [...document.querySelectorAll("[data-equipment-category-choice]")]
-    .find((element) => element.dataset.equipmentCategoryChoice === sectionId);
+    .find((element) => element.dataset.equipmentCategoryChoice === displaySectionId);
   const quantityInput = [...document.querySelectorAll("[data-equipment-category-quantity]")]
-    .find((element) => element.dataset.equipmentCategoryQuantity === sectionId);
+    .find((element) => element.dataset.equipmentCategoryQuantity === displaySectionId);
   const status = equipmentQuery("#equipmentSaveStatus");
   const description = String(select?.value || "").trim();
   const quantity = Math.max(0, Number(quantityInput?.value || 0) || 0);
@@ -2672,16 +2709,30 @@ function addEquipmentChoiceToSection(sectionId) {
     if (status) status.textContent = "Seleccione un equipo del inventario antes de agregarlo.";
     return;
   }
+  const category = String(select?.selectedOptions?.[0]?.parentElement?.label || displayCategory || section.inventoryCategory || section.title);
+  const choices = equipmentWarehouseRecordsForDescription(description, category)
+    .filter((record) => normalizeEquipmentKey(record.item?.category) === normalizeEquipmentKey(category));
+  const choice = choices.length === 1 ? choices[0] : null;
+  const metadata = { inventoryCategory: category, ...(choice ? { warehouseInventoryId: choice.id } : {}) };
   const existing = (section.items || [])
     .map(normalizeEquipmentItem)
-    .find((item) => equipmentInventoryIdentityForDescription(item.description, section.title) === equipmentInventoryIdentityForDescription(description, section.title));
+    .find((item) => {
+      if (equipmentPendingProcurementChoice(item)) return false;
+      const records = equipmentWarehouseRecordsForItem(item, section);
+      if (choice) return records.some((record) => record.id === choice.id);
+      const itemCategory = (records.length === 1 ? records[0].item?.category : "") || item.inventoryCategory
+        || (section.manualSection ? category : section.inventoryCategory || section.title);
+      return normalizeEquipmentKey(itemCategory) === normalizeEquipmentKey(category)
+        && equipmentInventoryIdentityForDescription(item.description, itemCategory) === equipmentInventoryIdentityForDescription(description, category);
+    });
   if (existing?.id) {
     updateEquipmentItem(existing.id, "quantity", (Number(existing.quantity) || 0) + quantity);
   } else if (sectionId === "extras-manuales") {
     equipmentState.manualExtras.push({
       id: `manual-extra-${Date.now()}-${equipmentExtraCounter++}`,
       quantity,
-      description
+      description,
+      ...metadata
     });
   } else {
     const manualSection = equipmentManualSectionForId(sectionId);
@@ -2689,19 +2740,21 @@ function addEquipmentChoiceToSection(sectionId) {
       manualSection.items.push({
         id: `manual-main-${Date.now()}-${equipmentManualMainCounter++}`,
         quantity,
-        description
+        description,
+        ...metadata
       });
     } else {
       const addedItems = equipmentState.sectionAddedItems.get(sectionId) || [];
       addedItems.push({
         id: `section-item-${Date.now()}-${equipmentManualMainCounter++}`,
         quantity,
-        description
+        description,
+        ...metadata
       });
       equipmentState.sectionAddedItems.set(sectionId, addedItems);
     }
   }
-  if (status) status.textContent = `Equipo agregado en ${section.title}: ${description}`;
+  if (status) status.textContent = `Equipo agregado en ${displayCategory || section.title}: ${description}`;
   renderEquipmentModule();
 }
 
@@ -2744,7 +2797,11 @@ function bindEquipmentSectionInputs() {
     });
   });
   host.querySelectorAll("[data-equipment-category-add]").forEach((button) => {
-    button.addEventListener("click", () => addEquipmentChoiceToSection(button.dataset.equipmentCategoryAdd || ""));
+    button.addEventListener("click", () => addEquipmentChoiceToSection(
+      button.dataset.equipmentCategoryAdd || "",
+      button.dataset.equipmentCategoryDisplayId || button.dataset.equipmentCategoryAdd || "",
+      button.dataset.equipmentCategoryTitle || ""
+    ));
   });
   host.querySelectorAll("[data-equipment-manual-section-title]").forEach((input) => {
     input.addEventListener("change", () => {
