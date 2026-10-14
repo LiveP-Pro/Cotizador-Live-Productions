@@ -461,6 +461,7 @@ function createTransferRegressionContext() {
         { id: "synthetic-keyboard", name: "Teclado de prueba", category: "BACKLINE INSTRUMENTOS / Teclado", quantity: 1, itemType: "equipo" },
         { id: "synthetic-monitor", name: "Monitor de prueba", category: "Audio", quantity: 4, itemType: "equipo" },
         { id: "synthetic-drums", name: "Batería eléctrica de prueba", category: "BACKLINE INSTRUMENTOS / Teclado", quantity: 1, itemType: "equipo" },
+        { id: "synthetic-acoustic-bass", name: "Bombo acústico de prueba", category: "BACKLINE INSTRUMENTOS / Teclado", quantity: 0, itemType: "equipo" },
         { id: "synthetic-battery", name: "Pila de prueba consumible", category: "Consumibles", quantity: 0, itemType: "consumible" }
       ]
     }});

@@ -235,9 +235,9 @@ test("same-name legacy stored Save, rent and purchase extras keep separate summa
   assert.equal(value.rows.length, 3);
   assert.equal(new Set(value.rows.map((row) => row.key)).size, 3);
   assert.deepEqual(value.rows.map(({ choice, quantity, action, available }) => ({ choice, quantity, action, available })), [
-    { choice: "save", quantity: 2, action: "GUARDAR", available: 0 },
-    { choice: "rent", quantity: 4, action: "RENTA", available: 0 },
-    { choice: "purchase", quantity: 4, action: "COMPRA", available: 0 }
+    { choice: "save", quantity: 2, action: "GUARDAR", available: null },
+    { choice: "rent", quantity: 4, action: "RENTA", available: null },
+    { choice: "purchase", quantity: 4, action: "COMPRA", available: null }
   ]);
   assert.deepEqual(value.rent, [{ quantity: 4, missing: 4, action: "RENTA" }]);
   assert.deepEqual(value.purchase, [{ quantity: 4, missing: 4, action: "COMPRA" }]);
@@ -286,7 +286,7 @@ test("registered purchase or saved extra uses new warehouse stock; rented extra 
   })()`));
   assert.equal(result.length, 2, "registered save and purchase extras merge into the inventory item");
   assert.deepEqual(result.find((row) => !row.choice), { choice: "", quantity: 4, available: 7, action: "RENTA" });
-  assert.deepEqual(result.find((row) => row.choice === "rent"), { choice: "rent", quantity: 2, available: 0, action: "RENTA" });
+  assert.deepEqual(result.find((row) => row.choice === "rent"), { choice: "rent", quantity: 2, available: 7, action: "RENTA" });
   const dispatch = plain(evaluate(context, "equipmentWarehouseDispatchItems(equipmentState.events[0])"));
   const rented = dispatch.find((item) => item.procurementChoice === "rent");
   assert.equal(rented.quantity, 2);
