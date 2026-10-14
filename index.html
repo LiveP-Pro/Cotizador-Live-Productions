@@ -6,16 +6,16 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20261008-stock-ingress-04" />
+    <link rel="stylesheet" href="styles.css?v=20261014-dj-audio-01" />
     <link rel="stylesheet" href="warehouse-inventory.css?v=20261008-stock-ingress-04" />
     <link rel="stylesheet" href="equipment-service-import.css?v=20261006-service-import-01" />
     <link rel="stylesheet" href="equipment-name-picker.css?v=20261007-extras-02" />
     <script src="app.js?v=20260814-01" defer></script>
-    <script src="equipment-catalog.js?v=20261013-servicios-archivo-01" defer></script>
+    <script src="equipment-catalog.js?v=20261014-dj-audio-01" defer></script>
     <script src="equipment-inventory.js?v=20261007-extras-decisions-03" defer></script>
     <script src="equipment-service-import.js?v=20261006-service-import-01" defer></script>
     <script src="equipment-name-picker.js?v=20261007-extras-02" defer></script>
-    <script src="equipment.js?v=20261013-servicios-archivo-03" defer></script>
+    <script src="equipment.js?v=20261014-dj-audio-01" defer></script>
     <script src="warehouse-import-review.js?v=20261006-warehouse-sync-01" defer></script>
     <script src="inventory.js?v=20261008-stock-ingress-04" defer></script>
   </head>
@@ -279,6 +279,7 @@
               <button type="button" data-dj-audio-type="t4">AUDIO JBL</button>
               <button type="button" data-dj-audio-type="turbosound">TURBOSOUND</button>
             </div>
+            <div id="equipmentDjAudioSelections" class="equipment-field-wide equipment-dj-audio-selections is-hidden" aria-live="polite"></div>
             <div class="equipment-field-wide equipment-event-actions">
               <button id="equipmentAddEventButton" type="button">Agregar ventana</button>
               <button id="equipmentSaveWindowButton" class="equipment-save-window-button" type="button" disabled>Guardar cambios</button>
@@ -549,6 +550,25 @@
             </div>
             </div>
           </div>
+
+          <dialog id="equipmentDjAudioDialog" class="equipment-logistics-dialog equipment-dj-audio-dialog no-print" aria-labelledby="equipmentDjAudioTitle" aria-describedby="equipmentDjAudioDescription">
+            <section class="equipment-logistics-modal">
+              <header>
+                <div>
+                  <p class="eyebrow">Audio para DJ</p>
+                  <h2 id="equipmentDjAudioTitle">Elige el tipo de audio</h2>
+                </div>
+                <button id="equipmentDjAudioCloseButton" type="button" aria-label="Cerrar selección de audio">X</button>
+              </header>
+              <div class="equipment-logistics-content">
+                <p id="equipmentDjAudioDescription">Elige una opción para agregar su audio al cuadro del DJ.</p>
+                <div id="equipmentDjAudioChoices" class="equipment-dj-audio-choices"></div>
+              </div>
+              <footer>
+                <button id="equipmentDjAudioCancelButton" type="button">Cancelar</button>
+              </footer>
+            </section>
+          </dialog>
 
           <dialog id="equipmentUnknownItemDialog" class="equipment-logistics-dialog equipment-unknown-item-dialog no-print" aria-labelledby="equipmentUnknownItemTitle" aria-describedby="equipmentUnknownItemDescription">
             <section class="equipment-logistics-modal">

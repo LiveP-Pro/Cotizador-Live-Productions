@@ -905,6 +905,96 @@ body {
   border-color: #111111;
 }
 
+.equipment-dj-audio-selections {
+  display: grid;
+  gap: 8px;
+}
+
+.equipment-dj-audio-selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.equipment-dj-audio-selection span,
+.equipment-dj-audio-preview {
+  display: grid;
+  gap: 4px;
+}
+
+.equipment-dj-audio-selection small {
+  color: var(--muted);
+}
+
+.equipment-dj-audio-selection button {
+  min-height: 42px;
+  padding: 8px 14px;
+  border: 1px solid #111111;
+  border-radius: 6px;
+  color: #ffffff;
+  background: #111111;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.equipment-dj-audio-dialog {
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+}
+
+.equipment-dj-audio-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.equipment-dj-audio-choice {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 16px;
+  text-align: left;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  color: #111111;
+  background: #ffffff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.equipment-dj-audio-choice:hover,
+.equipment-dj-audio-choice.is-active {
+  border-color: #111111;
+  background: #f4f5f7;
+}
+
+.equipment-dj-audio-choice:focus-visible {
+  outline: 3px solid #2f8b57;
+  outline-offset: 3px;
+}
+
+.equipment-dj-audio-preview {
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.equipment-dj-audio-choice small {
+  font-weight: 800;
+}
+
+@media (max-width: 600px) {
+  .equipment-dj-audio-choices { grid-template-columns: 1fr; }
+  .equipment-dj-audio-selection { flex-wrap: wrap; }
+}
+
 .equipment-workspace {
   display: grid;
   gap: 22px;

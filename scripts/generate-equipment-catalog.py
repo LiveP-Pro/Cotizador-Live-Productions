@@ -23,7 +23,7 @@ from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import get_column_letter
 
 
-DEFAULT_VERSION = "20261013-servicios-archivo-01"
+DEFAULT_VERSION = "20261014-dj-audio-01"
 BOOK_KEY = "servicios"
 STRUCTURAL_LABELS = {"cuadro de montaje", "equipo a llevar live productions"}
 

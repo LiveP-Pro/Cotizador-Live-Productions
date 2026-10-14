@@ -553,12 +553,14 @@ test("catalog is generated only from the current authorized workbook", () => {
   const context = createEquipmentContext();
   vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "equipment-catalog.js"), "utf8"), context);
   const catalog = plain(context.window.requerimientoEquipoCatalog);
-  assert.equal(catalog.version, "20261013-servicios-archivo-01");
-  assert.equal(catalog.source.sha256, "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411");
-  assert.equal(Object.keys(catalog.services).length, 62);
-  assert.equal(catalog.source.workbook, "EQUIPO DE AUDIO ACTUALIZADO.xlsx");
+  assert.equal(catalog.version, "20261014-dj-audio-01");
+  assert.equal(catalog.source.sha256, "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1");
+  assert.equal(Object.keys(catalog.services).length, 61);
+  assert.equal(catalog.source.workbook, "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx");
   assert.ok(!catalog.source.serviceSheets.includes("INVENTARIO"));
-  assert.equal(Object.values(catalog.services).reduce((count, service) => count + service.sourceCells.length, 0), 5305);
+  assert.equal(Object.values(catalog.services).reduce((count, service) => count + service.sourceCells.length, 0), 5117);
+  assert.deepEqual(catalog.groups.find(group => group.label === "DJ").serviceIds, ["dj-completo", "dj-privado"]);
+  assert.deepEqual(catalog.groups.find(group => group.label === "AUDIO").serviceIds, ["audio-qsc", "audio-jbl", "turbosound", "ip2000"]);
   assert.equal(catalog.services["novaloops-solo-show"].mainSections.reduce((count, section) => count + section.items.length, 0), 45);
   assert.deepEqual(catalog.groups.map((group) => group.label), [
     "SUNDAY FUNDAY", "DJ", "NOVALOOPS", "SAXOFONIC", "AUDIO",
@@ -569,7 +571,7 @@ test("catalog is generated only from the current authorized workbook", () => {
     .flatMap((service) => service.mainSections)
     .flatMap((section) => section.items)
     .filter(([quantity]) => quantity === 0);
-  assert.equal(zeroItems.length, 17);
+  assert.equal(zeroItems.length, 16);
 });
 
 test("purchase report contains only COMPRA; rent report contains only RENTA", () => {

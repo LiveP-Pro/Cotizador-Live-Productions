@@ -24,6 +24,7 @@ const equipmentState = {
   selectedServiceId: "",
   selectedServiceIds: new Set(),
   djAudioType: "qsc",
+  djAudioSelections: {},
   events: [],
   selectedExtraIds: new Set(),
   manualMainItems: [],
@@ -73,6 +74,8 @@ let equipmentExtraCounter = 1;
 let equipmentTransferRouteCounter = 1;
 let equipmentLogisticsDecision = null;
 let equipmentUnknownItemDecision = null;
+let equipmentDjAudioDecision = null;
+let equipmentDjServiceSelectionBusy = false;
 let equipmentExtraEntryBusy = false;
 
 const EQUIPMENT_TRANSFER_BUFFER_MINUTES = 120;
@@ -863,6 +866,90 @@ function populateNativeEquipmentServiceSelect() {
   });
 }
 
+function equipmentServiceRequiresDjAudio(serviceId) {
+  return equipmentServiceGroups.some((group) => normalizeEquipmentKey(group.label) === "dj"
+    && group.serviceIds?.includes(serviceId) && Boolean(equipmentServices[serviceId]));
+}
+
+function equipmentDjAudioServices() {
+  const group = equipmentServiceGroups.find((entry) => normalizeEquipmentKey(entry.label) === "audio");
+  return (group?.serviceIds || []).filter((serviceId) => equipmentServices[serviceId])
+    .map((serviceId) => ({ serviceId, service: equipmentServices[serviceId] }));
+}
+
+function cloneEquipmentDjAudioSelections(value = {}, serviceIds = null) {
+  const selectedIds = serviceIds === null ? null : new Set(equipmentNormalizeServiceIds(serviceIds));
+  const audioIds = new Set(equipmentDjAudioServices().map((entry) => entry.serviceId));
+  return Object.fromEntries(Object.entries(value && typeof value === "object" && !Array.isArray(value) ? value : {})
+    .filter(([serviceId, audioId]) => equipmentServiceRequiresDjAudio(serviceId)
+      && (!selectedIds || selectedIds.has(serviceId)) && audioIds.has(audioId)));
+}
+
+function requestEquipmentDjAudioChoice(serviceId) {
+  const dialog = equipmentQuery("#equipmentDjAudioDialog");
+  const choices = equipmentDjAudioServices();
+  if (!dialog || equipmentDjAudioDecision || !equipmentServiceRequiresDjAudio(serviceId) || !choices.length) return Promise.resolve(null);
+  const previousFocus = document.activeElement;
+  const selectedAudioId = equipmentState.djAudioSelections[serviceId] || "";
+  equipmentQuery("#equipmentDjAudioTitle").textContent = `Elige el audio para ${equipmentServices[serviceId].name}`;
+  const host = equipmentQuery("#equipmentDjAudioChoices");
+  host.innerHTML = choices.map(({ serviceId: audioId, service }) => {
+    const selected = audioId === selectedAudioId;
+    const preview = (service.mainSections || []).flatMap((section) => section.items || []).map((item) => {
+      const normalized = normalizeEquipmentItem(item);
+      return `<span>${escapeEquipmentHtml(normalized.quantity)} · ${escapeEquipmentHtml(normalized.description)}</span>`;
+    }).join("");
+    return `<button type="button" class="equipment-dj-audio-choice${selected ? " is-active" : ""}" data-equipment-dj-audio-choice="${escapeEquipmentHtml(audioId)}" aria-pressed="${selected}"><strong>${escapeEquipmentHtml(service.name)}</strong><span class="equipment-dj-audio-preview">${preview}</span>${selected ? '<small>Audio seleccionado</small>' : ""}</button>`;
+  }).join("");
+  return new Promise((resolve) => {
+    equipmentDjAudioDecision = { serviceId, resolve, previousFocus };
+    host.querySelectorAll("[data-equipment-dj-audio-choice]").forEach((button) => {
+      button.addEventListener("click", () => resolveEquipmentDjAudioDecision(button.dataset.equipmentDjAudioChoice));
+    });
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "");
+    const buttons = [...host.querySelectorAll("[data-equipment-dj-audio-choice]")];
+    (buttons.find((button) => button.dataset.equipmentDjAudioChoice === selectedAudioId) || buttons[0])?.focus();
+  });
+}
+
+function resolveEquipmentDjAudioDecision(audioId = null) {
+  const pending = equipmentDjAudioDecision;
+  if (!pending) return;
+  equipmentDjAudioDecision = null;
+  const dialog = equipmentQuery("#equipmentDjAudioDialog");
+  if (typeof dialog?.close === "function" && dialog.open) dialog.close();
+  else dialog?.removeAttribute("open");
+  const validId = equipmentDjAudioServices().some((entry) => entry.serviceId === audioId) ? audioId : null;
+  pending.resolve(validId);
+  // Service selection redraws its buttons after resolving the choice.
+  Promise.resolve().then(() => {
+    if (equipmentDjAudioDecision) return;
+    const target = pending.previousFocus?.isConnected ? pending.previousFocus
+      : [...document.querySelectorAll("[data-equipment-change-dj-audio], [data-equipment-service-option]")]
+        .find((button) => (button.dataset.equipmentChangeDjAudio || button.dataset.equipmentServiceOption) === pending.serviceId);
+    (target || equipmentQuery("#equipmentServiceSelect"))?.focus();
+  });
+}
+
+async function changeEquipmentDjAudio(serviceId) {
+  if (equipmentDjServiceSelectionBusy || !selectedEquipmentServiceIds().includes(serviceId)) return false;
+  equipmentDjServiceSelectionBusy = true;
+  try {
+    const audioId = await requestEquipmentDjAudioChoice(serviceId);
+    if (!audioId) return false;
+    equipmentState.djAudioSelections = { ...equipmentState.djAudioSelections, [serviceId]: audioId };
+    renderEquipmentModule();
+    return true;
+  } finally {
+    equipmentDjServiceSelectionBusy = false;
+  }
+}
+
+function equipmentDjSourceAudioSection(section) {
+  return normalizeEquipmentKey(String(section?.title || "").split("/").at(-1)) === "audio";
+}
+
 function serviceWithEquipmentAudioOption(serviceId) {
   const service = equipmentServices[serviceId] || null;
   if (!service) return null;
@@ -871,6 +958,22 @@ function serviceWithEquipmentAudioOption(serviceId) {
     id: serviceId,
     serviceId
   };
+  if (equipmentServiceRequiresDjAudio(serviceId)) {
+    const audioId = cloneEquipmentDjAudioSelections(equipmentState.djAudioSelections)[serviceId];
+    const audioService = equipmentServices[audioId];
+    if (!audioService) return baseService;
+    return {
+      ...baseService,
+      mainSections: (service.mainSections || []).flatMap((section) => equipmentDjSourceAudioSection(section)
+        ? (audioService.mainSections || []).map((audioSection, index) => ({
+          ...audioSection,
+          id: `dj-audio:${serviceId}:${audioId}:${audioSection.id || index}`,
+          inventoryCategory: audioSection.inventoryCategory || audioSection.title,
+          title: audioSection.title === audioService.name ? audioService.name : `${audioService.name} / ${audioSection.title}`
+        }))
+        : [section])
+    };
+  }
   if (!service.audioOptions) return baseService;
   const audioType = service.audioOptions[equipmentState.djAudioType] ? equipmentState.djAudioType : "qsc";
   const audioOption = service.audioOptions?.[audioType] || service.audioOptions?.qsc;
@@ -993,6 +1096,37 @@ function renderEquipmentServicePicker() {
   });
 }
 
+async function applyEquipmentUserServiceSelection(serviceIds) {
+  if (equipmentDjServiceSelectionBusy) {
+    updateNativeEquipmentServiceSelect();
+    return false;
+  }
+  const normalizedIds = equipmentNormalizeServiceIds(serviceIds);
+  const selectedIds = new Set(selectedEquipmentServiceIds());
+  const newlySelectedDjIds = normalizedIds.filter((serviceId) => !selectedIds.has(serviceId) && equipmentServiceRequiresDjAudio(serviceId));
+  // A native multiple select already reflects its proposed values. Keep it at the
+  // committed selection while a dialog is open, since module renders read it.
+  updateNativeEquipmentServiceSelect();
+  equipmentDjServiceSelectionBusy = true;
+  try {
+    const selections = cloneEquipmentDjAudioSelections(equipmentState.djAudioSelections, normalizedIds);
+    for (const serviceId of newlySelectedDjIds) {
+      const audioId = await requestEquipmentDjAudioChoice(serviceId);
+      if (!audioId) return false;
+      selections[serviceId] = audioId;
+    }
+    equipmentState.djAudioSelections = selections;
+    setEquipmentServiceSelection(normalizedIds, { clearExtras: true });
+    equipmentState.deletedStack = [];
+    equipmentState.activeWindow = "review";
+    renderEquipmentModule();
+    return true;
+  } finally {
+    equipmentDjServiceSelectionBusy = false;
+    updateNativeEquipmentServiceSelect();
+  }
+}
+
 function toggleEquipmentService(serviceId) {
   if (!equipmentServices[serviceId]) return;
   const selectedIds = new Set(selectedEquipmentServiceIds());
@@ -1001,10 +1135,7 @@ function toggleEquipmentService(serviceId) {
   } else {
     selectedIds.add(serviceId);
   }
-  setEquipmentServiceSelection([...selectedIds], { clearExtras: true });
-  equipmentState.deletedStack = [];
-  equipmentState.activeWindow = "review";
-  renderEquipmentModule();
+  return applyEquipmentUserServiceSelection([...selectedIds]);
 }
 
 function selectEquipmentService(serviceId = "") {
@@ -1012,10 +1143,7 @@ function selectEquipmentService(serviceId = "") {
   const selectedIds = serviceSelect?.multiple
     ? [...serviceSelect.selectedOptions].map((option) => option.value)
     : [serviceId || serviceSelect?.value || ""];
-  setEquipmentServiceSelection(selectedIds, { clearExtras: true });
-  equipmentState.deletedStack = [];
-  equipmentState.activeWindow = "review";
-  renderEquipmentModule();
+  return applyEquipmentUserServiceSelection(selectedIds);
 }
 
 function syncSelectedEquipmentService() {
@@ -1381,6 +1509,7 @@ function captureEquipmentEventSnapshot() {
     documentSections: cloneEquipmentSnapshotSections(equipmentState.documentSections),
     documentServiceName: equipmentState.documentServiceName,
     djAudioType: equipmentState.djAudioType,
+    djAudioSelections: cloneEquipmentDjAudioSelections(equipmentState.djAudioSelections, serviceIds),
     selectedExtraIds: [...equipmentState.selectedExtraIds],
     manualMainItems: cloneEquipmentSnapshotItems(equipmentState.manualMainItems),
     manualMainSections: equipmentState.manualMainSections.map((section, index) => ({
@@ -1400,11 +1529,13 @@ function captureEquipmentEventSnapshotForServiceIds(serviceIds) {
   const previousServiceIds = selectedEquipmentServiceIds();
   const previousSelectedServiceId = equipmentState.selectedServiceId;
   const previousDjAudioType = equipmentState.djAudioType;
+  const previousDjAudioSelections = { ...equipmentState.djAudioSelections };
   setEquipmentServiceSelection(serviceIds);
   const snapshot = captureEquipmentEventSnapshot();
   setEquipmentServiceSelection(previousServiceIds);
   equipmentState.selectedServiceId = previousSelectedServiceId;
   equipmentState.djAudioType = previousDjAudioType;
+  equipmentState.djAudioSelections = previousDjAudioSelections;
   updateNativeEquipmentServiceSelect();
   return snapshot;
 }
@@ -1419,6 +1550,7 @@ function restoreEquipmentEventSnapshot(event) {
   equipmentState.documentServiceName = equipmentState.documentSections.length
     ? event.documentServiceName || event.serviceName || "Cuadro importado" : "";
   equipmentState.djAudioType = event.djAudioType || "qsc";
+  equipmentState.djAudioSelections = cloneEquipmentDjAudioSelections(event.djAudioSelections, selectedEquipmentServiceIds());
   equipmentState.selectedExtraIds = new Set(event.selectedExtraIds || []);
   equipmentState.manualMainItems = cloneEquipmentSnapshotItems(event.manualMainItems || []);
   equipmentState.manualMainSections = (event.manualMainSections || []).map((section, index) => ({
@@ -3945,7 +4077,7 @@ async function loadEquipmentCatalogOverrides(force = false) {
 
 function equipmentCatalogDraftForService(serviceId) {
   const baseService = equipmentServices[serviceId];
-  const resolvedService = serviceWithEquipmentAudioOption(serviceId);
+  const resolvedService = equipmentServiceRequiresDjAudio(serviceId) ? baseService : serviceWithEquipmentAudioOption(serviceId);
   if (!baseService || !resolvedService) return null;
   const audioType = baseService.audioOptions?.[equipmentState.djAudioType]
     ? equipmentState.djAudioType
@@ -5101,6 +5233,7 @@ function resetEquipmentWindowDraft() {
   equipmentState.selectedServiceId = "";
   equipmentState.selectedServiceIds.clear();
   equipmentState.djAudioType = "qsc";
+  equipmentState.djAudioSelections = {};
   equipmentState.selectedExtraIds.clear();
   equipmentState.manualMainItems = [];
   equipmentState.manualMainSections = [];
@@ -5654,6 +5787,19 @@ function renderEquipmentModule() {
 function renderDjAudioOptions() {
   const audioOptions = equipmentQuery("#equipmentDjAudioOptions");
   if (!audioOptions) return;
+  const selectedDjIds = selectedEquipmentServiceIds().filter(equipmentServiceRequiresDjAudio);
+  const djHost = equipmentQuery("#equipmentDjAudioSelections");
+  if (djHost) {
+    djHost.innerHTML = selectedDjIds.map((serviceId) => {
+      const audioId = cloneEquipmentDjAudioSelections(equipmentState.djAudioSelections)[serviceId];
+      const audioName = equipmentServices[audioId]?.name || "Audio por elegir";
+      return `<div class="equipment-dj-audio-selection"><span><strong>${escapeEquipmentHtml(equipmentServices[serviceId].name)}</strong><small>${escapeEquipmentHtml(audioName)}</small></span><button type="button" data-equipment-change-dj-audio="${escapeEquipmentHtml(serviceId)}">Cambiar audio</button></div>`;
+    }).join("");
+    djHost.classList.toggle("is-hidden", !selectedDjIds.length);
+    djHost.querySelectorAll("[data-equipment-change-dj-audio]").forEach((button) => {
+      button.addEventListener("click", () => changeEquipmentDjAudio(button.dataset.equipmentChangeDjAudio));
+    });
+  }
   const audioServices = currentEquipmentServices().filter((service) => service.audioOptions);
   const service = audioServices[0] || null;
   const hasAudioOptions = Boolean(service);
@@ -5789,6 +5935,7 @@ function cloneEquipmentEventForEditable(event, index = 0) {
     documentSections,
     documentServiceName: documentSections.length ? event?.documentServiceName || event?.serviceName || "Cuadro importado" : "",
     djAudioType: event?.djAudioType || "qsc",
+    djAudioSelections: cloneEquipmentDjAudioSelections(event?.djAudioSelections, event?.serviceIds?.length ? event.serviceIds : event?.serviceId),
     selectedExtraIds: Array.isArray(event?.selectedExtraIds) ? [...event.selectedExtraIds] : [],
     manualMainItems: cloneEquipmentSnapshotItems(event?.manualMainItems || []),
     manualMainSections: (event?.manualMainSections || []).map((section, sectionIndex) => ({
@@ -6458,6 +6605,17 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentUnknownItemDialog")?.addEventListener("cancel", (event) => {
     event.preventDefault();
     resolveEquipmentUnknownDecision();
+  });
+  equipmentQuery("#equipmentDjAudioCloseButton")?.addEventListener("click", () => resolveEquipmentDjAudioDecision());
+  equipmentQuery("#equipmentDjAudioCancelButton")?.addEventListener("click", () => resolveEquipmentDjAudioDecision());
+  equipmentQuery("#equipmentDjAudioDialog")?.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    resolveEquipmentDjAudioDecision();
+  });
+  equipmentQuery("#equipmentDjAudioDialog")?.addEventListener("close", (event) => {
+    // A batch selection may already have opened the next DJ dialog when the
+    // previous close event is delivered.
+    if (!event.currentTarget.open) resolveEquipmentDjAudioDecision();
   });
   initEquipmentCatalogSync();
   window.EquipmentServiceImport?.init({

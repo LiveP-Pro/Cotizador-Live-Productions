@@ -1,14 +1,14 @@
 window.requerimientoEquipoCatalog = {
-  "version": "20261013-servicios-archivo-01",
+  "version": "20261014-dj-audio-01",
   "source": {
-    "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+    "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
     "bookKey": "servicios",
-    "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-    "version": "20261013-servicios-archivo-01",
+    "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+    "version": "20261014-dj-audio-01",
     "authoritative": true,
-    "userFile": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-    "workbook": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-    "importedAt": "2026-10-13T22:01:57Z",
+    "userFile": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
+    "workbook": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
+    "importedAt": "2026-10-14T15:15:04Z",
     "sheets": [
       "SUNDAY FUNDAY",
       "DJ",
@@ -1592,23 +1592,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A1",
+          "id": "20261014-dj-audio-01:sunday-funday:A1",
           "title": "SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A",
           "sourceStartRow": 1,
           "source": "SUNDAY FUNDAY!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -1655,15 +1655,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A6",
+          "id": "20261014-dj-audio-01:sunday-funday:A6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "SUNDAY FUNDAY!A6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -1771,15 +1771,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A10",
+          "id": "20261014-dj-audio-01:sunday-funday:A10",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 10,
           "source": "SUNDAY FUNDAY!A10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -1828,15 +1828,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A12",
+          "id": "20261014-dj-audio-01:sunday-funday:A12",
           "title": "Audio",
           "sourceStartRow": 12,
           "source": "SUNDAY FUNDAY!A12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -2020,15 +2020,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A19",
+          "id": "20261014-dj-audio-01:sunday-funday:A19",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 19,
           "source": "SUNDAY FUNDAY!A19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -2049,15 +2049,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A20",
+          "id": "20261014-dj-audio-01:sunday-funday:A20",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 20,
           "source": "SUNDAY FUNDAY!A20",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -2160,15 +2160,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A24",
+          "id": "20261014-dj-audio-01:sunday-funday:A24",
           "title": "MONITOREO INTERNO / Computadora",
           "sourceStartRow": 24,
           "source": "SUNDAY FUNDAY!A24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -2217,15 +2217,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A26",
+          "id": "20261014-dj-audio-01:sunday-funday:A26",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 26,
           "source": "SUNDAY FUNDAY!A26",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -2355,15 +2355,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A31",
+          "id": "20261014-dj-audio-01:sunday-funday:A31",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 31,
           "source": "SUNDAY FUNDAY!A31",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -2520,15 +2520,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A37",
+          "id": "20261014-dj-audio-01:sunday-funday:A37",
           "title": "BACKLINE INSTRUMENTOS",
           "sourceStartRow": 37,
           "source": "SUNDAY FUNDAY!A37",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -2549,15 +2549,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A38",
+          "id": "20261014-dj-audio-01:sunday-funday:A38",
           "title": "BACKLINE INSTRUMENTOS / Case de Pedestales de Bateria",
           "sourceStartRow": 38,
           "source": "SUNDAY FUNDAY!A38",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -2849,15 +2849,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A49",
+          "id": "20261014-dj-audio-01:sunday-funday:A49",
           "title": "BACKLINE INSTRUMENTOS / Case de platos",
           "sourceStartRow": 49,
           "source": "SUNDAY FUNDAY!A49",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -2960,15 +2960,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A53",
+          "id": "20261014-dj-audio-01:sunday-funday:A53",
           "title": "MICROFONIA",
           "sourceStartRow": 53,
           "source": "SUNDAY FUNDAY!A53",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -2989,15 +2989,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A54",
+          "id": "20261014-dj-audio-01:sunday-funday:A54",
           "title": "MICROFONIA / Microfonia para bateria",
           "sourceStartRow": 54,
           "source": "SUNDAY FUNDAY!A54",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -3127,15 +3127,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A59",
+          "id": "20261014-dj-audio-01:sunday-funday:A59",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 59,
           "source": "SUNDAY FUNDAY!A59",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -3292,15 +3292,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A65",
+          "id": "20261014-dj-audio-01:sunday-funday:A65",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 65,
           "source": "SUNDAY FUNDAY!A65",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -3457,15 +3457,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A71",
+          "id": "20261014-dj-audio-01:sunday-funday:A71",
           "title": "ILUMINACION",
           "sourceStartRow": 71,
           "source": "SUNDAY FUNDAY!A71",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -3486,15 +3486,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A72",
+          "id": "20261014-dj-audio-01:sunday-funday:A72",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 72,
           "source": "SUNDAY FUNDAY!A72",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -3813,15 +3813,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A85",
+          "id": "20261014-dj-audio-01:sunday-funday:A85",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 85,
           "source": "SUNDAY FUNDAY!A85",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -3842,15 +3842,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A86",
+          "id": "20261014-dj-audio-01:sunday-funday:A86",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 86,
           "source": "SUNDAY FUNDAY!A86",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -3926,15 +3926,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A89",
+          "id": "20261014-dj-audio-01:sunday-funday:A89",
           "title": "EFECTOS ESPECIALES / Pistola LED CO2",
           "sourceStartRow": 89,
           "source": "SUNDAY FUNDAY!A89",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -4145,15 +4145,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A97",
+          "id": "20261014-dj-audio-01:sunday-funday:A97",
           "title": "EFECTOS ESPECIALES / Pirotecnia Fria",
           "sourceStartRow": 97,
           "source": "SUNDAY FUNDAY!A97",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -4256,15 +4256,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A101",
+          "id": "20261014-dj-audio-01:sunday-funday:A101",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 101,
           "source": "SUNDAY FUNDAY!A101",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -4285,15 +4285,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A102",
+          "id": "20261014-dj-audio-01:sunday-funday:A102",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 102,
           "source": "SUNDAY FUNDAY!A102",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -4396,15 +4396,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A106",
+          "id": "20261014-dj-audio-01:sunday-funday:A106",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 106,
           "source": "SUNDAY FUNDAY!A106",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -4588,15 +4588,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A113",
+          "id": "20261014-dj-audio-01:sunday-funday:A113",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 113,
           "source": "SUNDAY FUNDAY!A113",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -4753,15 +4753,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A119",
+          "id": "20261014-dj-audio-01:sunday-funday:A119",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 119,
           "source": "SUNDAY FUNDAY!A119",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -5053,15 +5053,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A130",
+          "id": "20261014-dj-audio-01:sunday-funday:A130",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 130,
           "source": "SUNDAY FUNDAY!A130",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -5272,15 +5272,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A139",
+          "id": "20261014-dj-audio-01:sunday-funday:A139",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 139,
           "source": "SUNDAY FUNDAY!A139",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -5707,15 +5707,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A156",
+          "id": "20261014-dj-audio-01:sunday-funday:A156",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 156,
           "source": "SUNDAY FUNDAY!A156",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -5926,15 +5926,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A165",
+          "id": "20261014-dj-audio-01:sunday-funday:A165",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 165,
           "source": "SUNDAY FUNDAY!A165",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -6010,15 +6010,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A169",
+          "id": "20261014-dj-audio-01:sunday-funday:A169",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 169,
           "source": "SUNDAY FUNDAY!A169",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -6175,15 +6175,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A176",
+          "id": "20261014-dj-audio-01:sunday-funday:A176",
           "title": "EXTRA SUNDAY FUNDAY",
           "sourceStartRow": 176,
           "source": "SUNDAY FUNDAY!A176",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -6204,15 +6204,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:A177",
+          "id": "20261014-dj-audio-01:sunday-funday:A177",
           "title": "EXTRA SUNDAY FUNDAY / Toldos",
           "sourceStartRow": 177,
           "source": "SUNDAY FUNDAY!A177",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -7868,23 +7868,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D1",
+          "id": "20261014-dj-audio-01:sunday-funday:D1",
           "title": "SUNDAY FUNDAY - BATERIA ACUSTICA OPCION B",
           "sourceStartRow": 1,
           "source": "SUNDAY FUNDAY!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -7931,15 +7931,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D6",
+          "id": "20261014-dj-audio-01:sunday-funday:D6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "SUNDAY FUNDAY!D6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -8047,15 +8047,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D10",
+          "id": "20261014-dj-audio-01:sunday-funday:D10",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 10,
           "source": "SUNDAY FUNDAY!D10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -8104,15 +8104,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D12",
+          "id": "20261014-dj-audio-01:sunday-funday:D12",
           "title": "Audio",
           "sourceStartRow": 12,
           "source": "SUNDAY FUNDAY!D12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -8296,15 +8296,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D19",
+          "id": "20261014-dj-audio-01:sunday-funday:D19",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 19,
           "source": "SUNDAY FUNDAY!D19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -8325,15 +8325,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D20",
+          "id": "20261014-dj-audio-01:sunday-funday:D20",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 20,
           "source": "SUNDAY FUNDAY!D20",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -8436,15 +8436,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D24",
+          "id": "20261014-dj-audio-01:sunday-funday:D24",
           "title": "MONITOREO INTERNO / Computadora",
           "sourceStartRow": 24,
           "source": "SUNDAY FUNDAY!D24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -8493,15 +8493,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D26",
+          "id": "20261014-dj-audio-01:sunday-funday:D26",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 26,
           "source": "SUNDAY FUNDAY!D26",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -8631,15 +8631,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D31",
+          "id": "20261014-dj-audio-01:sunday-funday:D31",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 31,
           "source": "SUNDAY FUNDAY!D31",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -8796,15 +8796,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D37",
+          "id": "20261014-dj-audio-01:sunday-funday:D37",
           "title": "BACKLINE INSTRUMENTOS",
           "sourceStartRow": 37,
           "source": "SUNDAY FUNDAY!D37",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -8825,15 +8825,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D38",
+          "id": "20261014-dj-audio-01:sunday-funday:D38",
           "title": "BACKLINE INSTRUMENTOS / Case de Pedestales de Bateria",
           "sourceStartRow": 38,
           "source": "SUNDAY FUNDAY!D38",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -9098,15 +9098,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D48",
+          "id": "20261014-dj-audio-01:sunday-funday:D48",
           "title": "BACKLINE INSTRUMENTOS / Case de platos",
           "sourceStartRow": 48,
           "source": "SUNDAY FUNDAY!D48",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -9209,15 +9209,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D53",
+          "id": "20261014-dj-audio-01:sunday-funday:D53",
           "title": "MICROFONIA",
           "sourceStartRow": 53,
           "source": "SUNDAY FUNDAY!D53",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -9238,15 +9238,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D54",
+          "id": "20261014-dj-audio-01:sunday-funday:D54",
           "title": "MICROFONIA / Microfonia para bateria",
           "sourceStartRow": 54,
           "source": "SUNDAY FUNDAY!D54",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -9376,15 +9376,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D59",
+          "id": "20261014-dj-audio-01:sunday-funday:D59",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 59,
           "source": "SUNDAY FUNDAY!D59",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -9541,15 +9541,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D65",
+          "id": "20261014-dj-audio-01:sunday-funday:D65",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 65,
           "source": "SUNDAY FUNDAY!D65",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -9706,15 +9706,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D71",
+          "id": "20261014-dj-audio-01:sunday-funday:D71",
           "title": "ILUMINACION",
           "sourceStartRow": 71,
           "source": "SUNDAY FUNDAY!D71",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -9735,15 +9735,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D72",
+          "id": "20261014-dj-audio-01:sunday-funday:D72",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 72,
           "source": "SUNDAY FUNDAY!D72",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -10062,15 +10062,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D85",
+          "id": "20261014-dj-audio-01:sunday-funday:D85",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 85,
           "source": "SUNDAY FUNDAY!D85",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -10091,15 +10091,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D86",
+          "id": "20261014-dj-audio-01:sunday-funday:D86",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 86,
           "source": "SUNDAY FUNDAY!D86",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -10175,15 +10175,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D89",
+          "id": "20261014-dj-audio-01:sunday-funday:D89",
           "title": "EFECTOS ESPECIALES / Pistola LED CO2",
           "sourceStartRow": 89,
           "source": "SUNDAY FUNDAY!D89",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -10394,15 +10394,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D97",
+          "id": "20261014-dj-audio-01:sunday-funday:D97",
           "title": "EFECTOS ESPECIALES / Pirotecnia Fria",
           "sourceStartRow": 97,
           "source": "SUNDAY FUNDAY!D97",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -10505,15 +10505,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D101",
+          "id": "20261014-dj-audio-01:sunday-funday:D101",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 101,
           "source": "SUNDAY FUNDAY!D101",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -10534,15 +10534,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D102",
+          "id": "20261014-dj-audio-01:sunday-funday:D102",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 102,
           "source": "SUNDAY FUNDAY!D102",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -10645,15 +10645,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D106",
+          "id": "20261014-dj-audio-01:sunday-funday:D106",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 106,
           "source": "SUNDAY FUNDAY!D106",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -10837,15 +10837,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D113",
+          "id": "20261014-dj-audio-01:sunday-funday:D113",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 113,
           "source": "SUNDAY FUNDAY!D113",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -11002,15 +11002,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D119",
+          "id": "20261014-dj-audio-01:sunday-funday:D119",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 119,
           "source": "SUNDAY FUNDAY!D119",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -11302,15 +11302,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D130",
+          "id": "20261014-dj-audio-01:sunday-funday:D130",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 130,
           "source": "SUNDAY FUNDAY!D130",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -11521,15 +11521,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D139",
+          "id": "20261014-dj-audio-01:sunday-funday:D139",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 139,
           "source": "SUNDAY FUNDAY!D139",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -11956,15 +11956,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D156",
+          "id": "20261014-dj-audio-01:sunday-funday:D156",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 156,
           "source": "SUNDAY FUNDAY!D156",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -12175,15 +12175,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D165",
+          "id": "20261014-dj-audio-01:sunday-funday:D165",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 165,
           "source": "SUNDAY FUNDAY!D165",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -12259,15 +12259,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D169",
+          "id": "20261014-dj-audio-01:sunday-funday:D169",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 169,
           "source": "SUNDAY FUNDAY!D169",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -12424,15 +12424,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D176",
+          "id": "20261014-dj-audio-01:sunday-funday:D176",
           "title": "EXTRA SUNDAY FUNDAY",
           "sourceStartRow": 176,
           "source": "SUNDAY FUNDAY!D176",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -12453,15 +12453,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:D177",
+          "id": "20261014-dj-audio-01:sunday-funday:D177",
           "title": "EXTRA SUNDAY FUNDAY / Toldos",
           "sourceStartRow": 177,
           "source": "SUNDAY FUNDAY!D177",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -14034,23 +14034,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G1",
+          "id": "20261014-dj-audio-01:sunday-funday:G1",
           "title": "SUNDAY FUNDAY - BATERIA ELECTRICA OPCION A",
           "sourceStartRow": 1,
           "source": "SUNDAY FUNDAY!G1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -14097,15 +14097,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G6",
+          "id": "20261014-dj-audio-01:sunday-funday:G6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "SUNDAY FUNDAY!G6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -14213,15 +14213,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G10",
+          "id": "20261014-dj-audio-01:sunday-funday:G10",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 10,
           "source": "SUNDAY FUNDAY!G10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -14270,15 +14270,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G12",
+          "id": "20261014-dj-audio-01:sunday-funday:G12",
           "title": "Audio",
           "sourceStartRow": 12,
           "source": "SUNDAY FUNDAY!G12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -14489,15 +14489,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G20",
+          "id": "20261014-dj-audio-01:sunday-funday:G20",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 20,
           "source": "SUNDAY FUNDAY!G20",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -14518,15 +14518,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G21",
+          "id": "20261014-dj-audio-01:sunday-funday:G21",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 21,
           "source": "SUNDAY FUNDAY!G21",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -14629,15 +14629,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G25",
+          "id": "20261014-dj-audio-01:sunday-funday:G25",
           "title": "MONITOREO INTERNO / Computadora",
           "sourceStartRow": 25,
           "source": "SUNDAY FUNDAY!G25",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -14686,15 +14686,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G27",
+          "id": "20261014-dj-audio-01:sunday-funday:G27",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 27,
           "source": "SUNDAY FUNDAY!G27",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -14824,15 +14824,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G32",
+          "id": "20261014-dj-audio-01:sunday-funday:G32",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 32,
           "source": "SUNDAY FUNDAY!G32",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -14989,15 +14989,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G38",
+          "id": "20261014-dj-audio-01:sunday-funday:G38",
           "title": "BACKLINE INSTRUMENTOS",
           "sourceStartRow": 38,
           "source": "SUNDAY FUNDAY!G38",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -15018,15 +15018,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G39",
+          "id": "20261014-dj-audio-01:sunday-funday:G39",
           "title": "BACKLINE INSTRUMENTOS / Bateria Electrica",
           "sourceStartRow": 39,
           "source": "SUNDAY FUNDAY!G39",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -15183,15 +15183,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G45",
+          "id": "20261014-dj-audio-01:sunday-funday:G45",
           "title": "MICROFONIA",
           "sourceStartRow": 45,
           "source": "SUNDAY FUNDAY!G45",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -15212,15 +15212,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G46",
+          "id": "20261014-dj-audio-01:sunday-funday:G46",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 46,
           "source": "SUNDAY FUNDAY!G46",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -15377,15 +15377,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G53",
+          "id": "20261014-dj-audio-01:sunday-funday:G53",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 53,
           "source": "SUNDAY FUNDAY!G53",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -15542,15 +15542,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G59",
+          "id": "20261014-dj-audio-01:sunday-funday:G59",
           "title": "ILUMINACION",
           "sourceStartRow": 59,
           "source": "SUNDAY FUNDAY!G59",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -15571,15 +15571,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G60",
+          "id": "20261014-dj-audio-01:sunday-funday:G60",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 60,
           "source": "SUNDAY FUNDAY!G60",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -15898,15 +15898,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G73",
+          "id": "20261014-dj-audio-01:sunday-funday:G73",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 73,
           "source": "SUNDAY FUNDAY!G73",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -15927,15 +15927,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G74",
+          "id": "20261014-dj-audio-01:sunday-funday:G74",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 74,
           "source": "SUNDAY FUNDAY!G74",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -16011,15 +16011,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G77",
+          "id": "20261014-dj-audio-01:sunday-funday:G77",
           "title": "EFECTOS ESPECIALES / Pistola LED CO2",
           "sourceStartRow": 77,
           "source": "SUNDAY FUNDAY!G77",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -16230,15 +16230,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G85",
+          "id": "20261014-dj-audio-01:sunday-funday:G85",
           "title": "EFECTOS ESPECIALES / Pirotecnia Fria",
           "sourceStartRow": 85,
           "source": "SUNDAY FUNDAY!G85",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -16341,15 +16341,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G89",
+          "id": "20261014-dj-audio-01:sunday-funday:G89",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 89,
           "source": "SUNDAY FUNDAY!G89",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -16370,15 +16370,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G90",
+          "id": "20261014-dj-audio-01:sunday-funday:G90",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 90,
           "source": "SUNDAY FUNDAY!G90",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -16481,15 +16481,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G94",
+          "id": "20261014-dj-audio-01:sunday-funday:G94",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 94,
           "source": "SUNDAY FUNDAY!G94",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -16673,15 +16673,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G101",
+          "id": "20261014-dj-audio-01:sunday-funday:G101",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 101,
           "source": "SUNDAY FUNDAY!G101",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -16838,15 +16838,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G107",
+          "id": "20261014-dj-audio-01:sunday-funday:G107",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 107,
           "source": "SUNDAY FUNDAY!G107",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -17138,15 +17138,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G118",
+          "id": "20261014-dj-audio-01:sunday-funday:G118",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 118,
           "source": "SUNDAY FUNDAY!G118",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -17357,15 +17357,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G127",
+          "id": "20261014-dj-audio-01:sunday-funday:G127",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 127,
           "source": "SUNDAY FUNDAY!G127",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -17792,15 +17792,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G144",
+          "id": "20261014-dj-audio-01:sunday-funday:G144",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 144,
           "source": "SUNDAY FUNDAY!G144",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -18011,15 +18011,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G153",
+          "id": "20261014-dj-audio-01:sunday-funday:G153",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 153,
           "source": "SUNDAY FUNDAY!G153",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -18095,15 +18095,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G157",
+          "id": "20261014-dj-audio-01:sunday-funday:G157",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 157,
           "source": "SUNDAY FUNDAY!G157",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -18260,15 +18260,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G164",
+          "id": "20261014-dj-audio-01:sunday-funday:G164",
           "title": "EXTRA SUNDAY FUNDAY",
           "sourceStartRow": 164,
           "source": "SUNDAY FUNDAY!G164",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -18289,15 +18289,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:G165",
+          "id": "20261014-dj-audio-01:sunday-funday:G165",
           "title": "EXTRA SUNDAY FUNDAY / Toldos",
           "sourceStartRow": 165,
           "source": "SUNDAY FUNDAY!G165",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -19595,23 +19595,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J1",
+          "id": "20261014-dj-audio-01:sunday-funday:J1",
           "title": "SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A SOLO SHOW",
           "sourceStartRow": 1,
           "source": "SUNDAY FUNDAY!J1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -19658,15 +19658,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J6",
+          "id": "20261014-dj-audio-01:sunday-funday:J6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "SUNDAY FUNDAY!J6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -19774,15 +19774,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J10",
+          "id": "20261014-dj-audio-01:sunday-funday:J10",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 10,
           "source": "SUNDAY FUNDAY!J10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -19831,15 +19831,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J12",
+          "id": "20261014-dj-audio-01:sunday-funday:J12",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 12,
           "source": "SUNDAY FUNDAY!J12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -19860,15 +19860,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J13",
+          "id": "20261014-dj-audio-01:sunday-funday:J13",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 13,
           "source": "SUNDAY FUNDAY!J13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -19971,15 +19971,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J17",
+          "id": "20261014-dj-audio-01:sunday-funday:J17",
           "title": "MONITOREO INTERNO / Computadora",
           "sourceStartRow": 17,
           "source": "SUNDAY FUNDAY!J17",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -20028,15 +20028,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J19",
+          "id": "20261014-dj-audio-01:sunday-funday:J19",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 19,
           "source": "SUNDAY FUNDAY!J19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -20166,15 +20166,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J24",
+          "id": "20261014-dj-audio-01:sunday-funday:J24",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 24,
           "source": "SUNDAY FUNDAY!J24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -20331,15 +20331,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J30",
+          "id": "20261014-dj-audio-01:sunday-funday:J30",
           "title": "BACKLINE INSTRUMENTOS",
           "sourceStartRow": 30,
           "source": "SUNDAY FUNDAY!J30",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -20360,15 +20360,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J31",
+          "id": "20261014-dj-audio-01:sunday-funday:J31",
           "title": "BACKLINE INSTRUMENTOS / Case de Pedestales de Bateria",
           "sourceStartRow": 31,
           "source": "SUNDAY FUNDAY!J31",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -20660,15 +20660,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J42",
+          "id": "20261014-dj-audio-01:sunday-funday:J42",
           "title": "BACKLINE INSTRUMENTOS / Case de platos",
           "sourceStartRow": 42,
           "source": "SUNDAY FUNDAY!J42",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -20771,15 +20771,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J46",
+          "id": "20261014-dj-audio-01:sunday-funday:J46",
           "title": "MICROFONIA",
           "sourceStartRow": 46,
           "source": "SUNDAY FUNDAY!J46",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -20800,15 +20800,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J47",
+          "id": "20261014-dj-audio-01:sunday-funday:J47",
           "title": "MICROFONIA / Microfonia para bateria",
           "sourceStartRow": 47,
           "source": "SUNDAY FUNDAY!J47",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -20938,15 +20938,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J53",
+          "id": "20261014-dj-audio-01:sunday-funday:J53",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 53,
           "source": "SUNDAY FUNDAY!J53",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -21103,15 +21103,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J59",
+          "id": "20261014-dj-audio-01:sunday-funday:J59",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 59,
           "source": "SUNDAY FUNDAY!J59",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -21268,15 +21268,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J65",
+          "id": "20261014-dj-audio-01:sunday-funday:J65",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 65,
           "source": "SUNDAY FUNDAY!J65",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -21297,15 +21297,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J66",
+          "id": "20261014-dj-audio-01:sunday-funday:J66",
           "title": "EFECTOS ESPECIALES / Pistola LED CO2",
           "sourceStartRow": 66,
           "source": "SUNDAY FUNDAY!J66",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -21516,15 +21516,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J74",
+          "id": "20261014-dj-audio-01:sunday-funday:J74",
           "title": "EFECTOS ESPECIALES / Pirotecnia Fria",
           "sourceStartRow": 74,
           "source": "SUNDAY FUNDAY!J74",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -21627,15 +21627,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J78",
+          "id": "20261014-dj-audio-01:sunday-funday:J78",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 78,
           "source": "SUNDAY FUNDAY!J78",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -21656,15 +21656,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J79",
+          "id": "20261014-dj-audio-01:sunday-funday:J79",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 79,
           "source": "SUNDAY FUNDAY!J79",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -21713,15 +21713,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J81",
+          "id": "20261014-dj-audio-01:sunday-funday:J81",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 81,
           "source": "SUNDAY FUNDAY!J81",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -21770,15 +21770,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J83",
+          "id": "20261014-dj-audio-01:sunday-funday:J83",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 83,
           "source": "SUNDAY FUNDAY!J83",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -22016,15 +22016,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J92",
+          "id": "20261014-dj-audio-01:sunday-funday:J92",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 92,
           "source": "SUNDAY FUNDAY!J92",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -22208,15 +22208,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J100",
+          "id": "20261014-dj-audio-01:sunday-funday:J100",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 100,
           "source": "SUNDAY FUNDAY!J100",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -22562,15 +22562,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J114",
+          "id": "20261014-dj-audio-01:sunday-funday:J114",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 114,
           "source": "SUNDAY FUNDAY!J114",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -22781,15 +22781,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J123",
+          "id": "20261014-dj-audio-01:sunday-funday:J123",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 123,
           "source": "SUNDAY FUNDAY!J123",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -22865,15 +22865,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J127",
+          "id": "20261014-dj-audio-01:sunday-funday:J127",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 127,
           "source": "SUNDAY FUNDAY!J127",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -23030,15 +23030,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J134",
+          "id": "20261014-dj-audio-01:sunday-funday:J134",
           "title": "EXTRA SUNDAY FUNDAY",
           "sourceStartRow": 134,
           "source": "SUNDAY FUNDAY!J134",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -23059,15 +23059,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:J135",
+          "id": "20261014-dj-audio-01:sunday-funday:J135",
           "title": "EXTRA SUNDAY FUNDAY / Toldos",
           "sourceStartRow": 135,
           "source": "SUNDAY FUNDAY!J135",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -24235,23 +24235,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M1",
+          "id": "20261014-dj-audio-01:sunday-funday:M1",
           "title": "SUNDAY FUNDAY - BATERIA ELECTRICA SOLO SHOW",
           "sourceStartRow": 1,
           "source": "SUNDAY FUNDAY!M1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -24298,15 +24298,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M6",
+          "id": "20261014-dj-audio-01:sunday-funday:M6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "SUNDAY FUNDAY!M6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -24414,15 +24414,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M10",
+          "id": "20261014-dj-audio-01:sunday-funday:M10",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 10,
           "source": "SUNDAY FUNDAY!M10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -24471,15 +24471,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M12",
+          "id": "20261014-dj-audio-01:sunday-funday:M12",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 12,
           "source": "SUNDAY FUNDAY!M12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -24500,15 +24500,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M13",
+          "id": "20261014-dj-audio-01:sunday-funday:M13",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 13,
           "source": "SUNDAY FUNDAY!M13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -24611,15 +24611,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M17",
+          "id": "20261014-dj-audio-01:sunday-funday:M17",
           "title": "MONITOREO INTERNO / Computadora",
           "sourceStartRow": 17,
           "source": "SUNDAY FUNDAY!M17",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -24668,15 +24668,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M19",
+          "id": "20261014-dj-audio-01:sunday-funday:M19",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 19,
           "source": "SUNDAY FUNDAY!M19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -24806,15 +24806,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M24",
+          "id": "20261014-dj-audio-01:sunday-funday:M24",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 24,
           "source": "SUNDAY FUNDAY!M24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -24971,15 +24971,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M30",
+          "id": "20261014-dj-audio-01:sunday-funday:M30",
           "title": "BACKLINE INSTRUMENTOS",
           "sourceStartRow": 30,
           "source": "SUNDAY FUNDAY!M30",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -25000,15 +25000,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M31",
+          "id": "20261014-dj-audio-01:sunday-funday:M31",
           "title": "BACKLINE INSTRUMENTOS / Bateria Electrica",
           "sourceStartRow": 31,
           "source": "SUNDAY FUNDAY!M31",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -25165,15 +25165,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M37",
+          "id": "20261014-dj-audio-01:sunday-funday:M37",
           "title": "MICROFONIA",
           "sourceStartRow": 37,
           "source": "SUNDAY FUNDAY!M37",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -25194,15 +25194,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M38",
+          "id": "20261014-dj-audio-01:sunday-funday:M38",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 38,
           "source": "SUNDAY FUNDAY!M38",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -25359,15 +25359,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M44",
+          "id": "20261014-dj-audio-01:sunday-funday:M44",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 44,
           "source": "SUNDAY FUNDAY!M44",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -25524,15 +25524,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M50",
+          "id": "20261014-dj-audio-01:sunday-funday:M50",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 50,
           "source": "SUNDAY FUNDAY!M50",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -25553,15 +25553,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M51",
+          "id": "20261014-dj-audio-01:sunday-funday:M51",
           "title": "EFECTOS ESPECIALES / Pistola LED CO2",
           "sourceStartRow": 51,
           "source": "SUNDAY FUNDAY!M51",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -25772,15 +25772,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M59",
+          "id": "20261014-dj-audio-01:sunday-funday:M59",
           "title": "EFECTOS ESPECIALES / Pirotecnia Fria",
           "sourceStartRow": 59,
           "source": "SUNDAY FUNDAY!M59",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -25883,15 +25883,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M63",
+          "id": "20261014-dj-audio-01:sunday-funday:M63",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 63,
           "source": "SUNDAY FUNDAY!M63",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -25912,15 +25912,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M64",
+          "id": "20261014-dj-audio-01:sunday-funday:M64",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 64,
           "source": "SUNDAY FUNDAY!M64",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -25969,15 +25969,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M66",
+          "id": "20261014-dj-audio-01:sunday-funday:M66",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 66,
           "source": "SUNDAY FUNDAY!M66",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -26026,15 +26026,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M69",
+          "id": "20261014-dj-audio-01:sunday-funday:M69",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 69,
           "source": "SUNDAY FUNDAY!M69",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -26272,15 +26272,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M78",
+          "id": "20261014-dj-audio-01:sunday-funday:M78",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 78,
           "source": "SUNDAY FUNDAY!M78",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -26464,15 +26464,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M86",
+          "id": "20261014-dj-audio-01:sunday-funday:M86",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 86,
           "source": "SUNDAY FUNDAY!M86",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -26818,15 +26818,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M100",
+          "id": "20261014-dj-audio-01:sunday-funday:M100",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 100,
           "source": "SUNDAY FUNDAY!M100",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -27037,15 +27037,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M108",
+          "id": "20261014-dj-audio-01:sunday-funday:M108",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 108,
           "source": "SUNDAY FUNDAY!M108",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -27121,15 +27121,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M111",
+          "id": "20261014-dj-audio-01:sunday-funday:M111",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 111,
           "source": "SUNDAY FUNDAY!M111",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -27286,15 +27286,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M118",
+          "id": "20261014-dj-audio-01:sunday-funday:M118",
           "title": "EXTRA SUNDAY FUNDAY",
           "sourceStartRow": 118,
           "source": "SUNDAY FUNDAY!M118",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -27315,15 +27315,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:sunday-funday:M119",
+          "id": "20261014-dj-audio-01:sunday-funday:M119",
           "title": "EXTRA SUNDAY FUNDAY / Toldos",
           "sourceStartRow": 119,
           "source": "SUNDAY FUNDAY!M119",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -27455,14 +27455,14 @@ window.requerimientoEquipoCatalog = {
       ],
       "extras": []
     },
-    "dj-completo-audio-qsc": {
-      "name": "DJ COMPLETO - AUDIO QSC",
+    "dj-completo": {
+      "name": "DJ COMPLETO",
       "source": "DJ!A:C",
       "sourceCells": [
         {
           "address": "A1",
           "ref": "DJ!A1",
-          "value": "DJ COMPLETO - AUDIO QSC"
+          "value": "DJ COMPLETO"
         },
         {
           "address": "B4",
@@ -28411,23 +28411,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:dj:A1",
-          "title": "DJ COMPLETO - AUDIO QSC",
+          "id": "20261014-dj-audio-01:dj:A1",
+          "title": "DJ COMPLETO",
           "sourceStartRow": 1,
           "source": "DJ!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -28440,10 +28440,10 @@ window.requerimientoEquipoCatalog = {
                 {
                   "address": "A1",
                   "ref": "DJ!A1",
-                  "value": "DJ COMPLETO - AUDIO QSC"
+                  "value": "DJ COMPLETO"
                 }
               ],
-              "description": "DJ COMPLETO - AUDIO QSC"
+              "description": "DJ COMPLETO"
             },
             {
               "type": "header",
@@ -28474,15 +28474,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A6",
+          "id": "20261014-dj-audio-01:dj:A6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "DJ!A6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -28536,15 +28536,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A8",
+          "id": "20261014-dj-audio-01:dj:A8",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 8,
           "source": "DJ!A8",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -28593,15 +28593,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A10",
+          "id": "20261014-dj-audio-01:dj:A10",
           "title": "Audio",
           "sourceStartRow": 10,
           "source": "DJ!A10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -28785,15 +28785,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A17",
+          "id": "20261014-dj-audio-01:dj:A17",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 17,
           "source": "DJ!A17",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -28814,15 +28814,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A18",
+          "id": "20261014-dj-audio-01:dj:A18",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 18,
           "source": "DJ!A18",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -28871,15 +28871,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A20",
+          "id": "20261014-dj-audio-01:dj:A20",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 20,
           "source": "DJ!A20",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -28982,15 +28982,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A24",
+          "id": "20261014-dj-audio-01:dj:A24",
           "title": "MICROFONIA",
           "sourceStartRow": 24,
           "source": "DJ!A24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -29011,15 +29011,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A25",
+          "id": "20261014-dj-audio-01:dj:A25",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 25,
           "source": "DJ!A25",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -29095,15 +29095,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A28",
+          "id": "20261014-dj-audio-01:dj:A28",
           "title": "ILUMINACION",
           "sourceStartRow": 28,
           "source": "DJ!A28",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -29124,15 +29124,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A29",
+          "id": "20261014-dj-audio-01:dj:A29",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 29,
           "source": "DJ!A29",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -29397,15 +29397,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A40",
+          "id": "20261014-dj-audio-01:dj:A40",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 40,
           "source": "DJ!A40",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -29426,15 +29426,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A41",
+          "id": "20261014-dj-audio-01:dj:A41",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 41,
           "source": "DJ!A41",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -29510,15 +29510,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A44",
+          "id": "20261014-dj-audio-01:dj:A44",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 44,
           "source": "DJ!A44",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -29539,15 +29539,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A45",
+          "id": "20261014-dj-audio-01:dj:A45",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 45,
           "source": "DJ!A45",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -29650,15 +29650,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A49",
+          "id": "20261014-dj-audio-01:dj:A49",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 49,
           "source": "DJ!A49",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -29842,15 +29842,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A56",
+          "id": "20261014-dj-audio-01:dj:A56",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 56,
           "source": "DJ!A56",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -30007,15 +30007,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A62",
+          "id": "20261014-dj-audio-01:dj:A62",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 62,
           "source": "DJ!A62",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -30307,15 +30307,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A73",
+          "id": "20261014-dj-audio-01:dj:A73",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 73,
           "source": "DJ!A73",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -30445,15 +30445,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A79",
+          "id": "20261014-dj-audio-01:dj:A79",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 79,
           "source": "DJ!A79",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -30880,15 +30880,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A96",
+          "id": "20261014-dj-audio-01:dj:A96",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 96,
           "source": "DJ!A96",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -31099,15 +31099,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A104",
+          "id": "20261014-dj-audio-01:dj:A104",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 104,
           "source": "DJ!A104",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -31183,15 +31183,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:A107",
+          "id": "20261014-dj-audio-01:dj:A107",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 107,
           "source": "DJ!A107",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -31350,14 +31350,14 @@ window.requerimientoEquipoCatalog = {
       ],
       "extras": []
     },
-    "dj-completo-audio-jbl": {
-      "name": "DJ COMPLETO - AUDIO JBL",
-      "source": "DJ!D:F",
+    "dj-privado": {
+      "name": "DJ PRIVADO",
+      "source": "DJ!D:E",
       "sourceCells": [
         {
           "address": "D1",
           "ref": "DJ!D1",
-          "value": "DJ COMPLETO - AUDIO JBL"
+          "value": "DJ PRIVADO"
         },
         {
           "address": "E4",
@@ -31412,42 +31412,32 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "D11",
           "ref": "DJ!D11",
-          "value": 4
+          "value": 2
         },
         {
           "address": "E11",
           "ref": "DJ!E11",
-          "value": "Bajo doble JBL 18 pasivo con cable power spicon"
-        },
-        {
-          "address": "D12",
-          "ref": "DJ!D12",
-          "value": 6
+          "value": "Bocina IP 2000 con funda"
         },
         {
           "address": "E12",
           "ref": "DJ!E12",
-          "value": "Bocina T4 con power spicon"
-        },
-        {
-          "address": "D13",
-          "ref": "DJ!D13",
-          "value": 2
+          "value": "MONITOREO INTERNO"
         },
         {
           "address": "E13",
           "ref": "DJ!E13",
-          "value": "Boomper de T4 para pedestal"
+          "value": "Baterias"
         },
         {
           "address": "D14",
           "ref": "DJ!D14",
-          "value": 2
+          "value": 16
         },
         {
           "address": "E14",
           "ref": "DJ!E14",
-          "value": "Pedestal hercules para bocina con funda"
+          "value": "Bateria Bonai"
         },
         {
           "address": "D15",
@@ -31457,182 +31447,177 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E15",
           "ref": "DJ!E15",
-          "value": "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac"
+          "value": "Cargador para bateria Bonai"
+        },
+        {
+          "address": "D16",
+          "ref": "DJ!D16",
+          "value": 1
         },
         {
           "address": "E16",
           "ref": "DJ!E16",
-          "value": "MONITOREO INTERNO"
+          "value": "Porta bateria Bonai"
         },
         {
           "address": "E17",
           "ref": "DJ!E17",
-          "value": "Monitoreo"
-        },
-        {
-          "address": "D18",
-          "ref": "DJ!D18",
-          "value": 1
+          "value": "MICROFONIA"
         },
         {
           "address": "E18",
           "ref": "DJ!E18",
-          "value": "Bocina Turbosound IQ15 con cable power spicon"
+          "value": "Microfonia para voces"
+        },
+        {
+          "address": "D19",
+          "ref": "DJ!D19",
+          "value": 1
         },
         {
           "address": "E19",
           "ref": "DJ!E19",
-          "value": "Baterias"
+          "value": "Mic. Sm 58 inalambrico"
         },
         {
           "address": "D20",
           "ref": "DJ!D20",
-          "value": 16
+          "value": 2
         },
         {
           "address": "E20",
           "ref": "DJ!E20",
-          "value": "Bateria Bonai"
-        },
-        {
-          "address": "D21",
-          "ref": "DJ!D21",
-          "value": 1
+          "value": "Caja directa"
         },
         {
           "address": "E21",
           "ref": "DJ!E21",
-          "value": "Cargador para bateria Bonai"
-        },
-        {
-          "address": "D22",
-          "ref": "DJ!D22",
-          "value": 1
+          "value": "ILUMINACION"
         },
         {
           "address": "E22",
           "ref": "DJ!E22",
-          "value": "Porta bateria Bonai"
+          "value": "Luces"
+        },
+        {
+          "address": "D23",
+          "ref": "DJ!D23",
+          "value": 2
         },
         {
           "address": "E23",
           "ref": "DJ!E23",
-          "value": "MICROFONIA"
+          "value": "Wash con cable power spicon"
+        },
+        {
+          "address": "D24",
+          "ref": "DJ!D24",
+          "value": 6
         },
         {
           "address": "E24",
           "ref": "DJ!E24",
-          "value": "Microfonia para voces"
+          "value": "Par LED RGB con cable ac"
         },
         {
           "address": "D25",
           "ref": "DJ!D25",
-          "value": 1
+          "value": 8
         },
         {
           "address": "E25",
           "ref": "DJ!E25",
-          "value": "Mic. Sm 58 inalambrico"
+          "value": "Clamp para luces"
         },
         {
           "address": "D26",
           "ref": "DJ!D26",
-          "value": 2
+          "value": 8
         },
         {
           "address": "E26",
           "ref": "DJ!E26",
-          "value": "Caja directa"
+          "value": "Base de clamp"
+        },
+        {
+          "address": "D27",
+          "ref": "DJ!D27",
+          "value": 1
         },
         {
           "address": "E27",
           "ref": "DJ!E27",
-          "value": "ILUMINACION"
+          "value": "Dmx 384 adj con cable ac"
+        },
+        {
+          "address": "D28",
+          "ref": "DJ!D28",
+          "value": 1
         },
         {
           "address": "E28",
           "ref": "DJ!E28",
-          "value": "Luces"
+          "value": "Spliter American DJ con cable ac"
         },
         {
           "address": "D29",
           "ref": "DJ!D29",
-          "value": 6
-        },
-        {
-          "address": "E29",
-          "ref": "DJ!E29",
-          "value": "Beam 260 con cable power spicon"
-        },
-        {
-          "address": "D30",
-          "ref": "DJ!D30",
-          "value": 6
+          "value": "EFECTOS ESPECIALES"
         },
         {
           "address": "E30",
           "ref": "DJ!E30",
-          "value": "Par LED RGB con cable ac"
+          "value": "Maquina de humo"
         },
         {
           "address": "D31",
           "ref": "DJ!D31",
-          "value": 2
+          "value": 1
         },
         {
           "address": "E31",
           "ref": "DJ!E31",
-          "value": "Laser con cable power spicon"
+          "value": "Maquina de humo con control, cable ac y ventilador"
         },
         {
           "address": "D32",
           "ref": "DJ!D32",
-          "value": 24
+          "value": 1
         },
         {
           "address": "E32",
           "ref": "DJ!E32",
-          "value": "Clamp para luces"
+          "value": "Galon liquido de humo"
         },
         {
           "address": "D33",
           "ref": "DJ!D33",
-          "value": 24
-        },
-        {
-          "address": "E33",
-          "ref": "DJ!E33",
-          "value": "Base de clamp"
-        },
-        {
-          "address": "D34",
-          "ref": "DJ!D34",
-          "value": 2
+          "value": "ESTRUCTURAS"
         },
         {
           "address": "E34",
           "ref": "DJ!E34",
-          "value": "Tubo galvanizado"
+          "value": "Estructura DJ"
         },
         {
           "address": "D35",
           "ref": "DJ!D35",
-          "value": 2
+          "value": 1
         },
         {
           "address": "E35",
           "ref": "DJ!E35",
-          "value": "Spliter American DJ con cable ac"
+          "value": "Marco DJ booth grande"
         },
         {
           "address": "D36",
           "ref": "DJ!D36",
-          "value": 2
+          "value": 1
         },
         {
           "address": "E36",
           "ref": "DJ!E36",
-          "value": "Blinder RGB con cable power spicon"
+          "value": "Marco DJ booth pequeño"
         },
         {
           "address": "D37",
@@ -31642,57 +31627,77 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E37",
           "ref": "DJ!E37",
-          "value": "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)"
+          "value": "DJ booth"
+        },
+        {
+          "address": "E38",
+          "ref": "DJ!E38",
+          "value": "Estructura Luces"
         },
         {
           "address": "D39",
           "ref": "DJ!D39",
-          "value": "EFECTOS ESPECIALES"
+          "value": 4
+        },
+        {
+          "address": "E39",
+          "ref": "DJ!E39",
+          "value": "Estructura blanca pequeña con su funda"
+        },
+        {
+          "address": "D40",
+          "ref": "DJ!D40",
+          "value": 4
         },
         {
           "address": "E40",
           "ref": "DJ!E40",
-          "value": "Maquina de humo"
+          "value": "Platina pequeña para estructura blanca "
         },
         {
           "address": "D41",
           "ref": "DJ!D41",
-          "value": 2
+          "value": 4
         },
         {
           "address": "E41",
           "ref": "DJ!E41",
-          "value": "Maquina de humo con control, cable ac y ventilador"
+          "value": "Platina grande para estructrura blanca"
         },
         {
           "address": "D42",
           "ref": "DJ!D42",
-          "value": 1
+          "value": 16
         },
         {
           "address": "E42",
           "ref": "DJ!E42",
-          "value": "Galon liquido de humo"
+          "value": "Tornillos especiales para estructura blanca"
         },
         {
-          "address": "D43",
-          "ref": "DJ!D43",
-          "value": "ESTRUCTURAS"
+          "address": "E43",
+          "ref": "DJ!E43",
+          "value": "Telas para forrar estructuras"
+        },
+        {
+          "address": "D44",
+          "ref": "DJ!D44",
+          "value": 4
         },
         {
           "address": "E44",
           "ref": "DJ!E44",
-          "value": "Estructura DJ"
+          "value": "Funda para truss color negro de 2 mts"
         },
         {
           "address": "D45",
           "ref": "DJ!D45",
-          "value": 2
+          "value": 4
         },
         {
           "address": "E45",
           "ref": "DJ!E45",
-          "value": "Marco DJ booth grande"
+          "value": "Funda para truss color blanco de 2 mts"
         },
         {
           "address": "D46",
@@ -31702,7 +31707,7 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E46",
           "ref": "DJ!E46",
-          "value": "Marco DJ booth pequeño"
+          "value": "Tela pequeña para forrar DJ booth color negro (DJ)"
         },
         {
           "address": "D47",
@@ -31712,107 +31717,107 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E47",
           "ref": "DJ!E47",
-          "value": "DJ booth"
+          "value": "Tela pequeña para forrar DJ booth color blanco (DJ)"
+        },
+        {
+          "address": "D48",
+          "ref": "DJ!D48",
+          "value": 1
         },
         {
           "address": "E48",
           "ref": "DJ!E48",
-          "value": "Estructura Luces"
-        },
-        {
-          "address": "D49",
-          "ref": "DJ!D49",
-          "value": 6
+          "value": "Tela grande para forrar DJ booth color negro (controles)"
         },
         {
           "address": "E49",
           "ref": "DJ!E49",
-          "value": "Truss 2 mt"
+          "value": "Case de Cableado"
         },
         {
           "address": "D50",
           "ref": "DJ!D50",
-          "value": 8
+          "value": 1
         },
         {
           "address": "E50",
           "ref": "DJ!E50",
-          "value": "Truss 0.50 mt"
+          "value": "Distro de corriente pequeño "
         },
         {
           "address": "D51",
           "ref": "DJ!D51",
-          "value": 6
+          "value": 2
         },
         {
           "address": "E51",
           "ref": "DJ!E51",
-          "value": "Platina pequeña"
+          "value": "Cable ac"
         },
         {
           "address": "D52",
           "ref": "DJ!D52",
-          "value": 6
+          "value": 2
         },
         {
           "address": "E52",
           "ref": "DJ!E52",
-          "value": "Platina grande"
+          "value": "Cable power spicon"
         },
         {
           "address": "D53",
           "ref": "DJ!D53",
-          "value": 100
+          "value": 2
         },
         {
           "address": "E53",
           "ref": "DJ!E53",
-          "value": "Pin"
+          "value": "Cable de 1/4\" a 1/4\""
         },
         {
           "address": "D54",
           "ref": "DJ!D54",
-          "value": 40
+          "value": 5
         },
         {
           "address": "E54",
           "ref": "DJ!E54",
-          "value": "Chiche"
+          "value": "Cuadro de corriente"
+        },
+        {
+          "address": "D55",
+          "ref": "DJ!D55",
+          "value": 5
         },
         {
           "address": "E55",
           "ref": "DJ!E55",
-          "value": "Telas para forrar estructuras"
+          "value": "Regleta"
         },
         {
           "address": "D56",
           "ref": "DJ!D56",
-          "value": 6
+          "value": 35
         },
         {
           "address": "E56",
           "ref": "DJ!E56",
-          "value": "Funda para truss color negro de 3 mts"
+          "value": "Cable XLR"
         },
         {
           "address": "D57",
           "ref": "DJ!D57",
-          "value": 6
+          "value": 30
         },
         {
           "address": "E57",
           "ref": "DJ!E57",
-          "value": "Funda para truss color blanco de 3 mts"
-        },
-        {
-          "address": "D58",
-          "ref": "DJ!D58",
-          "value": 1
+          "value": "Extensión"
         },
         {
           "address": "E58",
           "ref": "DJ!E58",
-          "value": "Tela pequeña para forrar DJ booth color negro (DJ)"
+          "value": "Extras"
         },
         {
           "address": "D59",
@@ -31822,72 +31827,62 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E59",
           "ref": "DJ!E59",
-          "value": "Tela pequeña para forrar DJ booth color blanco (DJ)"
+          "value": "Extintor"
         },
         {
           "address": "D60",
           "ref": "DJ!D60",
-          "value": 2
+          "value": 1
         },
         {
           "address": "E60",
           "ref": "DJ!E60",
-          "value": "Tela grande para forrar DJ booth color negro (controles)"
+          "value": "Bolsa de agua pura"
+        },
+        {
+          "address": "D61",
+          "ref": "DJ!D61",
+          "value": 1
         },
         {
           "address": "E61",
           "ref": "DJ!E61",
-          "value": "Case de Cableado"
+          "value": "Grabadora de audio"
         },
         {
           "address": "D62",
           "ref": "DJ!D62",
-          "value": 1
+          "value": 2
         },
         {
           "address": "E62",
           "ref": "DJ!E62",
-          "value": "Distro de corriente grande"
-        },
-        {
-          "address": "D63",
-          "ref": "DJ!D63",
-          "value": 5
-        },
-        {
-          "address": "E63",
-          "ref": "DJ!E63",
-          "value": "Cable ac"
-        },
-        {
-          "address": "D64",
-          "ref": "DJ!D64",
-          "value": 5
+          "value": "Intercomunicador Hollyland"
         },
         {
           "address": "E64",
           "ref": "DJ!E64",
-          "value": "Cable power spicon"
+          "value": "Caja de Herramientas"
         },
         {
           "address": "D65",
           "ref": "DJ!D65",
-          "value": 2
+          "value": 1
         },
         {
           "address": "E65",
           "ref": "DJ!E65",
-          "value": "Cable de 1/4\" a 1/4\""
+          "value": "Macho"
         },
         {
           "address": "D66",
           "ref": "DJ!D66",
-          "value": 1
+          "value": 2
         },
         {
           "address": "E66",
           "ref": "DJ!E66",
-          "value": "Case de pulpos (6 grandes y 6 pequeños)"
+          "value": "Pata de Gallo"
         },
         {
           "address": "D67",
@@ -31897,52 +31892,57 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E67",
           "ref": "DJ!E67",
-          "value": "Cable TCJ"
+          "value": "Flipon doble de 50 amp"
         },
         {
           "address": "D68",
           "ref": "DJ!D68",
-          "value": 6
+          "value": 1
         },
         {
           "address": "E68",
           "ref": "DJ!E68",
-          "value": "Cuadro de corriente"
+          "value": "Desarmador de estrella"
         },
         {
           "address": "D69",
           "ref": "DJ!D69",
-          "value": 6
+          "value": 1
         },
         {
           "address": "E69",
           "ref": "DJ!E69",
-          "value": "Regleta"
+          "value": "Desarmador de castigaderas"
         },
         {
           "address": "D70",
           "ref": "DJ!D70",
-          "value": 40
+          "value": 1
         },
         {
           "address": "E70",
           "ref": "DJ!E70",
-          "value": "Cable XLR"
+          "value": "Cuchilla"
         },
         {
           "address": "D71",
           "ref": "DJ!D71",
-          "value": 30
+          "value": 1
         },
         {
           "address": "E71",
           "ref": "DJ!E71",
-          "value": "Extensión"
+          "value": "Estuche llaves Allen (25 unidades)"
+        },
+        {
+          "address": "D72",
+          "ref": "DJ!D72",
+          "value": 1
         },
         {
           "address": "E72",
           "ref": "DJ!E72",
-          "value": "Extras"
+          "value": "Alicate"
         },
         {
           "address": "D73",
@@ -31952,7 +31952,7 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E73",
           "ref": "DJ!E73",
-          "value": "Extintor"
+          "value": "Tenaza"
         },
         {
           "address": "D74",
@@ -31962,7 +31962,7 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E74",
           "ref": "DJ!E74",
-          "value": "Bolsa de agua pura"
+          "value": "Pinza"
         },
         {
           "address": "D75",
@@ -31972,62 +31972,62 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E75",
           "ref": "DJ!E75",
-          "value": "Grabadora de audio"
+          "value": "Espiga tipo tester"
         },
         {
           "address": "D76",
           "ref": "DJ!D76",
-          "value": 2
+          "value": 1
         },
         {
           "address": "E76",
           "ref": "DJ!E76",
-          "value": "Intercomunicador Hollyland"
+          "value": "Multímetro Fluke con estuche"
+        },
+        {
+          "address": "D77",
+          "ref": "DJ!D77",
+          "value": 5
+        },
+        {
+          "address": "E77",
+          "ref": "DJ!E77",
+          "value": "Duc tape"
+        },
+        {
+          "address": "D78",
+          "ref": "DJ!D78",
+          "value": 3
         },
         {
           "address": "E78",
           "ref": "DJ!E78",
-          "value": "Caja de Herramientas"
+          "value": "Paquete de cinchos 0.35 cm"
         },
         {
           "address": "D79",
           "ref": "DJ!D79",
-          "value": 1
+          "value": 7
         },
         {
           "address": "E79",
           "ref": "DJ!E79",
-          "value": "Macho"
-        },
-        {
-          "address": "D80",
-          "ref": "DJ!D80",
-          "value": 2
-        },
-        {
-          "address": "E80",
-          "ref": "DJ!E80",
-          "value": "Pata de Gallo"
-        },
-        {
-          "address": "D81",
-          "ref": "DJ!D81",
-          "value": 1
+          "value": "Cinta de aislar Electrica PVC"
         },
         {
           "address": "E81",
           "ref": "DJ!E81",
-          "value": "Flipon doble de 50 amp"
+          "value": "Equipo de Limpieza"
         },
         {
           "address": "D82",
           "ref": "DJ!D82",
-          "value": 1
+          "value": 5
         },
         {
           "address": "E82",
           "ref": "DJ!E82",
-          "value": "Desarmador de estrella"
+          "value": "Trapo"
         },
         {
           "address": "D83",
@@ -32037,7 +32037,7 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E83",
           "ref": "DJ!E83",
-          "value": "Desarmador de castigaderas"
+          "value": "Escoba"
         },
         {
           "address": "D84",
@@ -32047,17 +32047,17 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E84",
           "ref": "DJ!E84",
-          "value": "Cuchilla"
+          "value": "Pala"
         },
         {
           "address": "D85",
           "ref": "DJ!D85",
-          "value": 1
+          "value": 5
         },
         {
           "address": "E85",
           "ref": "DJ!E85",
-          "value": "Estuche llaves Allen (25 unidades)"
+          "value": "Trapiador"
         },
         {
           "address": "D86",
@@ -32067,7 +32067,7 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E86",
           "ref": "DJ!E86",
-          "value": "Alicate"
+          "value": "Atomizador con desinfectante"
         },
         {
           "address": "D87",
@@ -32077,82 +32077,87 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E87",
           "ref": "DJ!E87",
-          "value": "Tenaza"
+          "value": "Atomizador con silicón"
         },
         {
           "address": "D88",
           "ref": "DJ!D88",
-          "value": 1
+          "value": 2
         },
         {
           "address": "E88",
           "ref": "DJ!E88",
-          "value": "Pinza"
-        },
-        {
-          "address": "D89",
-          "ref": "DJ!D89",
-          "value": 1
+          "value": "Espuma limpiadora"
         },
         {
           "address": "E89",
           "ref": "DJ!E89",
-          "value": "Espiga tipo tester"
+          "value": "Equipo de proteccion"
         },
         {
           "address": "D90",
           "ref": "DJ!D90",
-          "value": 1
+          "value": 10
         },
         {
           "address": "E90",
           "ref": "DJ!E90",
-          "value": "Multímetro Fluke con estuche"
+          "value": "Bolsa jardinera de tonel"
         },
         {
           "address": "D91",
           "ref": "DJ!D91",
-          "value": 5
+          "value": 3
         },
         {
           "address": "E91",
           "ref": "DJ!E91",
-          "value": "Duc tape"
-        },
-        {
-          "address": "D92",
-          "ref": "DJ!D92",
-          "value": 3
+          "value": "Retazo de nylon (para tapar equipo)"
         },
         {
           "address": "E92",
           "ref": "DJ!E92",
-          "value": "Paquete de cinchos 0.35 cm"
+          "value": "Equipo de Seguridad Industrial"
         },
         {
           "address": "D93",
           "ref": "DJ!D93",
-          "value": 7
+          "value": 6
         },
         {
           "address": "E93",
           "ref": "DJ!E93",
-          "value": "Cinta de aislar Electrica PVC"
+          "value": "Casco"
+        },
+        {
+          "address": "D94",
+          "ref": "DJ!D94",
+          "value": 6
+        },
+        {
+          "address": "E94",
+          "ref": "DJ!E94",
+          "value": "Chaleco"
+        },
+        {
+          "address": "D95",
+          "ref": "DJ!D95",
+          "value": 0
         },
         {
           "address": "E95",
           "ref": "DJ!E95",
-          "value": "Equipo de Limpieza"
+          "value": "Par de botas"
         },
         {
           "address": "D96",
           "ref": "DJ!D96",
-          "value": 5
+          "value": 6
         },
         {
           "address": "E96",
           "ref": "DJ!E96",
-          "value": "Trapo"
+          "value": "Par de guantes"
         },
         {
           "address": "D97",
@@ -32162,157 +32167,27 @@ window.requerimientoEquipoCatalog = {
         {
           "address": "E97",
           "ref": "DJ!E97",
-          "value": "Escoba"
-        },
-        {
-          "address": "D98",
-          "ref": "DJ!D98",
-          "value": 1
-        },
-        {
-          "address": "E98",
-          "ref": "DJ!E98",
-          "value": "Pala"
-        },
-        {
-          "address": "D99",
-          "ref": "DJ!D99",
-          "value": 5
-        },
-        {
-          "address": "E99",
-          "ref": "DJ!E99",
-          "value": "Trapiador"
-        },
-        {
-          "address": "D100",
-          "ref": "DJ!D100",
-          "value": 1
-        },
-        {
-          "address": "E100",
-          "ref": "DJ!E100",
-          "value": "Atomizador con desinfectante"
-        },
-        {
-          "address": "D101",
-          "ref": "DJ!D101",
-          "value": 1
-        },
-        {
-          "address": "E101",
-          "ref": "DJ!E101",
-          "value": "Atomizador con silicón"
-        },
-        {
-          "address": "D102",
-          "ref": "DJ!D102",
-          "value": 2
-        },
-        {
-          "address": "E102",
-          "ref": "DJ!E102",
-          "value": "Espuma limpiadora"
-        },
-        {
-          "address": "E103",
-          "ref": "DJ!E103",
-          "value": "Equipo de proteccion"
-        },
-        {
-          "address": "D104",
-          "ref": "DJ!D104",
-          "value": 10
-        },
-        {
-          "address": "E104",
-          "ref": "DJ!E104",
-          "value": "Bolsa jardinera de tonel"
-        },
-        {
-          "address": "D105",
-          "ref": "DJ!D105",
-          "value": 3
-        },
-        {
-          "address": "E105",
-          "ref": "DJ!E105",
-          "value": "Retazo de nylon (para tapar equipo)"
-        },
-        {
-          "address": "E106",
-          "ref": "DJ!E106",
-          "value": "Equipo de Seguridad Industrial"
-        },
-        {
-          "address": "D107",
-          "ref": "DJ!D107",
-          "value": 6
-        },
-        {
-          "address": "E107",
-          "ref": "DJ!E107",
-          "value": "Casco"
-        },
-        {
-          "address": "D108",
-          "ref": "DJ!D108",
-          "value": 6
-        },
-        {
-          "address": "E108",
-          "ref": "DJ!E108",
-          "value": "Chaleco"
-        },
-        {
-          "address": "D109",
-          "ref": "DJ!D109",
-          "value": 0
-        },
-        {
-          "address": "E109",
-          "ref": "DJ!E109",
-          "value": "Par de botas"
-        },
-        {
-          "address": "D110",
-          "ref": "DJ!D110",
-          "value": 6
-        },
-        {
-          "address": "E110",
-          "ref": "DJ!E110",
-          "value": "Par de guantes"
-        },
-        {
-          "address": "D111",
-          "ref": "DJ!D111",
-          "value": 1
-        },
-        {
-          "address": "E111",
-          "ref": "DJ!E111",
           "value": "Arnes completo"
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:dj:D1",
-          "title": "DJ COMPLETO - AUDIO JBL",
+          "id": "20261014-dj-audio-01:dj:D1",
+          "title": "DJ PRIVADO",
           "sourceStartRow": 1,
           "source": "DJ!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -32325,10 +32200,10 @@ window.requerimientoEquipoCatalog = {
                 {
                   "address": "D1",
                   "ref": "DJ!D1",
-                  "value": "DJ COMPLETO - AUDIO JBL"
+                  "value": "DJ PRIVADO"
                 }
               ],
-              "description": "DJ COMPLETO - AUDIO JBL"
+              "description": "DJ PRIVADO"
             },
             {
               "type": "header",
@@ -32359,15 +32234,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:D6",
+          "id": "20261014-dj-audio-01:dj:D6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "DJ!D6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -32421,15 +32296,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:D8",
+          "id": "20261014-dj-audio-01:dj:D8",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 8,
           "source": "DJ!D8",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -32478,37 +32353,21 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:D10",
+          "id": "20261014-dj-audio-01:dj:D10",
           "title": "Audio",
           "sourceStartRow": 10,
           "source": "DJ!D10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
             [
-              4,
-              "Bajo doble JBL 18 pasivo con cable power spicon"
-            ],
-            [
-              6,
-              "Bocina T4 con power spicon"
-            ],
-            [
               2,
-              "Boomper de T4 para pedestal"
-            ],
-            [
-              2,
-              "Pedestal hercules para bocina con funda"
-            ],
-            [
-              1,
-              "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac"
+              "Bocina IP 2000 con funda"
             ]
           ],
           "rows": [
@@ -32533,66 +32392,91 @@ window.requerimientoEquipoCatalog = {
                 {
                   "address": "D11",
                   "ref": "DJ!D11",
-                  "value": 4
+                  "value": 2
                 },
                 {
                   "address": "E11",
                   "ref": "DJ!E11",
-                  "value": "Bajo doble JBL 18 pasivo con cable power spicon"
+                  "value": "Bocina IP 2000 con funda"
                 }
               ],
-              "description": "Bajo doble JBL 18 pasivo con cable power spicon",
+              "description": "Bocina IP 2000 con funda",
               "sourceItemIndex": 0,
-              "quantity": 4,
-              "equipment": "Bajo doble JBL 18 pasivo con cable power spicon",
+              "quantity": 2,
+              "equipment": "Bocina IP 2000 con funda",
               "quantityCell": "D11",
               "equipmentCell": "E11"
-            },
+            }
+          ]
+        },
+        {
+          "id": "20261014-dj-audio-01:dj:D12",
+          "title": "MONITOREO INTERNO",
+          "sourceStartRow": 12,
+          "source": "DJ!D12",
+          "importSource": {
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
+            "bookKey": "servicios",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
+            "authoritative": true
+          },
+          "items": [],
+          "rows": [
             {
-              "type": "item",
-              "sourceType": "data",
+              "type": "category",
+              "sourceType": "category",
               "sourceRow": 12,
               "cells": [
                 {
-                  "address": "D12",
-                  "ref": "DJ!D12",
-                  "value": 6
-                },
-                {
                   "address": "E12",
                   "ref": "DJ!E12",
-                  "value": "Bocina T4 con power spicon"
+                  "value": "MONITOREO INTERNO"
                 }
               ],
-              "description": "Bocina T4 con power spicon",
-              "sourceItemIndex": 1,
-              "quantity": 6,
-              "equipment": "Bocina T4 con power spicon",
-              "quantityCell": "D12",
-              "equipmentCell": "E12"
-            },
+              "description": "MONITOREO INTERNO"
+            }
+          ]
+        },
+        {
+          "id": "20261014-dj-audio-01:dj:D13",
+          "title": "MONITOREO INTERNO / Baterias",
+          "sourceStartRow": 13,
+          "source": "DJ!D13",
+          "importSource": {
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
+            "bookKey": "servicios",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
+            "authoritative": true
+          },
+          "items": [
+            [
+              16,
+              "Bateria Bonai"
+            ],
+            [
+              1,
+              "Cargador para bateria Bonai"
+            ],
+            [
+              1,
+              "Porta bateria Bonai"
+            ]
+          ],
+          "rows": [
             {
-              "type": "item",
-              "sourceType": "data",
+              "type": "category",
+              "sourceType": "category",
               "sourceRow": 13,
               "cells": [
                 {
-                  "address": "D13",
-                  "ref": "DJ!D13",
-                  "value": 2
-                },
-                {
                   "address": "E13",
                   "ref": "DJ!E13",
-                  "value": "Boomper de T4 para pedestal"
+                  "value": "Baterias"
                 }
               ],
-              "description": "Boomper de T4 para pedestal",
-              "sourceItemIndex": 2,
-              "quantity": 2,
-              "equipment": "Boomper de T4 para pedestal",
-              "quantityCell": "D13",
-              "equipmentCell": "E13"
+              "description": "Baterias"
             },
             {
               "type": "item",
@@ -32602,18 +32486,18 @@ window.requerimientoEquipoCatalog = {
                 {
                   "address": "D14",
                   "ref": "DJ!D14",
-                  "value": 2
+                  "value": 16
                 },
                 {
                   "address": "E14",
                   "ref": "DJ!E14",
-                  "value": "Pedestal hercules para bocina con funda"
+                  "value": "Bateria Bonai"
                 }
               ],
-              "description": "Pedestal hercules para bocina con funda",
-              "sourceItemIndex": 3,
-              "quantity": 2,
-              "equipment": "Pedestal hercules para bocina con funda",
+              "description": "Bateria Bonai",
+              "sourceItemIndex": 0,
+              "quantity": 16,
+              "equipment": "Bateria Bonai",
               "quantityCell": "D14",
               "equipmentCell": "E14"
             },
@@ -32630,65 +32514,54 @@ window.requerimientoEquipoCatalog = {
                 {
                   "address": "E15",
                   "ref": "DJ!E15",
-                  "value": "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac"
+                  "value": "Cargador para bateria Bonai"
                 }
               ],
-              "description": "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac",
-              "sourceItemIndex": 4,
+              "description": "Cargador para bateria Bonai",
+              "sourceItemIndex": 1,
               "quantity": 1,
-              "equipment": "Amplificador TP 18000 con Procesador DBX con 2 cables power spicon y 1 cable ac",
+              "equipment": "Cargador para bateria Bonai",
               "quantityCell": "D15",
               "equipmentCell": "E15"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D16",
-          "title": "MONITOREO INTERNO",
-          "sourceStartRow": 16,
-          "source": "DJ!D16",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [],
-          "rows": [
+            },
             {
-              "type": "category",
-              "sourceType": "category",
+              "type": "item",
+              "sourceType": "data",
               "sourceRow": 16,
               "cells": [
                 {
+                  "address": "D16",
+                  "ref": "DJ!D16",
+                  "value": 1
+                },
+                {
                   "address": "E16",
                   "ref": "DJ!E16",
-                  "value": "MONITOREO INTERNO"
+                  "value": "Porta bateria Bonai"
                 }
               ],
-              "description": "MONITOREO INTERNO"
+              "description": "Porta bateria Bonai",
+              "sourceItemIndex": 2,
+              "quantity": 1,
+              "equipment": "Porta bateria Bonai",
+              "quantityCell": "D16",
+              "equipmentCell": "E16"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:D17",
-          "title": "MONITOREO INTERNO / Monitoreo",
+          "id": "20261014-dj-audio-01:dj:D17",
+          "title": "MICROFONIA",
           "sourceStartRow": 17,
           "source": "DJ!D17",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
-          "items": [
-            [
-              1,
-              "Bocina Turbosound IQ15 con cable power spicon"
-            ]
-          ],
+          "items": [],
           "rows": [
             {
               "type": "category",
@@ -32698,75 +32571,71 @@ window.requerimientoEquipoCatalog = {
                 {
                   "address": "E17",
                   "ref": "DJ!E17",
-                  "value": "Monitoreo"
+                  "value": "MICROFONIA"
                 }
               ],
-              "description": "Monitoreo"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 18,
-              "cells": [
-                {
-                  "address": "D18",
-                  "ref": "DJ!D18",
-                  "value": 1
-                },
-                {
-                  "address": "E18",
-                  "ref": "DJ!E18",
-                  "value": "Bocina Turbosound IQ15 con cable power spicon"
-                }
-              ],
-              "description": "Bocina Turbosound IQ15 con cable power spicon",
-              "sourceItemIndex": 0,
-              "quantity": 1,
-              "equipment": "Bocina Turbosound IQ15 con cable power spicon",
-              "quantityCell": "D18",
-              "equipmentCell": "E18"
+              "description": "MICROFONIA"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:D19",
-          "title": "MONITOREO INTERNO / Baterias",
-          "sourceStartRow": 19,
-          "source": "DJ!D19",
+          "id": "20261014-dj-audio-01:dj:D18",
+          "title": "MICROFONIA / Microfonia para voces",
+          "sourceStartRow": 18,
+          "source": "DJ!D18",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
             [
-              16,
-              "Bateria Bonai"
+              1,
+              "Mic. Sm 58 inalambrico"
             ],
             [
-              1,
-              "Cargador para bateria Bonai"
-            ],
-            [
-              1,
-              "Porta bateria Bonai"
+              2,
+              "Caja directa"
             ]
           ],
           "rows": [
             {
               "type": "category",
               "sourceType": "category",
+              "sourceRow": 18,
+              "cells": [
+                {
+                  "address": "E18",
+                  "ref": "DJ!E18",
+                  "value": "Microfonia para voces"
+                }
+              ],
+              "description": "Microfonia para voces"
+            },
+            {
+              "type": "item",
+              "sourceType": "data",
               "sourceRow": 19,
               "cells": [
                 {
+                  "address": "D19",
+                  "ref": "DJ!D19",
+                  "value": 1
+                },
+                {
                   "address": "E19",
                   "ref": "DJ!E19",
-                  "value": "Baterias"
+                  "value": "Mic. Sm 58 inalambrico"
                 }
               ],
-              "description": "Baterias"
+              "description": "Mic. Sm 58 inalambrico",
+              "sourceItemIndex": 0,
+              "quantity": 1,
+              "equipment": "Mic. Sm 58 inalambrico",
+              "quantityCell": "D19",
+              "equipmentCell": "E19"
             },
             {
               "type": "item",
@@ -32776,204 +32645,45 @@ window.requerimientoEquipoCatalog = {
                 {
                   "address": "D20",
                   "ref": "DJ!D20",
-                  "value": 16
+                  "value": 2
                 },
                 {
                   "address": "E20",
                   "ref": "DJ!E20",
-                  "value": "Bateria Bonai"
+                  "value": "Caja directa"
                 }
               ],
-              "description": "Bateria Bonai",
-              "sourceItemIndex": 0,
-              "quantity": 16,
-              "equipment": "Bateria Bonai",
+              "description": "Caja directa",
+              "sourceItemIndex": 1,
+              "quantity": 2,
+              "equipment": "Caja directa",
               "quantityCell": "D20",
               "equipmentCell": "E20"
-            },
+            }
+          ]
+        },
+        {
+          "id": "20261014-dj-audio-01:dj:D21",
+          "title": "ILUMINACION",
+          "sourceStartRow": 21,
+          "source": "DJ!D21",
+          "importSource": {
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
+            "bookKey": "servicios",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
+            "authoritative": true
+          },
+          "items": [],
+          "rows": [
             {
-              "type": "item",
-              "sourceType": "data",
+              "type": "category",
+              "sourceType": "category",
               "sourceRow": 21,
               "cells": [
-                {
-                  "address": "D21",
-                  "ref": "DJ!D21",
-                  "value": 1
-                },
                 {
                   "address": "E21",
                   "ref": "DJ!E21",
-                  "value": "Cargador para bateria Bonai"
-                }
-              ],
-              "description": "Cargador para bateria Bonai",
-              "sourceItemIndex": 1,
-              "quantity": 1,
-              "equipment": "Cargador para bateria Bonai",
-              "quantityCell": "D21",
-              "equipmentCell": "E21"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 22,
-              "cells": [
-                {
-                  "address": "D22",
-                  "ref": "DJ!D22",
-                  "value": 1
-                },
-                {
-                  "address": "E22",
-                  "ref": "DJ!E22",
-                  "value": "Porta bateria Bonai"
-                }
-              ],
-              "description": "Porta bateria Bonai",
-              "sourceItemIndex": 2,
-              "quantity": 1,
-              "equipment": "Porta bateria Bonai",
-              "quantityCell": "D22",
-              "equipmentCell": "E22"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D23",
-          "title": "MICROFONIA",
-          "sourceStartRow": 23,
-          "source": "DJ!D23",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 23,
-              "cells": [
-                {
-                  "address": "E23",
-                  "ref": "DJ!E23",
-                  "value": "MICROFONIA"
-                }
-              ],
-              "description": "MICROFONIA"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D24",
-          "title": "MICROFONIA / Microfonia para voces",
-          "sourceStartRow": 24,
-          "source": "DJ!D24",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              1,
-              "Mic. Sm 58 inalambrico"
-            ],
-            [
-              2,
-              "Caja directa"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 24,
-              "cells": [
-                {
-                  "address": "E24",
-                  "ref": "DJ!E24",
-                  "value": "Microfonia para voces"
-                }
-              ],
-              "description": "Microfonia para voces"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 25,
-              "cells": [
-                {
-                  "address": "D25",
-                  "ref": "DJ!D25",
-                  "value": 1
-                },
-                {
-                  "address": "E25",
-                  "ref": "DJ!E25",
-                  "value": "Mic. Sm 58 inalambrico"
-                }
-              ],
-              "description": "Mic. Sm 58 inalambrico",
-              "sourceItemIndex": 0,
-              "quantity": 1,
-              "equipment": "Mic. Sm 58 inalambrico",
-              "quantityCell": "D25",
-              "equipmentCell": "E25"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 26,
-              "cells": [
-                {
-                  "address": "D26",
-                  "ref": "DJ!D26",
-                  "value": 2
-                },
-                {
-                  "address": "E26",
-                  "ref": "DJ!E26",
-                  "value": "Caja directa"
-                }
-              ],
-              "description": "Caja directa",
-              "sourceItemIndex": 1,
-              "quantity": 2,
-              "equipment": "Caja directa",
-              "quantityCell": "D26",
-              "equipmentCell": "E26"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D27",
-          "title": "ILUMINACION",
-          "sourceStartRow": 27,
-          "source": "DJ!D27",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 27,
-              "cells": [
-                {
-                  "address": "E27",
-                  "ref": "DJ!E27",
                   "value": "ILUMINACION"
                 }
               ],
@@ -32982,3583 +32692,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:D28",
-          "title": "ILUMINACION / Luces",
-          "sourceStartRow": 28,
-          "source": "DJ!D28",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              6,
-              "Beam 260 con cable power spicon"
-            ],
-            [
-              6,
-              "Par LED RGB con cable ac"
-            ],
-            [
-              2,
-              "Laser con cable power spicon"
-            ],
-            [
-              24,
-              "Clamp para luces"
-            ],
-            [
-              24,
-              "Base de clamp"
-            ],
-            [
-              2,
-              "Tubo galvanizado"
-            ],
-            [
-              2,
-              "Spliter American DJ con cable ac"
-            ],
-            [
-              2,
-              "Blinder RGB con cable power spicon"
-            ],
-            [
-              1,
-              "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 28,
-              "cells": [
-                {
-                  "address": "E28",
-                  "ref": "DJ!E28",
-                  "value": "Luces"
-                }
-              ],
-              "description": "Luces"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 29,
-              "cells": [
-                {
-                  "address": "D29",
-                  "ref": "DJ!D29",
-                  "value": 6
-                },
-                {
-                  "address": "E29",
-                  "ref": "DJ!E29",
-                  "value": "Beam 260 con cable power spicon"
-                }
-              ],
-              "description": "Beam 260 con cable power spicon",
-              "sourceItemIndex": 0,
-              "quantity": 6,
-              "equipment": "Beam 260 con cable power spicon",
-              "quantityCell": "D29",
-              "equipmentCell": "E29"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 30,
-              "cells": [
-                {
-                  "address": "D30",
-                  "ref": "DJ!D30",
-                  "value": 6
-                },
-                {
-                  "address": "E30",
-                  "ref": "DJ!E30",
-                  "value": "Par LED RGB con cable ac"
-                }
-              ],
-              "description": "Par LED RGB con cable ac",
-              "sourceItemIndex": 1,
-              "quantity": 6,
-              "equipment": "Par LED RGB con cable ac",
-              "quantityCell": "D30",
-              "equipmentCell": "E30"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 31,
-              "cells": [
-                {
-                  "address": "D31",
-                  "ref": "DJ!D31",
-                  "value": 2
-                },
-                {
-                  "address": "E31",
-                  "ref": "DJ!E31",
-                  "value": "Laser con cable power spicon"
-                }
-              ],
-              "description": "Laser con cable power spicon",
-              "sourceItemIndex": 2,
-              "quantity": 2,
-              "equipment": "Laser con cable power spicon",
-              "quantityCell": "D31",
-              "equipmentCell": "E31"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 32,
-              "cells": [
-                {
-                  "address": "D32",
-                  "ref": "DJ!D32",
-                  "value": 24
-                },
-                {
-                  "address": "E32",
-                  "ref": "DJ!E32",
-                  "value": "Clamp para luces"
-                }
-              ],
-              "description": "Clamp para luces",
-              "sourceItemIndex": 3,
-              "quantity": 24,
-              "equipment": "Clamp para luces",
-              "quantityCell": "D32",
-              "equipmentCell": "E32"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 33,
-              "cells": [
-                {
-                  "address": "D33",
-                  "ref": "DJ!D33",
-                  "value": 24
-                },
-                {
-                  "address": "E33",
-                  "ref": "DJ!E33",
-                  "value": "Base de clamp"
-                }
-              ],
-              "description": "Base de clamp",
-              "sourceItemIndex": 4,
-              "quantity": 24,
-              "equipment": "Base de clamp",
-              "quantityCell": "D33",
-              "equipmentCell": "E33"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 34,
-              "cells": [
-                {
-                  "address": "D34",
-                  "ref": "DJ!D34",
-                  "value": 2
-                },
-                {
-                  "address": "E34",
-                  "ref": "DJ!E34",
-                  "value": "Tubo galvanizado"
-                }
-              ],
-              "description": "Tubo galvanizado",
-              "sourceItemIndex": 5,
-              "quantity": 2,
-              "equipment": "Tubo galvanizado",
-              "quantityCell": "D34",
-              "equipmentCell": "E34"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 35,
-              "cells": [
-                {
-                  "address": "D35",
-                  "ref": "DJ!D35",
-                  "value": 2
-                },
-                {
-                  "address": "E35",
-                  "ref": "DJ!E35",
-                  "value": "Spliter American DJ con cable ac"
-                }
-              ],
-              "description": "Spliter American DJ con cable ac",
-              "sourceItemIndex": 6,
-              "quantity": 2,
-              "equipment": "Spliter American DJ con cable ac",
-              "quantityCell": "D35",
-              "equipmentCell": "E35"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 36,
-              "cells": [
-                {
-                  "address": "D36",
-                  "ref": "DJ!D36",
-                  "value": 2
-                },
-                {
-                  "address": "E36",
-                  "ref": "DJ!E36",
-                  "value": "Blinder RGB con cable power spicon"
-                }
-              ],
-              "description": "Blinder RGB con cable power spicon",
-              "sourceItemIndex": 7,
-              "quantity": 2,
-              "equipment": "Blinder RGB con cable power spicon",
-              "quantityCell": "D36",
-              "equipmentCell": "E36"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 37,
-              "cells": [
-                {
-                  "address": "D37",
-                  "ref": "DJ!D37",
-                  "value": 1
-                },
-                {
-                  "address": "E37",
-                  "ref": "DJ!E37",
-                  "value": "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)"
-                }
-              ],
-              "description": "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)",
-              "sourceItemIndex": 8,
-              "quantity": 1,
-              "equipment": "Interfaz con cable de RED con cargador y case (compu, mouse, adaptador, monitor, HDMI, cable de corriente)",
-              "quantityCell": "D37",
-              "equipmentCell": "E37"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D39",
-          "title": "EFECTOS ESPECIALES",
-          "sourceStartRow": 39,
-          "source": "DJ!D39",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 39,
-              "cells": [
-                {
-                  "address": "D39",
-                  "ref": "DJ!D39",
-                  "value": "EFECTOS ESPECIALES"
-                }
-              ],
-              "description": "EFECTOS ESPECIALES"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D40",
-          "title": "EFECTOS ESPECIALES / Maquina de humo",
-          "sourceStartRow": 40,
-          "source": "DJ!D40",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              2,
-              "Maquina de humo con control, cable ac y ventilador"
-            ],
-            [
-              1,
-              "Galon liquido de humo"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 40,
-              "cells": [
-                {
-                  "address": "E40",
-                  "ref": "DJ!E40",
-                  "value": "Maquina de humo"
-                }
-              ],
-              "description": "Maquina de humo"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 41,
-              "cells": [
-                {
-                  "address": "D41",
-                  "ref": "DJ!D41",
-                  "value": 2
-                },
-                {
-                  "address": "E41",
-                  "ref": "DJ!E41",
-                  "value": "Maquina de humo con control, cable ac y ventilador"
-                }
-              ],
-              "description": "Maquina de humo con control, cable ac y ventilador",
-              "sourceItemIndex": 0,
-              "quantity": 2,
-              "equipment": "Maquina de humo con control, cable ac y ventilador",
-              "quantityCell": "D41",
-              "equipmentCell": "E41"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 42,
-              "cells": [
-                {
-                  "address": "D42",
-                  "ref": "DJ!D42",
-                  "value": 1
-                },
-                {
-                  "address": "E42",
-                  "ref": "DJ!E42",
-                  "value": "Galon liquido de humo"
-                }
-              ],
-              "description": "Galon liquido de humo",
-              "sourceItemIndex": 1,
-              "quantity": 1,
-              "equipment": "Galon liquido de humo",
-              "quantityCell": "D42",
-              "equipmentCell": "E42"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D43",
-          "title": "ESTRUCTURAS",
-          "sourceStartRow": 43,
-          "source": "DJ!D43",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 43,
-              "cells": [
-                {
-                  "address": "D43",
-                  "ref": "DJ!D43",
-                  "value": "ESTRUCTURAS"
-                }
-              ],
-              "description": "ESTRUCTURAS"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D44",
-          "title": "ESTRUCTURAS / Estructura DJ",
-          "sourceStartRow": 44,
-          "source": "DJ!D44",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              2,
-              "Marco DJ booth grande"
-            ],
-            [
-              1,
-              "Marco DJ booth pequeño"
-            ],
-            [
-              1,
-              "DJ booth"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 44,
-              "cells": [
-                {
-                  "address": "E44",
-                  "ref": "DJ!E44",
-                  "value": "Estructura DJ"
-                }
-              ],
-              "description": "Estructura DJ"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 45,
-              "cells": [
-                {
-                  "address": "D45",
-                  "ref": "DJ!D45",
-                  "value": 2
-                },
-                {
-                  "address": "E45",
-                  "ref": "DJ!E45",
-                  "value": "Marco DJ booth grande"
-                }
-              ],
-              "description": "Marco DJ booth grande",
-              "sourceItemIndex": 0,
-              "quantity": 2,
-              "equipment": "Marco DJ booth grande",
-              "quantityCell": "D45",
-              "equipmentCell": "E45"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 46,
-              "cells": [
-                {
-                  "address": "D46",
-                  "ref": "DJ!D46",
-                  "value": 1
-                },
-                {
-                  "address": "E46",
-                  "ref": "DJ!E46",
-                  "value": "Marco DJ booth pequeño"
-                }
-              ],
-              "description": "Marco DJ booth pequeño",
-              "sourceItemIndex": 1,
-              "quantity": 1,
-              "equipment": "Marco DJ booth pequeño",
-              "quantityCell": "D46",
-              "equipmentCell": "E46"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 47,
-              "cells": [
-                {
-                  "address": "D47",
-                  "ref": "DJ!D47",
-                  "value": 1
-                },
-                {
-                  "address": "E47",
-                  "ref": "DJ!E47",
-                  "value": "DJ booth"
-                }
-              ],
-              "description": "DJ booth",
-              "sourceItemIndex": 2,
-              "quantity": 1,
-              "equipment": "DJ booth",
-              "quantityCell": "D47",
-              "equipmentCell": "E47"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D48",
-          "title": "ESTRUCTURAS / Estructura Luces",
-          "sourceStartRow": 48,
-          "source": "DJ!D48",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              6,
-              "Truss 2 mt"
-            ],
-            [
-              8,
-              "Truss 0.50 mt"
-            ],
-            [
-              6,
-              "Platina pequeña"
-            ],
-            [
-              6,
-              "Platina grande"
-            ],
-            [
-              100,
-              "Pin"
-            ],
-            [
-              40,
-              "Chiche"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 48,
-              "cells": [
-                {
-                  "address": "E48",
-                  "ref": "DJ!E48",
-                  "value": "Estructura Luces"
-                }
-              ],
-              "description": "Estructura Luces"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 49,
-              "cells": [
-                {
-                  "address": "D49",
-                  "ref": "DJ!D49",
-                  "value": 6
-                },
-                {
-                  "address": "E49",
-                  "ref": "DJ!E49",
-                  "value": "Truss 2 mt"
-                }
-              ],
-              "description": "Truss 2 mt",
-              "sourceItemIndex": 0,
-              "quantity": 6,
-              "equipment": "Truss 2 mt",
-              "quantityCell": "D49",
-              "equipmentCell": "E49"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 50,
-              "cells": [
-                {
-                  "address": "D50",
-                  "ref": "DJ!D50",
-                  "value": 8
-                },
-                {
-                  "address": "E50",
-                  "ref": "DJ!E50",
-                  "value": "Truss 0.50 mt"
-                }
-              ],
-              "description": "Truss 0.50 mt",
-              "sourceItemIndex": 1,
-              "quantity": 8,
-              "equipment": "Truss 0.50 mt",
-              "quantityCell": "D50",
-              "equipmentCell": "E50"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 51,
-              "cells": [
-                {
-                  "address": "D51",
-                  "ref": "DJ!D51",
-                  "value": 6
-                },
-                {
-                  "address": "E51",
-                  "ref": "DJ!E51",
-                  "value": "Platina pequeña"
-                }
-              ],
-              "description": "Platina pequeña",
-              "sourceItemIndex": 2,
-              "quantity": 6,
-              "equipment": "Platina pequeña",
-              "quantityCell": "D51",
-              "equipmentCell": "E51"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 52,
-              "cells": [
-                {
-                  "address": "D52",
-                  "ref": "DJ!D52",
-                  "value": 6
-                },
-                {
-                  "address": "E52",
-                  "ref": "DJ!E52",
-                  "value": "Platina grande"
-                }
-              ],
-              "description": "Platina grande",
-              "sourceItemIndex": 3,
-              "quantity": 6,
-              "equipment": "Platina grande",
-              "quantityCell": "D52",
-              "equipmentCell": "E52"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 53,
-              "cells": [
-                {
-                  "address": "D53",
-                  "ref": "DJ!D53",
-                  "value": 100
-                },
-                {
-                  "address": "E53",
-                  "ref": "DJ!E53",
-                  "value": "Pin"
-                }
-              ],
-              "description": "Pin",
-              "sourceItemIndex": 4,
-              "quantity": 100,
-              "equipment": "Pin",
-              "quantityCell": "D53",
-              "equipmentCell": "E53"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 54,
-              "cells": [
-                {
-                  "address": "D54",
-                  "ref": "DJ!D54",
-                  "value": 40
-                },
-                {
-                  "address": "E54",
-                  "ref": "DJ!E54",
-                  "value": "Chiche"
-                }
-              ],
-              "description": "Chiche",
-              "sourceItemIndex": 5,
-              "quantity": 40,
-              "equipment": "Chiche",
-              "quantityCell": "D54",
-              "equipmentCell": "E54"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D55",
-          "title": "ESTRUCTURAS / Telas para forrar estructuras",
-          "sourceStartRow": 55,
-          "source": "DJ!D55",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              6,
-              "Funda para truss color negro de 3 mts"
-            ],
-            [
-              6,
-              "Funda para truss color blanco de 3 mts"
-            ],
-            [
-              1,
-              "Tela pequeña para forrar DJ booth color negro (DJ)"
-            ],
-            [
-              1,
-              "Tela pequeña para forrar DJ booth color blanco (DJ)"
-            ],
-            [
-              2,
-              "Tela grande para forrar DJ booth color negro (controles)"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 55,
-              "cells": [
-                {
-                  "address": "E55",
-                  "ref": "DJ!E55",
-                  "value": "Telas para forrar estructuras"
-                }
-              ],
-              "description": "Telas para forrar estructuras"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 56,
-              "cells": [
-                {
-                  "address": "D56",
-                  "ref": "DJ!D56",
-                  "value": 6
-                },
-                {
-                  "address": "E56",
-                  "ref": "DJ!E56",
-                  "value": "Funda para truss color negro de 3 mts"
-                }
-              ],
-              "description": "Funda para truss color negro de 3 mts",
-              "sourceItemIndex": 0,
-              "quantity": 6,
-              "equipment": "Funda para truss color negro de 3 mts",
-              "quantityCell": "D56",
-              "equipmentCell": "E56"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 57,
-              "cells": [
-                {
-                  "address": "D57",
-                  "ref": "DJ!D57",
-                  "value": 6
-                },
-                {
-                  "address": "E57",
-                  "ref": "DJ!E57",
-                  "value": "Funda para truss color blanco de 3 mts"
-                }
-              ],
-              "description": "Funda para truss color blanco de 3 mts",
-              "sourceItemIndex": 1,
-              "quantity": 6,
-              "equipment": "Funda para truss color blanco de 3 mts",
-              "quantityCell": "D57",
-              "equipmentCell": "E57"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 58,
-              "cells": [
-                {
-                  "address": "D58",
-                  "ref": "DJ!D58",
-                  "value": 1
-                },
-                {
-                  "address": "E58",
-                  "ref": "DJ!E58",
-                  "value": "Tela pequeña para forrar DJ booth color negro (DJ)"
-                }
-              ],
-              "description": "Tela pequeña para forrar DJ booth color negro (DJ)",
-              "sourceItemIndex": 2,
-              "quantity": 1,
-              "equipment": "Tela pequeña para forrar DJ booth color negro (DJ)",
-              "quantityCell": "D58",
-              "equipmentCell": "E58"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 59,
-              "cells": [
-                {
-                  "address": "D59",
-                  "ref": "DJ!D59",
-                  "value": 1
-                },
-                {
-                  "address": "E59",
-                  "ref": "DJ!E59",
-                  "value": "Tela pequeña para forrar DJ booth color blanco (DJ)"
-                }
-              ],
-              "description": "Tela pequeña para forrar DJ booth color blanco (DJ)",
-              "sourceItemIndex": 3,
-              "quantity": 1,
-              "equipment": "Tela pequeña para forrar DJ booth color blanco (DJ)",
-              "quantityCell": "D59",
-              "equipmentCell": "E59"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 60,
-              "cells": [
-                {
-                  "address": "D60",
-                  "ref": "DJ!D60",
-                  "value": 2
-                },
-                {
-                  "address": "E60",
-                  "ref": "DJ!E60",
-                  "value": "Tela grande para forrar DJ booth color negro (controles)"
-                }
-              ],
-              "description": "Tela grande para forrar DJ booth color negro (controles)",
-              "sourceItemIndex": 4,
-              "quantity": 2,
-              "equipment": "Tela grande para forrar DJ booth color negro (controles)",
-              "quantityCell": "D60",
-              "equipmentCell": "E60"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D61",
-          "title": "ESTRUCTURAS / Case de Cableado",
-          "sourceStartRow": 61,
-          "source": "DJ!D61",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              1,
-              "Distro de corriente grande"
-            ],
-            [
-              5,
-              "Cable ac"
-            ],
-            [
-              5,
-              "Cable power spicon"
-            ],
-            [
-              2,
-              "Cable de 1/4\" a 1/4\""
-            ],
-            [
-              1,
-              "Case de pulpos (6 grandes y 6 pequeños)"
-            ],
-            [
-              1,
-              "Cable TCJ"
-            ],
-            [
-              6,
-              "Cuadro de corriente"
-            ],
-            [
-              6,
-              "Regleta"
-            ],
-            [
-              40,
-              "Cable XLR"
-            ],
-            [
-              30,
-              "Extensión"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 61,
-              "cells": [
-                {
-                  "address": "E61",
-                  "ref": "DJ!E61",
-                  "value": "Case de Cableado"
-                }
-              ],
-              "description": "Case de Cableado"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 62,
-              "cells": [
-                {
-                  "address": "D62",
-                  "ref": "DJ!D62",
-                  "value": 1
-                },
-                {
-                  "address": "E62",
-                  "ref": "DJ!E62",
-                  "value": "Distro de corriente grande"
-                }
-              ],
-              "description": "Distro de corriente grande",
-              "sourceItemIndex": 0,
-              "quantity": 1,
-              "equipment": "Distro de corriente grande",
-              "quantityCell": "D62",
-              "equipmentCell": "E62"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 63,
-              "cells": [
-                {
-                  "address": "D63",
-                  "ref": "DJ!D63",
-                  "value": 5
-                },
-                {
-                  "address": "E63",
-                  "ref": "DJ!E63",
-                  "value": "Cable ac"
-                }
-              ],
-              "description": "Cable ac",
-              "sourceItemIndex": 1,
-              "quantity": 5,
-              "equipment": "Cable ac",
-              "quantityCell": "D63",
-              "equipmentCell": "E63"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 64,
-              "cells": [
-                {
-                  "address": "D64",
-                  "ref": "DJ!D64",
-                  "value": 5
-                },
-                {
-                  "address": "E64",
-                  "ref": "DJ!E64",
-                  "value": "Cable power spicon"
-                }
-              ],
-              "description": "Cable power spicon",
-              "sourceItemIndex": 2,
-              "quantity": 5,
-              "equipment": "Cable power spicon",
-              "quantityCell": "D64",
-              "equipmentCell": "E64"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 65,
-              "cells": [
-                {
-                  "address": "D65",
-                  "ref": "DJ!D65",
-                  "value": 2
-                },
-                {
-                  "address": "E65",
-                  "ref": "DJ!E65",
-                  "value": "Cable de 1/4\" a 1/4\""
-                }
-              ],
-              "description": "Cable de 1/4\" a 1/4\"",
-              "sourceItemIndex": 3,
-              "quantity": 2,
-              "equipment": "Cable de 1/4\" a 1/4\"",
-              "quantityCell": "D65",
-              "equipmentCell": "E65"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 66,
-              "cells": [
-                {
-                  "address": "D66",
-                  "ref": "DJ!D66",
-                  "value": 1
-                },
-                {
-                  "address": "E66",
-                  "ref": "DJ!E66",
-                  "value": "Case de pulpos (6 grandes y 6 pequeños)"
-                }
-              ],
-              "description": "Case de pulpos (6 grandes y 6 pequeños)",
-              "sourceItemIndex": 4,
-              "quantity": 1,
-              "equipment": "Case de pulpos (6 grandes y 6 pequeños)",
-              "quantityCell": "D66",
-              "equipmentCell": "E66"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 67,
-              "cells": [
-                {
-                  "address": "D67",
-                  "ref": "DJ!D67",
-                  "value": 1
-                },
-                {
-                  "address": "E67",
-                  "ref": "DJ!E67",
-                  "value": "Cable TCJ"
-                }
-              ],
-              "description": "Cable TCJ",
-              "sourceItemIndex": 5,
-              "quantity": 1,
-              "equipment": "Cable TCJ",
-              "quantityCell": "D67",
-              "equipmentCell": "E67"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 68,
-              "cells": [
-                {
-                  "address": "D68",
-                  "ref": "DJ!D68",
-                  "value": 6
-                },
-                {
-                  "address": "E68",
-                  "ref": "DJ!E68",
-                  "value": "Cuadro de corriente"
-                }
-              ],
-              "description": "Cuadro de corriente",
-              "sourceItemIndex": 6,
-              "quantity": 6,
-              "equipment": "Cuadro de corriente",
-              "quantityCell": "D68",
-              "equipmentCell": "E68"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 69,
-              "cells": [
-                {
-                  "address": "D69",
-                  "ref": "DJ!D69",
-                  "value": 6
-                },
-                {
-                  "address": "E69",
-                  "ref": "DJ!E69",
-                  "value": "Regleta"
-                }
-              ],
-              "description": "Regleta",
-              "sourceItemIndex": 7,
-              "quantity": 6,
-              "equipment": "Regleta",
-              "quantityCell": "D69",
-              "equipmentCell": "E69"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 70,
-              "cells": [
-                {
-                  "address": "D70",
-                  "ref": "DJ!D70",
-                  "value": 40
-                },
-                {
-                  "address": "E70",
-                  "ref": "DJ!E70",
-                  "value": "Cable XLR"
-                }
-              ],
-              "description": "Cable XLR",
-              "sourceItemIndex": 8,
-              "quantity": 40,
-              "equipment": "Cable XLR",
-              "quantityCell": "D70",
-              "equipmentCell": "E70"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 71,
-              "cells": [
-                {
-                  "address": "D71",
-                  "ref": "DJ!D71",
-                  "value": 30
-                },
-                {
-                  "address": "E71",
-                  "ref": "DJ!E71",
-                  "value": "Extensión"
-                }
-              ],
-              "description": "Extensión",
-              "sourceItemIndex": 9,
-              "quantity": 30,
-              "equipment": "Extensión",
-              "quantityCell": "D71",
-              "equipmentCell": "E71"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D72",
-          "title": "ESTRUCTURAS / Extras",
-          "sourceStartRow": 72,
-          "source": "DJ!D72",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              1,
-              "Extintor"
-            ],
-            [
-              1,
-              "Bolsa de agua pura"
-            ],
-            [
-              1,
-              "Grabadora de audio"
-            ],
-            [
-              2,
-              "Intercomunicador Hollyland"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 72,
-              "cells": [
-                {
-                  "address": "E72",
-                  "ref": "DJ!E72",
-                  "value": "Extras"
-                }
-              ],
-              "description": "Extras"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 73,
-              "cells": [
-                {
-                  "address": "D73",
-                  "ref": "DJ!D73",
-                  "value": 1
-                },
-                {
-                  "address": "E73",
-                  "ref": "DJ!E73",
-                  "value": "Extintor"
-                }
-              ],
-              "description": "Extintor",
-              "sourceItemIndex": 0,
-              "quantity": 1,
-              "equipment": "Extintor",
-              "quantityCell": "D73",
-              "equipmentCell": "E73"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 74,
-              "cells": [
-                {
-                  "address": "D74",
-                  "ref": "DJ!D74",
-                  "value": 1
-                },
-                {
-                  "address": "E74",
-                  "ref": "DJ!E74",
-                  "value": "Bolsa de agua pura"
-                }
-              ],
-              "description": "Bolsa de agua pura",
-              "sourceItemIndex": 1,
-              "quantity": 1,
-              "equipment": "Bolsa de agua pura",
-              "quantityCell": "D74",
-              "equipmentCell": "E74"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 75,
-              "cells": [
-                {
-                  "address": "D75",
-                  "ref": "DJ!D75",
-                  "value": 1
-                },
-                {
-                  "address": "E75",
-                  "ref": "DJ!E75",
-                  "value": "Grabadora de audio"
-                }
-              ],
-              "description": "Grabadora de audio",
-              "sourceItemIndex": 2,
-              "quantity": 1,
-              "equipment": "Grabadora de audio",
-              "quantityCell": "D75",
-              "equipmentCell": "E75"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 76,
-              "cells": [
-                {
-                  "address": "D76",
-                  "ref": "DJ!D76",
-                  "value": 2
-                },
-                {
-                  "address": "E76",
-                  "ref": "DJ!E76",
-                  "value": "Intercomunicador Hollyland"
-                }
-              ],
-              "description": "Intercomunicador Hollyland",
-              "sourceItemIndex": 3,
-              "quantity": 2,
-              "equipment": "Intercomunicador Hollyland",
-              "quantityCell": "D76",
-              "equipmentCell": "E76"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D78",
-          "title": "ESTRUCTURAS / Caja de Herramientas",
-          "sourceStartRow": 78,
-          "source": "DJ!D78",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              1,
-              "Macho"
-            ],
-            [
-              2,
-              "Pata de Gallo"
-            ],
-            [
-              1,
-              "Flipon doble de 50 amp"
-            ],
-            [
-              1,
-              "Desarmador de estrella"
-            ],
-            [
-              1,
-              "Desarmador de castigaderas"
-            ],
-            [
-              1,
-              "Cuchilla"
-            ],
-            [
-              1,
-              "Estuche llaves Allen (25 unidades)"
-            ],
-            [
-              1,
-              "Alicate"
-            ],
-            [
-              1,
-              "Tenaza"
-            ],
-            [
-              1,
-              "Pinza"
-            ],
-            [
-              1,
-              "Espiga tipo tester"
-            ],
-            [
-              1,
-              "Multímetro Fluke con estuche"
-            ],
-            [
-              5,
-              "Duc tape"
-            ],
-            [
-              3,
-              "Paquete de cinchos 0.35 cm"
-            ],
-            [
-              7,
-              "Cinta de aislar Electrica PVC"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 78,
-              "cells": [
-                {
-                  "address": "E78",
-                  "ref": "DJ!E78",
-                  "value": "Caja de Herramientas"
-                }
-              ],
-              "description": "Caja de Herramientas"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 79,
-              "cells": [
-                {
-                  "address": "D79",
-                  "ref": "DJ!D79",
-                  "value": 1
-                },
-                {
-                  "address": "E79",
-                  "ref": "DJ!E79",
-                  "value": "Macho"
-                }
-              ],
-              "description": "Macho",
-              "sourceItemIndex": 0,
-              "quantity": 1,
-              "equipment": "Macho",
-              "quantityCell": "D79",
-              "equipmentCell": "E79"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 80,
-              "cells": [
-                {
-                  "address": "D80",
-                  "ref": "DJ!D80",
-                  "value": 2
-                },
-                {
-                  "address": "E80",
-                  "ref": "DJ!E80",
-                  "value": "Pata de Gallo"
-                }
-              ],
-              "description": "Pata de Gallo",
-              "sourceItemIndex": 1,
-              "quantity": 2,
-              "equipment": "Pata de Gallo",
-              "quantityCell": "D80",
-              "equipmentCell": "E80"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 81,
-              "cells": [
-                {
-                  "address": "D81",
-                  "ref": "DJ!D81",
-                  "value": 1
-                },
-                {
-                  "address": "E81",
-                  "ref": "DJ!E81",
-                  "value": "Flipon doble de 50 amp"
-                }
-              ],
-              "description": "Flipon doble de 50 amp",
-              "sourceItemIndex": 2,
-              "quantity": 1,
-              "equipment": "Flipon doble de 50 amp",
-              "quantityCell": "D81",
-              "equipmentCell": "E81"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 82,
-              "cells": [
-                {
-                  "address": "D82",
-                  "ref": "DJ!D82",
-                  "value": 1
-                },
-                {
-                  "address": "E82",
-                  "ref": "DJ!E82",
-                  "value": "Desarmador de estrella"
-                }
-              ],
-              "description": "Desarmador de estrella",
-              "sourceItemIndex": 3,
-              "quantity": 1,
-              "equipment": "Desarmador de estrella",
-              "quantityCell": "D82",
-              "equipmentCell": "E82"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 83,
-              "cells": [
-                {
-                  "address": "D83",
-                  "ref": "DJ!D83",
-                  "value": 1
-                },
-                {
-                  "address": "E83",
-                  "ref": "DJ!E83",
-                  "value": "Desarmador de castigaderas"
-                }
-              ],
-              "description": "Desarmador de castigaderas",
-              "sourceItemIndex": 4,
-              "quantity": 1,
-              "equipment": "Desarmador de castigaderas",
-              "quantityCell": "D83",
-              "equipmentCell": "E83"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 84,
-              "cells": [
-                {
-                  "address": "D84",
-                  "ref": "DJ!D84",
-                  "value": 1
-                },
-                {
-                  "address": "E84",
-                  "ref": "DJ!E84",
-                  "value": "Cuchilla"
-                }
-              ],
-              "description": "Cuchilla",
-              "sourceItemIndex": 5,
-              "quantity": 1,
-              "equipment": "Cuchilla",
-              "quantityCell": "D84",
-              "equipmentCell": "E84"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 85,
-              "cells": [
-                {
-                  "address": "D85",
-                  "ref": "DJ!D85",
-                  "value": 1
-                },
-                {
-                  "address": "E85",
-                  "ref": "DJ!E85",
-                  "value": "Estuche llaves Allen (25 unidades)"
-                }
-              ],
-              "description": "Estuche llaves Allen (25 unidades)",
-              "sourceItemIndex": 6,
-              "quantity": 1,
-              "equipment": "Estuche llaves Allen (25 unidades)",
-              "quantityCell": "D85",
-              "equipmentCell": "E85"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 86,
-              "cells": [
-                {
-                  "address": "D86",
-                  "ref": "DJ!D86",
-                  "value": 1
-                },
-                {
-                  "address": "E86",
-                  "ref": "DJ!E86",
-                  "value": "Alicate"
-                }
-              ],
-              "description": "Alicate",
-              "sourceItemIndex": 7,
-              "quantity": 1,
-              "equipment": "Alicate",
-              "quantityCell": "D86",
-              "equipmentCell": "E86"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 87,
-              "cells": [
-                {
-                  "address": "D87",
-                  "ref": "DJ!D87",
-                  "value": 1
-                },
-                {
-                  "address": "E87",
-                  "ref": "DJ!E87",
-                  "value": "Tenaza"
-                }
-              ],
-              "description": "Tenaza",
-              "sourceItemIndex": 8,
-              "quantity": 1,
-              "equipment": "Tenaza",
-              "quantityCell": "D87",
-              "equipmentCell": "E87"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 88,
-              "cells": [
-                {
-                  "address": "D88",
-                  "ref": "DJ!D88",
-                  "value": 1
-                },
-                {
-                  "address": "E88",
-                  "ref": "DJ!E88",
-                  "value": "Pinza"
-                }
-              ],
-              "description": "Pinza",
-              "sourceItemIndex": 9,
-              "quantity": 1,
-              "equipment": "Pinza",
-              "quantityCell": "D88",
-              "equipmentCell": "E88"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 89,
-              "cells": [
-                {
-                  "address": "D89",
-                  "ref": "DJ!D89",
-                  "value": 1
-                },
-                {
-                  "address": "E89",
-                  "ref": "DJ!E89",
-                  "value": "Espiga tipo tester"
-                }
-              ],
-              "description": "Espiga tipo tester",
-              "sourceItemIndex": 10,
-              "quantity": 1,
-              "equipment": "Espiga tipo tester",
-              "quantityCell": "D89",
-              "equipmentCell": "E89"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 90,
-              "cells": [
-                {
-                  "address": "D90",
-                  "ref": "DJ!D90",
-                  "value": 1
-                },
-                {
-                  "address": "E90",
-                  "ref": "DJ!E90",
-                  "value": "Multímetro Fluke con estuche"
-                }
-              ],
-              "description": "Multímetro Fluke con estuche",
-              "sourceItemIndex": 11,
-              "quantity": 1,
-              "equipment": "Multímetro Fluke con estuche",
-              "quantityCell": "D90",
-              "equipmentCell": "E90"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 91,
-              "cells": [
-                {
-                  "address": "D91",
-                  "ref": "DJ!D91",
-                  "value": 5
-                },
-                {
-                  "address": "E91",
-                  "ref": "DJ!E91",
-                  "value": "Duc tape"
-                }
-              ],
-              "description": "Duc tape",
-              "sourceItemIndex": 12,
-              "quantity": 5,
-              "equipment": "Duc tape",
-              "quantityCell": "D91",
-              "equipmentCell": "E91"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 92,
-              "cells": [
-                {
-                  "address": "D92",
-                  "ref": "DJ!D92",
-                  "value": 3
-                },
-                {
-                  "address": "E92",
-                  "ref": "DJ!E92",
-                  "value": "Paquete de cinchos 0.35 cm"
-                }
-              ],
-              "description": "Paquete de cinchos 0.35 cm",
-              "sourceItemIndex": 13,
-              "quantity": 3,
-              "equipment": "Paquete de cinchos 0.35 cm",
-              "quantityCell": "D92",
-              "equipmentCell": "E92"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 93,
-              "cells": [
-                {
-                  "address": "D93",
-                  "ref": "DJ!D93",
-                  "value": 7
-                },
-                {
-                  "address": "E93",
-                  "ref": "DJ!E93",
-                  "value": "Cinta de aislar Electrica PVC"
-                }
-              ],
-              "description": "Cinta de aislar Electrica PVC",
-              "sourceItemIndex": 14,
-              "quantity": 7,
-              "equipment": "Cinta de aislar Electrica PVC",
-              "quantityCell": "D93",
-              "equipmentCell": "E93"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D95",
-          "title": "ESTRUCTURAS / Equipo de Limpieza",
-          "sourceStartRow": 95,
-          "source": "DJ!D95",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              5,
-              "Trapo"
-            ],
-            [
-              1,
-              "Escoba"
-            ],
-            [
-              1,
-              "Pala"
-            ],
-            [
-              5,
-              "Trapiador"
-            ],
-            [
-              1,
-              "Atomizador con desinfectante"
-            ],
-            [
-              1,
-              "Atomizador con silicón"
-            ],
-            [
-              2,
-              "Espuma limpiadora"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 95,
-              "cells": [
-                {
-                  "address": "E95",
-                  "ref": "DJ!E95",
-                  "value": "Equipo de Limpieza"
-                }
-              ],
-              "description": "Equipo de Limpieza"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 96,
-              "cells": [
-                {
-                  "address": "D96",
-                  "ref": "DJ!D96",
-                  "value": 5
-                },
-                {
-                  "address": "E96",
-                  "ref": "DJ!E96",
-                  "value": "Trapo"
-                }
-              ],
-              "description": "Trapo",
-              "sourceItemIndex": 0,
-              "quantity": 5,
-              "equipment": "Trapo",
-              "quantityCell": "D96",
-              "equipmentCell": "E96"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 97,
-              "cells": [
-                {
-                  "address": "D97",
-                  "ref": "DJ!D97",
-                  "value": 1
-                },
-                {
-                  "address": "E97",
-                  "ref": "DJ!E97",
-                  "value": "Escoba"
-                }
-              ],
-              "description": "Escoba",
-              "sourceItemIndex": 1,
-              "quantity": 1,
-              "equipment": "Escoba",
-              "quantityCell": "D97",
-              "equipmentCell": "E97"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 98,
-              "cells": [
-                {
-                  "address": "D98",
-                  "ref": "DJ!D98",
-                  "value": 1
-                },
-                {
-                  "address": "E98",
-                  "ref": "DJ!E98",
-                  "value": "Pala"
-                }
-              ],
-              "description": "Pala",
-              "sourceItemIndex": 2,
-              "quantity": 1,
-              "equipment": "Pala",
-              "quantityCell": "D98",
-              "equipmentCell": "E98"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 99,
-              "cells": [
-                {
-                  "address": "D99",
-                  "ref": "DJ!D99",
-                  "value": 5
-                },
-                {
-                  "address": "E99",
-                  "ref": "DJ!E99",
-                  "value": "Trapiador"
-                }
-              ],
-              "description": "Trapiador",
-              "sourceItemIndex": 3,
-              "quantity": 5,
-              "equipment": "Trapiador",
-              "quantityCell": "D99",
-              "equipmentCell": "E99"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 100,
-              "cells": [
-                {
-                  "address": "D100",
-                  "ref": "DJ!D100",
-                  "value": 1
-                },
-                {
-                  "address": "E100",
-                  "ref": "DJ!E100",
-                  "value": "Atomizador con desinfectante"
-                }
-              ],
-              "description": "Atomizador con desinfectante",
-              "sourceItemIndex": 4,
-              "quantity": 1,
-              "equipment": "Atomizador con desinfectante",
-              "quantityCell": "D100",
-              "equipmentCell": "E100"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 101,
-              "cells": [
-                {
-                  "address": "D101",
-                  "ref": "DJ!D101",
-                  "value": 1
-                },
-                {
-                  "address": "E101",
-                  "ref": "DJ!E101",
-                  "value": "Atomizador con silicón"
-                }
-              ],
-              "description": "Atomizador con silicón",
-              "sourceItemIndex": 5,
-              "quantity": 1,
-              "equipment": "Atomizador con silicón",
-              "quantityCell": "D101",
-              "equipmentCell": "E101"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 102,
-              "cells": [
-                {
-                  "address": "D102",
-                  "ref": "DJ!D102",
-                  "value": 2
-                },
-                {
-                  "address": "E102",
-                  "ref": "DJ!E102",
-                  "value": "Espuma limpiadora"
-                }
-              ],
-              "description": "Espuma limpiadora",
-              "sourceItemIndex": 6,
-              "quantity": 2,
-              "equipment": "Espuma limpiadora",
-              "quantityCell": "D102",
-              "equipmentCell": "E102"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D103",
-          "title": "ESTRUCTURAS / Equipo de proteccion",
-          "sourceStartRow": 103,
-          "source": "DJ!D103",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              10,
-              "Bolsa jardinera de tonel"
-            ],
-            [
-              3,
-              "Retazo de nylon (para tapar equipo)"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 103,
-              "cells": [
-                {
-                  "address": "E103",
-                  "ref": "DJ!E103",
-                  "value": "Equipo de proteccion"
-                }
-              ],
-              "description": "Equipo de proteccion"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 104,
-              "cells": [
-                {
-                  "address": "D104",
-                  "ref": "DJ!D104",
-                  "value": 10
-                },
-                {
-                  "address": "E104",
-                  "ref": "DJ!E104",
-                  "value": "Bolsa jardinera de tonel"
-                }
-              ],
-              "description": "Bolsa jardinera de tonel",
-              "sourceItemIndex": 0,
-              "quantity": 10,
-              "equipment": "Bolsa jardinera de tonel",
-              "quantityCell": "D104",
-              "equipmentCell": "E104"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 105,
-              "cells": [
-                {
-                  "address": "D105",
-                  "ref": "DJ!D105",
-                  "value": 3
-                },
-                {
-                  "address": "E105",
-                  "ref": "DJ!E105",
-                  "value": "Retazo de nylon (para tapar equipo)"
-                }
-              ],
-              "description": "Retazo de nylon (para tapar equipo)",
-              "sourceItemIndex": 1,
-              "quantity": 3,
-              "equipment": "Retazo de nylon (para tapar equipo)",
-              "quantityCell": "D105",
-              "equipmentCell": "E105"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:D106",
-          "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
-          "sourceStartRow": 106,
-          "source": "DJ!D106",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              6,
-              "Casco"
-            ],
-            [
-              6,
-              "Chaleco"
-            ],
-            [
-              0,
-              "Par de botas"
-            ],
-            [
-              6,
-              "Par de guantes"
-            ],
-            [
-              1,
-              "Arnes completo"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 106,
-              "cells": [
-                {
-                  "address": "E106",
-                  "ref": "DJ!E106",
-                  "value": "Equipo de Seguridad Industrial"
-                }
-              ],
-              "description": "Equipo de Seguridad Industrial"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 107,
-              "cells": [
-                {
-                  "address": "D107",
-                  "ref": "DJ!D107",
-                  "value": 6
-                },
-                {
-                  "address": "E107",
-                  "ref": "DJ!E107",
-                  "value": "Casco"
-                }
-              ],
-              "description": "Casco",
-              "sourceItemIndex": 0,
-              "quantity": 6,
-              "equipment": "Casco",
-              "quantityCell": "D107",
-              "equipmentCell": "E107"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 108,
-              "cells": [
-                {
-                  "address": "D108",
-                  "ref": "DJ!D108",
-                  "value": 6
-                },
-                {
-                  "address": "E108",
-                  "ref": "DJ!E108",
-                  "value": "Chaleco"
-                }
-              ],
-              "description": "Chaleco",
-              "sourceItemIndex": 1,
-              "quantity": 6,
-              "equipment": "Chaleco",
-              "quantityCell": "D108",
-              "equipmentCell": "E108"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 109,
-              "cells": [
-                {
-                  "address": "D109",
-                  "ref": "DJ!D109",
-                  "value": 0
-                },
-                {
-                  "address": "E109",
-                  "ref": "DJ!E109",
-                  "value": "Par de botas"
-                }
-              ],
-              "description": "Par de botas",
-              "sourceItemIndex": 2,
-              "quantity": 0,
-              "equipment": "Par de botas",
-              "quantityCell": "D109",
-              "equipmentCell": "E109"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 110,
-              "cells": [
-                {
-                  "address": "D110",
-                  "ref": "DJ!D110",
-                  "value": 6
-                },
-                {
-                  "address": "E110",
-                  "ref": "DJ!E110",
-                  "value": "Par de guantes"
-                }
-              ],
-              "description": "Par de guantes",
-              "sourceItemIndex": 3,
-              "quantity": 6,
-              "equipment": "Par de guantes",
-              "quantityCell": "D110",
-              "equipmentCell": "E110"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 111,
-              "cells": [
-                {
-                  "address": "D111",
-                  "ref": "DJ!D111",
-                  "value": 1
-                },
-                {
-                  "address": "E111",
-                  "ref": "DJ!E111",
-                  "value": "Arnes completo"
-                }
-              ],
-              "description": "Arnes completo",
-              "sourceItemIndex": 4,
-              "quantity": 1,
-              "equipment": "Arnes completo",
-              "quantityCell": "D111",
-              "equipmentCell": "E111"
-            }
-          ]
-        }
-      ],
-      "extras": []
-    },
-    "dj-privado": {
-      "name": "DJ PRIVADO",
-      "source": "DJ!G:H",
-      "sourceCells": [
-        {
-          "address": "G1",
-          "ref": "DJ!G1",
-          "value": "DJ PRIVADO"
-        },
-        {
-          "address": "H4",
-          "ref": "DJ!H4",
-          "value": "CUADRO DE MONTAJE"
-        },
-        {
-          "address": "H5",
-          "ref": "DJ!H5",
-          "value": "Equipo a llevar - Live Productions"
-        },
-        {
-          "address": "G6",
-          "ref": "DJ!G6",
-          "value": "Cantidad"
-        },
-        {
-          "address": "H6",
-          "ref": "DJ!H6",
-          "value": "Consola"
-        },
-        {
-          "address": "G7",
-          "ref": "DJ!G7",
-          "value": 1
-        },
-        {
-          "address": "H7",
-          "ref": "DJ!H7",
-          "value": "Consola analoga con cable ac"
-        },
-        {
-          "address": "H8",
-          "ref": "DJ!H8",
-          "value": "Telefono (Mochila)"
-        },
-        {
-          "address": "G9",
-          "ref": "DJ!G9",
-          "value": 1
-        },
-        {
-          "address": "H9",
-          "ref": "DJ!H9",
-          "value": "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
-        },
-        {
-          "address": "H10",
-          "ref": "DJ!H10",
-          "value": "Audio"
-        },
-        {
-          "address": "G11",
-          "ref": "DJ!G11",
-          "value": 2
-        },
-        {
-          "address": "H11",
-          "ref": "DJ!H11",
-          "value": "Bocina IP 2000 con funda"
-        },
-        {
-          "address": "H12",
-          "ref": "DJ!H12",
-          "value": "MONITOREO INTERNO"
-        },
-        {
-          "address": "H13",
-          "ref": "DJ!H13",
-          "value": "Baterias"
-        },
-        {
-          "address": "G14",
-          "ref": "DJ!G14",
-          "value": 16
-        },
-        {
-          "address": "H14",
-          "ref": "DJ!H14",
-          "value": "Bateria Bonai"
-        },
-        {
-          "address": "G15",
-          "ref": "DJ!G15",
-          "value": 1
-        },
-        {
-          "address": "H15",
-          "ref": "DJ!H15",
-          "value": "Cargador para bateria Bonai"
-        },
-        {
-          "address": "G16",
-          "ref": "DJ!G16",
-          "value": 1
-        },
-        {
-          "address": "H16",
-          "ref": "DJ!H16",
-          "value": "Porta bateria Bonai"
-        },
-        {
-          "address": "H17",
-          "ref": "DJ!H17",
-          "value": "MICROFONIA"
-        },
-        {
-          "address": "H18",
-          "ref": "DJ!H18",
-          "value": "Microfonia para voces"
-        },
-        {
-          "address": "G19",
-          "ref": "DJ!G19",
-          "value": 1
-        },
-        {
-          "address": "H19",
-          "ref": "DJ!H19",
-          "value": "Mic. Sm 58 inalambrico"
-        },
-        {
-          "address": "G20",
-          "ref": "DJ!G20",
-          "value": 2
-        },
-        {
-          "address": "H20",
-          "ref": "DJ!H20",
-          "value": "Caja directa"
-        },
-        {
-          "address": "H21",
-          "ref": "DJ!H21",
-          "value": "ILUMINACION"
-        },
-        {
-          "address": "H22",
-          "ref": "DJ!H22",
-          "value": "Luces"
-        },
-        {
-          "address": "G23",
-          "ref": "DJ!G23",
-          "value": 2
-        },
-        {
-          "address": "H23",
-          "ref": "DJ!H23",
-          "value": "Wash con cable power spicon"
-        },
-        {
-          "address": "G24",
-          "ref": "DJ!G24",
-          "value": 6
-        },
-        {
-          "address": "H24",
-          "ref": "DJ!H24",
-          "value": "Par LED RGB con cable ac"
-        },
-        {
-          "address": "G25",
-          "ref": "DJ!G25",
-          "value": 8
-        },
-        {
-          "address": "H25",
-          "ref": "DJ!H25",
-          "value": "Clamp para luces"
-        },
-        {
-          "address": "G26",
-          "ref": "DJ!G26",
-          "value": 8
-        },
-        {
-          "address": "H26",
-          "ref": "DJ!H26",
-          "value": "Base de clamp"
-        },
-        {
-          "address": "G27",
-          "ref": "DJ!G27",
-          "value": 1
-        },
-        {
-          "address": "H27",
-          "ref": "DJ!H27",
-          "value": "Dmx 384 adj con cable ac"
-        },
-        {
-          "address": "G28",
-          "ref": "DJ!G28",
-          "value": 1
-        },
-        {
-          "address": "H28",
-          "ref": "DJ!H28",
-          "value": "Spliter American DJ con cable ac"
-        },
-        {
-          "address": "G29",
-          "ref": "DJ!G29",
-          "value": "EFECTOS ESPECIALES"
-        },
-        {
-          "address": "H30",
-          "ref": "DJ!H30",
-          "value": "Maquina de humo"
-        },
-        {
-          "address": "G31",
-          "ref": "DJ!G31",
-          "value": 1
-        },
-        {
-          "address": "H31",
-          "ref": "DJ!H31",
-          "value": "Maquina de humo con control, cable ac y ventilador"
-        },
-        {
-          "address": "G32",
-          "ref": "DJ!G32",
-          "value": 1
-        },
-        {
-          "address": "H32",
-          "ref": "DJ!H32",
-          "value": "Galon liquido de humo"
-        },
-        {
-          "address": "G33",
-          "ref": "DJ!G33",
-          "value": "ESTRUCTURAS"
-        },
-        {
-          "address": "H34",
-          "ref": "DJ!H34",
-          "value": "Estructura DJ"
-        },
-        {
-          "address": "G35",
-          "ref": "DJ!G35",
-          "value": 1
-        },
-        {
-          "address": "H35",
-          "ref": "DJ!H35",
-          "value": "Marco DJ booth grande"
-        },
-        {
-          "address": "G36",
-          "ref": "DJ!G36",
-          "value": 1
-        },
-        {
-          "address": "H36",
-          "ref": "DJ!H36",
-          "value": "Marco DJ booth pequeño"
-        },
-        {
-          "address": "G37",
-          "ref": "DJ!G37",
-          "value": 1
-        },
-        {
-          "address": "H37",
-          "ref": "DJ!H37",
-          "value": "DJ booth"
-        },
-        {
-          "address": "H38",
-          "ref": "DJ!H38",
-          "value": "Estructura Luces"
-        },
-        {
-          "address": "G39",
-          "ref": "DJ!G39",
-          "value": 4
-        },
-        {
-          "address": "H39",
-          "ref": "DJ!H39",
-          "value": "Estructura blanca pequeña con su funda"
-        },
-        {
-          "address": "G40",
-          "ref": "DJ!G40",
-          "value": 4
-        },
-        {
-          "address": "H40",
-          "ref": "DJ!H40",
-          "value": "Platina pequeña para estructura blanca "
-        },
-        {
-          "address": "G41",
-          "ref": "DJ!G41",
-          "value": 4
-        },
-        {
-          "address": "H41",
-          "ref": "DJ!H41",
-          "value": "Platina grande para estructrura blanca"
-        },
-        {
-          "address": "G42",
-          "ref": "DJ!G42",
-          "value": 16
-        },
-        {
-          "address": "H42",
-          "ref": "DJ!H42",
-          "value": "Tornillos especiales para estructura blanca"
-        },
-        {
-          "address": "H43",
-          "ref": "DJ!H43",
-          "value": "Telas para forrar estructuras"
-        },
-        {
-          "address": "G44",
-          "ref": "DJ!G44",
-          "value": 4
-        },
-        {
-          "address": "H44",
-          "ref": "DJ!H44",
-          "value": "Funda para truss color negro de 2 mts"
-        },
-        {
-          "address": "G45",
-          "ref": "DJ!G45",
-          "value": 4
-        },
-        {
-          "address": "H45",
-          "ref": "DJ!H45",
-          "value": "Funda para truss color blanco de 2 mts"
-        },
-        {
-          "address": "G46",
-          "ref": "DJ!G46",
-          "value": 1
-        },
-        {
-          "address": "H46",
-          "ref": "DJ!H46",
-          "value": "Tela pequeña para forrar DJ booth color negro (DJ)"
-        },
-        {
-          "address": "G47",
-          "ref": "DJ!G47",
-          "value": 1
-        },
-        {
-          "address": "H47",
-          "ref": "DJ!H47",
-          "value": "Tela pequeña para forrar DJ booth color blanco (DJ)"
-        },
-        {
-          "address": "G48",
-          "ref": "DJ!G48",
-          "value": 1
-        },
-        {
-          "address": "H48",
-          "ref": "DJ!H48",
-          "value": "Tela grande para forrar DJ booth color negro (controles)"
-        },
-        {
-          "address": "H49",
-          "ref": "DJ!H49",
-          "value": "Case de Cableado"
-        },
-        {
-          "address": "G50",
-          "ref": "DJ!G50",
-          "value": 1
-        },
-        {
-          "address": "H50",
-          "ref": "DJ!H50",
-          "value": "Distro de corriente pequeño "
-        },
-        {
-          "address": "G51",
-          "ref": "DJ!G51",
-          "value": 2
-        },
-        {
-          "address": "H51",
-          "ref": "DJ!H51",
-          "value": "Cable ac"
-        },
-        {
-          "address": "G52",
-          "ref": "DJ!G52",
-          "value": 2
-        },
-        {
-          "address": "H52",
-          "ref": "DJ!H52",
-          "value": "Cable power spicon"
-        },
-        {
-          "address": "G53",
-          "ref": "DJ!G53",
-          "value": 2
-        },
-        {
-          "address": "H53",
-          "ref": "DJ!H53",
-          "value": "Cable de 1/4\" a 1/4\""
-        },
-        {
-          "address": "G54",
-          "ref": "DJ!G54",
-          "value": 5
-        },
-        {
-          "address": "H54",
-          "ref": "DJ!H54",
-          "value": "Cuadro de corriente"
-        },
-        {
-          "address": "G55",
-          "ref": "DJ!G55",
-          "value": 5
-        },
-        {
-          "address": "H55",
-          "ref": "DJ!H55",
-          "value": "Regleta"
-        },
-        {
-          "address": "G56",
-          "ref": "DJ!G56",
-          "value": 35
-        },
-        {
-          "address": "H56",
-          "ref": "DJ!H56",
-          "value": "Cable XLR"
-        },
-        {
-          "address": "G57",
-          "ref": "DJ!G57",
-          "value": 30
-        },
-        {
-          "address": "H57",
-          "ref": "DJ!H57",
-          "value": "Extensión"
-        },
-        {
-          "address": "H58",
-          "ref": "DJ!H58",
-          "value": "Extras"
-        },
-        {
-          "address": "G59",
-          "ref": "DJ!G59",
-          "value": 1
-        },
-        {
-          "address": "H59",
-          "ref": "DJ!H59",
-          "value": "Extintor"
-        },
-        {
-          "address": "G60",
-          "ref": "DJ!G60",
-          "value": 1
-        },
-        {
-          "address": "H60",
-          "ref": "DJ!H60",
-          "value": "Bolsa de agua pura"
-        },
-        {
-          "address": "G61",
-          "ref": "DJ!G61",
-          "value": 1
-        },
-        {
-          "address": "H61",
-          "ref": "DJ!H61",
-          "value": "Grabadora de audio"
-        },
-        {
-          "address": "G62",
-          "ref": "DJ!G62",
-          "value": 2
-        },
-        {
-          "address": "H62",
-          "ref": "DJ!H62",
-          "value": "Intercomunicador Hollyland"
-        },
-        {
-          "address": "H64",
-          "ref": "DJ!H64",
-          "value": "Caja de Herramientas"
-        },
-        {
-          "address": "G65",
-          "ref": "DJ!G65",
-          "value": 1
-        },
-        {
-          "address": "H65",
-          "ref": "DJ!H65",
-          "value": "Macho"
-        },
-        {
-          "address": "G66",
-          "ref": "DJ!G66",
-          "value": 2
-        },
-        {
-          "address": "H66",
-          "ref": "DJ!H66",
-          "value": "Pata de Gallo"
-        },
-        {
-          "address": "G67",
-          "ref": "DJ!G67",
-          "value": 1
-        },
-        {
-          "address": "H67",
-          "ref": "DJ!H67",
-          "value": "Flipon doble de 50 amp"
-        },
-        {
-          "address": "G68",
-          "ref": "DJ!G68",
-          "value": 1
-        },
-        {
-          "address": "H68",
-          "ref": "DJ!H68",
-          "value": "Desarmador de estrella"
-        },
-        {
-          "address": "G69",
-          "ref": "DJ!G69",
-          "value": 1
-        },
-        {
-          "address": "H69",
-          "ref": "DJ!H69",
-          "value": "Desarmador de castigaderas"
-        },
-        {
-          "address": "G70",
-          "ref": "DJ!G70",
-          "value": 1
-        },
-        {
-          "address": "H70",
-          "ref": "DJ!H70",
-          "value": "Cuchilla"
-        },
-        {
-          "address": "G71",
-          "ref": "DJ!G71",
-          "value": 1
-        },
-        {
-          "address": "H71",
-          "ref": "DJ!H71",
-          "value": "Estuche llaves Allen (25 unidades)"
-        },
-        {
-          "address": "G72",
-          "ref": "DJ!G72",
-          "value": 1
-        },
-        {
-          "address": "H72",
-          "ref": "DJ!H72",
-          "value": "Alicate"
-        },
-        {
-          "address": "G73",
-          "ref": "DJ!G73",
-          "value": 1
-        },
-        {
-          "address": "H73",
-          "ref": "DJ!H73",
-          "value": "Tenaza"
-        },
-        {
-          "address": "G74",
-          "ref": "DJ!G74",
-          "value": 1
-        },
-        {
-          "address": "H74",
-          "ref": "DJ!H74",
-          "value": "Pinza"
-        },
-        {
-          "address": "G75",
-          "ref": "DJ!G75",
-          "value": 1
-        },
-        {
-          "address": "H75",
-          "ref": "DJ!H75",
-          "value": "Espiga tipo tester"
-        },
-        {
-          "address": "G76",
-          "ref": "DJ!G76",
-          "value": 1
-        },
-        {
-          "address": "H76",
-          "ref": "DJ!H76",
-          "value": "Multímetro Fluke con estuche"
-        },
-        {
-          "address": "G77",
-          "ref": "DJ!G77",
-          "value": 5
-        },
-        {
-          "address": "H77",
-          "ref": "DJ!H77",
-          "value": "Duc tape"
-        },
-        {
-          "address": "G78",
-          "ref": "DJ!G78",
-          "value": 3
-        },
-        {
-          "address": "H78",
-          "ref": "DJ!H78",
-          "value": "Paquete de cinchos 0.35 cm"
-        },
-        {
-          "address": "G79",
-          "ref": "DJ!G79",
-          "value": 7
-        },
-        {
-          "address": "H79",
-          "ref": "DJ!H79",
-          "value": "Cinta de aislar Electrica PVC"
-        },
-        {
-          "address": "H81",
-          "ref": "DJ!H81",
-          "value": "Equipo de Limpieza"
-        },
-        {
-          "address": "G82",
-          "ref": "DJ!G82",
-          "value": 5
-        },
-        {
-          "address": "H82",
-          "ref": "DJ!H82",
-          "value": "Trapo"
-        },
-        {
-          "address": "G83",
-          "ref": "DJ!G83",
-          "value": 1
-        },
-        {
-          "address": "H83",
-          "ref": "DJ!H83",
-          "value": "Escoba"
-        },
-        {
-          "address": "G84",
-          "ref": "DJ!G84",
-          "value": 1
-        },
-        {
-          "address": "H84",
-          "ref": "DJ!H84",
-          "value": "Pala"
-        },
-        {
-          "address": "G85",
-          "ref": "DJ!G85",
-          "value": 5
-        },
-        {
-          "address": "H85",
-          "ref": "DJ!H85",
-          "value": "Trapiador"
-        },
-        {
-          "address": "G86",
-          "ref": "DJ!G86",
-          "value": 1
-        },
-        {
-          "address": "H86",
-          "ref": "DJ!H86",
-          "value": "Atomizador con desinfectante"
-        },
-        {
-          "address": "G87",
-          "ref": "DJ!G87",
-          "value": 1
-        },
-        {
-          "address": "H87",
-          "ref": "DJ!H87",
-          "value": "Atomizador con silicón"
-        },
-        {
-          "address": "G88",
-          "ref": "DJ!G88",
-          "value": 2
-        },
-        {
-          "address": "H88",
-          "ref": "DJ!H88",
-          "value": "Espuma limpiadora"
-        },
-        {
-          "address": "H89",
-          "ref": "DJ!H89",
-          "value": "Equipo de proteccion"
-        },
-        {
-          "address": "G90",
-          "ref": "DJ!G90",
-          "value": 10
-        },
-        {
-          "address": "H90",
-          "ref": "DJ!H90",
-          "value": "Bolsa jardinera de tonel"
-        },
-        {
-          "address": "G91",
-          "ref": "DJ!G91",
-          "value": 3
-        },
-        {
-          "address": "H91",
-          "ref": "DJ!H91",
-          "value": "Retazo de nylon (para tapar equipo)"
-        },
-        {
-          "address": "H92",
-          "ref": "DJ!H92",
-          "value": "Equipo de Seguridad Industrial"
-        },
-        {
-          "address": "G93",
-          "ref": "DJ!G93",
-          "value": 6
-        },
-        {
-          "address": "H93",
-          "ref": "DJ!H93",
-          "value": "Casco"
-        },
-        {
-          "address": "G94",
-          "ref": "DJ!G94",
-          "value": 6
-        },
-        {
-          "address": "H94",
-          "ref": "DJ!H94",
-          "value": "Chaleco"
-        },
-        {
-          "address": "G95",
-          "ref": "DJ!G95",
-          "value": 0
-        },
-        {
-          "address": "H95",
-          "ref": "DJ!H95",
-          "value": "Par de botas"
-        },
-        {
-          "address": "G96",
-          "ref": "DJ!G96",
-          "value": 6
-        },
-        {
-          "address": "H96",
-          "ref": "DJ!H96",
-          "value": "Par de guantes"
-        },
-        {
-          "address": "G97",
-          "ref": "DJ!G97",
-          "value": 1
-        },
-        {
-          "address": "H97",
-          "ref": "DJ!H97",
-          "value": "Arnes completo"
-        }
-      ],
-      "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-        "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
-        "authoritative": true
-      },
-      "mainSections": [
-        {
-          "id": "20261013-servicios-archivo-01:dj:G1",
-          "title": "DJ PRIVADO",
-          "sourceStartRow": 1,
-          "source": "DJ!G1",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [],
-          "rows": [
-            {
-              "type": "header",
-              "sourceType": "header",
-              "sourceRow": 1,
-              "cells": [
-                {
-                  "address": "G1",
-                  "ref": "DJ!G1",
-                  "value": "DJ PRIVADO"
-                }
-              ],
-              "description": "DJ PRIVADO"
-            },
-            {
-              "type": "header",
-              "sourceType": "header",
-              "sourceRow": 4,
-              "cells": [
-                {
-                  "address": "H4",
-                  "ref": "DJ!H4",
-                  "value": "CUADRO DE MONTAJE"
-                }
-              ],
-              "description": "CUADRO DE MONTAJE"
-            },
-            {
-              "type": "header",
-              "sourceType": "header",
-              "sourceRow": 5,
-              "cells": [
-                {
-                  "address": "H5",
-                  "ref": "DJ!H5",
-                  "value": "Equipo a llevar - Live Productions"
-                }
-              ],
-              "description": "Equipo a llevar - Live Productions"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:G6",
-          "title": "Consola",
-          "sourceStartRow": 6,
-          "source": "DJ!G6",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              1,
-              "Consola analoga con cable ac"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 6,
-              "cells": [
-                {
-                  "address": "G6",
-                  "ref": "DJ!G6",
-                  "value": "Cantidad"
-                },
-                {
-                  "address": "H6",
-                  "ref": "DJ!H6",
-                  "value": "Consola"
-                }
-              ],
-              "description": "Cantidad · Consola"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 7,
-              "cells": [
-                {
-                  "address": "G7",
-                  "ref": "DJ!G7",
-                  "value": 1
-                },
-                {
-                  "address": "H7",
-                  "ref": "DJ!H7",
-                  "value": "Consola analoga con cable ac"
-                }
-              ],
-              "description": "Consola analoga con cable ac",
-              "sourceItemIndex": 0,
-              "quantity": 1,
-              "equipment": "Consola analoga con cable ac",
-              "quantityCell": "G7",
-              "equipmentCell": "H7"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:G8",
-          "title": "Telefono (Mochila)",
-          "sourceStartRow": 8,
-          "source": "DJ!G8",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              1,
-              "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 8,
-              "cells": [
-                {
-                  "address": "H8",
-                  "ref": "DJ!H8",
-                  "value": "Telefono (Mochila)"
-                }
-              ],
-              "description": "Telefono (Mochila)"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 9,
-              "cells": [
-                {
-                  "address": "G9",
-                  "ref": "DJ!G9",
-                  "value": 1
-                },
-                {
-                  "address": "H9",
-                  "ref": "DJ!H9",
-                  "value": "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)"
-                }
-              ],
-              "description": "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)",
-              "sourceItemIndex": 0,
-              "quantity": 1,
-              "equipment": "Kit celular (estuche, celular, cable audio, cable lighting, cable tipo c, maletin, cable, cargador)",
-              "quantityCell": "G9",
-              "equipmentCell": "H9"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:G10",
-          "title": "Audio",
-          "sourceStartRow": 10,
-          "source": "DJ!G10",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              2,
-              "Bocina IP 2000 con funda"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 10,
-              "cells": [
-                {
-                  "address": "H10",
-                  "ref": "DJ!H10",
-                  "value": "Audio"
-                }
-              ],
-              "description": "Audio"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 11,
-              "cells": [
-                {
-                  "address": "G11",
-                  "ref": "DJ!G11",
-                  "value": 2
-                },
-                {
-                  "address": "H11",
-                  "ref": "DJ!H11",
-                  "value": "Bocina IP 2000 con funda"
-                }
-              ],
-              "description": "Bocina IP 2000 con funda",
-              "sourceItemIndex": 0,
-              "quantity": 2,
-              "equipment": "Bocina IP 2000 con funda",
-              "quantityCell": "G11",
-              "equipmentCell": "H11"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:G12",
-          "title": "MONITOREO INTERNO",
-          "sourceStartRow": 12,
-          "source": "DJ!G12",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 12,
-              "cells": [
-                {
-                  "address": "H12",
-                  "ref": "DJ!H12",
-                  "value": "MONITOREO INTERNO"
-                }
-              ],
-              "description": "MONITOREO INTERNO"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:G13",
-          "title": "MONITOREO INTERNO / Baterias",
-          "sourceStartRow": 13,
-          "source": "DJ!G13",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              16,
-              "Bateria Bonai"
-            ],
-            [
-              1,
-              "Cargador para bateria Bonai"
-            ],
-            [
-              1,
-              "Porta bateria Bonai"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 13,
-              "cells": [
-                {
-                  "address": "H13",
-                  "ref": "DJ!H13",
-                  "value": "Baterias"
-                }
-              ],
-              "description": "Baterias"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 14,
-              "cells": [
-                {
-                  "address": "G14",
-                  "ref": "DJ!G14",
-                  "value": 16
-                },
-                {
-                  "address": "H14",
-                  "ref": "DJ!H14",
-                  "value": "Bateria Bonai"
-                }
-              ],
-              "description": "Bateria Bonai",
-              "sourceItemIndex": 0,
-              "quantity": 16,
-              "equipment": "Bateria Bonai",
-              "quantityCell": "G14",
-              "equipmentCell": "H14"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 15,
-              "cells": [
-                {
-                  "address": "G15",
-                  "ref": "DJ!G15",
-                  "value": 1
-                },
-                {
-                  "address": "H15",
-                  "ref": "DJ!H15",
-                  "value": "Cargador para bateria Bonai"
-                }
-              ],
-              "description": "Cargador para bateria Bonai",
-              "sourceItemIndex": 1,
-              "quantity": 1,
-              "equipment": "Cargador para bateria Bonai",
-              "quantityCell": "G15",
-              "equipmentCell": "H15"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 16,
-              "cells": [
-                {
-                  "address": "G16",
-                  "ref": "DJ!G16",
-                  "value": 1
-                },
-                {
-                  "address": "H16",
-                  "ref": "DJ!H16",
-                  "value": "Porta bateria Bonai"
-                }
-              ],
-              "description": "Porta bateria Bonai",
-              "sourceItemIndex": 2,
-              "quantity": 1,
-              "equipment": "Porta bateria Bonai",
-              "quantityCell": "G16",
-              "equipmentCell": "H16"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:G17",
-          "title": "MICROFONIA",
-          "sourceStartRow": 17,
-          "source": "DJ!G17",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 17,
-              "cells": [
-                {
-                  "address": "H17",
-                  "ref": "DJ!H17",
-                  "value": "MICROFONIA"
-                }
-              ],
-              "description": "MICROFONIA"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:G18",
-          "title": "MICROFONIA / Microfonia para voces",
-          "sourceStartRow": 18,
-          "source": "DJ!G18",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [
-            [
-              1,
-              "Mic. Sm 58 inalambrico"
-            ],
-            [
-              2,
-              "Caja directa"
-            ]
-          ],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 18,
-              "cells": [
-                {
-                  "address": "H18",
-                  "ref": "DJ!H18",
-                  "value": "Microfonia para voces"
-                }
-              ],
-              "description": "Microfonia para voces"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 19,
-              "cells": [
-                {
-                  "address": "G19",
-                  "ref": "DJ!G19",
-                  "value": 1
-                },
-                {
-                  "address": "H19",
-                  "ref": "DJ!H19",
-                  "value": "Mic. Sm 58 inalambrico"
-                }
-              ],
-              "description": "Mic. Sm 58 inalambrico",
-              "sourceItemIndex": 0,
-              "quantity": 1,
-              "equipment": "Mic. Sm 58 inalambrico",
-              "quantityCell": "G19",
-              "equipmentCell": "H19"
-            },
-            {
-              "type": "item",
-              "sourceType": "data",
-              "sourceRow": 20,
-              "cells": [
-                {
-                  "address": "G20",
-                  "ref": "DJ!G20",
-                  "value": 2
-                },
-                {
-                  "address": "H20",
-                  "ref": "DJ!H20",
-                  "value": "Caja directa"
-                }
-              ],
-              "description": "Caja directa",
-              "sourceItemIndex": 1,
-              "quantity": 2,
-              "equipment": "Caja directa",
-              "quantityCell": "G20",
-              "equipmentCell": "H20"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:G21",
-          "title": "ILUMINACION",
-          "sourceStartRow": 21,
-          "source": "DJ!G21",
-          "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
-            "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
-            "authoritative": true
-          },
-          "items": [],
-          "rows": [
-            {
-              "type": "category",
-              "sourceType": "category",
-              "sourceRow": 21,
-              "cells": [
-                {
-                  "address": "H21",
-                  "ref": "DJ!H21",
-                  "value": "ILUMINACION"
-                }
-              ],
-              "description": "ILUMINACION"
-            }
-          ]
-        },
-        {
-          "id": "20261013-servicios-archivo-01:dj:G22",
+          "id": "20261014-dj-audio-01:dj:D22",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 22,
-          "source": "DJ!G22",
+          "source": "DJ!D22",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -36594,8 +32736,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 22,
               "cells": [
                 {
-                  "address": "H22",
-                  "ref": "DJ!H22",
+                  "address": "E22",
+                  "ref": "DJ!E22",
                   "value": "Luces"
                 }
               ],
@@ -36607,13 +32749,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 23,
               "cells": [
                 {
-                  "address": "G23",
-                  "ref": "DJ!G23",
+                  "address": "D23",
+                  "ref": "DJ!D23",
                   "value": 2
                 },
                 {
-                  "address": "H23",
-                  "ref": "DJ!H23",
+                  "address": "E23",
+                  "ref": "DJ!E23",
                   "value": "Wash con cable power spicon"
                 }
               ],
@@ -36621,8 +32763,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 0,
               "quantity": 2,
               "equipment": "Wash con cable power spicon",
-              "quantityCell": "G23",
-              "equipmentCell": "H23"
+              "quantityCell": "D23",
+              "equipmentCell": "E23"
             },
             {
               "type": "item",
@@ -36630,13 +32772,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 24,
               "cells": [
                 {
-                  "address": "G24",
-                  "ref": "DJ!G24",
+                  "address": "D24",
+                  "ref": "DJ!D24",
                   "value": 6
                 },
                 {
-                  "address": "H24",
-                  "ref": "DJ!H24",
+                  "address": "E24",
+                  "ref": "DJ!E24",
                   "value": "Par LED RGB con cable ac"
                 }
               ],
@@ -36644,8 +32786,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 1,
               "quantity": 6,
               "equipment": "Par LED RGB con cable ac",
-              "quantityCell": "G24",
-              "equipmentCell": "H24"
+              "quantityCell": "D24",
+              "equipmentCell": "E24"
             },
             {
               "type": "item",
@@ -36653,13 +32795,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 25,
               "cells": [
                 {
-                  "address": "G25",
-                  "ref": "DJ!G25",
+                  "address": "D25",
+                  "ref": "DJ!D25",
                   "value": 8
                 },
                 {
-                  "address": "H25",
-                  "ref": "DJ!H25",
+                  "address": "E25",
+                  "ref": "DJ!E25",
                   "value": "Clamp para luces"
                 }
               ],
@@ -36667,8 +32809,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 2,
               "quantity": 8,
               "equipment": "Clamp para luces",
-              "quantityCell": "G25",
-              "equipmentCell": "H25"
+              "quantityCell": "D25",
+              "equipmentCell": "E25"
             },
             {
               "type": "item",
@@ -36676,13 +32818,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 26,
               "cells": [
                 {
-                  "address": "G26",
-                  "ref": "DJ!G26",
+                  "address": "D26",
+                  "ref": "DJ!D26",
                   "value": 8
                 },
                 {
-                  "address": "H26",
-                  "ref": "DJ!H26",
+                  "address": "E26",
+                  "ref": "DJ!E26",
                   "value": "Base de clamp"
                 }
               ],
@@ -36690,8 +32832,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 3,
               "quantity": 8,
               "equipment": "Base de clamp",
-              "quantityCell": "G26",
-              "equipmentCell": "H26"
+              "quantityCell": "D26",
+              "equipmentCell": "E26"
             },
             {
               "type": "item",
@@ -36699,13 +32841,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 27,
               "cells": [
                 {
-                  "address": "G27",
-                  "ref": "DJ!G27",
+                  "address": "D27",
+                  "ref": "DJ!D27",
                   "value": 1
                 },
                 {
-                  "address": "H27",
-                  "ref": "DJ!H27",
+                  "address": "E27",
+                  "ref": "DJ!E27",
                   "value": "Dmx 384 adj con cable ac"
                 }
               ],
@@ -36713,8 +32855,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 4,
               "quantity": 1,
               "equipment": "Dmx 384 adj con cable ac",
-              "quantityCell": "G27",
-              "equipmentCell": "H27"
+              "quantityCell": "D27",
+              "equipmentCell": "E27"
             },
             {
               "type": "item",
@@ -36722,13 +32864,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 28,
               "cells": [
                 {
-                  "address": "G28",
-                  "ref": "DJ!G28",
+                  "address": "D28",
+                  "ref": "DJ!D28",
                   "value": 1
                 },
                 {
-                  "address": "H28",
-                  "ref": "DJ!H28",
+                  "address": "E28",
+                  "ref": "DJ!E28",
                   "value": "Spliter American DJ con cable ac"
                 }
               ],
@@ -36736,21 +32878,21 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 5,
               "quantity": 1,
               "equipment": "Spliter American DJ con cable ac",
-              "quantityCell": "G28",
-              "equipmentCell": "H28"
+              "quantityCell": "D28",
+              "equipmentCell": "E28"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G29",
+          "id": "20261014-dj-audio-01:dj:D29",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 29,
-          "source": "DJ!G29",
+          "source": "DJ!D29",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -36761,8 +32903,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 29,
               "cells": [
                 {
-                  "address": "G29",
-                  "ref": "DJ!G29",
+                  "address": "D29",
+                  "ref": "DJ!D29",
                   "value": "EFECTOS ESPECIALES"
                 }
               ],
@@ -36771,15 +32913,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G30",
+          "id": "20261014-dj-audio-01:dj:D30",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 30,
-          "source": "DJ!G30",
+          "source": "DJ!D30",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -36799,8 +32941,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 30,
               "cells": [
                 {
-                  "address": "H30",
-                  "ref": "DJ!H30",
+                  "address": "E30",
+                  "ref": "DJ!E30",
                   "value": "Maquina de humo"
                 }
               ],
@@ -36812,13 +32954,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 31,
               "cells": [
                 {
-                  "address": "G31",
-                  "ref": "DJ!G31",
+                  "address": "D31",
+                  "ref": "DJ!D31",
                   "value": 1
                 },
                 {
-                  "address": "H31",
-                  "ref": "DJ!H31",
+                  "address": "E31",
+                  "ref": "DJ!E31",
                   "value": "Maquina de humo con control, cable ac y ventilador"
                 }
               ],
@@ -36826,8 +32968,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 0,
               "quantity": 1,
               "equipment": "Maquina de humo con control, cable ac y ventilador",
-              "quantityCell": "G31",
-              "equipmentCell": "H31"
+              "quantityCell": "D31",
+              "equipmentCell": "E31"
             },
             {
               "type": "item",
@@ -36835,13 +32977,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 32,
               "cells": [
                 {
-                  "address": "G32",
-                  "ref": "DJ!G32",
+                  "address": "D32",
+                  "ref": "DJ!D32",
                   "value": 1
                 },
                 {
-                  "address": "H32",
-                  "ref": "DJ!H32",
+                  "address": "E32",
+                  "ref": "DJ!E32",
                   "value": "Galon liquido de humo"
                 }
               ],
@@ -36849,21 +32991,21 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 1,
               "quantity": 1,
               "equipment": "Galon liquido de humo",
-              "quantityCell": "G32",
-              "equipmentCell": "H32"
+              "quantityCell": "D32",
+              "equipmentCell": "E32"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G33",
+          "id": "20261014-dj-audio-01:dj:D33",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 33,
-          "source": "DJ!G33",
+          "source": "DJ!D33",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -36874,8 +33016,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 33,
               "cells": [
                 {
-                  "address": "G33",
-                  "ref": "DJ!G33",
+                  "address": "D33",
+                  "ref": "DJ!D33",
                   "value": "ESTRUCTURAS"
                 }
               ],
@@ -36884,15 +33026,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G34",
+          "id": "20261014-dj-audio-01:dj:D34",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 34,
-          "source": "DJ!G34",
+          "source": "DJ!D34",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -36916,8 +33058,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 34,
               "cells": [
                 {
-                  "address": "H34",
-                  "ref": "DJ!H34",
+                  "address": "E34",
+                  "ref": "DJ!E34",
                   "value": "Estructura DJ"
                 }
               ],
@@ -36929,13 +33071,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 35,
               "cells": [
                 {
-                  "address": "G35",
-                  "ref": "DJ!G35",
+                  "address": "D35",
+                  "ref": "DJ!D35",
                   "value": 1
                 },
                 {
-                  "address": "H35",
-                  "ref": "DJ!H35",
+                  "address": "E35",
+                  "ref": "DJ!E35",
                   "value": "Marco DJ booth grande"
                 }
               ],
@@ -36943,8 +33085,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 0,
               "quantity": 1,
               "equipment": "Marco DJ booth grande",
-              "quantityCell": "G35",
-              "equipmentCell": "H35"
+              "quantityCell": "D35",
+              "equipmentCell": "E35"
             },
             {
               "type": "item",
@@ -36952,13 +33094,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 36,
               "cells": [
                 {
-                  "address": "G36",
-                  "ref": "DJ!G36",
+                  "address": "D36",
+                  "ref": "DJ!D36",
                   "value": 1
                 },
                 {
-                  "address": "H36",
-                  "ref": "DJ!H36",
+                  "address": "E36",
+                  "ref": "DJ!E36",
                   "value": "Marco DJ booth pequeño"
                 }
               ],
@@ -36966,8 +33108,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 1,
               "quantity": 1,
               "equipment": "Marco DJ booth pequeño",
-              "quantityCell": "G36",
-              "equipmentCell": "H36"
+              "quantityCell": "D36",
+              "equipmentCell": "E36"
             },
             {
               "type": "item",
@@ -36975,13 +33117,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 37,
               "cells": [
                 {
-                  "address": "G37",
-                  "ref": "DJ!G37",
+                  "address": "D37",
+                  "ref": "DJ!D37",
                   "value": 1
                 },
                 {
-                  "address": "H37",
-                  "ref": "DJ!H37",
+                  "address": "E37",
+                  "ref": "DJ!E37",
                   "value": "DJ booth"
                 }
               ],
@@ -36989,21 +33131,21 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 2,
               "quantity": 1,
               "equipment": "DJ booth",
-              "quantityCell": "G37",
-              "equipmentCell": "H37"
+              "quantityCell": "D37",
+              "equipmentCell": "E37"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G38",
+          "id": "20261014-dj-audio-01:dj:D38",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 38,
-          "source": "DJ!G38",
+          "source": "DJ!D38",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -37031,8 +33173,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 38,
               "cells": [
                 {
-                  "address": "H38",
-                  "ref": "DJ!H38",
+                  "address": "E38",
+                  "ref": "DJ!E38",
                   "value": "Estructura Luces"
                 }
               ],
@@ -37044,13 +33186,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 39,
               "cells": [
                 {
-                  "address": "G39",
-                  "ref": "DJ!G39",
+                  "address": "D39",
+                  "ref": "DJ!D39",
                   "value": 4
                 },
                 {
-                  "address": "H39",
-                  "ref": "DJ!H39",
+                  "address": "E39",
+                  "ref": "DJ!E39",
                   "value": "Estructura blanca pequeña con su funda"
                 }
               ],
@@ -37058,8 +33200,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 0,
               "quantity": 4,
               "equipment": "Estructura blanca pequeña con su funda",
-              "quantityCell": "G39",
-              "equipmentCell": "H39"
+              "quantityCell": "D39",
+              "equipmentCell": "E39"
             },
             {
               "type": "item",
@@ -37067,13 +33209,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 40,
               "cells": [
                 {
-                  "address": "G40",
-                  "ref": "DJ!G40",
+                  "address": "D40",
+                  "ref": "DJ!D40",
                   "value": 4
                 },
                 {
-                  "address": "H40",
-                  "ref": "DJ!H40",
+                  "address": "E40",
+                  "ref": "DJ!E40",
                   "value": "Platina pequeña para estructura blanca "
                 }
               ],
@@ -37081,8 +33223,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 1,
               "quantity": 4,
               "equipment": "Platina pequeña para estructura blanca ",
-              "quantityCell": "G40",
-              "equipmentCell": "H40"
+              "quantityCell": "D40",
+              "equipmentCell": "E40"
             },
             {
               "type": "item",
@@ -37090,13 +33232,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 41,
               "cells": [
                 {
-                  "address": "G41",
-                  "ref": "DJ!G41",
+                  "address": "D41",
+                  "ref": "DJ!D41",
                   "value": 4
                 },
                 {
-                  "address": "H41",
-                  "ref": "DJ!H41",
+                  "address": "E41",
+                  "ref": "DJ!E41",
                   "value": "Platina grande para estructrura blanca"
                 }
               ],
@@ -37104,8 +33246,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 2,
               "quantity": 4,
               "equipment": "Platina grande para estructrura blanca",
-              "quantityCell": "G41",
-              "equipmentCell": "H41"
+              "quantityCell": "D41",
+              "equipmentCell": "E41"
             },
             {
               "type": "item",
@@ -37113,13 +33255,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 42,
               "cells": [
                 {
-                  "address": "G42",
-                  "ref": "DJ!G42",
+                  "address": "D42",
+                  "ref": "DJ!D42",
                   "value": 16
                 },
                 {
-                  "address": "H42",
-                  "ref": "DJ!H42",
+                  "address": "E42",
+                  "ref": "DJ!E42",
                   "value": "Tornillos especiales para estructura blanca"
                 }
               ],
@@ -37127,21 +33269,21 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 3,
               "quantity": 16,
               "equipment": "Tornillos especiales para estructura blanca",
-              "quantityCell": "G42",
-              "equipmentCell": "H42"
+              "quantityCell": "D42",
+              "equipmentCell": "E42"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G43",
+          "id": "20261014-dj-audio-01:dj:D43",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 43,
-          "source": "DJ!G43",
+          "source": "DJ!D43",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -37173,8 +33315,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 43,
               "cells": [
                 {
-                  "address": "H43",
-                  "ref": "DJ!H43",
+                  "address": "E43",
+                  "ref": "DJ!E43",
                   "value": "Telas para forrar estructuras"
                 }
               ],
@@ -37186,13 +33328,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 44,
               "cells": [
                 {
-                  "address": "G44",
-                  "ref": "DJ!G44",
+                  "address": "D44",
+                  "ref": "DJ!D44",
                   "value": 4
                 },
                 {
-                  "address": "H44",
-                  "ref": "DJ!H44",
+                  "address": "E44",
+                  "ref": "DJ!E44",
                   "value": "Funda para truss color negro de 2 mts"
                 }
               ],
@@ -37200,8 +33342,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 0,
               "quantity": 4,
               "equipment": "Funda para truss color negro de 2 mts",
-              "quantityCell": "G44",
-              "equipmentCell": "H44"
+              "quantityCell": "D44",
+              "equipmentCell": "E44"
             },
             {
               "type": "item",
@@ -37209,13 +33351,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 45,
               "cells": [
                 {
-                  "address": "G45",
-                  "ref": "DJ!G45",
+                  "address": "D45",
+                  "ref": "DJ!D45",
                   "value": 4
                 },
                 {
-                  "address": "H45",
-                  "ref": "DJ!H45",
+                  "address": "E45",
+                  "ref": "DJ!E45",
                   "value": "Funda para truss color blanco de 2 mts"
                 }
               ],
@@ -37223,8 +33365,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 1,
               "quantity": 4,
               "equipment": "Funda para truss color blanco de 2 mts",
-              "quantityCell": "G45",
-              "equipmentCell": "H45"
+              "quantityCell": "D45",
+              "equipmentCell": "E45"
             },
             {
               "type": "item",
@@ -37232,13 +33374,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 46,
               "cells": [
                 {
-                  "address": "G46",
-                  "ref": "DJ!G46",
+                  "address": "D46",
+                  "ref": "DJ!D46",
                   "value": 1
                 },
                 {
-                  "address": "H46",
-                  "ref": "DJ!H46",
+                  "address": "E46",
+                  "ref": "DJ!E46",
                   "value": "Tela pequeña para forrar DJ booth color negro (DJ)"
                 }
               ],
@@ -37246,8 +33388,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 2,
               "quantity": 1,
               "equipment": "Tela pequeña para forrar DJ booth color negro (DJ)",
-              "quantityCell": "G46",
-              "equipmentCell": "H46"
+              "quantityCell": "D46",
+              "equipmentCell": "E46"
             },
             {
               "type": "item",
@@ -37255,13 +33397,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 47,
               "cells": [
                 {
-                  "address": "G47",
-                  "ref": "DJ!G47",
+                  "address": "D47",
+                  "ref": "DJ!D47",
                   "value": 1
                 },
                 {
-                  "address": "H47",
-                  "ref": "DJ!H47",
+                  "address": "E47",
+                  "ref": "DJ!E47",
                   "value": "Tela pequeña para forrar DJ booth color blanco (DJ)"
                 }
               ],
@@ -37269,8 +33411,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 3,
               "quantity": 1,
               "equipment": "Tela pequeña para forrar DJ booth color blanco (DJ)",
-              "quantityCell": "G47",
-              "equipmentCell": "H47"
+              "quantityCell": "D47",
+              "equipmentCell": "E47"
             },
             {
               "type": "item",
@@ -37278,13 +33420,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 48,
               "cells": [
                 {
-                  "address": "G48",
-                  "ref": "DJ!G48",
+                  "address": "D48",
+                  "ref": "DJ!D48",
                   "value": 1
                 },
                 {
-                  "address": "H48",
-                  "ref": "DJ!H48",
+                  "address": "E48",
+                  "ref": "DJ!E48",
                   "value": "Tela grande para forrar DJ booth color negro (controles)"
                 }
               ],
@@ -37292,21 +33434,21 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 4,
               "quantity": 1,
               "equipment": "Tela grande para forrar DJ booth color negro (controles)",
-              "quantityCell": "G48",
-              "equipmentCell": "H48"
+              "quantityCell": "D48",
+              "equipmentCell": "E48"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G49",
+          "id": "20261014-dj-audio-01:dj:D49",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 49,
-          "source": "DJ!G49",
+          "source": "DJ!D49",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -37350,8 +33492,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 49,
               "cells": [
                 {
-                  "address": "H49",
-                  "ref": "DJ!H49",
+                  "address": "E49",
+                  "ref": "DJ!E49",
                   "value": "Case de Cableado"
                 }
               ],
@@ -37363,13 +33505,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 50,
               "cells": [
                 {
-                  "address": "G50",
-                  "ref": "DJ!G50",
+                  "address": "D50",
+                  "ref": "DJ!D50",
                   "value": 1
                 },
                 {
-                  "address": "H50",
-                  "ref": "DJ!H50",
+                  "address": "E50",
+                  "ref": "DJ!E50",
                   "value": "Distro de corriente pequeño "
                 }
               ],
@@ -37377,8 +33519,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 0,
               "quantity": 1,
               "equipment": "Distro de corriente pequeño ",
-              "quantityCell": "G50",
-              "equipmentCell": "H50"
+              "quantityCell": "D50",
+              "equipmentCell": "E50"
             },
             {
               "type": "item",
@@ -37386,13 +33528,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 51,
               "cells": [
                 {
-                  "address": "G51",
-                  "ref": "DJ!G51",
+                  "address": "D51",
+                  "ref": "DJ!D51",
                   "value": 2
                 },
                 {
-                  "address": "H51",
-                  "ref": "DJ!H51",
+                  "address": "E51",
+                  "ref": "DJ!E51",
                   "value": "Cable ac"
                 }
               ],
@@ -37400,8 +33542,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 1,
               "quantity": 2,
               "equipment": "Cable ac",
-              "quantityCell": "G51",
-              "equipmentCell": "H51"
+              "quantityCell": "D51",
+              "equipmentCell": "E51"
             },
             {
               "type": "item",
@@ -37409,13 +33551,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 52,
               "cells": [
                 {
-                  "address": "G52",
-                  "ref": "DJ!G52",
+                  "address": "D52",
+                  "ref": "DJ!D52",
                   "value": 2
                 },
                 {
-                  "address": "H52",
-                  "ref": "DJ!H52",
+                  "address": "E52",
+                  "ref": "DJ!E52",
                   "value": "Cable power spicon"
                 }
               ],
@@ -37423,8 +33565,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 2,
               "quantity": 2,
               "equipment": "Cable power spicon",
-              "quantityCell": "G52",
-              "equipmentCell": "H52"
+              "quantityCell": "D52",
+              "equipmentCell": "E52"
             },
             {
               "type": "item",
@@ -37432,13 +33574,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 53,
               "cells": [
                 {
-                  "address": "G53",
-                  "ref": "DJ!G53",
+                  "address": "D53",
+                  "ref": "DJ!D53",
                   "value": 2
                 },
                 {
-                  "address": "H53",
-                  "ref": "DJ!H53",
+                  "address": "E53",
+                  "ref": "DJ!E53",
                   "value": "Cable de 1/4\" a 1/4\""
                 }
               ],
@@ -37446,8 +33588,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 3,
               "quantity": 2,
               "equipment": "Cable de 1/4\" a 1/4\"",
-              "quantityCell": "G53",
-              "equipmentCell": "H53"
+              "quantityCell": "D53",
+              "equipmentCell": "E53"
             },
             {
               "type": "item",
@@ -37455,13 +33597,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 54,
               "cells": [
                 {
-                  "address": "G54",
-                  "ref": "DJ!G54",
+                  "address": "D54",
+                  "ref": "DJ!D54",
                   "value": 5
                 },
                 {
-                  "address": "H54",
-                  "ref": "DJ!H54",
+                  "address": "E54",
+                  "ref": "DJ!E54",
                   "value": "Cuadro de corriente"
                 }
               ],
@@ -37469,8 +33611,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 4,
               "quantity": 5,
               "equipment": "Cuadro de corriente",
-              "quantityCell": "G54",
-              "equipmentCell": "H54"
+              "quantityCell": "D54",
+              "equipmentCell": "E54"
             },
             {
               "type": "item",
@@ -37478,13 +33620,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 55,
               "cells": [
                 {
-                  "address": "G55",
-                  "ref": "DJ!G55",
+                  "address": "D55",
+                  "ref": "DJ!D55",
                   "value": 5
                 },
                 {
-                  "address": "H55",
-                  "ref": "DJ!H55",
+                  "address": "E55",
+                  "ref": "DJ!E55",
                   "value": "Regleta"
                 }
               ],
@@ -37492,8 +33634,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 5,
               "quantity": 5,
               "equipment": "Regleta",
-              "quantityCell": "G55",
-              "equipmentCell": "H55"
+              "quantityCell": "D55",
+              "equipmentCell": "E55"
             },
             {
               "type": "item",
@@ -37501,13 +33643,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 56,
               "cells": [
                 {
-                  "address": "G56",
-                  "ref": "DJ!G56",
+                  "address": "D56",
+                  "ref": "DJ!D56",
                   "value": 35
                 },
                 {
-                  "address": "H56",
-                  "ref": "DJ!H56",
+                  "address": "E56",
+                  "ref": "DJ!E56",
                   "value": "Cable XLR"
                 }
               ],
@@ -37515,8 +33657,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 6,
               "quantity": 35,
               "equipment": "Cable XLR",
-              "quantityCell": "G56",
-              "equipmentCell": "H56"
+              "quantityCell": "D56",
+              "equipmentCell": "E56"
             },
             {
               "type": "item",
@@ -37524,13 +33666,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 57,
               "cells": [
                 {
-                  "address": "G57",
-                  "ref": "DJ!G57",
+                  "address": "D57",
+                  "ref": "DJ!D57",
                   "value": 30
                 },
                 {
-                  "address": "H57",
-                  "ref": "DJ!H57",
+                  "address": "E57",
+                  "ref": "DJ!E57",
                   "value": "Extensión"
                 }
               ],
@@ -37538,21 +33680,21 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 7,
               "quantity": 30,
               "equipment": "Extensión",
-              "quantityCell": "G57",
-              "equipmentCell": "H57"
+              "quantityCell": "D57",
+              "equipmentCell": "E57"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G58",
+          "id": "20261014-dj-audio-01:dj:D58",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 58,
-          "source": "DJ!G58",
+          "source": "DJ!D58",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -37580,8 +33722,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 58,
               "cells": [
                 {
-                  "address": "H58",
-                  "ref": "DJ!H58",
+                  "address": "E58",
+                  "ref": "DJ!E58",
                   "value": "Extras"
                 }
               ],
@@ -37593,13 +33735,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 59,
               "cells": [
                 {
-                  "address": "G59",
-                  "ref": "DJ!G59",
+                  "address": "D59",
+                  "ref": "DJ!D59",
                   "value": 1
                 },
                 {
-                  "address": "H59",
-                  "ref": "DJ!H59",
+                  "address": "E59",
+                  "ref": "DJ!E59",
                   "value": "Extintor"
                 }
               ],
@@ -37607,8 +33749,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 0,
               "quantity": 1,
               "equipment": "Extintor",
-              "quantityCell": "G59",
-              "equipmentCell": "H59"
+              "quantityCell": "D59",
+              "equipmentCell": "E59"
             },
             {
               "type": "item",
@@ -37616,13 +33758,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 60,
               "cells": [
                 {
-                  "address": "G60",
-                  "ref": "DJ!G60",
+                  "address": "D60",
+                  "ref": "DJ!D60",
                   "value": 1
                 },
                 {
-                  "address": "H60",
-                  "ref": "DJ!H60",
+                  "address": "E60",
+                  "ref": "DJ!E60",
                   "value": "Bolsa de agua pura"
                 }
               ],
@@ -37630,8 +33772,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 1,
               "quantity": 1,
               "equipment": "Bolsa de agua pura",
-              "quantityCell": "G60",
-              "equipmentCell": "H60"
+              "quantityCell": "D60",
+              "equipmentCell": "E60"
             },
             {
               "type": "item",
@@ -37639,13 +33781,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 61,
               "cells": [
                 {
-                  "address": "G61",
-                  "ref": "DJ!G61",
+                  "address": "D61",
+                  "ref": "DJ!D61",
                   "value": 1
                 },
                 {
-                  "address": "H61",
-                  "ref": "DJ!H61",
+                  "address": "E61",
+                  "ref": "DJ!E61",
                   "value": "Grabadora de audio"
                 }
               ],
@@ -37653,8 +33795,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 2,
               "quantity": 1,
               "equipment": "Grabadora de audio",
-              "quantityCell": "G61",
-              "equipmentCell": "H61"
+              "quantityCell": "D61",
+              "equipmentCell": "E61"
             },
             {
               "type": "item",
@@ -37662,13 +33804,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 62,
               "cells": [
                 {
-                  "address": "G62",
-                  "ref": "DJ!G62",
+                  "address": "D62",
+                  "ref": "DJ!D62",
                   "value": 2
                 },
                 {
-                  "address": "H62",
-                  "ref": "DJ!H62",
+                  "address": "E62",
+                  "ref": "DJ!E62",
                   "value": "Intercomunicador Hollyland"
                 }
               ],
@@ -37676,21 +33818,21 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 3,
               "quantity": 2,
               "equipment": "Intercomunicador Hollyland",
-              "quantityCell": "G62",
-              "equipmentCell": "H62"
+              "quantityCell": "D62",
+              "equipmentCell": "E62"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G64",
+          "id": "20261014-dj-audio-01:dj:D64",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 64,
-          "source": "DJ!G64",
+          "source": "DJ!D64",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -37762,8 +33904,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 64,
               "cells": [
                 {
-                  "address": "H64",
-                  "ref": "DJ!H64",
+                  "address": "E64",
+                  "ref": "DJ!E64",
                   "value": "Caja de Herramientas"
                 }
               ],
@@ -37775,13 +33917,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 65,
               "cells": [
                 {
-                  "address": "G65",
-                  "ref": "DJ!G65",
+                  "address": "D65",
+                  "ref": "DJ!D65",
                   "value": 1
                 },
                 {
-                  "address": "H65",
-                  "ref": "DJ!H65",
+                  "address": "E65",
+                  "ref": "DJ!E65",
                   "value": "Macho"
                 }
               ],
@@ -37789,8 +33931,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 0,
               "quantity": 1,
               "equipment": "Macho",
-              "quantityCell": "G65",
-              "equipmentCell": "H65"
+              "quantityCell": "D65",
+              "equipmentCell": "E65"
             },
             {
               "type": "item",
@@ -37798,13 +33940,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 66,
               "cells": [
                 {
-                  "address": "G66",
-                  "ref": "DJ!G66",
+                  "address": "D66",
+                  "ref": "DJ!D66",
                   "value": 2
                 },
                 {
-                  "address": "H66",
-                  "ref": "DJ!H66",
+                  "address": "E66",
+                  "ref": "DJ!E66",
                   "value": "Pata de Gallo"
                 }
               ],
@@ -37812,8 +33954,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 1,
               "quantity": 2,
               "equipment": "Pata de Gallo",
-              "quantityCell": "G66",
-              "equipmentCell": "H66"
+              "quantityCell": "D66",
+              "equipmentCell": "E66"
             },
             {
               "type": "item",
@@ -37821,13 +33963,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 67,
               "cells": [
                 {
-                  "address": "G67",
-                  "ref": "DJ!G67",
+                  "address": "D67",
+                  "ref": "DJ!D67",
                   "value": 1
                 },
                 {
-                  "address": "H67",
-                  "ref": "DJ!H67",
+                  "address": "E67",
+                  "ref": "DJ!E67",
                   "value": "Flipon doble de 50 amp"
                 }
               ],
@@ -37835,8 +33977,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 2,
               "quantity": 1,
               "equipment": "Flipon doble de 50 amp",
-              "quantityCell": "G67",
-              "equipmentCell": "H67"
+              "quantityCell": "D67",
+              "equipmentCell": "E67"
             },
             {
               "type": "item",
@@ -37844,13 +33986,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 68,
               "cells": [
                 {
-                  "address": "G68",
-                  "ref": "DJ!G68",
+                  "address": "D68",
+                  "ref": "DJ!D68",
                   "value": 1
                 },
                 {
-                  "address": "H68",
-                  "ref": "DJ!H68",
+                  "address": "E68",
+                  "ref": "DJ!E68",
                   "value": "Desarmador de estrella"
                 }
               ],
@@ -37858,8 +34000,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 3,
               "quantity": 1,
               "equipment": "Desarmador de estrella",
-              "quantityCell": "G68",
-              "equipmentCell": "H68"
+              "quantityCell": "D68",
+              "equipmentCell": "E68"
             },
             {
               "type": "item",
@@ -37867,13 +34009,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 69,
               "cells": [
                 {
-                  "address": "G69",
-                  "ref": "DJ!G69",
+                  "address": "D69",
+                  "ref": "DJ!D69",
                   "value": 1
                 },
                 {
-                  "address": "H69",
-                  "ref": "DJ!H69",
+                  "address": "E69",
+                  "ref": "DJ!E69",
                   "value": "Desarmador de castigaderas"
                 }
               ],
@@ -37881,8 +34023,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 4,
               "quantity": 1,
               "equipment": "Desarmador de castigaderas",
-              "quantityCell": "G69",
-              "equipmentCell": "H69"
+              "quantityCell": "D69",
+              "equipmentCell": "E69"
             },
             {
               "type": "item",
@@ -37890,13 +34032,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 70,
               "cells": [
                 {
-                  "address": "G70",
-                  "ref": "DJ!G70",
+                  "address": "D70",
+                  "ref": "DJ!D70",
                   "value": 1
                 },
                 {
-                  "address": "H70",
-                  "ref": "DJ!H70",
+                  "address": "E70",
+                  "ref": "DJ!E70",
                   "value": "Cuchilla"
                 }
               ],
@@ -37904,8 +34046,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 5,
               "quantity": 1,
               "equipment": "Cuchilla",
-              "quantityCell": "G70",
-              "equipmentCell": "H70"
+              "quantityCell": "D70",
+              "equipmentCell": "E70"
             },
             {
               "type": "item",
@@ -37913,13 +34055,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 71,
               "cells": [
                 {
-                  "address": "G71",
-                  "ref": "DJ!G71",
+                  "address": "D71",
+                  "ref": "DJ!D71",
                   "value": 1
                 },
                 {
-                  "address": "H71",
-                  "ref": "DJ!H71",
+                  "address": "E71",
+                  "ref": "DJ!E71",
                   "value": "Estuche llaves Allen (25 unidades)"
                 }
               ],
@@ -37927,8 +34069,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 6,
               "quantity": 1,
               "equipment": "Estuche llaves Allen (25 unidades)",
-              "quantityCell": "G71",
-              "equipmentCell": "H71"
+              "quantityCell": "D71",
+              "equipmentCell": "E71"
             },
             {
               "type": "item",
@@ -37936,13 +34078,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 72,
               "cells": [
                 {
-                  "address": "G72",
-                  "ref": "DJ!G72",
+                  "address": "D72",
+                  "ref": "DJ!D72",
                   "value": 1
                 },
                 {
-                  "address": "H72",
-                  "ref": "DJ!H72",
+                  "address": "E72",
+                  "ref": "DJ!E72",
                   "value": "Alicate"
                 }
               ],
@@ -37950,8 +34092,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 7,
               "quantity": 1,
               "equipment": "Alicate",
-              "quantityCell": "G72",
-              "equipmentCell": "H72"
+              "quantityCell": "D72",
+              "equipmentCell": "E72"
             },
             {
               "type": "item",
@@ -37959,13 +34101,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 73,
               "cells": [
                 {
-                  "address": "G73",
-                  "ref": "DJ!G73",
+                  "address": "D73",
+                  "ref": "DJ!D73",
                   "value": 1
                 },
                 {
-                  "address": "H73",
-                  "ref": "DJ!H73",
+                  "address": "E73",
+                  "ref": "DJ!E73",
                   "value": "Tenaza"
                 }
               ],
@@ -37973,8 +34115,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 8,
               "quantity": 1,
               "equipment": "Tenaza",
-              "quantityCell": "G73",
-              "equipmentCell": "H73"
+              "quantityCell": "D73",
+              "equipmentCell": "E73"
             },
             {
               "type": "item",
@@ -37982,13 +34124,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 74,
               "cells": [
                 {
-                  "address": "G74",
-                  "ref": "DJ!G74",
+                  "address": "D74",
+                  "ref": "DJ!D74",
                   "value": 1
                 },
                 {
-                  "address": "H74",
-                  "ref": "DJ!H74",
+                  "address": "E74",
+                  "ref": "DJ!E74",
                   "value": "Pinza"
                 }
               ],
@@ -37996,8 +34138,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 9,
               "quantity": 1,
               "equipment": "Pinza",
-              "quantityCell": "G74",
-              "equipmentCell": "H74"
+              "quantityCell": "D74",
+              "equipmentCell": "E74"
             },
             {
               "type": "item",
@@ -38005,13 +34147,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 75,
               "cells": [
                 {
-                  "address": "G75",
-                  "ref": "DJ!G75",
+                  "address": "D75",
+                  "ref": "DJ!D75",
                   "value": 1
                 },
                 {
-                  "address": "H75",
-                  "ref": "DJ!H75",
+                  "address": "E75",
+                  "ref": "DJ!E75",
                   "value": "Espiga tipo tester"
                 }
               ],
@@ -38019,8 +34161,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 10,
               "quantity": 1,
               "equipment": "Espiga tipo tester",
-              "quantityCell": "G75",
-              "equipmentCell": "H75"
+              "quantityCell": "D75",
+              "equipmentCell": "E75"
             },
             {
               "type": "item",
@@ -38028,13 +34170,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 76,
               "cells": [
                 {
-                  "address": "G76",
-                  "ref": "DJ!G76",
+                  "address": "D76",
+                  "ref": "DJ!D76",
                   "value": 1
                 },
                 {
-                  "address": "H76",
-                  "ref": "DJ!H76",
+                  "address": "E76",
+                  "ref": "DJ!E76",
                   "value": "Multímetro Fluke con estuche"
                 }
               ],
@@ -38042,8 +34184,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 11,
               "quantity": 1,
               "equipment": "Multímetro Fluke con estuche",
-              "quantityCell": "G76",
-              "equipmentCell": "H76"
+              "quantityCell": "D76",
+              "equipmentCell": "E76"
             },
             {
               "type": "item",
@@ -38051,13 +34193,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 77,
               "cells": [
                 {
-                  "address": "G77",
-                  "ref": "DJ!G77",
+                  "address": "D77",
+                  "ref": "DJ!D77",
                   "value": 5
                 },
                 {
-                  "address": "H77",
-                  "ref": "DJ!H77",
+                  "address": "E77",
+                  "ref": "DJ!E77",
                   "value": "Duc tape"
                 }
               ],
@@ -38065,8 +34207,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 12,
               "quantity": 5,
               "equipment": "Duc tape",
-              "quantityCell": "G77",
-              "equipmentCell": "H77"
+              "quantityCell": "D77",
+              "equipmentCell": "E77"
             },
             {
               "type": "item",
@@ -38074,13 +34216,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 78,
               "cells": [
                 {
-                  "address": "G78",
-                  "ref": "DJ!G78",
+                  "address": "D78",
+                  "ref": "DJ!D78",
                   "value": 3
                 },
                 {
-                  "address": "H78",
-                  "ref": "DJ!H78",
+                  "address": "E78",
+                  "ref": "DJ!E78",
                   "value": "Paquete de cinchos 0.35 cm"
                 }
               ],
@@ -38088,8 +34230,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 13,
               "quantity": 3,
               "equipment": "Paquete de cinchos 0.35 cm",
-              "quantityCell": "G78",
-              "equipmentCell": "H78"
+              "quantityCell": "D78",
+              "equipmentCell": "E78"
             },
             {
               "type": "item",
@@ -38097,13 +34239,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 79,
               "cells": [
                 {
-                  "address": "G79",
-                  "ref": "DJ!G79",
+                  "address": "D79",
+                  "ref": "DJ!D79",
                   "value": 7
                 },
                 {
-                  "address": "H79",
-                  "ref": "DJ!H79",
+                  "address": "E79",
+                  "ref": "DJ!E79",
                   "value": "Cinta de aislar Electrica PVC"
                 }
               ],
@@ -38111,21 +34253,21 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 14,
               "quantity": 7,
               "equipment": "Cinta de aislar Electrica PVC",
-              "quantityCell": "G79",
-              "equipmentCell": "H79"
+              "quantityCell": "D79",
+              "equipmentCell": "E79"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G81",
+          "id": "20261014-dj-audio-01:dj:D81",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 81,
-          "source": "DJ!G81",
+          "source": "DJ!D81",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -38165,8 +34307,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 81,
               "cells": [
                 {
-                  "address": "H81",
-                  "ref": "DJ!H81",
+                  "address": "E81",
+                  "ref": "DJ!E81",
                   "value": "Equipo de Limpieza"
                 }
               ],
@@ -38178,13 +34320,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 82,
               "cells": [
                 {
-                  "address": "G82",
-                  "ref": "DJ!G82",
+                  "address": "D82",
+                  "ref": "DJ!D82",
                   "value": 5
                 },
                 {
-                  "address": "H82",
-                  "ref": "DJ!H82",
+                  "address": "E82",
+                  "ref": "DJ!E82",
                   "value": "Trapo"
                 }
               ],
@@ -38192,8 +34334,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 0,
               "quantity": 5,
               "equipment": "Trapo",
-              "quantityCell": "G82",
-              "equipmentCell": "H82"
+              "quantityCell": "D82",
+              "equipmentCell": "E82"
             },
             {
               "type": "item",
@@ -38201,13 +34343,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 83,
               "cells": [
                 {
-                  "address": "G83",
-                  "ref": "DJ!G83",
+                  "address": "D83",
+                  "ref": "DJ!D83",
                   "value": 1
                 },
                 {
-                  "address": "H83",
-                  "ref": "DJ!H83",
+                  "address": "E83",
+                  "ref": "DJ!E83",
                   "value": "Escoba"
                 }
               ],
@@ -38215,8 +34357,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 1,
               "quantity": 1,
               "equipment": "Escoba",
-              "quantityCell": "G83",
-              "equipmentCell": "H83"
+              "quantityCell": "D83",
+              "equipmentCell": "E83"
             },
             {
               "type": "item",
@@ -38224,13 +34366,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 84,
               "cells": [
                 {
-                  "address": "G84",
-                  "ref": "DJ!G84",
+                  "address": "D84",
+                  "ref": "DJ!D84",
                   "value": 1
                 },
                 {
-                  "address": "H84",
-                  "ref": "DJ!H84",
+                  "address": "E84",
+                  "ref": "DJ!E84",
                   "value": "Pala"
                 }
               ],
@@ -38238,8 +34380,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 2,
               "quantity": 1,
               "equipment": "Pala",
-              "quantityCell": "G84",
-              "equipmentCell": "H84"
+              "quantityCell": "D84",
+              "equipmentCell": "E84"
             },
             {
               "type": "item",
@@ -38247,13 +34389,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 85,
               "cells": [
                 {
-                  "address": "G85",
-                  "ref": "DJ!G85",
+                  "address": "D85",
+                  "ref": "DJ!D85",
                   "value": 5
                 },
                 {
-                  "address": "H85",
-                  "ref": "DJ!H85",
+                  "address": "E85",
+                  "ref": "DJ!E85",
                   "value": "Trapiador"
                 }
               ],
@@ -38261,8 +34403,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 3,
               "quantity": 5,
               "equipment": "Trapiador",
-              "quantityCell": "G85",
-              "equipmentCell": "H85"
+              "quantityCell": "D85",
+              "equipmentCell": "E85"
             },
             {
               "type": "item",
@@ -38270,13 +34412,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 86,
               "cells": [
                 {
-                  "address": "G86",
-                  "ref": "DJ!G86",
+                  "address": "D86",
+                  "ref": "DJ!D86",
                   "value": 1
                 },
                 {
-                  "address": "H86",
-                  "ref": "DJ!H86",
+                  "address": "E86",
+                  "ref": "DJ!E86",
                   "value": "Atomizador con desinfectante"
                 }
               ],
@@ -38284,8 +34426,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 4,
               "quantity": 1,
               "equipment": "Atomizador con desinfectante",
-              "quantityCell": "G86",
-              "equipmentCell": "H86"
+              "quantityCell": "D86",
+              "equipmentCell": "E86"
             },
             {
               "type": "item",
@@ -38293,13 +34435,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 87,
               "cells": [
                 {
-                  "address": "G87",
-                  "ref": "DJ!G87",
+                  "address": "D87",
+                  "ref": "DJ!D87",
                   "value": 1
                 },
                 {
-                  "address": "H87",
-                  "ref": "DJ!H87",
+                  "address": "E87",
+                  "ref": "DJ!E87",
                   "value": "Atomizador con silicón"
                 }
               ],
@@ -38307,8 +34449,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 5,
               "quantity": 1,
               "equipment": "Atomizador con silicón",
-              "quantityCell": "G87",
-              "equipmentCell": "H87"
+              "quantityCell": "D87",
+              "equipmentCell": "E87"
             },
             {
               "type": "item",
@@ -38316,13 +34458,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 88,
               "cells": [
                 {
-                  "address": "G88",
-                  "ref": "DJ!G88",
+                  "address": "D88",
+                  "ref": "DJ!D88",
                   "value": 2
                 },
                 {
-                  "address": "H88",
-                  "ref": "DJ!H88",
+                  "address": "E88",
+                  "ref": "DJ!E88",
                   "value": "Espuma limpiadora"
                 }
               ],
@@ -38330,21 +34472,21 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 6,
               "quantity": 2,
               "equipment": "Espuma limpiadora",
-              "quantityCell": "G88",
-              "equipmentCell": "H88"
+              "quantityCell": "D88",
+              "equipmentCell": "E88"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G89",
+          "id": "20261014-dj-audio-01:dj:D89",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 89,
-          "source": "DJ!G89",
+          "source": "DJ!D89",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -38364,8 +34506,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 89,
               "cells": [
                 {
-                  "address": "H89",
-                  "ref": "DJ!H89",
+                  "address": "E89",
+                  "ref": "DJ!E89",
                   "value": "Equipo de proteccion"
                 }
               ],
@@ -38377,13 +34519,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 90,
               "cells": [
                 {
-                  "address": "G90",
-                  "ref": "DJ!G90",
+                  "address": "D90",
+                  "ref": "DJ!D90",
                   "value": 10
                 },
                 {
-                  "address": "H90",
-                  "ref": "DJ!H90",
+                  "address": "E90",
+                  "ref": "DJ!E90",
                   "value": "Bolsa jardinera de tonel"
                 }
               ],
@@ -38391,8 +34533,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 0,
               "quantity": 10,
               "equipment": "Bolsa jardinera de tonel",
-              "quantityCell": "G90",
-              "equipmentCell": "H90"
+              "quantityCell": "D90",
+              "equipmentCell": "E90"
             },
             {
               "type": "item",
@@ -38400,13 +34542,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 91,
               "cells": [
                 {
-                  "address": "G91",
-                  "ref": "DJ!G91",
+                  "address": "D91",
+                  "ref": "DJ!D91",
                   "value": 3
                 },
                 {
-                  "address": "H91",
-                  "ref": "DJ!H91",
+                  "address": "E91",
+                  "ref": "DJ!E91",
                   "value": "Retazo de nylon (para tapar equipo)"
                 }
               ],
@@ -38414,21 +34556,21 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 1,
               "quantity": 3,
               "equipment": "Retazo de nylon (para tapar equipo)",
-              "quantityCell": "G91",
-              "equipmentCell": "H91"
+              "quantityCell": "D91",
+              "equipmentCell": "E91"
             }
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:dj:G92",
+          "id": "20261014-dj-audio-01:dj:D92",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 92,
-          "source": "DJ!G92",
+          "source": "DJ!D92",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -38460,8 +34602,8 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 92,
               "cells": [
                 {
-                  "address": "H92",
-                  "ref": "DJ!H92",
+                  "address": "E92",
+                  "ref": "DJ!E92",
                   "value": "Equipo de Seguridad Industrial"
                 }
               ],
@@ -38473,13 +34615,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 93,
               "cells": [
                 {
-                  "address": "G93",
-                  "ref": "DJ!G93",
+                  "address": "D93",
+                  "ref": "DJ!D93",
                   "value": 6
                 },
                 {
-                  "address": "H93",
-                  "ref": "DJ!H93",
+                  "address": "E93",
+                  "ref": "DJ!E93",
                   "value": "Casco"
                 }
               ],
@@ -38487,8 +34629,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 0,
               "quantity": 6,
               "equipment": "Casco",
-              "quantityCell": "G93",
-              "equipmentCell": "H93"
+              "quantityCell": "D93",
+              "equipmentCell": "E93"
             },
             {
               "type": "item",
@@ -38496,13 +34638,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 94,
               "cells": [
                 {
-                  "address": "G94",
-                  "ref": "DJ!G94",
+                  "address": "D94",
+                  "ref": "DJ!D94",
                   "value": 6
                 },
                 {
-                  "address": "H94",
-                  "ref": "DJ!H94",
+                  "address": "E94",
+                  "ref": "DJ!E94",
                   "value": "Chaleco"
                 }
               ],
@@ -38510,8 +34652,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 1,
               "quantity": 6,
               "equipment": "Chaleco",
-              "quantityCell": "G94",
-              "equipmentCell": "H94"
+              "quantityCell": "D94",
+              "equipmentCell": "E94"
             },
             {
               "type": "item",
@@ -38519,13 +34661,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 95,
               "cells": [
                 {
-                  "address": "G95",
-                  "ref": "DJ!G95",
+                  "address": "D95",
+                  "ref": "DJ!D95",
                   "value": 0
                 },
                 {
-                  "address": "H95",
-                  "ref": "DJ!H95",
+                  "address": "E95",
+                  "ref": "DJ!E95",
                   "value": "Par de botas"
                 }
               ],
@@ -38533,8 +34675,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 2,
               "quantity": 0,
               "equipment": "Par de botas",
-              "quantityCell": "G95",
-              "equipmentCell": "H95"
+              "quantityCell": "D95",
+              "equipmentCell": "E95"
             },
             {
               "type": "item",
@@ -38542,13 +34684,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 96,
               "cells": [
                 {
-                  "address": "G96",
-                  "ref": "DJ!G96",
+                  "address": "D96",
+                  "ref": "DJ!D96",
                   "value": 6
                 },
                 {
-                  "address": "H96",
-                  "ref": "DJ!H96",
+                  "address": "E96",
+                  "ref": "DJ!E96",
                   "value": "Par de guantes"
                 }
               ],
@@ -38556,8 +34698,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 3,
               "quantity": 6,
               "equipment": "Par de guantes",
-              "quantityCell": "G96",
-              "equipmentCell": "H96"
+              "quantityCell": "D96",
+              "equipmentCell": "E96"
             },
             {
               "type": "item",
@@ -38565,13 +34707,13 @@ window.requerimientoEquipoCatalog = {
               "sourceRow": 97,
               "cells": [
                 {
-                  "address": "G97",
-                  "ref": "DJ!G97",
+                  "address": "D97",
+                  "ref": "DJ!D97",
                   "value": 1
                 },
                 {
-                  "address": "H97",
-                  "ref": "DJ!H97",
+                  "address": "E97",
+                  "ref": "DJ!E97",
                   "value": "Arnes completo"
                 }
               ],
@@ -38579,8 +34721,8 @@ window.requerimientoEquipoCatalog = {
               "sourceItemIndex": 4,
               "quantity": 1,
               "equipment": "Arnes completo",
-              "quantityCell": "G97",
-              "equipmentCell": "H97"
+              "quantityCell": "D97",
+              "equipmentCell": "E97"
             }
           ]
         }
@@ -39623,23 +35765,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A1",
+          "id": "20261014-dj-audio-01:novaloops:A1",
           "title": "NOVALOOPS - COMPLETO",
           "sourceStartRow": 1,
           "source": "NOVALOOPS!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -39686,15 +35828,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A6",
+          "id": "20261014-dj-audio-01:novaloops:A6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "NOVALOOPS!A6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -39802,15 +35944,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A10",
+          "id": "20261014-dj-audio-01:novaloops:A10",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 10,
           "source": "NOVALOOPS!A10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -39859,15 +36001,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A12",
+          "id": "20261014-dj-audio-01:novaloops:A12",
           "title": "Audio",
           "sourceStartRow": 12,
           "source": "NOVALOOPS!A12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -40051,15 +36193,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A19",
+          "id": "20261014-dj-audio-01:novaloops:A19",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 19,
           "source": "NOVALOOPS!A19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -40080,15 +36222,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A20",
+          "id": "20261014-dj-audio-01:novaloops:A20",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 20,
           "source": "NOVALOOPS!A20",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -40137,15 +36279,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A22",
+          "id": "20261014-dj-audio-01:novaloops:A22",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 22,
           "source": "NOVALOOPS!A22",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -40194,15 +36336,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A24",
+          "id": "20261014-dj-audio-01:novaloops:A24",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 24,
           "source": "NOVALOOPS!A24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -40305,15 +36447,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A28",
+          "id": "20261014-dj-audio-01:novaloops:A28",
           "title": "MICROFONIA",
           "sourceStartRow": 28,
           "source": "NOVALOOPS!A28",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -40334,15 +36476,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A29",
+          "id": "20261014-dj-audio-01:novaloops:A29",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 29,
           "source": "NOVALOOPS!A29",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -40445,15 +36587,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A33",
+          "id": "20261014-dj-audio-01:novaloops:A33",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 33,
           "source": "NOVALOOPS!A33",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -40529,15 +36671,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A36",
+          "id": "20261014-dj-audio-01:novaloops:A36",
           "title": "ILUMINACION",
           "sourceStartRow": 36,
           "source": "NOVALOOPS!A36",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -40558,15 +36700,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A37",
+          "id": "20261014-dj-audio-01:novaloops:A37",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 37,
           "source": "NOVALOOPS!A37",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -40858,15 +37000,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A49",
+          "id": "20261014-dj-audio-01:novaloops:A49",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 49,
           "source": "NOVALOOPS!A49",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -40887,15 +37029,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A50",
+          "id": "20261014-dj-audio-01:novaloops:A50",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 50,
           "source": "NOVALOOPS!A50",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -40971,15 +37113,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A53",
+          "id": "20261014-dj-audio-01:novaloops:A53",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 53,
           "source": "NOVALOOPS!A53",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -41000,15 +37142,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A54",
+          "id": "20261014-dj-audio-01:novaloops:A54",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 54,
           "source": "NOVALOOPS!A54",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -41111,15 +37253,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A58",
+          "id": "20261014-dj-audio-01:novaloops:A58",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 58,
           "source": "NOVALOOPS!A58",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -41303,15 +37445,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A65",
+          "id": "20261014-dj-audio-01:novaloops:A65",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 65,
           "source": "NOVALOOPS!A65",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -41468,15 +37610,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A71",
+          "id": "20261014-dj-audio-01:novaloops:A71",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 71,
           "source": "NOVALOOPS!A71",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -41768,15 +37910,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A82",
+          "id": "20261014-dj-audio-01:novaloops:A82",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 82,
           "source": "NOVALOOPS!A82",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -41906,15 +38048,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A87",
+          "id": "20261014-dj-audio-01:novaloops:A87",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 87,
           "source": "NOVALOOPS!A87",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -42341,15 +38483,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A104",
+          "id": "20261014-dj-audio-01:novaloops:A104",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 104,
           "source": "NOVALOOPS!A104",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -42560,15 +38702,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A113",
+          "id": "20261014-dj-audio-01:novaloops:A113",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 113,
           "source": "NOVALOOPS!A113",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -42644,15 +38786,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:A117",
+          "id": "20261014-dj-audio-01:novaloops:A117",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 117,
           "source": "NOVALOOPS!A117",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -43357,23 +39499,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D1",
+          "id": "20261014-dj-audio-01:novaloops:D1",
           "title": "NOVALOOPS - SOLO SHOW",
           "sourceStartRow": 1,
           "source": "NOVALOOPS!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -43420,15 +39562,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D6",
+          "id": "20261014-dj-audio-01:novaloops:D6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "NOVALOOPS!D6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -43536,15 +39678,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D10",
+          "id": "20261014-dj-audio-01:novaloops:D10",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 10,
           "source": "NOVALOOPS!D10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -43593,15 +39735,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D12",
+          "id": "20261014-dj-audio-01:novaloops:D12",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 12,
           "source": "NOVALOOPS!D12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -43622,15 +39764,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D13",
+          "id": "20261014-dj-audio-01:novaloops:D13",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 13,
           "source": "NOVALOOPS!D13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -43679,15 +39821,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D15",
+          "id": "20261014-dj-audio-01:novaloops:D15",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 15,
           "source": "NOVALOOPS!D15",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -43736,15 +39878,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D17",
+          "id": "20261014-dj-audio-01:novaloops:D17",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 17,
           "source": "NOVALOOPS!D17",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -43847,15 +39989,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D21",
+          "id": "20261014-dj-audio-01:novaloops:D21",
           "title": "MICROFONIA",
           "sourceStartRow": 21,
           "source": "NOVALOOPS!D21",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -43876,15 +40018,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D22",
+          "id": "20261014-dj-audio-01:novaloops:D22",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 22,
           "source": "NOVALOOPS!D22",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -43987,15 +40129,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D26",
+          "id": "20261014-dj-audio-01:novaloops:D26",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 26,
           "source": "NOVALOOPS!D26",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -44071,15 +40213,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D29",
+          "id": "20261014-dj-audio-01:novaloops:D29",
           "title": "MICROFONIA / Case de Cableado",
           "sourceStartRow": 29,
           "source": "NOVALOOPS!D29",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -44290,15 +40432,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D37",
+          "id": "20261014-dj-audio-01:novaloops:D37",
           "title": "MICROFONIA / Extras",
           "sourceStartRow": 37,
           "source": "NOVALOOPS!D37",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -44401,15 +40543,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D41",
+          "id": "20261014-dj-audio-01:novaloops:D41",
           "title": "MICROFONIA / Caja de Herramientas",
           "sourceStartRow": 41,
           "source": "NOVALOOPS!D41",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -44755,15 +40897,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D55",
+          "id": "20261014-dj-audio-01:novaloops:D55",
           "title": "MICROFONIA / Equipo de Limpieza",
           "sourceStartRow": 55,
           "source": "NOVALOOPS!D55",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -44974,15 +41116,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:D64",
+          "id": "20261014-dj-audio-01:novaloops:D64",
           "title": "MICROFONIA / Equipo de proteccion",
           "sourceStartRow": 64,
           "source": "NOVALOOPS!D64",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -46016,23 +42158,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G1",
+          "id": "20261014-dj-audio-01:novaloops:G1",
           "title": "NOVALOOPS - PRIVADO PEQUEÑO",
           "sourceStartRow": 1,
           "source": "NOVALOOPS!G1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -46079,15 +42221,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G6",
+          "id": "20261014-dj-audio-01:novaloops:G6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "NOVALOOPS!G6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -46195,15 +42337,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G10",
+          "id": "20261014-dj-audio-01:novaloops:G10",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 10,
           "source": "NOVALOOPS!G10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -46252,15 +42394,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G12",
+          "id": "20261014-dj-audio-01:novaloops:G12",
           "title": "Audio",
           "sourceStartRow": 12,
           "source": "NOVALOOPS!G12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -46363,15 +42505,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G16",
+          "id": "20261014-dj-audio-01:novaloops:G16",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 16,
           "source": "NOVALOOPS!G16",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -46392,15 +42534,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G17",
+          "id": "20261014-dj-audio-01:novaloops:G17",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 17,
           "source": "NOVALOOPS!G17",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -46449,15 +42591,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G19",
+          "id": "20261014-dj-audio-01:novaloops:G19",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 19,
           "source": "NOVALOOPS!G19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -46506,15 +42648,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G21",
+          "id": "20261014-dj-audio-01:novaloops:G21",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 21,
           "source": "NOVALOOPS!G21",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -46617,15 +42759,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G25",
+          "id": "20261014-dj-audio-01:novaloops:G25",
           "title": "MICROFONIA",
           "sourceStartRow": 25,
           "source": "NOVALOOPS!G25",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -46646,15 +42788,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G26",
+          "id": "20261014-dj-audio-01:novaloops:G26",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 26,
           "source": "NOVALOOPS!G26",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -46757,15 +42899,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G30",
+          "id": "20261014-dj-audio-01:novaloops:G30",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 30,
           "source": "NOVALOOPS!G30",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -46841,15 +42983,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G33",
+          "id": "20261014-dj-audio-01:novaloops:G33",
           "title": "ILUMINACION",
           "sourceStartRow": 33,
           "source": "NOVALOOPS!G33",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -46870,15 +43012,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G34",
+          "id": "20261014-dj-audio-01:novaloops:G34",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 34,
           "source": "NOVALOOPS!G34",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -47089,15 +43231,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G42",
+          "id": "20261014-dj-audio-01:novaloops:G42",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 42,
           "source": "NOVALOOPS!G42",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -47118,15 +43260,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G43",
+          "id": "20261014-dj-audio-01:novaloops:G43",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 43,
           "source": "NOVALOOPS!G43",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -47202,15 +43344,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G46",
+          "id": "20261014-dj-audio-01:novaloops:G46",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 46,
           "source": "NOVALOOPS!G46",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -47231,15 +43373,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G47",
+          "id": "20261014-dj-audio-01:novaloops:G47",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 47,
           "source": "NOVALOOPS!G47",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -47342,15 +43484,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G51",
+          "id": "20261014-dj-audio-01:novaloops:G51",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 51,
           "source": "NOVALOOPS!G51",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -47480,15 +43622,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G56",
+          "id": "20261014-dj-audio-01:novaloops:G56",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 56,
           "source": "NOVALOOPS!G56",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -47645,15 +43787,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G62",
+          "id": "20261014-dj-audio-01:novaloops:G62",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 62,
           "source": "NOVALOOPS!G62",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -47945,15 +44087,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G73",
+          "id": "20261014-dj-audio-01:novaloops:G73",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 73,
           "source": "NOVALOOPS!G73",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -48083,15 +44225,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G79",
+          "id": "20261014-dj-audio-01:novaloops:G79",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 79,
           "source": "NOVALOOPS!G79",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -48518,15 +44660,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G96",
+          "id": "20261014-dj-audio-01:novaloops:G96",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 96,
           "source": "NOVALOOPS!G96",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -48737,15 +44879,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G105",
+          "id": "20261014-dj-audio-01:novaloops:G105",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 105,
           "source": "NOVALOOPS!G105",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -48821,15 +44963,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:G109",
+          "id": "20261014-dj-audio-01:novaloops:G109",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 109,
           "source": "NOVALOOPS!G109",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -49914,23 +46056,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J1",
+          "id": "20261014-dj-audio-01:novaloops:J1",
           "title": "NOVALOOPS - PRIVADO PEQUEÑO IP2000",
           "sourceStartRow": 1,
           "source": "NOVALOOPS!J1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -49977,15 +46119,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J6",
+          "id": "20261014-dj-audio-01:novaloops:J6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "NOVALOOPS!J6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -50093,15 +46235,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J10",
+          "id": "20261014-dj-audio-01:novaloops:J10",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 10,
           "source": "NOVALOOPS!J10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -50150,15 +46292,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J12",
+          "id": "20261014-dj-audio-01:novaloops:J12",
           "title": "Audio",
           "sourceStartRow": 12,
           "source": "NOVALOOPS!J12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -50207,15 +46349,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J14",
+          "id": "20261014-dj-audio-01:novaloops:J14",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 14,
           "source": "NOVALOOPS!J14",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -50236,15 +46378,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J15",
+          "id": "20261014-dj-audio-01:novaloops:J15",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 15,
           "source": "NOVALOOPS!J15",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -50293,15 +46435,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J17",
+          "id": "20261014-dj-audio-01:novaloops:J17",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 17,
           "source": "NOVALOOPS!J17",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -50350,15 +46492,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J19",
+          "id": "20261014-dj-audio-01:novaloops:J19",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 19,
           "source": "NOVALOOPS!J19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -50461,15 +46603,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J23",
+          "id": "20261014-dj-audio-01:novaloops:J23",
           "title": "MICROFONIA",
           "sourceStartRow": 23,
           "source": "NOVALOOPS!J23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -50490,15 +46632,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J24",
+          "id": "20261014-dj-audio-01:novaloops:J24",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 24,
           "source": "NOVALOOPS!J24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -50601,15 +46743,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J28",
+          "id": "20261014-dj-audio-01:novaloops:J28",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 28,
           "source": "NOVALOOPS!J28",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -50685,15 +46827,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J31",
+          "id": "20261014-dj-audio-01:novaloops:J31",
           "title": "ILUMINACION",
           "sourceStartRow": 31,
           "source": "NOVALOOPS!J31",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -50714,15 +46856,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J32",
+          "id": "20261014-dj-audio-01:novaloops:J32",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 32,
           "source": "NOVALOOPS!J32",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -50933,15 +47075,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J40",
+          "id": "20261014-dj-audio-01:novaloops:J40",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 40,
           "source": "NOVALOOPS!J40",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -50962,15 +47104,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J41",
+          "id": "20261014-dj-audio-01:novaloops:J41",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 41,
           "source": "NOVALOOPS!J41",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -51046,15 +47188,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J44",
+          "id": "20261014-dj-audio-01:novaloops:J44",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 44,
           "source": "NOVALOOPS!J44",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -51075,15 +47217,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J45",
+          "id": "20261014-dj-audio-01:novaloops:J45",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 45,
           "source": "NOVALOOPS!J45",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -51186,15 +47328,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J49",
+          "id": "20261014-dj-audio-01:novaloops:J49",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 49,
           "source": "NOVALOOPS!J49",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -51324,15 +47466,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J54",
+          "id": "20261014-dj-audio-01:novaloops:J54",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 54,
           "source": "NOVALOOPS!J54",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -51489,15 +47631,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J60",
+          "id": "20261014-dj-audio-01:novaloops:J60",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 60,
           "source": "NOVALOOPS!J60",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -51762,15 +47904,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J70",
+          "id": "20261014-dj-audio-01:novaloops:J70",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 70,
           "source": "NOVALOOPS!J70",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -51900,15 +48042,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J76",
+          "id": "20261014-dj-audio-01:novaloops:J76",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 76,
           "source": "NOVALOOPS!J76",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -52335,15 +48477,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J93",
+          "id": "20261014-dj-audio-01:novaloops:J93",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 93,
           "source": "NOVALOOPS!J93",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -52554,15 +48696,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J102",
+          "id": "20261014-dj-audio-01:novaloops:J102",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 102,
           "source": "NOVALOOPS!J102",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -52638,15 +48780,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:novaloops:J106",
+          "id": "20261014-dj-audio-01:novaloops:J106",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 106,
           "source": "NOVALOOPS!J106",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -53741,23 +49883,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A1",
+          "id": "20261014-dj-audio-01:saxofonic:A1",
           "title": "SAXOFONIC - AUDIO TURBOSOUND",
           "sourceStartRow": 1,
           "source": "SAXOFONIC!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -53804,15 +49946,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A6",
+          "id": "20261014-dj-audio-01:saxofonic:A6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "SAXOFONIC!A6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -53866,15 +50008,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A8",
+          "id": "20261014-dj-audio-01:saxofonic:A8",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 8,
           "source": "SAXOFONIC!A8",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -53923,15 +50065,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A10",
+          "id": "20261014-dj-audio-01:saxofonic:A10",
           "title": "Audio",
           "sourceStartRow": 10,
           "source": "SAXOFONIC!A10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -54034,15 +50176,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A14",
+          "id": "20261014-dj-audio-01:saxofonic:A14",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 14,
           "source": "SAXOFONIC!A14",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -54063,15 +50205,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A15",
+          "id": "20261014-dj-audio-01:saxofonic:A15",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 15,
           "source": "SAXOFONIC!A15",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -54120,15 +50262,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A17",
+          "id": "20261014-dj-audio-01:saxofonic:A17",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 17,
           "source": "SAXOFONIC!A17",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -54231,15 +50373,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A21",
+          "id": "20261014-dj-audio-01:saxofonic:A21",
           "title": "MICROFONIA",
           "sourceStartRow": 21,
           "source": "SAXOFONIC!A21",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -54260,15 +50402,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A22",
+          "id": "20261014-dj-audio-01:saxofonic:A22",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 22,
           "source": "SAXOFONIC!A22",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -54371,15 +50513,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A26",
+          "id": "20261014-dj-audio-01:saxofonic:A26",
           "title": "ILUMINACION",
           "sourceStartRow": 26,
           "source": "SAXOFONIC!A26",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -54400,15 +50542,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A27",
+          "id": "20261014-dj-audio-01:saxofonic:A27",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 27,
           "source": "SAXOFONIC!A27",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -54673,15 +50815,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A38",
+          "id": "20261014-dj-audio-01:saxofonic:A38",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 38,
           "source": "SAXOFONIC!A38",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -54702,15 +50844,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A39",
+          "id": "20261014-dj-audio-01:saxofonic:A39",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 39,
           "source": "SAXOFONIC!A39",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -54786,15 +50928,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A42",
+          "id": "20261014-dj-audio-01:saxofonic:A42",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 42,
           "source": "SAXOFONIC!A42",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -54815,15 +50957,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A43",
+          "id": "20261014-dj-audio-01:saxofonic:A43",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 43,
           "source": "SAXOFONIC!A43",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -54926,15 +51068,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A47",
+          "id": "20261014-dj-audio-01:saxofonic:A47",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 47,
           "source": "SAXOFONIC!A47",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -55118,15 +51260,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A54",
+          "id": "20261014-dj-audio-01:saxofonic:A54",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 54,
           "source": "SAXOFONIC!A54",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -55283,15 +51425,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A60",
+          "id": "20261014-dj-audio-01:saxofonic:A60",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 60,
           "source": "SAXOFONIC!A60",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -55583,15 +51725,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A71",
+          "id": "20261014-dj-audio-01:saxofonic:A71",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 71,
           "source": "SAXOFONIC!A71",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -55721,15 +51863,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A77",
+          "id": "20261014-dj-audio-01:saxofonic:A77",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 77,
           "source": "SAXOFONIC!A77",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -56156,15 +52298,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A94",
+          "id": "20261014-dj-audio-01:saxofonic:A94",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 94,
           "source": "SAXOFONIC!A94",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -56375,15 +52517,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A103",
+          "id": "20261014-dj-audio-01:saxofonic:A103",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 103,
           "source": "SAXOFONIC!A103",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -56459,15 +52601,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:A107",
+          "id": "20261014-dj-audio-01:saxofonic:A107",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 107,
           "source": "SAXOFONIC!A107",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -57477,23 +53619,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D1",
+          "id": "20261014-dj-audio-01:saxofonic:D1",
           "title": "SAXOFONIC PRIVADO",
           "sourceStartRow": 1,
           "source": "SAXOFONIC!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -57540,15 +53682,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D6",
+          "id": "20261014-dj-audio-01:saxofonic:D6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "SAXOFONIC!D6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -57602,15 +53744,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D8",
+          "id": "20261014-dj-audio-01:saxofonic:D8",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 8,
           "source": "SAXOFONIC!D8",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -57659,15 +53801,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D10",
+          "id": "20261014-dj-audio-01:saxofonic:D10",
           "title": "Audio",
           "sourceStartRow": 10,
           "source": "SAXOFONIC!D10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -57716,15 +53858,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D12",
+          "id": "20261014-dj-audio-01:saxofonic:D12",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 12,
           "source": "SAXOFONIC!D12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -57745,15 +53887,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D13",
+          "id": "20261014-dj-audio-01:saxofonic:D13",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 13,
           "source": "SAXOFONIC!D13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -57856,15 +53998,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D17",
+          "id": "20261014-dj-audio-01:saxofonic:D17",
           "title": "MICROFONIA",
           "sourceStartRow": 17,
           "source": "SAXOFONIC!D17",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -57885,15 +54027,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D18",
+          "id": "20261014-dj-audio-01:saxofonic:D18",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 18,
           "source": "SAXOFONIC!D18",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -57996,15 +54138,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D22",
+          "id": "20261014-dj-audio-01:saxofonic:D22",
           "title": "ILUMINACION",
           "sourceStartRow": 22,
           "source": "SAXOFONIC!D22",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -58025,15 +54167,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D23",
+          "id": "20261014-dj-audio-01:saxofonic:D23",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 23,
           "source": "SAXOFONIC!D23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -58244,15 +54386,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D31",
+          "id": "20261014-dj-audio-01:saxofonic:D31",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 31,
           "source": "SAXOFONIC!D31",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -58273,15 +54415,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D32",
+          "id": "20261014-dj-audio-01:saxofonic:D32",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 32,
           "source": "SAXOFONIC!D32",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -58357,15 +54499,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D35",
+          "id": "20261014-dj-audio-01:saxofonic:D35",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 35,
           "source": "SAXOFONIC!D35",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -58386,15 +54528,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D36",
+          "id": "20261014-dj-audio-01:saxofonic:D36",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 36,
           "source": "SAXOFONIC!D36",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -58497,15 +54639,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D40",
+          "id": "20261014-dj-audio-01:saxofonic:D40",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 40,
           "source": "SAXOFONIC!D40",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -58635,15 +54777,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D45",
+          "id": "20261014-dj-audio-01:saxofonic:D45",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 45,
           "source": "SAXOFONIC!D45",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -58800,15 +54942,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D51",
+          "id": "20261014-dj-audio-01:saxofonic:D51",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 51,
           "source": "SAXOFONIC!D51",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -59073,15 +55215,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D61",
+          "id": "20261014-dj-audio-01:saxofonic:D61",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 61,
           "source": "SAXOFONIC!D61",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -59211,15 +55353,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D67",
+          "id": "20261014-dj-audio-01:saxofonic:D67",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 67,
           "source": "SAXOFONIC!D67",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -59646,15 +55788,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D84",
+          "id": "20261014-dj-audio-01:saxofonic:D84",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 84,
           "source": "SAXOFONIC!D84",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -59865,15 +56007,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D92",
+          "id": "20261014-dj-audio-01:saxofonic:D92",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 92,
           "source": "SAXOFONIC!D92",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -59949,15 +56091,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:D95",
+          "id": "20261014-dj-audio-01:saxofonic:D95",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 95,
           "source": "SAXOFONIC!D95",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -60282,23 +56424,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:G1",
+          "id": "20261014-dj-audio-01:saxofonic:G1",
           "title": "SAXOFONIC SOLO SHOW CON AUDIO",
           "sourceStartRow": 1,
           "source": "SAXOFONIC!G1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -60345,15 +56487,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:G6",
+          "id": "20261014-dj-audio-01:saxofonic:G6",
           "title": "Consola",
           "sourceStartRow": 6,
           "source": "SAXOFONIC!G6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -60407,15 +56549,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:G8",
+          "id": "20261014-dj-audio-01:saxofonic:G8",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 8,
           "source": "SAXOFONIC!G8",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -60464,15 +56606,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:G10",
+          "id": "20261014-dj-audio-01:saxofonic:G10",
           "title": "Audio",
           "sourceStartRow": 10,
           "source": "SAXOFONIC!G10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -60521,15 +56663,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:G12",
+          "id": "20261014-dj-audio-01:saxofonic:G12",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 12,
           "source": "SAXOFONIC!G12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -60550,15 +56692,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:G13",
+          "id": "20261014-dj-audio-01:saxofonic:G13",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 13,
           "source": "SAXOFONIC!G13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -60661,15 +56803,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:G17",
+          "id": "20261014-dj-audio-01:saxofonic:G17",
           "title": "MICROFONIA",
           "sourceStartRow": 17,
           "source": "SAXOFONIC!G17",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -60690,15 +56832,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:G18",
+          "id": "20261014-dj-audio-01:saxofonic:G18",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 18,
           "source": "SAXOFONIC!G18",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -60747,15 +56889,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:saxofonic:G20",
+          "id": "20261014-dj-audio-01:saxofonic:G20",
           "title": "MICROFONIA / Case de Cableado",
           "sourceStartRow": 20,
           "source": "SAXOFONIC!G20",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -60936,23 +57078,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:audio:A1",
+          "id": "20261014-dj-audio-01:audio:A1",
           "title": "AUDIO QSC",
           "sourceStartRow": 1,
           "source": "AUDIO!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -60973,15 +57115,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:audio:A3",
+          "id": "20261014-dj-audio-01:audio:A3",
           "title": "Audio",
           "sourceStartRow": 3,
           "source": "AUDIO!A3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -61233,23 +57375,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:audio:D1",
+          "id": "20261014-dj-audio-01:audio:D1",
           "title": "AUDIO JBL",
           "sourceStartRow": 1,
           "source": "AUDIO!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -61270,15 +57412,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:audio:D3",
+          "id": "20261014-dj-audio-01:audio:D3",
           "title": "Audio",
           "sourceStartRow": 3,
           "source": "AUDIO!D3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -61483,23 +57625,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:audio:G1",
+          "id": "20261014-dj-audio-01:audio:G1",
           "title": "TURBOSOUND",
           "sourceStartRow": 1,
           "source": "AUDIO!G1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -61520,15 +57662,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:audio:G3",
+          "id": "20261014-dj-audio-01:audio:G3",
           "title": "Audio",
           "sourceStartRow": 3,
           "source": "AUDIO!G3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -61659,23 +57801,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:audio:J1",
+          "id": "20261014-dj-audio-01:audio:J1",
           "title": "IP2000",
           "sourceStartRow": 1,
           "source": "AUDIO!J1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -61696,15 +57838,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:audio:J3",
+          "id": "20261014-dj-audio-01:audio:J3",
           "title": "Audio",
           "sourceStartRow": 3,
           "source": "AUDIO!J3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -63561,23 +59703,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A1",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A1",
           "title": "Sunday Funday Completo OPCION A\nAudio para ceremonia y coctel, Tarima 6x4 \"Con vinil impreso\", luces extras en truss",
           "sourceStartRow": 1,
           "source": "ESTUARDO REYNA!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -63624,15 +59766,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A6",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A6",
           "title": "CEREMONIA",
           "sourceStartRow": 6,
           "source": "ESTUARDO REYNA!A6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -63653,15 +59795,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A7",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A7",
           "title": "CEREMONIA / Consola",
           "sourceStartRow": 7,
           "source": "ESTUARDO REYNA!A7",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -63715,15 +59857,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A9",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A9",
           "title": "CEREMONIA / Audio",
           "sourceStartRow": 9,
           "source": "ESTUARDO REYNA!A9",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -63772,15 +59914,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A11",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A11",
           "title": "MICROFONIA",
           "sourceStartRow": 11,
           "source": "ESTUARDO REYNA!A11",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -63801,15 +59943,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A12",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A12",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 12,
           "source": "ESTUARDO REYNA!A12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -63912,15 +60054,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A16",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A16",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 16,
           "source": "ESTUARDO REYNA!A16",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -63969,15 +60111,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A18",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A18",
           "title": "COCTEL",
           "sourceStartRow": 18,
           "source": "ESTUARDO REYNA!A18",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -63998,15 +60140,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A19",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A19",
           "title": "COCTEL / Consola",
           "sourceStartRow": 19,
           "source": "ESTUARDO REYNA!A19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -64060,15 +60202,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A21",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A21",
           "title": "COCTEL / Audio",
           "sourceStartRow": 21,
           "source": "ESTUARDO REYNA!A21",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -64117,15 +60259,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A23",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A23",
           "title": "RECEPCION",
           "sourceStartRow": 23,
           "source": "ESTUARDO REYNA!A23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -64146,15 +60288,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A24",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A24",
           "title": "RECEPCION / Consola",
           "sourceStartRow": 24,
           "source": "ESTUARDO REYNA!A24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -64262,15 +60404,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A28",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A28",
           "title": "RECEPCION / Telefono (Mochila)",
           "sourceStartRow": 28,
           "source": "ESTUARDO REYNA!A28",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -64319,15 +60461,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A30",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A30",
           "title": "RECEPCION / Audio",
           "sourceStartRow": 30,
           "source": "ESTUARDO REYNA!A30",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -64511,15 +60653,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A37",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A37",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 37,
           "source": "ESTUARDO REYNA!A37",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -64540,15 +60682,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A38",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A38",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 38,
           "source": "ESTUARDO REYNA!A38",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -64651,15 +60793,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A42",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A42",
           "title": "MONITOREO INTERNO / Computadora",
           "sourceStartRow": 42,
           "source": "ESTUARDO REYNA!A42",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -64708,15 +60850,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A44",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A44",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 44,
           "source": "ESTUARDO REYNA!A44",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -64846,15 +60988,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A49",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A49",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 49,
           "source": "ESTUARDO REYNA!A49",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -65011,15 +61153,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A55",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A55",
           "title": "BACKLINE INSTRUMENTOS",
           "sourceStartRow": 55,
           "source": "ESTUARDO REYNA!A55",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -65040,15 +61182,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A56",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A56",
           "title": "BACKLINE INSTRUMENTOS / Case de Pedestales de Bateria",
           "sourceStartRow": 56,
           "source": "ESTUARDO REYNA!A56",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -65340,15 +61482,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A67",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A67",
           "title": "BACKLINE INSTRUMENTOS / Case de platos",
           "sourceStartRow": 67,
           "source": "ESTUARDO REYNA!A67",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -65451,15 +61593,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A71",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A71",
           "title": "MICROFONIA",
           "sourceStartRow": 71,
           "source": "ESTUARDO REYNA!A71",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -65480,15 +61622,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A72",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A72",
           "title": "MICROFONIA / Microfonia para bateria",
           "sourceStartRow": 72,
           "source": "ESTUARDO REYNA!A72",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -65618,15 +61760,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A77",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A77",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 77,
           "source": "ESTUARDO REYNA!A77",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -65783,15 +61925,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A83",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A83",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 83,
           "source": "ESTUARDO REYNA!A83",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -65921,15 +62063,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A88",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A88",
           "title": "ILUMINACION",
           "sourceStartRow": 88,
           "source": "ESTUARDO REYNA!A88",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -65950,15 +62092,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A89",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A89",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 89,
           "source": "ESTUARDO REYNA!A89",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -66169,15 +62311,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A98",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A98",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 98,
           "source": "ESTUARDO REYNA!A98",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -66198,15 +62340,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A99",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A99",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 99,
           "source": "ESTUARDO REYNA!A99",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -66282,15 +62424,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A102",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A102",
           "title": "EFECTOS ESPECIALES / Pistola LED CO2",
           "sourceStartRow": 102,
           "source": "ESTUARDO REYNA!A102",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -66501,15 +62643,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A110",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A110",
           "title": "EFECTOS ESPECIALES / Pirotecnia Fria",
           "sourceStartRow": 110,
           "source": "ESTUARDO REYNA!A110",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -66612,15 +62754,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A114",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A114",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 114,
           "source": "ESTUARDO REYNA!A114",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -66641,15 +62783,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A115",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A115",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 115,
           "source": "ESTUARDO REYNA!A115",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -66779,15 +62921,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A120",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A120",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 120,
           "source": "ESTUARDO REYNA!A120",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -66971,15 +63113,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A127",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A127",
           "title": "ESTRUCTURAS / Iluminacion Extra (En Truss)",
           "sourceStartRow": 127,
           "source": "ESTUARDO REYNA!A127",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -67163,15 +63305,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A134",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A134",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 134,
           "source": "ESTUARDO REYNA!A134",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -67409,15 +63551,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A143",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A143",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 143,
           "source": "ESTUARDO REYNA!A143",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -67709,15 +63851,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A154",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A154",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 154,
           "source": "ESTUARDO REYNA!A154",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -67847,15 +63989,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A160",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A160",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 160,
           "source": "ESTUARDO REYNA!A160",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -68282,15 +64424,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A177",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A177",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 177,
           "source": "ESTUARDO REYNA!A177",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -68501,15 +64643,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A186",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A186",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 186,
           "source": "ESTUARDO REYNA!A186",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -68585,15 +64727,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A190",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A190",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 190,
           "source": "ESTUARDO REYNA!A190",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -68750,15 +64892,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A197",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A197",
           "title": "EXTRA SUNDAY FUNDAY",
           "sourceStartRow": 197,
           "source": "ESTUARDO REYNA!A197",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -68779,15 +64921,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A198",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A198",
           "title": "EXTRA SUNDAY FUNDAY / Toldos",
           "sourceStartRow": 198,
           "source": "ESTUARDO REYNA!A198",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -68890,15 +65032,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:A203",
+          "id": "20261014-dj-audio-01:estuardo-reyna:A203",
           "title": "EXTRA SUNDAY FUNDAY / Tarima de 6.10 x 3.66 mts.",
           "sourceStartRow": 203,
           "source": "ESTUARDO REYNA!A203",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -70824,23 +66966,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D1",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D1",
           "title": "Sunday Funday Completo - bateria electrica\nAudio para ceremonia y coctel, Tarima 6x4 \"Con vinil impreso\", luces extras en truss",
           "sourceStartRow": 1,
           "source": "ESTUARDO REYNA!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -70887,15 +67029,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D6",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D6",
           "title": "CEREMONIA",
           "sourceStartRow": 6,
           "source": "ESTUARDO REYNA!D6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -70916,15 +67058,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D7",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D7",
           "title": "CEREMONIA / Consola",
           "sourceStartRow": 7,
           "source": "ESTUARDO REYNA!D7",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -70978,15 +67120,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D9",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D9",
           "title": "CEREMONIA / Audio",
           "sourceStartRow": 9,
           "source": "ESTUARDO REYNA!D9",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -71035,15 +67177,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D11",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D11",
           "title": "MICROFONIA",
           "sourceStartRow": 11,
           "source": "ESTUARDO REYNA!D11",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -71064,15 +67206,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D12",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D12",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 12,
           "source": "ESTUARDO REYNA!D12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -71175,15 +67317,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D16",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D16",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 16,
           "source": "ESTUARDO REYNA!D16",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -71232,15 +67374,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D18",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D18",
           "title": "COCTEL",
           "sourceStartRow": 18,
           "source": "ESTUARDO REYNA!D18",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -71261,15 +67403,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D19",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D19",
           "title": "COCTEL / Consola",
           "sourceStartRow": 19,
           "source": "ESTUARDO REYNA!D19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -71323,15 +67465,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D21",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D21",
           "title": "COCTEL / Audio",
           "sourceStartRow": 21,
           "source": "ESTUARDO REYNA!D21",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -71380,15 +67522,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D23",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D23",
           "title": "RECEPCION",
           "sourceStartRow": 23,
           "source": "ESTUARDO REYNA!D23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -71409,15 +67551,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D24",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D24",
           "title": "RECEPCION / Consola",
           "sourceStartRow": 24,
           "source": "ESTUARDO REYNA!D24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -71525,15 +67667,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D28",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D28",
           "title": "RECEPCION / Telefono (Mochila)",
           "sourceStartRow": 28,
           "source": "ESTUARDO REYNA!D28",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -71582,15 +67724,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D30",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D30",
           "title": "RECEPCION / Audio",
           "sourceStartRow": 30,
           "source": "ESTUARDO REYNA!D30",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -71774,15 +67916,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D37",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D37",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 37,
           "source": "ESTUARDO REYNA!D37",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -71803,15 +67945,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D38",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D38",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 38,
           "source": "ESTUARDO REYNA!D38",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -71914,15 +68056,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D42",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D42",
           "title": "MONITOREO INTERNO / Computadora",
           "sourceStartRow": 42,
           "source": "ESTUARDO REYNA!D42",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -71971,15 +68113,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D44",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D44",
           "title": "MONITOREO INTERNO / In ears",
           "sourceStartRow": 44,
           "source": "ESTUARDO REYNA!D44",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -72109,15 +68251,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D49",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D49",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 49,
           "source": "ESTUARDO REYNA!D49",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -72274,15 +68416,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D55",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D55",
           "title": "BACKLINE INSTRUMENTOS",
           "sourceStartRow": 55,
           "source": "ESTUARDO REYNA!D55",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -72303,15 +68445,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D56",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D56",
           "title": "BACKLINE INSTRUMENTOS / Bateria Electrica",
           "sourceStartRow": 56,
           "source": "ESTUARDO REYNA!D56",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -72468,15 +68610,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D62",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D62",
           "title": "MICROFONIA",
           "sourceStartRow": 62,
           "source": "ESTUARDO REYNA!D62",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -72497,15 +68639,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D63",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D63",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 63,
           "source": "ESTUARDO REYNA!D63",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -72662,15 +68804,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D69",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D69",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 69,
           "source": "ESTUARDO REYNA!D69",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -72800,15 +68942,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D74",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D74",
           "title": "ILUMINACION",
           "sourceStartRow": 74,
           "source": "ESTUARDO REYNA!D74",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -72829,15 +68971,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D75",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D75",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 75,
           "source": "ESTUARDO REYNA!D75",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -73048,15 +69190,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D84",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D84",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 84,
           "source": "ESTUARDO REYNA!D84",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -73077,15 +69219,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D85",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D85",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 85,
           "source": "ESTUARDO REYNA!D85",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -73161,15 +69303,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D88",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D88",
           "title": "EFECTOS ESPECIALES / Pistola LED CO2",
           "sourceStartRow": 88,
           "source": "ESTUARDO REYNA!D88",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -73380,15 +69522,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D96",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D96",
           "title": "EFECTOS ESPECIALES / Pirotecnia Fria",
           "sourceStartRow": 96,
           "source": "ESTUARDO REYNA!D96",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -73491,15 +69633,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D100",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D100",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 100,
           "source": "ESTUARDO REYNA!D100",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -73520,15 +69662,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D101",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D101",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 101,
           "source": "ESTUARDO REYNA!D101",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -73658,15 +69800,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D106",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D106",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 106,
           "source": "ESTUARDO REYNA!D106",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -73850,15 +69992,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D113",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D113",
           "title": "ESTRUCTURAS / Iluminacion Extra (En Truss)",
           "sourceStartRow": 113,
           "source": "ESTUARDO REYNA!D113",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -74042,15 +70184,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D120",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D120",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 120,
           "source": "ESTUARDO REYNA!D120",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -74288,15 +70430,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D129",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D129",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 129,
           "source": "ESTUARDO REYNA!D129",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -74588,15 +70730,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D140",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D140",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 140,
           "source": "ESTUARDO REYNA!D140",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -74726,15 +70868,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D146",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D146",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 146,
           "source": "ESTUARDO REYNA!D146",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -75161,15 +71303,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D163",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D163",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 163,
           "source": "ESTUARDO REYNA!D163",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -75380,15 +71522,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D172",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D172",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 172,
           "source": "ESTUARDO REYNA!D172",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -75464,15 +71606,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D176",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D176",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 176,
           "source": "ESTUARDO REYNA!D176",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -75629,15 +71771,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D183",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D183",
           "title": "EXTRA SUNDAY FUNDAY",
           "sourceStartRow": 183,
           "source": "ESTUARDO REYNA!D183",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -75658,15 +71800,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D184",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D184",
           "title": "EXTRA SUNDAY FUNDAY / Toldos",
           "sourceStartRow": 184,
           "source": "ESTUARDO REYNA!D184",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -75769,15 +71911,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:D189",
+          "id": "20261014-dj-audio-01:estuardo-reyna:D189",
           "title": "EXTRA SUNDAY FUNDAY / Tarima de 6.10 x 3.66 mts.",
           "sourceStartRow": 189,
           "source": "ESTUARDO REYNA!D189",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -77146,23 +73288,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G1",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G1",
           "title": "DJ Completo - Villa Bokeh\nAudio para ceremonia, audio para coctel, luces extras colgadas",
           "sourceStartRow": 1,
           "source": "ESTUARDO REYNA!G1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -77209,15 +73351,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G6",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G6",
           "title": "CEREMONIA",
           "sourceStartRow": 6,
           "source": "ESTUARDO REYNA!G6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -77238,15 +73380,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G7",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G7",
           "title": "CEREMONIA / Consola",
           "sourceStartRow": 7,
           "source": "ESTUARDO REYNA!G7",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -77300,15 +73442,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G9",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G9",
           "title": "CEREMONIA / Audio",
           "sourceStartRow": 9,
           "source": "ESTUARDO REYNA!G9",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -77357,15 +73499,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G11",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G11",
           "title": "MICROFONIA",
           "sourceStartRow": 11,
           "source": "ESTUARDO REYNA!G11",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -77386,15 +73528,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G12",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G12",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 12,
           "source": "ESTUARDO REYNA!G12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -77497,15 +73639,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G16",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G16",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 16,
           "source": "ESTUARDO REYNA!G16",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -77554,15 +73696,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G18",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G18",
           "title": "COCTEL",
           "sourceStartRow": 18,
           "source": "ESTUARDO REYNA!G18",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -77583,15 +73725,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G19",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G19",
           "title": "COCTEL / Consola",
           "sourceStartRow": 19,
           "source": "ESTUARDO REYNA!G19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -77645,15 +73787,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G21",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G21",
           "title": "COCTEL / Audio",
           "sourceStartRow": 21,
           "source": "ESTUARDO REYNA!G21",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -77702,15 +73844,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G23",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G23",
           "title": "RECEPCION",
           "sourceStartRow": 23,
           "source": "ESTUARDO REYNA!G23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -77731,15 +73873,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G24",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G24",
           "title": "RECEPCION / Consola",
           "sourceStartRow": 24,
           "source": "ESTUARDO REYNA!G24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -77847,15 +73989,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G28",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G28",
           "title": "RECEPCION / Telefono (Mochila)",
           "sourceStartRow": 28,
           "source": "ESTUARDO REYNA!G28",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -77904,15 +74046,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G30",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G30",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 30,
           "source": "ESTUARDO REYNA!G30",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -77933,15 +74075,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G31",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G31",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 31,
           "source": "ESTUARDO REYNA!G31",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -77990,15 +74132,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G33",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G33",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 33,
           "source": "ESTUARDO REYNA!G33",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -78101,15 +74243,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G37",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G37",
           "title": "MICROFONIA",
           "sourceStartRow": 37,
           "source": "ESTUARDO REYNA!G37",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -78130,15 +74272,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G38",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G38",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 38,
           "source": "ESTUARDO REYNA!G38",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -78214,15 +74356,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G41",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G41",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 41,
           "source": "ESTUARDO REYNA!G41",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -78271,15 +74413,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G43",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G43",
           "title": "ILUMINACION",
           "sourceStartRow": 43,
           "source": "ESTUARDO REYNA!G43",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -78300,15 +74442,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G44",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G44",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 44,
           "source": "ESTUARDO REYNA!G44",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -78519,15 +74661,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G53",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G53",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 53,
           "source": "ESTUARDO REYNA!G53",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -78548,15 +74690,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G54",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G54",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 54,
           "source": "ESTUARDO REYNA!G54",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -78632,15 +74774,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G57",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G57",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 57,
           "source": "ESTUARDO REYNA!G57",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -78661,15 +74803,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G58",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G58",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 58,
           "source": "ESTUARDO REYNA!G58",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -78772,15 +74914,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G62",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G62",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 62,
           "source": "ESTUARDO REYNA!G62",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -78964,15 +75106,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G69",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G69",
           "title": "ESTRUCTURAS / Iluminacion Extra (Colgadas)",
           "sourceStartRow": 69,
           "source": "ESTUARDO REYNA!G69",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -79102,15 +75244,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G74",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G74",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 74,
           "source": "ESTUARDO REYNA!G74",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -79294,15 +75436,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G81",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G81",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 81,
           "source": "ESTUARDO REYNA!G81",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -79594,15 +75736,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G92",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G92",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 92,
           "source": "ESTUARDO REYNA!G92",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -79759,15 +75901,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G99",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G99",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 99,
           "source": "ESTUARDO REYNA!G99",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -80194,15 +76336,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G116",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G116",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 116,
           "source": "ESTUARDO REYNA!G116",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -80413,15 +76555,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G125",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G125",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 125,
           "source": "ESTUARDO REYNA!G125",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -80497,15 +76639,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:G129",
+          "id": "20261014-dj-audio-01:estuardo-reyna:G129",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 129,
           "source": "ESTUARDO REYNA!G129",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -81875,23 +78017,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J1",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J1",
           "title": "DJ Completo - San José El Viejo\nAudio para ceremonia, audio para coctel, luces extras en truss",
           "sourceStartRow": 1,
           "source": "ESTUARDO REYNA!J1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -81938,15 +78080,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J6",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J6",
           "title": "CEREMONIA",
           "sourceStartRow": 6,
           "source": "ESTUARDO REYNA!J6",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -81967,15 +78109,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J7",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J7",
           "title": "CEREMONIA / Consola",
           "sourceStartRow": 7,
           "source": "ESTUARDO REYNA!J7",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -82029,15 +78171,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J9",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J9",
           "title": "CEREMONIA / Audio",
           "sourceStartRow": 9,
           "source": "ESTUARDO REYNA!J9",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -82086,15 +78228,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J11",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J11",
           "title": "MICROFONIA",
           "sourceStartRow": 11,
           "source": "ESTUARDO REYNA!J11",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -82115,15 +78257,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J12",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J12",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 12,
           "source": "ESTUARDO REYNA!J12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -82226,15 +78368,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J16",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J16",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 16,
           "source": "ESTUARDO REYNA!J16",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -82283,15 +78425,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J18",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J18",
           "title": "COCTEL",
           "sourceStartRow": 18,
           "source": "ESTUARDO REYNA!J18",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -82312,15 +78454,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J19",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J19",
           "title": "COCTEL / Consola",
           "sourceStartRow": 19,
           "source": "ESTUARDO REYNA!J19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -82374,15 +78516,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J21",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J21",
           "title": "COCTEL / Audio",
           "sourceStartRow": 21,
           "source": "ESTUARDO REYNA!J21",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -82431,15 +78573,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J23",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J23",
           "title": "RECEPCION",
           "sourceStartRow": 23,
           "source": "ESTUARDO REYNA!J23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -82460,15 +78602,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J24",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J24",
           "title": "RECEPCION / Consola",
           "sourceStartRow": 24,
           "source": "ESTUARDO REYNA!J24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -82576,15 +78718,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J28",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J28",
           "title": "RECEPCION / Telefono (Mochila)",
           "sourceStartRow": 28,
           "source": "ESTUARDO REYNA!J28",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -82633,15 +78775,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J30",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J30",
           "title": "RECEPCION / Audio",
           "sourceStartRow": 30,
           "source": "ESTUARDO REYNA!J30",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -82825,15 +78967,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J37",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J37",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 37,
           "source": "ESTUARDO REYNA!J37",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -82854,15 +78996,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J38",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J38",
           "title": "MONITOREO INTERNO / Monitoreo",
           "sourceStartRow": 38,
           "source": "ESTUARDO REYNA!J38",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -82911,15 +79053,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J40",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J40",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 40,
           "source": "ESTUARDO REYNA!J40",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -83022,15 +79164,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J44",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J44",
           "title": "MICROFONIA",
           "sourceStartRow": 44,
           "source": "ESTUARDO REYNA!J44",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -83051,15 +79193,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J45",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J45",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 45,
           "source": "ESTUARDO REYNA!J45",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -83162,15 +79304,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J49",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J49",
           "title": "ILUMINACION",
           "sourceStartRow": 49,
           "source": "ESTUARDO REYNA!J49",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -83191,15 +79333,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J50",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J50",
           "title": "ILUMINACION / Luces",
           "sourceStartRow": 50,
           "source": "ESTUARDO REYNA!J50",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -83410,15 +79552,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J59",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J59",
           "title": "EFECTOS ESPECIALES",
           "sourceStartRow": 59,
           "source": "ESTUARDO REYNA!J59",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -83439,15 +79581,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J60",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J60",
           "title": "EFECTOS ESPECIALES / Maquina de humo",
           "sourceStartRow": 60,
           "source": "ESTUARDO REYNA!J60",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -83523,15 +79665,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J63",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J63",
           "title": "ESTRUCTURAS",
           "sourceStartRow": 63,
           "source": "ESTUARDO REYNA!J63",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -83552,15 +79694,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J64",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J64",
           "title": "ESTRUCTURAS / Estructura DJ",
           "sourceStartRow": 64,
           "source": "ESTUARDO REYNA!J64",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -83663,15 +79805,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J68",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J68",
           "title": "ESTRUCTURAS / Estructura Luces",
           "sourceStartRow": 68,
           "source": "ESTUARDO REYNA!J68",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -83855,15 +79997,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J75",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J75",
           "title": "ESTRUCTURAS / Iluminacion Extra (En Truss)",
           "sourceStartRow": 75,
           "source": "ESTUARDO REYNA!J75",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -84047,15 +80189,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J82",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J82",
           "title": "ESTRUCTURAS / Telas para forrar estructuras",
           "sourceStartRow": 82,
           "source": "ESTUARDO REYNA!J82",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -84293,15 +80435,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J91",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J91",
           "title": "ESTRUCTURAS / Case de Cableado",
           "sourceStartRow": 91,
           "source": "ESTUARDO REYNA!J91",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -84593,15 +80735,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J102",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J102",
           "title": "ESTRUCTURAS / Extras",
           "sourceStartRow": 102,
           "source": "ESTUARDO REYNA!J102",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -84758,15 +80900,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J109",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J109",
           "title": "ESTRUCTURAS / Caja de Herramientas",
           "sourceStartRow": 109,
           "source": "ESTUARDO REYNA!J109",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -85193,15 +81335,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J126",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J126",
           "title": "ESTRUCTURAS / Equipo de Limpieza",
           "sourceStartRow": 126,
           "source": "ESTUARDO REYNA!J126",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -85412,15 +81554,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J135",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J135",
           "title": "ESTRUCTURAS / Equipo de proteccion",
           "sourceStartRow": 135,
           "source": "ESTUARDO REYNA!J135",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -85496,15 +81638,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estuardo-reyna:J139",
+          "id": "20261014-dj-audio-01:estuardo-reyna:J139",
           "title": "ESTRUCTURAS / Equipo de Seguridad Industrial",
           "sourceStartRow": 139,
           "source": "ESTUARDO REYNA!J139",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -85759,23 +81901,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:ceremonia:A1",
+          "id": "20261014-dj-audio-01:ceremonia:A1",
           "title": "CEREMONIA",
           "sourceStartRow": 1,
           "source": "CEREMONIA!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -85809,15 +81951,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:ceremonia:A3",
+          "id": "20261014-dj-audio-01:ceremonia:A3",
           "title": "Consola",
           "sourceStartRow": 3,
           "source": "CEREMONIA!A3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -85871,15 +82013,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:ceremonia:A5",
+          "id": "20261014-dj-audio-01:ceremonia:A5",
           "title": "Audio",
           "sourceStartRow": 5,
           "source": "CEREMONIA!A5",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -85928,15 +82070,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:ceremonia:A7",
+          "id": "20261014-dj-audio-01:ceremonia:A7",
           "title": "MICROFONIA",
           "sourceStartRow": 7,
           "source": "CEREMONIA!A7",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -85957,15 +82099,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:ceremonia:A8",
+          "id": "20261014-dj-audio-01:ceremonia:A8",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 8,
           "source": "CEREMONIA!A8",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -86041,15 +82183,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:ceremonia:A11",
+          "id": "20261014-dj-audio-01:ceremonia:A11",
           "title": "MICROFONIA / Pedestales",
           "sourceStartRow": 11,
           "source": "CEREMONIA!A11",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -86256,23 +82398,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:coctel:A1",
+          "id": "20261014-dj-audio-01:coctel:A1",
           "title": "COCTEL - SAXOFONIC",
           "sourceStartRow": 1,
           "source": "COCTEL!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -86319,15 +82461,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:A5",
+          "id": "20261014-dj-audio-01:coctel:A5",
           "title": "Consola",
           "sourceStartRow": 5,
           "source": "COCTEL!A5",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -86381,15 +82523,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:A7",
+          "id": "20261014-dj-audio-01:coctel:A7",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 7,
           "source": "COCTEL!A7",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -86438,15 +82580,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:A9",
+          "id": "20261014-dj-audio-01:coctel:A9",
           "title": "Audio",
           "sourceStartRow": 9,
           "source": "COCTEL!A9",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -86495,15 +82637,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:A11",
+          "id": "20261014-dj-audio-01:coctel:A11",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 11,
           "source": "COCTEL!A11",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -86524,15 +82666,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:A12",
+          "id": "20261014-dj-audio-01:coctel:A12",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 12,
           "source": "COCTEL!A12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -86608,15 +82750,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:A15",
+          "id": "20261014-dj-audio-01:coctel:A15",
           "title": "MICROFONIA",
           "sourceStartRow": 15,
           "source": "COCTEL!A15",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -86637,15 +82779,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:A16",
+          "id": "20261014-dj-audio-01:coctel:A16",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 16,
           "source": "COCTEL!A16",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -86694,15 +82836,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:A18",
+          "id": "20261014-dj-audio-01:coctel:A18",
           "title": "MICROFONIA / Case de Cableado",
           "sourceStartRow": 18,
           "source": "COCTEL!A18",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -86973,23 +83115,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:coctel:D1",
+          "id": "20261014-dj-audio-01:coctel:D1",
           "title": "COCTEL - VIOLIN",
           "sourceStartRow": 1,
           "source": "COCTEL!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -87036,15 +83178,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:D5",
+          "id": "20261014-dj-audio-01:coctel:D5",
           "title": "Consola",
           "sourceStartRow": 5,
           "source": "COCTEL!D5",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -87098,15 +83240,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:D7",
+          "id": "20261014-dj-audio-01:coctel:D7",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 7,
           "source": "COCTEL!D7",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -87155,15 +83297,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:D9",
+          "id": "20261014-dj-audio-01:coctel:D9",
           "title": "Audio",
           "sourceStartRow": 9,
           "source": "COCTEL!D9",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -87212,15 +83354,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:D11",
+          "id": "20261014-dj-audio-01:coctel:D11",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 11,
           "source": "COCTEL!D11",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -87241,15 +83383,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:D12",
+          "id": "20261014-dj-audio-01:coctel:D12",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 12,
           "source": "COCTEL!D12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -87325,15 +83467,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:D15",
+          "id": "20261014-dj-audio-01:coctel:D15",
           "title": "MICROFONIA",
           "sourceStartRow": 15,
           "source": "COCTEL!D15",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -87354,15 +83496,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:D16",
+          "id": "20261014-dj-audio-01:coctel:D16",
           "title": "MICROFONIA / Microfonia para voces",
           "sourceStartRow": 16,
           "source": "COCTEL!D16",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -87438,15 +83580,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:D19",
+          "id": "20261014-dj-audio-01:coctel:D19",
           "title": "MICROFONIA / Case de Cableado",
           "sourceStartRow": 19,
           "source": "COCTEL!D19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -87687,23 +83829,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:coctel:G1",
+          "id": "20261014-dj-audio-01:coctel:G1",
           "title": "COCTEL - PLAYLIST",
           "sourceStartRow": 1,
           "source": "COCTEL!G1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -87750,15 +83892,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:G5",
+          "id": "20261014-dj-audio-01:coctel:G5",
           "title": "Consola",
           "sourceStartRow": 5,
           "source": "COCTEL!G5",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -87812,15 +83954,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:G7",
+          "id": "20261014-dj-audio-01:coctel:G7",
           "title": "Telefono (Mochila)",
           "sourceStartRow": 7,
           "source": "COCTEL!G7",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -87869,15 +84011,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:G9",
+          "id": "20261014-dj-audio-01:coctel:G9",
           "title": "Audio",
           "sourceStartRow": 9,
           "source": "COCTEL!G9",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -87926,15 +84068,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:G11",
+          "id": "20261014-dj-audio-01:coctel:G11",
           "title": "MONITOREO INTERNO",
           "sourceStartRow": 11,
           "source": "COCTEL!G11",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -87955,15 +84097,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:G12",
+          "id": "20261014-dj-audio-01:coctel:G12",
           "title": "MONITOREO INTERNO / Baterias",
           "sourceStartRow": 12,
           "source": "COCTEL!G12",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -88039,15 +84181,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:coctel:G15",
+          "id": "20261014-dj-audio-01:coctel:G15",
           "title": "MONITOREO INTERNO / Case de Cableado",
           "sourceStartRow": 15,
           "source": "COCTEL!G15",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -88303,23 +84445,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:estructuras-en-l:A1",
+          "id": "20261014-dj-audio-01:estructuras-en-l:A1",
           "title": "ESTRUCTURA QSC",
           "sourceStartRow": 1,
           "source": "ESTRUCTURAS EN L!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -88340,15 +84482,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estructuras-en-l:A3",
+          "id": "20261014-dj-audio-01:estructuras-en-l:A3",
           "title": "Estructuras en L",
           "sourceStartRow": 3,
           "source": "ESTRUCTURAS EN L!A3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -88667,15 +84809,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estructuras-en-l:A15",
+          "id": "20261014-dj-audio-01:estructuras-en-l:A15",
           "title": "Telas para forrar ",
           "sourceStartRow": 15,
           "source": "ESTRUCTURAS EN L!A15",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -88904,23 +85046,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:estructuras-en-l:D1",
+          "id": "20261014-dj-audio-01:estructuras-en-l:D1",
           "title": "ESTRUCTURA T4 - COLGAR",
           "sourceStartRow": 1,
           "source": "ESTRUCTURAS EN L!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -88941,15 +85083,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estructuras-en-l:D3",
+          "id": "20261014-dj-audio-01:estructuras-en-l:D3",
           "title": "Estructuras en L",
           "sourceStartRow": 3,
           "source": "ESTRUCTURAS EN L!D3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -89268,15 +85410,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estructuras-en-l:D15",
+          "id": "20261014-dj-audio-01:estructuras-en-l:D15",
           "title": "Telas para forrar ",
           "sourceStartRow": 15,
           "source": "ESTRUCTURAS EN L!D15",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -89505,23 +85647,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:estructuras-en-l:G1",
+          "id": "20261014-dj-audio-01:estructuras-en-l:G1",
           "title": "ESTRUCTURA T4 - PEDESTAL",
           "sourceStartRow": 1,
           "source": "ESTRUCTURAS EN L!G1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -89542,15 +85684,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estructuras-en-l:G3",
+          "id": "20261014-dj-audio-01:estructuras-en-l:G3",
           "title": "Estructuras en L",
           "sourceStartRow": 3,
           "source": "ESTRUCTURAS EN L!G3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -89869,15 +86011,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:estructuras-en-l:G15",
+          "id": "20261014-dj-audio-01:estructuras-en-l:G15",
           "title": "Telas para forrar ",
           "sourceStartRow": 15,
           "source": "ESTRUCTURAS EN L!G15",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -90056,23 +86198,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:A1",
+          "id": "20261014-dj-audio-01:cuadrilatero:A1",
           "title": "CUADRILATERO DE 5 X 7 X 4MTS DE ALTO",
           "sourceStartRow": 1,
           "source": "CUADRILATERO!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -90093,15 +86235,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:A3",
+          "id": "20261014-dj-audio-01:cuadrilatero:A3",
           "title": "Cuadrilatero 5 X 7mts X 4mts de alto con travesaños 5mts",
           "sourceStartRow": 3,
           "source": "CUADRILATERO!A3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -90285,15 +86427,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:A10",
+          "id": "20261014-dj-audio-01:cuadrilatero:A10",
           "title": "Telas para forrar ",
           "sourceStartRow": 10,
           "source": "CUADRILATERO!A10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -90472,23 +86614,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:D1",
+          "id": "20261014-dj-audio-01:cuadrilatero:D1",
           "title": "CUADRILATERO DE 6 X 6 X 4MTS DE ALTO",
           "sourceStartRow": 1,
           "source": "CUADRILATERO!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -90509,15 +86651,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:D3",
+          "id": "20261014-dj-audio-01:cuadrilatero:D3",
           "title": "Cuadrilatero 6 X 6mts X 4mts de alto ",
           "sourceStartRow": 3,
           "source": "CUADRILATERO!D3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -90701,15 +86843,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:D10",
+          "id": "20261014-dj-audio-01:cuadrilatero:D10",
           "title": "Telas para forrar ",
           "sourceStartRow": 10,
           "source": "CUADRILATERO!D10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -90888,23 +87030,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:G1",
+          "id": "20261014-dj-audio-01:cuadrilatero:G1",
           "title": "CUADRILATERO DE 7 X 7 X 4MTS DE ALTO",
           "sourceStartRow": 1,
           "source": "CUADRILATERO!G1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -90925,15 +87067,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:G3",
+          "id": "20261014-dj-audio-01:cuadrilatero:G3",
           "title": "Cuadrilatero 7 X 7mts X 4mts de alto ",
           "sourceStartRow": 3,
           "source": "CUADRILATERO!G3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -91117,15 +87259,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:G10",
+          "id": "20261014-dj-audio-01:cuadrilatero:G10",
           "title": "Telas para forrar ",
           "sourceStartRow": 10,
           "source": "CUADRILATERO!G10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -91304,23 +87446,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:J1",
+          "id": "20261014-dj-audio-01:cuadrilatero:J1",
           "title": "CUADRILATERO DE 8 X 8 X 4MTS DE ALTO",
           "sourceStartRow": 1,
           "source": "CUADRILATERO!J1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -91341,15 +87483,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:J3",
+          "id": "20261014-dj-audio-01:cuadrilatero:J3",
           "title": "Cuadrilatero 8 X 8mts X 4mts de alto ",
           "sourceStartRow": 3,
           "source": "CUADRILATERO!J3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -91533,15 +87675,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:cuadrilatero:J10",
+          "id": "20261014-dj-audio-01:cuadrilatero:J10",
           "title": "Telas para forrar ",
           "sourceStartRow": 10,
           "source": "CUADRILATERO!J10",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -91700,23 +87842,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:A1",
+          "id": "20261014-dj-audio-01:pista-de-baile:A1",
           "title": "PISTA DE BAILE 7 x 7MTS - BLANCA",
           "sourceStartRow": 1,
           "source": "PISTA DE BAILE!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -91737,15 +87879,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:A4",
+          "id": "20261014-dj-audio-01:pista-de-baile:A4",
           "title": "Pista de baile 7.32 X 7.32 mts.",
           "sourceStartRow": 4,
           "source": "PISTA DE BAILE!A4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -91997,23 +88139,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:D1",
+          "id": "20261014-dj-audio-01:pista-de-baile:D1",
           "title": "PISTA DE BAILE 7 x 7MTS - CON DISEÑO",
           "sourceStartRow": 1,
           "source": "PISTA DE BAILE!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -92034,15 +88176,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:D4",
+          "id": "20261014-dj-audio-01:pista-de-baile:D4",
           "title": "Pista de baile 7.32 X 7.32 mts.",
           "sourceStartRow": 4,
           "source": "PISTA DE BAILE!D4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -92260,23 +88402,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:G1",
+          "id": "20261014-dj-audio-01:pista-de-baile:G1",
           "title": "PISTA DE BAILE 6 x 6MTS - BLANCA",
           "sourceStartRow": 1,
           "source": "PISTA DE BAILE!G1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -92297,15 +88439,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:G4",
+          "id": "20261014-dj-audio-01:pista-de-baile:G4",
           "title": "Pista de baile 6.10 x 6.10 mts.",
           "sourceStartRow": 4,
           "source": "PISTA DE BAILE!G4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -92557,23 +88699,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:J1",
+          "id": "20261014-dj-audio-01:pista-de-baile:J1",
           "title": "PISTA DE BAILE 6 x 6MTS - CON DISEÑO",
           "sourceStartRow": 1,
           "source": "PISTA DE BAILE!J1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -92594,15 +88736,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:J4",
+          "id": "20261014-dj-audio-01:pista-de-baile:J4",
           "title": "Pista de baile 6.10 x 6.10 mts.",
           "sourceStartRow": 4,
           "source": "PISTA DE BAILE!J4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -92820,23 +88962,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:M1",
+          "id": "20261014-dj-audio-01:pista-de-baile:M1",
           "title": "PISTA DE BAILE 6 x 4MTS - BLANCA",
           "sourceStartRow": 1,
           "source": "PISTA DE BAILE!M1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -92857,15 +88999,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:M4",
+          "id": "20261014-dj-audio-01:pista-de-baile:M4",
           "title": "Pista de baile 6.10 x 3.66 mts.",
           "sourceStartRow": 4,
           "source": "PISTA DE BAILE!M4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -93117,23 +89259,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:P1",
+          "id": "20261014-dj-audio-01:pista-de-baile:P1",
           "title": "PISTA DE BAILE 6 x 4MTS - DISEÑO",
           "sourceStartRow": 1,
           "source": "PISTA DE BAILE!P1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -93154,15 +89296,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:P4",
+          "id": "20261014-dj-audio-01:pista-de-baile:P4",
           "title": "Pista de baile 6.10 x 3.66 mts.",
           "sourceStartRow": 4,
           "source": "PISTA DE BAILE!P4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -93380,23 +89522,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:S1",
+          "id": "20261014-dj-audio-01:pista-de-baile:S1",
           "title": "PISTA DE BAILE 5 x 5MTS - BLANCA",
           "sourceStartRow": 1,
           "source": "PISTA DE BAILE!S1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -93417,15 +89559,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:S4",
+          "id": "20261014-dj-audio-01:pista-de-baile:S4",
           "title": "Pista de baile 4.88 x 4.88 mts.",
           "sourceStartRow": 4,
           "source": "PISTA DE BAILE!S4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -93677,23 +89819,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:V1",
+          "id": "20261014-dj-audio-01:pista-de-baile:V1",
           "title": "PISTA DE BAILE 5 x 5MTS - DISEÑO",
           "sourceStartRow": 1,
           "source": "PISTA DE BAILE!V1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -93714,15 +89856,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:V4",
+          "id": "20261014-dj-audio-01:pista-de-baile:V4",
           "title": "Pista de baile 4.88 x 4.88 mts.",
           "sourceStartRow": 4,
           "source": "PISTA DE BAILE!V4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -93940,23 +90082,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:Y1",
+          "id": "20261014-dj-audio-01:pista-de-baile:Y1",
           "title": "PISTA DE BAILE 4 x 4MTS - BLANCA",
           "sourceStartRow": 1,
           "source": "PISTA DE BAILE!Y1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -93977,15 +90119,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:Y4",
+          "id": "20261014-dj-audio-01:pista-de-baile:Y4",
           "title": "Pista de baile 3.66 x 3.66 mts.",
           "sourceStartRow": 4,
           "source": "PISTA DE BAILE!Y4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -94237,23 +90379,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:AB1",
+          "id": "20261014-dj-audio-01:pista-de-baile:AB1",
           "title": "PISTA DE BAILE 4 x 4MTS - DISEÑO",
           "sourceStartRow": 1,
           "source": "PISTA DE BAILE!AB1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -94274,15 +90416,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pista-de-baile:AB4",
+          "id": "20261014-dj-audio-01:pista-de-baile:AB4",
           "title": "Pista de baile 3.66 x 3.66 mts.",
           "sourceStartRow": 4,
           "source": "PISTA DE BAILE!AB4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -94675,23 +90817,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:A1",
+          "id": "20261014-dj-audio-01:pantalla-led:A1",
           "title": "PANTALLA LED EN MODULOS 3MTS AL RAS DE PISO",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -94727,15 +90869,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:A4",
+          "id": "20261014-dj-audio-01:pantalla-led:A4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!A4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -94838,15 +90980,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:A8",
+          "id": "20261014-dj-audio-01:pantalla-led:A8",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 8,
           "source": "PANTALLA LED!A8",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -95138,15 +91280,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:A19",
+          "id": "20261014-dj-audio-01:pantalla-led:A19",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 19,
           "source": "PANTALLA LED!A19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -95384,15 +91526,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:A28",
+          "id": "20261014-dj-audio-01:pantalla-led:A28",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 28,
           "source": "PANTALLA LED!A28",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -95699,23 +91841,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:D1",
+          "id": "20261014-dj-audio-01:pantalla-led:D1",
           "title": "PANTALLA LED EN MODULOS 3MTS - SOBRE TARIMA",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -95751,15 +91893,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:D4",
+          "id": "20261014-dj-audio-01:pantalla-led:D4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!D4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -95862,15 +92004,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:D8",
+          "id": "20261014-dj-audio-01:pantalla-led:D8",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 8,
           "source": "PANTALLA LED!D8",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -96162,15 +92304,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:D19",
+          "id": "20261014-dj-audio-01:pantalla-led:D19",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 19,
           "source": "PANTALLA LED!D19",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -96408,15 +92550,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:D28",
+          "id": "20261014-dj-audio-01:pantalla-led:D28",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 28,
           "source": "PANTALLA LED!D28",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -96698,23 +92840,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:G1",
+          "id": "20261014-dj-audio-01:pantalla-led:G1",
           "title": "PANTALLA LED EN MODULOS 2MTS - SOBRE TARIMA",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!G1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -96735,15 +92877,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:G4",
+          "id": "20261014-dj-audio-01:pantalla-led:G4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!G4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -96846,15 +92988,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:G8",
+          "id": "20261014-dj-audio-01:pantalla-led:G8",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 8,
           "source": "PANTALLA LED!G8",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -97119,15 +93261,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:G18",
+          "id": "20261014-dj-audio-01:pantalla-led:G18",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 18,
           "source": "PANTALLA LED!G18",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -97338,15 +93480,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:G26",
+          "id": "20261014-dj-audio-01:pantalla-led:G26",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 26,
           "source": "PANTALLA LED!G26",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -97628,23 +93770,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:J1",
+          "id": "20261014-dj-audio-01:pantalla-led:J1",
           "title": "PANTALLA LED EN MODULOS 2MTS - AL RAS DE PISO",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!J1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -97665,15 +93807,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:J4",
+          "id": "20261014-dj-audio-01:pantalla-led:J4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!J4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -97776,15 +93918,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:J8",
+          "id": "20261014-dj-audio-01:pantalla-led:J8",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 8,
           "source": "PANTALLA LED!J8",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -98049,15 +94191,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:J18",
+          "id": "20261014-dj-audio-01:pantalla-led:J18",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 18,
           "source": "PANTALLA LED!J18",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -98268,15 +94410,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:J26",
+          "id": "20261014-dj-audio-01:pantalla-led:J26",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 26,
           "source": "PANTALLA LED!J26",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -98598,23 +94740,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:M1",
+          "id": "20261014-dj-audio-01:pantalla-led:M1",
           "title": "PANTALLA LED 3 X 2MTS AL RAS DE PISO",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!M1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -98635,15 +94777,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:M4",
+          "id": "20261014-dj-audio-01:pantalla-led:M4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!M4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -98881,15 +95023,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:M13",
+          "id": "20261014-dj-audio-01:pantalla-led:M13",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 13,
           "source": "PANTALLA LED!M13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -99181,15 +95323,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:M24",
+          "id": "20261014-dj-audio-01:pantalla-led:M24",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 24,
           "source": "PANTALLA LED!M24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -99346,15 +95488,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:M30",
+          "id": "20261014-dj-audio-01:pantalla-led:M30",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 30,
           "source": "PANTALLA LED!M30",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -99686,23 +95828,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:P1",
+          "id": "20261014-dj-audio-01:pantalla-led:P1",
           "title": "PANTALLA LED 3 X 2MTS - SOBRE TARIMA",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!P1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -99723,15 +95865,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:P4",
+          "id": "20261014-dj-audio-01:pantalla-led:P4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!P4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -99969,15 +96111,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:P13",
+          "id": "20261014-dj-audio-01:pantalla-led:P13",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 13,
           "source": "PANTALLA LED!P13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -100269,15 +96411,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:P24",
+          "id": "20261014-dj-audio-01:pantalla-led:P24",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 24,
           "source": "PANTALLA LED!P24",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -100461,15 +96603,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:P31",
+          "id": "20261014-dj-audio-01:pantalla-led:P31",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 31,
           "source": "PANTALLA LED!P31",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -100781,23 +96923,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:S1",
+          "id": "20261014-dj-audio-01:pantalla-led:S1",
           "title": "PANTALLA LED 6 X 2MTS - AL RAS DE PISO",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!S1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -100818,15 +96960,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:S4",
+          "id": "20261014-dj-audio-01:pantalla-led:S4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!S4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -101064,15 +97206,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:S13",
+          "id": "20261014-dj-audio-01:pantalla-led:S13",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 13,
           "source": "PANTALLA LED!S13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -101337,15 +97479,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:S23",
+          "id": "20261014-dj-audio-01:pantalla-led:S23",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 23,
           "source": "PANTALLA LED!S23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -101502,15 +97644,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:S29",
+          "id": "20261014-dj-audio-01:pantalla-led:S29",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 29,
           "source": "PANTALLA LED!S29",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -101832,23 +97974,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:V1",
+          "id": "20261014-dj-audio-01:pantalla-led:V1",
           "title": "PANTALLA LED 6 X 2MTS - SOBRE TARIMA",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!V1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -101869,15 +98011,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:V4",
+          "id": "20261014-dj-audio-01:pantalla-led:V4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!V4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -102115,15 +98257,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:V13",
+          "id": "20261014-dj-audio-01:pantalla-led:V13",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 13,
           "source": "PANTALLA LED!V13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -102388,15 +98530,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:V23",
+          "id": "20261014-dj-audio-01:pantalla-led:V23",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 23,
           "source": "PANTALLA LED!V23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -102580,15 +98722,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:V30",
+          "id": "20261014-dj-audio-01:pantalla-led:V30",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 30,
           "source": "PANTALLA LED!V30",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -102910,23 +99052,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:Y1",
+          "id": "20261014-dj-audio-01:pantalla-led:Y1",
           "title": "PANTALLA LED 6 X 3MTS - AL RAS DE PISO",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!Y1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -102947,15 +99089,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:Y4",
+          "id": "20261014-dj-audio-01:pantalla-led:Y4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!Y4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -103193,15 +99335,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:Y13",
+          "id": "20261014-dj-audio-01:pantalla-led:Y13",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 13,
           "source": "PANTALLA LED!Y13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -103466,15 +99608,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:Y23",
+          "id": "20261014-dj-audio-01:pantalla-led:Y23",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 23,
           "source": "PANTALLA LED!Y23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -103658,15 +99800,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:Y30",
+          "id": "20261014-dj-audio-01:pantalla-led:Y30",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 30,
           "source": "PANTALLA LED!Y30",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -103998,23 +100140,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AB1",
+          "id": "20261014-dj-audio-01:pantalla-led:AB1",
           "title": "PANTALLA LED 6 X 3MTS - SOBRE TARIMA",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!AB1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -104035,15 +100177,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AB4",
+          "id": "20261014-dj-audio-01:pantalla-led:AB4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!AB4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -104281,15 +100423,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AB13",
+          "id": "20261014-dj-audio-01:pantalla-led:AB13",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 13,
           "source": "PANTALLA LED!AB13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -104554,15 +100696,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AB23",
+          "id": "20261014-dj-audio-01:pantalla-led:AB23",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 23,
           "source": "PANTALLA LED!AB23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -104773,15 +100915,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AB31",
+          "id": "20261014-dj-audio-01:pantalla-led:AB31",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 31,
           "source": "PANTALLA LED!AB31",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -105083,23 +101225,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AE1",
+          "id": "20261014-dj-audio-01:pantalla-led:AE1",
           "title": "PANTALLA LED 6 X 4MTS - AL RAS DE PISO",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!AE1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -105120,15 +101262,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AE4",
+          "id": "20261014-dj-audio-01:pantalla-led:AE4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!AE4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -105366,15 +101508,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AE13",
+          "id": "20261014-dj-audio-01:pantalla-led:AE13",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 13,
           "source": "PANTALLA LED!AE13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -105639,15 +101781,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AE23",
+          "id": "20261014-dj-audio-01:pantalla-led:AE23",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 23,
           "source": "PANTALLA LED!AE23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -105777,15 +101919,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AE28",
+          "id": "20261014-dj-audio-01:pantalla-led:AE28",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 28,
           "source": "PANTALLA LED!AE28",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -106097,23 +102239,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AH1",
+          "id": "20261014-dj-audio-01:pantalla-led:AH1",
           "title": "PANTALLA LED 6 X 4MTS - SOBRE TARIMA",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!AH1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -106134,15 +102276,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AH4",
+          "id": "20261014-dj-audio-01:pantalla-led:AH4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!AH4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -106380,15 +102522,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AH13",
+          "id": "20261014-dj-audio-01:pantalla-led:AH13",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 13,
           "source": "PANTALLA LED!AH13",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -106653,15 +102795,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AH23",
+          "id": "20261014-dj-audio-01:pantalla-led:AH23",
           "title": "CABLES PARA PANTALLA  / Estructura para pantalla",
           "sourceStartRow": 23,
           "source": "PANTALLA LED!AH23",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -106818,15 +102960,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AH29",
+          "id": "20261014-dj-audio-01:pantalla-led:AH29",
           "title": "CABLES PARA PANTALLA  / Telas para forrar estructuras",
           "sourceStartRow": 29,
           "source": "PANTALLA LED!AH29",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -107018,23 +103160,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AK1",
+          "id": "20261014-dj-audio-01:pantalla-led:AK1",
           "title": "PANTALLA LED - DJ BOOTH",
           "sourceStartRow": 1,
           "source": "PANTALLA LED!AK1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -107055,15 +103197,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AK4",
+          "id": "20261014-dj-audio-01:pantalla-led:AK4",
           "title": "PANTALLA EN MODULOS",
           "sourceStartRow": 4,
           "source": "PANTALLA LED!AK4",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -107166,15 +103308,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:pantalla-led:AK8",
+          "id": "20261014-dj-audio-01:pantalla-led:AK8",
           "title": "CABLES PARA PANTALLA ",
           "sourceStartRow": 8,
           "source": "PANTALLA LED!AK8",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -107572,23 +103714,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:tarima:A1",
+          "id": "20261014-dj-audio-01:tarima:A1",
           "title": "TARIMA 6 X 4MTS - NEGRO",
           "sourceStartRow": 1,
           "source": "TARIMA!A1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -107609,15 +103751,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:tarima:A3",
+          "id": "20261014-dj-audio-01:tarima:A3",
           "title": "Tarima de 6.10 x 3.66 mts.",
           "sourceStartRow": 3,
           "source": "TARIMA!A3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -108034,23 +104176,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:tarima:D1",
+          "id": "20261014-dj-audio-01:tarima:D1",
           "title": "TARIMA 6 X 4MTS - CON DISEÑO",
           "sourceStartRow": 1,
           "source": "TARIMA!D1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -108071,15 +104213,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:tarima:D3",
+          "id": "20261014-dj-audio-01:tarima:D3",
           "title": "Tarima de 6.10 x 3.66 mts. con diseño",
           "sourceStartRow": 3,
           "source": "TARIMA!D3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -108428,23 +104570,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:tarima:G1",
+          "id": "20261014-dj-audio-01:tarima:G1",
           "title": "TARIMA 6 X 5 MTS - NEGRO",
           "sourceStartRow": 1,
           "source": "TARIMA!G1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -108465,15 +104607,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:tarima:G3",
+          "id": "20261014-dj-audio-01:tarima:G3",
           "title": "Tarima de 6.10 x 4.88 mts.",
           "sourceStartRow": 3,
           "source": "TARIMA!G3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -108930,23 +105072,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:tarima:J1",
+          "id": "20261014-dj-audio-01:tarima:J1",
           "title": "TARIMA 5 X 4MTS - NEGRO",
           "sourceStartRow": 1,
           "source": "TARIMA!J1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -108967,15 +105109,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:tarima:J3",
+          "id": "20261014-dj-audio-01:tarima:J3",
           "title": "Tarima de 4.88 x 3.66 mts.",
           "sourceStartRow": 3,
           "source": "TARIMA!J3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -109422,23 +105564,23 @@ window.requerimientoEquipoCatalog = {
         }
       ],
       "importSource": {
-        "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+        "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
         "bookKey": "servicios",
-        "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-        "version": "20261013-servicios-archivo-01",
+        "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+        "version": "20261014-dj-audio-01",
         "authoritative": true
       },
       "mainSections": [
         {
-          "id": "20261013-servicios-archivo-01:tarima:M1",
+          "id": "20261014-dj-audio-01:tarima:M1",
           "title": "TARIMA 3 X 4MTS - NEGRO",
           "sourceStartRow": 1,
           "source": "TARIMA!M1",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [],
@@ -109459,15 +105601,15 @@ window.requerimientoEquipoCatalog = {
           ]
         },
         {
-          "id": "20261013-servicios-archivo-01:tarima:M3",
+          "id": "20261014-dj-audio-01:tarima:M3",
           "title": "Tarima de 2.44 x 3.66 mts.",
           "sourceStartRow": 3,
           "source": "TARIMA!M3",
           "importSource": {
-            "fileName": "EQUIPO DE AUDIO ACTUALIZADO.xlsx",
+            "fileName": "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx",
             "bookKey": "servicios",
-            "sha256": "0a489e152756944b4c1942d51dbd6e6eea4a98a4593426f3f99756a625271411",
-            "version": "20261013-servicios-archivo-01",
+            "sha256": "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1",
+            "version": "20261014-dj-audio-01",
             "authoritative": true
           },
           "items": [
@@ -109781,8 +105923,7 @@ window.requerimientoEquipoCatalog = {
     {
       "label": "DJ",
       "serviceIds": [
-        "dj-completo-audio-qsc",
-        "dj-completo-audio-jbl",
+        "dj-completo",
         "dj-privado"
       ]
     },
