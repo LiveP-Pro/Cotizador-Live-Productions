@@ -187,6 +187,8 @@ test("canceling a later pending decision commits neither purchase intent nor sav
   const context = createContext();
   loadWarehouse(context);
   evaluate(context, `
+    equipmentServices["synthetic-current-service"] = { name: "Servicio sintético actual", mainSections: [], extras: [] };
+    setEquipmentServiceSelection(["synthetic-current-service"]);
     equipmentState.manualExtras = [
       { id: "synthetic-pending-a", quantity: 2, description: "Equipo sintético pendiente A" },
       { id: "synthetic-pending-b", quantity: 3, description: "Equipo sintético pendiente B" }

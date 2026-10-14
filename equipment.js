@@ -406,22 +406,10 @@ function equipmentEventTimelineValidation(event, options = {}) {
   if (!setupAt) missingFields.push("fecha y hora de montaje");
   if (!eventDate) missingFields.push("fecha del evento");
   if (!equipmentInAt) missingFields.push("fecha y hora de ingreso del equipo");
-  if (requireComplete && missingFields.length) {
-    return {
-      valid: false,
-      code: "missing-schedule",
-      title: "Complete las fechas operativas",
-      summary: `Falta completar: ${missingFields.join(", ")}.`,
-      detail: "Estos datos son obligatorios para calcular disponibilidad, renta y trasiego sin errores.",
-      invalidFields: missingFields
-    };
-  }
-  if (!setupAt || !eventDate || !equipmentInAt) {
-    return { valid: true, incomplete: true, code: "incomplete-schedule", invalidFields: [] };
-  }
   const setupMs = equipmentDateTimeMillis(setupAt);
   const returnMs = equipmentDateTimeMillis(equipmentInAt);
-  if (!Number.isFinite(setupMs) || !Number.isFinite(returnMs) || returnMs < setupMs) {
+  if ((setupAt && !Number.isFinite(setupMs)) || (equipmentInAt && !Number.isFinite(returnMs))
+      || (setupAt && equipmentInAt && returnMs < setupMs)) {
     return {
       valid: false,
       code: "return-before-setup",
@@ -433,15 +421,31 @@ function equipmentEventTimelineValidation(event, options = {}) {
   }
   const setupDate = equipmentDateKeyFromDateTime(setupAt);
   const returnDate = equipmentDateKeyFromDateTime(equipmentInAt);
-  if (eventDate < setupDate || eventDate > returnDate) {
+  if (eventDate && ((setupDate && eventDate < setupDate) || (returnDate && eventDate > returnDate))) {
     return {
       valid: false,
       code: "event-outside-operation-range",
       title: "Fecha del evento fuera del rango",
       summary: "EL EVENTO SE LLEVARÁ FUERA DE LAS FECHAS ESTABLECIDAS, LO CUAL GENERA UN ERROR.",
-      detail: `La fecha del evento debe estar entre el montaje del ${formatEquipmentDate(setupDate)} y el ingreso del equipo del ${formatEquipmentDate(returnDate)}.`,
+      detail: setupDate && returnDate
+        ? `La fecha del evento debe estar entre el montaje del ${formatEquipmentDate(setupDate)} y el ingreso del equipo del ${formatEquipmentDate(returnDate)}.`
+        : setupDate ? `La fecha del evento no puede ser anterior al montaje del ${formatEquipmentDate(setupDate)}.`
+          : `La fecha del evento no puede ser posterior al ingreso del equipo del ${formatEquipmentDate(returnDate)}.`,
       invalidFields: ["date"]
     };
+  }
+  if (requireComplete && missingFields.length) {
+    return {
+      valid: false,
+      code: "missing-schedule",
+      title: "Complete las fechas operativas",
+      summary: `Falta completar: ${missingFields.join(", ")}.`,
+      detail: "Estos datos son obligatorios para calcular disponibilidad, renta y trasiego sin errores.",
+      invalidFields: missingFields
+    };
+  }
+  if (missingFields.length) {
+    return { valid: true, incomplete: true, code: "incomplete-schedule", invalidFields: [] };
   }
   return { valid: true, incomplete: false, code: "ok", invalidFields: [] };
 }
@@ -780,6 +784,10 @@ function equipmentPeakRequiredQuantity(row, events, transferRoutes = [], applyTr
   events.forEach((event) => {
     const eventQuantity = Math.max(0, Number(row.eventQuantities.get(event.id)) || 0);
     if (!eventQuantity) return;
+    if (!equipmentEventTimelineValidation(event, { requireComplete: true }).valid) {
+      quantityWithoutDates += eventQuantity;
+      return;
+    }
     const inbound = applyTransfers
       ? equipmentTransferInboundStats(row, event.id, transferRoutes)
       : { quantity: 0, adjustmentQuantity: 0, routeIds: new Set() };
@@ -1623,7 +1631,11 @@ function equipmentSummaryColumnName(event, index = 0) {
 }
 
 function equipmentEventCardTitle(event, index = 0) {
-  return event?.place?.trim() || event?.name?.trim() || `Ventana ${index + 1}`;
+  const place = event?.place?.trim();
+  const name = event?.name?.trim();
+  return (place && place !== "Lugar por definir" ? place : "")
+    || (name && name !== "Evento por definir" ? name : "")
+    || event?.serviceName || `Ventana ${index + 1}`;
 }
 
 function equipmentEventNameForFile(event) {
@@ -2601,6 +2613,9 @@ function renderEquipmentEvents() {
       const cardTitle = equipmentEventCardTitle(event, index);
       const eventName = event.name && event.name !== "Evento por definir" ? event.name : "";
       const eventNameLine = eventName ? `<span>Evento: ${escapeEquipmentHtml(eventName)}</span>` : "";
+      const audioLine = Object.entries(cloneEquipmentDjAudioSelections(event.djAudioSelections, event.serviceIds || event.serviceId))
+        .map(([serviceId, audioId]) => `<span>Audio de ${escapeEquipmentHtml(equipmentServices[serviceId].name)}: ${escapeEquipmentHtml(equipmentServices[audioId].name)}</span>`)
+        .join("");
       const logisticsLine = event.equipmentInAt
         ? `<span>Ingreso: ${escapeEquipmentHtml(equipmentEventReturnDateTime(event))}</span>`
         : "";
@@ -2609,6 +2624,7 @@ function renderEquipmentEvents() {
           <button class="equipment-event-open" type="button" data-open-event="${escapeEquipmentHtml(event.id)}">
             <strong>${escapeEquipmentHtml(`${index + 1}. ${cardTitle}`)}</strong>
             <small>${escapeEquipmentHtml(serviceName)}</small>
+            ${audioLine}
             ${eventNameLine}
             <span>Fecha del evento: ${escapeEquipmentHtml(date)}</span>
             <span>Montaje: ${escapeEquipmentHtml(setupAt)}</span>
@@ -2641,46 +2657,7 @@ function startNewEquipmentWindowDraft() {
 }
 
 function addEquipmentEvent() {
-  if (equipmentState.selectedEventId) {
-    startNewEquipmentWindowDraft();
-    return;
-  }
-  const draft = currentEquipmentEventDraft();
-  const status = equipmentQuery("#equipmentSaveStatus");
-  const serviceIds = selectedEquipmentServiceIds();
-  if (!serviceIds.length && !equipmentState.documentSections.length) {
-    if (status) status.textContent = "Seleccione el tipo de servicio antes de crear una ventana.";
-    return;
-  }
-  if (!draft.place || draft.place === "Lugar por definir") {
-    if (status) status.textContent = "Escriba el lugar del evento antes de crear la ventana.";
-    return;
-  }
-  if (!draft.name || draft.name === "Evento por definir") {
-    if (status) status.textContent = "Escriba el nombre del evento antes de crear la ventana.";
-    return;
-  }
-  const timelineValidation = equipmentEventTimelineValidation(draft, { requireComplete: true });
-  if (!timelineValidation.valid) {
-    reportEquipmentTimelineValidation(timelineValidation);
-    return;
-  }
-  const createdEvent = {
-    ...draft,
-    ...captureEquipmentEventSnapshot(),
-    id: `event-${Date.now()}-${equipmentEventCounter++}`,
-    warehouseDispatchId: equipmentState.draftWarehouseDispatchId
-  };
-  invalidateEquipmentRentalPreview();
-  equipmentState.events.push(createdEvent);
-  resetEquipmentWindowDraft();
-  renderEquipmentModule();
-  const nextStatus = equipmentQuery("#equipmentSaveStatus");
-  if (nextStatus) {
-    nextStatus.textContent = `Ventana agregada para ${draft.place}. Ya puede capturar el siguiente evento.`;
-    nextStatus.classList.remove("is-error");
-  }
-  queueEquipmentAutomaticLogisticsRecommendation(createdEvent.id);
+  return saveCurrentEquipmentWindowWithExtraChoices({ clearAfterSave: true });
 }
 
 function refreshEquipmentSummaryAndPreview() {
@@ -3707,13 +3684,14 @@ async function resolveEquipmentPendingExtraChoices() {
   return purchases;
 }
 
-async function saveCurrentEquipmentWindowWithExtraChoices() {
+async function saveCurrentEquipmentWindowWithExtraChoices(options = {}) {
   if (equipmentExtraEntryBusy) return false;
+  if (!validateCurrentEquipmentWindowDraft()) return false;
   equipmentExtraEntryBusy = true;
   try {
     const purchases = await resolveEquipmentPendingExtraChoices();
     if (!purchases) return false;
-    const saved = saveCurrentEquipmentWindow();
+    const saved = saveCurrentEquipmentWindow(options);
     if (saved) sendEquipmentPurchaseRequest(purchases);
     return saved;
   } catch (error) {
@@ -5214,12 +5192,15 @@ function renderEquipmentWindowState() {
   if (reviewButton) reviewButton.classList.toggle("is-active", activeWindow === "review");
   if (summaryButton) summaryButton.classList.toggle("is-active", activeWindow === "summary");
   if (transferButton) transferButton.classList.toggle("is-active", activeWindow === "transfer");
-  if (addEventButton) addEventButton.textContent = equipmentState.selectedEventId ? "Crear nueva ventana" : "Agregar ventana";
+  if (addEventButton) addEventButton.textContent = "Agregar ventana";
   if (saveWindowButton) {
-    saveWindowButton.disabled = !equipmentState.selectedEventId;
-    saveWindowButton.title = equipmentState.selectedEventId
+    const hasSelectedEvent = Boolean(selectedEquipmentEvent());
+    const hasCurrentService = Boolean(currentEquipmentService());
+    saveWindowButton.disabled = !hasSelectedEvent && !hasCurrentService;
+    saveWindowButton.textContent = hasSelectedEvent ? "Guardar cambios" : "Guardar ventana";
+    saveWindowButton.title = hasSelectedEvent
       ? "Guardar inmediatamente los cambios de la ventana seleccionada"
-      : "Seleccione una ventana para guardar cambios";
+      : hasCurrentService ? "Guardar la nueva ventana con el equipo agregado" : "Seleccione un servicio o importe un cuadro para guardar la ventana";
   }
 }
 
@@ -5570,40 +5551,48 @@ function previewEquipmentRentReport(options = {}) {
   }
 }
 
-function saveCurrentEquipmentWindow() {
+function validateCurrentEquipmentWindowDraft() {
   const status = equipmentQuery("#equipmentSaveStatus");
-  const draft = currentEquipmentEventDraft();
   if (!currentEquipmentService()) {
     if (status) status.textContent = "Seleccione el tipo de servicio antes de guardar la ventana.";
     return false;
   }
-  if (!draft.place || draft.place === "Lugar por definir") {
-    if (status) status.textContent = "Escriba el lugar del evento antes de guardar la ventana.";
-    return false;
-  }
-  if (!draft.name || draft.name === "Evento por definir") {
-    if (status) status.textContent = "Escriba el nombre del evento antes de guardar la ventana.";
-    return false;
-  }
-  const timelineValidation = equipmentEventTimelineValidation(draft, { requireComplete: true });
+  const timelineValidation = equipmentEventTimelineValidation(currentEquipmentEventDraft());
   if (!timelineValidation.valid) {
     reportEquipmentTimelineValidation(timelineValidation);
     return false;
   }
-  const event = selectedEquipmentEvent();
-  if (!event) {
-    const previousEventCount = equipmentState.events.length;
-    addEquipmentEvent();
-    return equipmentState.events.length > previousEventCount;
-  }
+  return true;
+}
+
+function saveCurrentEquipmentWindow(options = {}) {
+  if (!validateCurrentEquipmentWindowDraft()) return false;
+  const draft = currentEquipmentEventDraft();
+  let event = selectedEquipmentEvent();
   invalidateEquipmentRentalPreview();
-  updateEquipmentEventFromCurrent(event);
-  if (status) {
-    status.textContent = `Ventana actualizada: ${event.place || event.name}`;
-    status.classList.remove("is-error");
+  if (!event) {
+    event = {
+      ...draft,
+      ...captureEquipmentEventSnapshot(),
+      id: `event-${Date.now()}-${equipmentEventCounter++}`,
+      warehouseDispatchId: equipmentState.draftWarehouseDispatchId
+    };
+    equipmentState.events.push(event);
+    equipmentState.selectedEventId = event.id;
+  } else {
+    updateEquipmentEventFromCurrent(event);
   }
+  const clearAfterSave = options?.clearAfterSave === true;
+  if (clearAfterSave) resetEquipmentWindowDraft();
   markEquipmentTimelineValidation({ valid: true, invalidFields: [] });
   renderEquipmentModule();
+  const status = equipmentQuery("#equipmentSaveStatus");
+  if (status) {
+    status.textContent = clearAfterSave
+      ? `Ventana guardada: ${event.serviceName}. Seleccione otro servicio para agregar la siguiente.`
+      : `Ventana guardada: ${event.serviceName || event.place || event.name}`;
+    status.classList.remove("is-error");
+  }
   queueEquipmentAutomaticLogisticsRecommendation(event.id);
   return true;
 }
