@@ -10,6 +10,7 @@ const { DatabaseSync } = require("node:sqlite");
 const { parseInventoryFile } = require("./warehouse-import.cjs");
 const { parseServiceFile, verifyServiceImport } = require("./equipment-service-import.cjs");
 const { applyStockIngress, prepareWarehouseSave, nextWarehouseTimestamp } = require("./warehouse-ledger.cjs");
+const { authoritativeSeed, planAuthoritativeSeed, protectedWarehouseMetadata, warehouseSourceStatus } = require("./warehouse-authoritative-seed.cjs");
 
 const rootDir = __dirname;
 const port = Number.parseInt(process.env.PORT || "8787", 10);
@@ -49,7 +50,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261013-servicios-archivo-03";
+const warehouseAssetVersion = "20261013-inventario-disponible-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -149,13 +150,36 @@ function warehouseInventoryMigrationBackupPath(datasetId) {
   return path.join(dataDir, `inventario-bodega-antes-${fingerprint}.json`);
 }
 
-function replaceWarehouseInventorySync(normalized) {
-  const temporaryPath = `${warehouseInventoryPath}.tmp-${process.pid}-${Date.now()}`;
+function replaceWarehouseInventorySync(normalized, targetPath = warehouseInventoryPath) {
+  const temporaryPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
   fs.writeFileSync(temporaryPath, JSON.stringify(normalized, null, 2), { mode: 0o600 });
-  fs.renameSync(temporaryPath, warehouseInventoryPath);
+  fs.renameSync(temporaryPath, targetPath);
 }
 
 function ensureWarehouseInventoryStorage() {
+  const deployed = fs.existsSync(warehouseInventoryBundledInitialPath)
+    ? readWarehouseInventoryFile(warehouseInventoryBundledInitialPath) : null;
+  if (authoritativeSeed(deployed)) {
+    let current = null;
+    if (fs.existsSync(warehouseInventoryPath)) current = readWarehouseInventoryFile(warehouseInventoryPath);
+    else if (fs.existsSync(warehouseInventoryPrivateInitialPath)) current = readWarehouseInventoryFile(warehouseInventoryPrivateInitialPath);
+    const migration = planAuthoritativeSeed(current, deployed);
+    if (!migration.applied) return;
+    const backupPath = warehouseInventoryMigrationBackupPath(migration.metadata.datasetId);
+    if (fs.existsSync(warehouseInventoryPath)) {
+      if (!fs.existsSync(backupPath)) fs.copyFileSync(warehouseInventoryPath, backupPath);
+      fs.copyFileSync(warehouseInventoryPath, warehouseInventoryBackupPath);
+    }
+    if (fs.existsSync(warehouseInventoryPrivateInitialPath) && !fs.existsSync(`${backupPath}.inicial.json`)) {
+      fs.copyFileSync(warehouseInventoryPrivateInitialPath, `${backupPath}.inicial.json`);
+    }
+    // Write the private reset baseline first. If interrupted before the active
+    // rename, retrying will still find an unmarked active state and migrate it.
+    replaceWarehouseInventorySync(migration.saved, warehouseInventoryPrivateInitialPath);
+    replaceWarehouseInventorySync(migration.saved);
+    console.log(`Inventario autorizado aplicado al conjunto ${migration.metadata.datasetId}.`);
+    return;
+  }
   const initial = readWarehouseInventoryInitial();
   if (!fs.existsSync(warehouseInventoryPath)) {
     replaceWarehouseInventorySync(initial);
@@ -169,7 +193,7 @@ function ensureWarehouseInventoryStorage() {
   try {
     current = readWarehouseInventoryFile(warehouseInventoryPath);
   } catch (error) {
-    console.warn(`El inventario activo no se pudo leer y será sustituido: ${error.message}`);
+    throw new Error(`El inventario activo no se pudo leer; la migración se detuvo para conservar el historial: ${error.message}`);
   }
   if (warehouseInventoryDatasetId(current) === targetDatasetId) return;
 
@@ -196,7 +220,7 @@ function warehouseAuditActor(request) {
 
 async function writeWarehouseInventory(normalized, context = {}) {
   const current = readWarehouseInventory();
-  const audited = prepareWarehouseSave(current, normalized.state, context);
+  const audited = prepareWarehouseSave(current, protectedWarehouseMetadata(current, normalized.state), context);
   Object.assign(normalized, audited);
   if (fs.existsSync(warehouseInventoryPath)) {
     await fsp.copyFile(warehouseInventoryPath, warehouseInventoryBackupPath);
@@ -3164,13 +3188,10 @@ async function saveQuoteBatch(payload, response) {
 }
 
 function warehouseDispatchLookupKey(value) {
-  return String(value || "")
+  return String(value ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase("es-GT")
-    .replace(/[“”"']/g, "")
-    .replace(/\bno\.\s*/g, "no ")
-    .replace(/[.,;:]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -3181,13 +3202,61 @@ function warehouseDispatchHasConsumableMarker(value) {
 
 function warehouseDispatchLookupKeys(value) {
   const key = warehouseDispatchLookupKey(value);
-  const withoutConsumableMarker = key.replace(/\s*\/?\s*consumible$/i, "").trim();
-  return [...new Set([key, withoutConsumableMarker].filter(Boolean))];
+  return key ? [key] : [];
 }
 
 function warehouseDispatchItemIsConsumable(item) {
-  return String(item?.itemType || "").trim().toLowerCase() === "consumible"
-    || warehouseDispatchHasConsumableMarker(item?.name);
+  const type = String(item?.itemType || "").trim().toLowerCase();
+  if (["equipo", "consumible"].includes(type)) return type === "consumible";
+  return warehouseDispatchHasConsumableMarker(item?.name);
+}
+
+function warehouseDispatchInventoryLookup(state) {
+  const activeItems = (state.items || []).filter((item) => item && !item.archived);
+  const itemsById = new Map(activeItems.map((item) => [String(item.id || ""), item]));
+  const itemsByName = new Map();
+  activeItems.forEach((item) => {
+    const key = warehouseDispatchLookupKey(item.name);
+    if (!key) return;
+    if (!itemsByName.has(key)) itemsByName.set(key, []);
+    itemsByName.get(key).push(item);
+  });
+  // Aliases come only from this authorized inventory source. A source alias
+  // must never reinterpret the literal current name of another physical item.
+  (Array.isArray(state.approvedNameAliases) ? state.approvedNameAliases : []).forEach((entry) => {
+    const item = itemsById.get(String(entry?.itemId || ""));
+    const key = warehouseDispatchLookupKey(entry?.alias);
+    if (!item || !key) return;
+    const literal = activeItems.filter((candidate) => warehouseDispatchLookupKey(candidate.name) === key);
+    if (literal.some((candidate) => String(candidate.id) !== String(item.id))) return;
+    if (!itemsByName.has(key)) itemsByName.set(key, []);
+    if (!itemsByName.get(key).some((candidate) => String(candidate.id) === String(item.id))) itemsByName.get(key).push(item);
+  });
+  return { itemsById, itemsByName };
+}
+
+function warehouseDispatchCandidates(line, lookup) {
+  if (line?.inventoryMatchUnresolved === true) return [];
+  const key = warehouseDispatchLookupKey(line?.description);
+  const byDescription = lookup.itemsByName.get(key) || [];
+  const matchesDescription = (item) => byDescription.some((candidate) => String(candidate.id) === String(item.id));
+  const singleton = (items) => {
+    let candidates = [...new Map(items.map((item) => [String(item.id), item])).values()];
+    const category = warehouseDispatchLookupKey(line?.category);
+    if (candidates.length > 1 && category) candidates = candidates.filter((item) => warehouseDispatchLookupKey(item.category) === category);
+    return candidates.length === 1 ? candidates : [];
+  };
+  const boundId = String(line?.warehouseInventoryId || "").trim();
+  if (boundId) {
+    const item = lookup.itemsById.get(boundId);
+    // A valid but mismatching bound identity is rejected. A missing old ID can
+    // resolve only through an unequivocal name from the current source.
+    return item ? matchesDescription(item) ? [item] : [] : singleton(byDescription);
+  }
+  const requestedItems = (Array.isArray(line?.warehouseItemIds) ? line.warehouseItemIds : [])
+    .map((id) => lookup.itemsById.get(String(id))).filter(Boolean);
+  if (requestedItems.length) return requestedItems.every(matchesDescription) ? singleton(requestedItems) : [];
+  return singleton(byDescription);
 }
 
 function warehouseDispatchQuantity(value) {
@@ -3297,16 +3366,7 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData, request)
     );
   }
 
-  const activeItems = (state.items || []).filter((item) => item && !item.archived);
-  const itemsById = new Map(activeItems.map((item) => [String(item.id || ""), item]));
-  const itemsByName = new Map();
-  activeItems.forEach((item) => {
-    const descriptions = [item.name, item.sourceKey, ...(Array.isArray(item.descriptionAliases) ? item.descriptionAliases : [])];
-    [...new Set(descriptions.flatMap(warehouseDispatchLookupKeys))].forEach((key) => {
-      if (!itemsByName.has(key)) itemsByName.set(key, []);
-      itemsByName.get(key).push(item);
-    });
-  });
+  const inventoryLookup = warehouseDispatchInventoryLookup(state);
 
   const eventName = String(dispatch.name || "Evento por definir").trim() || "Evento por definir";
   const eventPlace = String(dispatch.place || "Lugar por definir").trim() || "Lugar por definir";
@@ -3380,25 +3440,9 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData, request)
       if (procurementChoice === "purchase") purchaseQuantity += remaining;
       return;
     }
-    const boundId = String(line?.warehouseInventoryId || "").trim();
-    const requestedIds = boundId ? [boundId] : Array.isArray(line?.warehouseItemIds) ? line.warehouseItemIds.map(String) : [];
-    const requestedItems = requestedIds.map((id) => itemsById.get(id)).filter(Boolean);
-    const descriptionKeys = warehouseDispatchLookupKeys(description);
-    const fallbackItems = descriptionKeys
-      .flatMap((key) => itemsByName.get(key) || []);
-    const category = warehouseDispatchLookupKey(line?.category);
-    let candidates = line?.inventoryMatchUnresolved === true ? []
-      : [...new Map((requestedIds.length ? requestedItems : fallbackItems).map((item) => [String(item.id), item])).values()];
-    const sameCategory = candidates.filter((item) => warehouseDispatchLookupKey(item.category) === category);
-    if (sameCategory.length) candidates = sameCategory;
-    const matchesDescription = (name) => warehouseDispatchLookupKeys(name).some((key) => descriptionKeys.includes(key));
-    const matchRank = (item) => matchesDescription(item.name) ? 0 : matchesDescription(item.sourceKey) ? 1
-      : (Array.isArray(item.descriptionAliases) ? item.descriptionAliases : []).some(matchesDescription) ? 2 : 3;
-    const bestRank = Math.min(...candidates.map(matchRank));
-    candidates = candidates.filter((item) => matchRank(item) === bestRank);
-    const consumable = line?.consumable === true
-      || warehouseDispatchHasConsumableMarker(description)
-      || candidates.some(warehouseDispatchItemIsConsumable);
+    const candidates = warehouseDispatchCandidates(line, inventoryLookup);
+    const consumable = candidates.length === 1 ? warehouseDispatchItemIsConsumable(candidates[0])
+      : line?.consumable === true || warehouseDispatchHasConsumableMarker(description);
 
     candidates.forEach((item) => {
       if (remaining <= 0) return;
@@ -3598,6 +3642,17 @@ async function handleRequest(request, response) {
   const url = new URL(request.url, `http://${request.headers.host || "127.0.0.1"}`);
 
   try {
+    if (request.method === "GET" && url.pathname === "/api/inventario-bodega/fuente-estado") {
+      response.setHeader("Cache-Control", "no-store");
+      try {
+        const seed = fs.existsSync(warehouseInventoryBundledInitialPath)
+          ? readWarehouseInventoryFile(warehouseInventoryBundledInitialPath) : null;
+        jsonResponse(response, 200, warehouseSourceStatus(readWarehouseInventory(), seed, warehouseAssetVersion));
+      } catch {
+        jsonResponse(response, 503, warehouseSourceStatus(null, null, warehouseAssetVersion));
+      }
+      return;
+    }
     if (request.method === "GET" && url.pathname === "/api/sesion") {
       const user = authenticatedUser(request);
       jsonResponse(response, 200, { authenticated: Boolean(user), user });

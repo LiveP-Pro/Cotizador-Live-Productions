@@ -278,7 +278,7 @@ test("later requirement edits preserve the original receipt and never silently r
   assert.equal(evaluate(context, "equipmentProcurementReportRows('rent')[0].missing"), 4);
 });
 
-test("a saved extra with a receipt stays a stock shortage when its warehouse item is subsequently removed", async () => {
+test("a saved extra with a receipt becomes unidentified when its warehouse item is subsequently removed", async () => {
   const { context, ledger } = createContext();
   setBatch(context, [[3, "Equipo sintético retirado"]], ["save"]);
   assert.equal(await tryAdd(context), true);
@@ -288,7 +288,12 @@ test("a saved extra with a receipt stays a stock shortage when its warehouse ite
   };
   evaluate(context, "applyEquipmentWarehouseInventoryPayload(syntheticRemovedInventory)");
   assert.equal(evaluate(context, "equipmentPendingProcurementChoice(equipmentState.manualMainSections[0].items[0])"), "");
-  assert.equal(evaluate(context, "equipmentProcurementReportRows('rent')[0].missing"), 3);
+  assert.equal(evaluate(context, "equipmentProcurementReportRows('rent').length"), 0);
+  const pending = clone(evaluate(context, `(() => {
+    const row=equipmentRowsSummary().find(row=>row.type==="item"&&row.quantity>0);
+    return {quantity:row.quantity,pending:equipmentInventoryIdentificationPending(row),available:equipmentInventoryAvailableValueFor(row)};
+  })()`));
+  assert.deepEqual(pending, {quantity:3,pending:true,available:null});
   assert.equal(await evaluate(context, "saveCurrentEquipmentWindowWithExtraChoices()"), true);
   assert.equal(ledger.calls.length, 1, "a removed warehouse item must never trigger a replay of the old ingress");
 });

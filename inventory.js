@@ -3,7 +3,7 @@
   const PREVIOUS_STORAGE_KEY = "liveWarehouseInventoryStateV2";
   const LEGACY_STORAGE_KEY = "liveWarehouseInventoryStateV1";
   const API_PATH = "/api/inventario-bodega";
-  const MODULE_PATH = "/warehouse-module.html?v=20261008-movimientos-01";
+  const MODULE_PATH = "/warehouse-module.html?v=20261013-inventario-disponible-01";
   const movementLabels = {
     ingreso: "Ingreso / compra recibida",
     salida: "Salida de bodega",
@@ -366,7 +366,10 @@
       rentalDraft: [],
       workshopDraft: [],
       auditEntries: [],
-      equipmentStockReceipts: []
+      equipmentStockReceipts: [],
+      historicalMovements: [],
+      approvedNameAliases: window.LIVE_WAREHOUSE_INITIAL_INVENTORY_META?.approvedNameAliases || [],
+      sourceCells: window.LIVE_WAREHOUSE_INITIAL_INVENTORY_META?.sourceCells || []
     };
   }
 
@@ -393,7 +396,10 @@
       rentalDraft: rentalDraft.map(normalizeRentalDraftLine),
       workshopDraft: workshopDraft.map(normalizeWorkshopDraftLine),
       auditEntries: Array.isArray(base.auditEntries) ? JSON.parse(JSON.stringify(base.auditEntries)) : [],
-      equipmentStockReceipts: Array.isArray(base.equipmentStockReceipts) ? JSON.parse(JSON.stringify(base.equipmentStockReceipts)) : []
+      equipmentStockReceipts: Array.isArray(base.equipmentStockReceipts) ? JSON.parse(JSON.stringify(base.equipmentStockReceipts)) : [],
+      historicalMovements: Array.isArray(base.historicalMovements) ? JSON.parse(JSON.stringify(base.historicalMovements)) : [],
+      approvedNameAliases: Array.isArray(base.approvedNameAliases) ? JSON.parse(JSON.stringify(base.approvedNameAliases)) : seeded.approvedNameAliases,
+      sourceCells: Array.isArray(base.sourceCells) ? JSON.parse(JSON.stringify(base.sourceCells)) : seeded.sourceCells
     };
   }
 
@@ -1397,7 +1403,7 @@
   }
 
   function renderLog() {
-    const movements = state.movements
+    const movements = [...state.movements, ...(state.historicalMovements || []).map(movement => ({ ...movement, historicalBaseline: true }))]
       .filter(movementMatchesLogFilter)
       .slice()
       .sort((a, b) => `${b.dateTime || b.date} ${b.createdAt}`.localeCompare(`${a.dateTime || a.date} ${a.createdAt}`))
@@ -1416,7 +1422,7 @@
         return `
           <article class="warehouse-log-entry">
             <div>
-              <span class="warehouse-log-type">${escapeHtml(movementDisplayLabel(movement))}</span>
+              <span class="warehouse-log-type">${escapeHtml(movementDisplayLabel(movement))}${movement.historicalBaseline ? " · Historial anterior" : ""}</span>
               <strong>${escapeHtml(movementItemName(movement))}</strong>
               <small>${escapeHtml(displayDateTime(movement))} · ${escapeHtml(adjustment)}</small>
             </div>
@@ -1427,7 +1433,7 @@
             ${movement.notes ? `<p>${escapeHtml(movement.notes)}</p>` : ""}
             ${movement.attachment ? `<a href="${escapeHtml(attachmentHref(movement.attachment))}" download="${escapeHtml(movement.attachment.name)}">Ver archivo adjunto</a>` : ""}
             ${movement.sourcePdfUrl ? `<a href="${escapeHtml(movement.sourcePdfUrl)}" target="_blank" rel="noopener">Ver cuadro de Requerimiento de equipo</a>` : ""}
-            <button class="warehouse-row-button" type="button" data-delete-movement="${escapeHtml(movement.id)}">Eliminar</button>
+            ${movement.historicalBaseline ? '<small>Conservado como historial; no descuenta la disponibilidad actual.</small>' : `<button class="warehouse-row-button" type="button" data-delete-movement="${escapeHtml(movement.id)}">Eliminar</button>`}
           </article>
         `;
       })
