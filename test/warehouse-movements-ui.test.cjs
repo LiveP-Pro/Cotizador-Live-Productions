@@ -53,8 +53,9 @@ function createHarness(fetchImplementation) {
       snapshot() { return JSON.parse(JSON.stringify({ state, warehouseDirty, manualMovementPendingSave })); },
       physical() { return statsForItem(state.items[0]); },
       setAudit(entries) { state.auditEntries = entries; },
+      setArchive(payload, logFields) { state = normalizeState(payload); Object.assign(elements, logFields); },
       nextPage() { historyPage += 1; renderWarehouseHistory(); },
-      normalizeState, renderWarehouseHistory, registerManualMovement
+      normalizeState, renderWarehouseHistory, registerManualMovement, renderLog
     };
   `;
   vm.runInContext(source.replace('  if (document.readyState === "loading") {', instrumentation + '  if (document.readyState === "loading") {'), context);
@@ -212,4 +213,27 @@ test("Movimientos markup has distinct form and read-only history controls", () =
   assert.equal(ids.length, new Set(ids).size);
   for (const id of ["warehouseMovementForm", "warehouseMovementRelated", "warehouseHistoryList", "warehouseHistoryPrevious", "warehouseHistoryNext"])
     assert.ok(ids.includes(id));
+});
+
+test("previous movements remain searchable read-only history without reducing the current available baseline", () => {
+  const harness = createHarness();
+  const fields = { logTypeFilter: { value: "all" }, logSearch: { value: "" }, logList: { innerHTML: "" } };
+  const archived = { id: "old-outgoing", itemId: "synthetic-item", itemName: "Equipo anterior <prueba>", type: "salida", quantity: 6,
+    date: "2026-10-01", dateTime: "2026-10-01T10:00", reference: "Evento anterior", createdAt: "2026-10-01T16:00:00Z" };
+  harness.context.window.__movementHarness.setArchive({ items: [{ id: "synthetic-item", name: "Equipo actual", category: "PRUEBA", quantity: 7 }], movements: [],
+    historicalMovements: [archived], approvedNameAliases: [{ alias: "Nombre permitido", itemId: "synthetic-item" }], sourceCells: [{ ref: "L4", effectiveValue: { numberValue: 7 } }] }, fields);
+  assert.equal(harness.physical().physical, 7);
+  assert.equal(harness.snapshot().state.historicalMovements[0].reference, "Evento anterior");
+  assert.equal(harness.snapshot().state.approvedNameAliases[0].alias, "Nombre permitido");
+  assert.equal(harness.snapshot().state.sourceCells[0].effectiveValue.numberValue, 7);
+  harness.context.window.__movementHarness.renderLog();
+  assert.match(fields.logList.innerHTML, /Historial anterior/);
+  assert.match(fields.logList.innerHTML, /Equipo anterior &lt;prueba&gt;/);
+  assert.doesNotMatch(fields.logList.innerHTML, /data-delete-movement/);
+  fields.logSearch.value = "Evento anterior";
+  harness.context.window.__movementHarness.renderLog();
+  assert.match(fields.logList.innerHTML, /old|anterior/i);
+  fields.logSearch.value = "No existe";
+  harness.context.window.__movementHarness.renderLog();
+  assert.match(fields.logList.innerHTML, /Sin bitácoras/);
 });

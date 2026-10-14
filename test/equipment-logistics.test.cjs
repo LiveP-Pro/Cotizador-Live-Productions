@@ -207,7 +207,7 @@ test("requirement summary uses the consumed warehouse balance and requests purch
     equipmentState.events = [{
       id: "evento-a",
       active: true,
-      sections: [{ title: "EFECTOS ESPECIALES", items: [[2, "Galon liquido de humo"]] }]
+      sections: [{ title: "EFECTOS ESPECIALES", items: [[2, "Galon liquido de humo / consumible"]] }]
     }];
     const row = equipmentRowsSummary().find((entry) => entry.type === "item");
     return {
@@ -456,7 +456,14 @@ function createTransferRegressionContext() {
           { title: "Consumibles", items: [[4, "Pila de prueba consumible"]] }
         ] }
     ];
-    equipmentState.inventory = new Map([["teclado de prueba", 1], ["monitor de prueba", 4]]);
+    applyEquipmentWarehouseInventoryPayload({ savedAt: "2026-09-25T06:00:00.000Z", state: {
+      datasetId: "synthetic-transfer-inventory", movements: [], items: [
+        { id: "synthetic-keyboard", name: "Teclado de prueba", category: "BACKLINE INSTRUMENTOS / Teclado", quantity: 1, itemType: "equipo" },
+        { id: "synthetic-monitor", name: "Monitor de prueba", category: "Audio", quantity: 4, itemType: "equipo" },
+        { id: "synthetic-drums", name: "Batería eléctrica de prueba", category: "BACKLINE INSTRUMENTOS / Teclado", quantity: 1, itemType: "equipo" },
+        { id: "synthetic-battery", name: "Pila de prueba consumible", category: "Consumibles", quantity: 0, itemType: "consumible" }
+      ]
+    }});
     equipmentState.summaryTransferEnabled = true;
     equipmentState.summaryTransferRoutes = [createEquipmentSummaryTransferRoute(["a", "b"], "ruta-1")];
     equipmentState.activeSummaryTransferRouteId = "ruta-1";
