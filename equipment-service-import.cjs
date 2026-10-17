@@ -1,6 +1,7 @@
 const crypto = require("node:crypto");
 const ExcelJS = require("exceljs");
 const unzipper = require("unzipper");
+const { normalizeXlsxNamespaces } = require("./warehouse-xlsx-normalize.cjs");
 
 const LIMITS = { fileBytes: 15 * 1024 * 1024, expandedBytes: 100 * 1024 * 1024,
   zipEntries: 2000, pages: 100, rows: 10000, cells: 100000, pageTextItems: 10000 };
@@ -62,7 +63,7 @@ async function loadWorkbook(buffer) {
       });
     }
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(await normalizeXlsxNamespaces(buffer, { maxExpandedBytes: LIMITS.expandedBytes, maxEntries: LIMITS.zipEntries }));
     return workbook;
   } catch (error) {
     if (error.code === "EQUIPMENT_SERVICE_IMPORT_INVALID") throw error;
@@ -98,6 +99,60 @@ function directive(cells, kind) {
   return "";
 }
 
+function inferExcelLayouts(sourceRows) {
+  const sheets = new Map();
+  for (const row of sourceRows) {
+    if (!sheets.has(row.location)) sheets.set(row.location, []);
+    sheets.get(row.location).push(row);
+  }
+  return [...sheets.values()].flatMap((rows) => {
+    // Explicit columns always take precedence. Repeated or competing headers
+    // remain unresolved rather than reinterpreting a quantity as another field.
+    if (rows.some((row) => detectHeader(row.cells))) return rows;
+    const pairs = new Map();
+    for (const row of rows) {
+      const byColumn = new Map(row.cells.map((cell) => [cell.column, cell]));
+      for (const cell of row.cells) {
+        const description = byColumn.get(cell.column + 1);
+        if (quantity(cell.value) === null || typeof description?.value !== "string" || !clean(description.value)) continue;
+        if (!pairs.has(cell.column)) pairs.set(cell.column, []);
+        pairs.get(cell.column).push(row);
+      }
+    }
+    const isNote = (value) => /^(?:nota|notas|observacion|observaciones|comentario)\s*:/i.test(key(value));
+    const starts = [...pairs].filter(([column, matched]) => matched.length >= 2
+      || rows[0].cells.some((cell) => cell.column === column && typeof cell.value === "string"
+        && clean(cell.value) && quantity(cell.value) === null && !field(cell.value) && !isNote(cell.value)))
+      .map(([column]) => column).sort((a, b) => a - b);
+    if (starts.length !== pairs.size) return rows;
+    if (!starts.length || starts[0] !== Math.min(...rows.flatMap((row) => row.cells.map((cell) => cell.column)))) return rows;
+    const titles = starts.map((column) => rows.find((row) => row.order < pairs.get(column)[0].order
+      && row.cells.some((cell) => cell.column === column && typeof cell.value === "string"
+        && clean(cell.value) && quantity(cell.value) === null && !field(cell.value) && !isNote(cell.value))));
+    // Parallel blocks need a distinct, explicit title at the same source row.
+    // Without that evidence they may be extra numeric/text columns of one table.
+    if (starts.length > 1 && (starts.some((column, index) => index && column <= starts[index - 1] + 1)
+      || titles.some((row) => !row || row.order !== rows[0].order)
+      || new Set(titles.map((row, index) => key(row?.cells.find((cell) => cell.column === starts[index])?.value))).size !== starts.length)) return rows;
+    return starts.flatMap((column, index) => {
+      const end = starts[index + 1] ?? Infinity;
+      const firstDataOrder = pairs.get(column)[0].order;
+      return rows.flatMap((row) => {
+        const cells = row.cells.filter((cell) => cell.column >= column && cell.column < end);
+        if (!cells.length) return [];
+        const single = cells.length === 1 ? cells[0] : null;
+        const inferredHeading = Boolean(single && single.column === column && quantity(single.value) === null
+          && !isNote(single.value) && !field(single.value)
+          && (single.isHeading || /^[A-ZÁÉÍÓÚÑ\s/-]+$/.test(clean(single.value))
+            || row.order === titles[index]?.order && row.order < firstDataOrder));
+        return [{ ...row, cells, ...(starts.length > 1 ? { location: `${row.location} · cuadro ${index + 1}`,
+          sourceGroupId: `${row.sourceGroupId}:block:${index + 1}` } : {}),
+          inferredHeading, inferredTable: { inferred: true, columns: { quantity: column, description: column + 1 }, labels: {} } }];
+      });
+    });
+  });
+}
+
 function buildServices(sourceRows, warnings, blockers) {
   const services = [];
   const servicesByName = new Map();
@@ -107,10 +162,11 @@ function buildServices(sourceRows, warnings, blockers) {
   let table = null;
   let pending = [];
   let location = "";
+  let sourceGroupId = "";
   let inferredName = "";
 
   const ensureService = (name) => {
-    const normalized = key(name);
+    const normalized = `${sourceGroupId}\u0000${key(name)}`;
     let current = servicesByName.get(normalized);
     if (!current) {
       current = { name: clean(name) || "Servicio importado", sourceName: clean(name) || "Servicio importado", mainSections: [], sourceRefs: [] };
@@ -150,15 +206,17 @@ function buildServices(sourceRows, warnings, blockers) {
   };
 
   for (const sourceRow of sourceRows) {
-    if (sourceRow.location !== location) {
+    if ((sourceRow.sourceGroupId || sourceRow.location) !== sourceGroupId) {
       if (pending.length) { ensureService(inferredName || location); flushPending(); }
       location = sourceRow.location;
+      sourceGroupId = sourceRow.sourceGroupId || location;
       service = null; section = null; table = null; category = "Equipo"; inferredName = "";
     }
+    if (sourceRow.inferredTable && (!table || table.inferred)) table = sourceRow.inferredTable;
     const cells = sourceRow.columns || sourceRow.cells;
     const values = new Map(cells.map((cell) => [cell.column, cell.value]));
     const rawCount = table ? values.get(table.columns.quantity) : undefined;
-    const hasCount = rawCount !== undefined && clean(rawCount) !== "";
+    const hasCount = rawCount !== undefined && clean(rawCount) !== "" && !sourceRow.inferredHeading;
     const header = !hasCount || field(rawCount) ? detectHeader(cells) : null;
     if (header) {
       table = header;
@@ -197,14 +255,15 @@ function buildServices(sourceRows, warnings, blockers) {
     const noteLabel = /^(?:nota|notas|observacion|observaciones|comentario)\s*:/i.test(key(description || cells.map((cell) => clean(cell.value)).join(" ")));
     const pageFooter = !hasCount && /^(?:pagina|page)\s+\d+\s+(?:de|of)\s+\d+$/.test(key(description || cells.map((cell) => clean(cell.value)).join(" ")));
     const single = cells.length === 1 ? cells[0] : null;
-    const heading = single && !hasCount && (single.isHeading || /^[A-ZÁÉÍÓÚÑ\s/-]+$/.test(clean(single.value))) && !noteLabel;
+    const heading = single && !hasCount && (single.isHeading || sourceRow.inferredHeading || /^[A-ZÁÉÍÓÚÑ\s/-]+$/.test(clean(single.value))) && !noteLabel;
     if (heading) {
-      if (!table && !service && !inferredName) inferredName = clean(single.value);
+      const sourceHeading = (!table || table.inferred) && !service && !inferredName;
+      if (sourceHeading) inferredName = clean(single.value);
       else category = clean(single.value);
       if (!service) ensureService(inferredName || location);
       flushPending();
       ensureSection(category);
-      append(sourceRow, "heading", single.value, null, { headingKind: table ? "category" : "source" });
+      append(sourceRow, "heading", single.value, null, { headingKind: sourceHeading ? "source" : "category" });
       continue;
     }
     if (!service && !table) {
@@ -247,7 +306,7 @@ async function readExcel(buffer) {
       row.eachCell({ includeEmpty: false }, (cell, column) => {
         if (cell.isMerged && cell.master.address !== cell.address) return;
         const value = displayedCell(cell);
-        if (!clean(value) && !cell.value?.formula && !cell.value?.sharedFormula) return;
+        if ((value === null || value === undefined || value === "") && !cell.value?.formula && !cell.value?.sharedFormula) return;
         if (sourceCells.length >= LIMITS.cells) throw invalid("El Excel supera el límite de 100,000 celdas con información.");
         const rawValue = clone(cell.value);
         if (rawValue && typeof rawValue === "object" && ("formula" in rawValue || "sharedFormula" in rawValue) && cell.result !== undefined) rawValue.result = clone(cell.result);
@@ -258,11 +317,13 @@ async function readExcel(buffer) {
         sourceCells.push(entry);
         cells.push(entry);
       });
-      if (cells.length) sourceRows.push({ location: sheet.name, cells, order: sourceRows.length,
+      if (cells.length) sourceRows.push({ location: sheet.name, sourceGroupId: `xlsx:${sheet.id}`, cells, order: sourceRows.length,
         sourceLocation: `Hoja «${sheet.name}», fila ${rowNumber}` });
     });
   }
-  return { sourceCells, sourceRows, documentLines: [], blockers };
+  const inferredRows = inferExcelLayouts(sourceRows);
+  if (inferredRows.length > LIMITS.rows) throw invalid("El Excel supera el límite de 10,000 filas de cuadros.");
+  return { sourceCells, sourceRows: inferredRows, documentLines: [], blockers };
 }
 
 function pdfLines(items, pageNumber) {
@@ -314,6 +375,61 @@ function hasLargePdfImage(operators, ops, pageArea) {
   return false;
 }
 
+function pdfImageRectangles(operators, ops) {
+  let matrix = [1, 0, 0, 1, 0, 0];
+  const stack = [], rectangles = [];
+  const multiply = (first, second) => {
+    const [a, b, c, d, e, f] = first, [aa, bb, cc, dd, ee, ff] = second;
+    return [a * aa + c * bb, b * aa + d * bb, a * cc + c * dd, b * cc + d * dd,
+      a * ee + c * ff + e, b * ee + d * ff + f];
+  };
+  const append = (transform) => {
+    const [a, b, c, d, e, f] = transform;
+    const xs = [e, e + a, e + c, e + a + c], ys = [f, f + b, f + d, f + b + d];
+    rectangles.push({ left: Math.min(...xs), right: Math.max(...xs), bottom: Math.min(...ys), top: Math.max(...ys) });
+  };
+  for (let index = 0; index < operators.fnArray.length; index++) {
+    const operation = operators.fnArray[index], args = operators.argsArray[index];
+    if (operation === ops.save) stack.push([...matrix]);
+    else if (operation === ops.restore) matrix = stack.pop() || [1, 0, 0, 1, 0, 0];
+    else if (operation === ops.transform && args?.length >= 6) matrix = multiply(matrix, args);
+    else if ([ops.paintImageXObject, ops.paintInlineImageXObject, ops.paintImageMaskXObject].includes(operation)) append(matrix);
+    else if (operation === ops.paintImageXObjectRepeat) {
+      const positions = args?.[3] || [];
+      for (let offset = 0; offset + 1 < positions.length; offset += 2) {
+        append(multiply(matrix, [args[1], 0, 0, args[2], positions[offset], positions[offset + 1]]));
+      }
+    }
+  }
+  return rectangles;
+}
+
+function hasPdfTableImage(operators, ops, headers) {
+  if (!headers.length) return false;
+  const rectangles = pdfImageRectangles(operators, ops);
+  for (const { table, y, bottom = -Infinity } of headers) {
+    const anchors = [Number(table.columns.quantity), Number(table.columns.description)].sort((a, b) => a - b);
+    if (!anchors.every(Number.isFinite)) continue;
+    const clusters = [];
+    for (const rectangle of rectangles.filter((rect) => rect.bottom < y && rect.top > bottom
+      && rect.right >= anchors[0] - 14 && rect.left <= anchors[1] + 14)) {
+      const cluster = { ...rectangle };
+      for (let index = 0; index < clusters.length;) {
+        const other = clusters[index];
+        if (Math.min(cluster.top, other.top) > Math.max(cluster.bottom, other.bottom)
+          && cluster.left <= other.right + 14 && other.left <= cluster.right + 14) {
+          cluster.left = Math.min(cluster.left, other.left); cluster.right = Math.max(cluster.right, other.right);
+          cluster.bottom = Math.min(cluster.bottom, other.bottom); cluster.top = Math.max(cluster.top, other.top);
+          clusters.splice(index, 1); index = 0;
+        } else index++;
+      }
+      clusters.push(cluster);
+    }
+    if (clusters.some((rect) => rect.left <= anchors[0] + 14 && rect.right >= anchors[1] - 14)) return true;
+  }
+  return false;
+}
+
 async function readPdf(buffer) {
   let task;
   try {
@@ -333,12 +449,25 @@ async function readPdf(buffer) {
       const lines = pdfLines(content.items.filter((item) => typeof item.str === "string"), pageNumber);
       const operators = await page.getOperatorList();
       const viewport = page.getViewport({ scale: 1 });
+      const pageHeaders = lines.flatMap((line) => {
+        const table = detectHeader(line.columns);
+        return table ? [{ table, y: line.y }] : [];
+      });
+      const imageTableContexts = pageHeaders.map((entry, index) => ({ ...entry, bottom: pageHeaders[index + 1]?.y ?? -Infinity }));
+      if (headers) imageTableContexts.unshift({ table: headers, y: Infinity, bottom: pageHeaders[0]?.y ?? -Infinity });
       if (hasLargePdfImage(operators, OPS, viewport.width * viewport.height)) {
         blockers.push(`Página ${pageNumber}: contiene una imagen grande cuyo contenido no puede compararse celda por celda. Si es un cuadro escaneado, use el Excel original o un PDF con toda la tabla como texto seleccionable.`);
+      } else if (hasPdfTableImage(operators, OPS, imageTableContexts)) {
+        blockers.push(`Página ${pageNumber}: contiene una imagen o mosaico en las columnas del cuadro cuyo contenido no es texto seleccionable. Use el Excel original o un PDF con toda la tabla como texto seleccionable.`);
       }
       if (!lines.length) {
+        const paintOps = new Set([OPS.stroke, OPS.closeStroke, OPS.fill, OPS.eoFill, OPS.fillStroke,
+          OPS.eoFillStroke, OPS.closeFillStroke, OPS.closeEOFillStroke, OPS.shadingFill].filter(Number.isFinite));
         if (operators.fnArray.some((op) => [OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject, OPS.paintImageXObjectRepeat].includes(op))) {
           blockers.push(`Página ${pageNumber}: contiene imágenes sin texto seleccionable. No se puede verificar todo su contenido; use el Excel original o un PDF digital.`);
+        } else if (operators.fnArray.some((op, index) => paintOps.has(op)
+          || op === OPS.constructPath && paintOps.has(operators.argsArray[index]?.[0]))) {
+          blockers.push(`Página ${pageNumber}: contiene contenido dibujado sin texto seleccionable. No se puede verificar todo su contenido; use el Excel original o un PDF digital.`);
         }
       }
       for (const line of lines) {

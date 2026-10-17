@@ -456,7 +456,9 @@
     const response = await fetch(API_PATH, { credentials: "same-origin" });
     if (!response.ok) throw new Error("Inventario no disponible en servidor");
     const data = await response.json();
-    if (!data?.state?.items?.length) return null;
+    if (!data?.state?.items?.length || typeof data.savedAt !== "string" || !data.savedAt.trim()) {
+      throw new Error("El servidor no devolvió un inventario actual con su revisión.");
+    }
     persistenceMode = "server";
     serverSavedAt = data.savedAt || "";
     return normalizeState(data.state);
@@ -473,13 +475,18 @@
 
   async function persistServerState(options = {}) {
     if (!isHttpPage()) return false;
+    if (!serverSavedAt) {
+      const error = new Error("Primero cargue el inventario actual del servidor antes de guardar o importar");
+      error.status = 428;
+      throw error;
+    }
     const revision = changeRevision;
     const snapshot = JSON.parse(JSON.stringify(state));
     return enqueueWarehouseWrite(async () => {
       const response = await fetch(API_PATH, {
         method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ state: snapshot, setAsInitial: options.setAsInitial === true,
-          ...(serverSavedAt ? { expectedSavedAt: serverSavedAt } : {}) })
+          expectedSavedAt: serverSavedAt })
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -595,27 +602,29 @@
   }
 
   async function loadState() {
-    try {
-      const serverState = await loadServerState();
-      if (serverState) {
+    if (isHttpPage()) {
+      try {
+        const serverState = await loadServerState();
+        if (!serverState) throw new Error("Inventario no disponible en servidor");
         state = serverState;
         saveLocalState();
         setStatus("Inventario cargado desde servidor.", "success");
-        return;
+        return true;
+      } catch {
+        serverSavedAt = "";
+        persistenceMode = "unavailable";
+        const now = new Date().toISOString();
+        state = { version: 4, datasetId: "", source: "", title: "INVENTARIO", createdAt: now, updatedAt: now,
+          subtitles: [], items: [], movements: [], rentalDraft: [], workshopDraft: [], auditEntries: [], equipmentStockReceipts: [] };
+        setStatus("No se pudo cargar el inventario actual. Se reintentará la conexión; también puede recargar la página. Las ediciones e importaciones están desactivadas hasta recuperarlo.", "warning");
+        return false;
       }
-    } catch {
-      persistenceMode = "local";
     }
-
+    persistenceMode = "local";
     state = readLocalState() || seedState();
     saveLocalState();
-    try {
-      await persistServerState();
-      setStatus("Inventario guardado en servidor.", "success");
-    } catch {
-      persistenceMode = "local";
-      setStatus("Inventario guardado en este navegador. Use Exportar respaldo para copia externa.", "neutral");
-    }
+    setStatus("Inventario guardado en este navegador. Use Exportar respaldo para copia externa.", "neutral");
+    return true;
   }
 
   async function saveState(options = {}) {
@@ -632,7 +641,7 @@
     } catch (error) {
       persistenceMode = "local";
       setStatus(`${error.message}. Los cambios están pendientes en este navegador. Exporte un respaldo antes de recargar para conservarlos.`, "warning");
-      if (error.status !== 409 && isHttpPage()) {
+      if (error.status !== 409 && error.status !== 428 && isHttpPage()) {
         window.clearTimeout(saveTimer);
         saveTimer = window.setTimeout(() => { if (warehouseDirty) saveState({ silent: true }); }, 5000);
       }
@@ -1435,6 +1444,7 @@
   }
 
   function publishWarehouseAvailability() {
+    if (isHttpPage() && !serverSavedAt) return;
     const lifecycle = inventoryLifecycle();
     const publishedAt = new Date().toISOString();
     const payload = {
@@ -1481,13 +1491,18 @@
   }
 
   function applyRemoteWarehouse(payload) {
-    if (!canRefreshWarehouse() || !payload?.state?.items?.length || !payload.savedAt) return false;
+    if (!canRefreshWarehouse() || !payload?.state?.items?.length || typeof payload.savedAt !== "string" || !payload.savedAt.trim()) return false;
     if (serverSavedAt && Date.parse(payload.savedAt) <= Date.parse(serverSavedAt)) return false;
+    const recoveredConnection = persistenceMode === "unavailable";
     state = normalizeState(payload.state);
     serverSavedAt = payload.savedAt;
     persistenceMode = "server";
+    warehouseReady = true;
+    if (elements.root) elements.root.inert = false;
     saveLocalState();
     renderAll();
+    if (purchaseRequests.length && !purchaseDraftId) preparePurchaseDraft(purchaseRequests[0].id);
+    if (recoveredConnection) setStatus("Conexión recuperada. Inventario actual cargado; ya puede editar e importar.", "success");
     return true;
   }
 
@@ -1512,7 +1527,10 @@
     const refresh = () => { if (visible()) refreshWarehouseFromServer(); };
     window.addEventListener("focus", refresh);
     window.addEventListener("storage", (event) => { if (event.key === STORAGE_KEY) refresh(); });
-    window.addEventListener("online", () => { if (warehouseDirty) saveState({ silent: true }); });
+    window.addEventListener("online", () => {
+      if (warehouseDirty) saveState({ silent: true });
+      else refresh();
+    });
     document.addEventListener("visibilitychange", refresh);
     elements.root.addEventListener("focusout", () => window.setTimeout(refresh, 0));
     if (page && typeof MutationObserver === "function") {
@@ -2986,6 +3004,11 @@
         warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
         worksheets = Array.isArray(payload.worksheets)
           ? [...new Set(payload.worksheets.filter((name) => typeof name === "string" && name.length))] : [];
+        if (payload.verification?.complete === false || (Array.isArray(payload.blockers) && payload.blockers.length)) {
+          throw new Error(`El archivo contiene datos pendientes de interpretar. ${
+            (Array.isArray(payload.blockers) ? payload.blockers : []).slice(0, 3).join(" ")
+          } Revise el archivo o elija una hoja completa antes de importar.`);
+        }
       }
       if (!window.WarehouseImportReview) throw new Error("Actualice la página para cargar el comparador de descripciones.");
       const plan = window.WarehouseImportReview.prepare(state, imported, { mode: restore ? "restore" : "merge" });
@@ -3135,6 +3158,7 @@
     if (!importReview?.plan || importReview.busy) return;
     const review = importReview;
     try {
+      if (isHttpPage() && !serverSavedAt) throw new Error("Primero cargue el inventario actual del servidor antes de importar.");
       if (JSON.stringify({ ...state, updatedAt: "" }) !== review.baseline) throw new Error("El inventario cambió mientras revisaba. Cancele y vuelva a importar para comparar los datos actuales.");
       const result = window.WarehouseImportReview.finalize(review.plan, { createId: () => uid("import") });
       const next = normalizeState(result);
@@ -3147,7 +3171,7 @@
           const response = await fetch(API_PATH, {
             method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ state: next, setAsInitial: true,
-              ...(serverSavedAt ? { expectedSavedAt: serverSavedAt } : {}) })
+              expectedSavedAt: serverSavedAt })
           });
           if (!response.ok) {
             const failure = await response.json().catch(() => ({}));
@@ -3432,12 +3456,13 @@
     bindEvents();
     setStatus("Esperando acceso al inventario...", "neutral");
     await waitForAuthenticatedApp();
-    await loadState();
+    const loaded = await loadState();
+    elements.root.inert = !loaded;
     initWarehouseSync();
     renderAll();
     switchWindow(activeWindow);
-    warehouseReady = true;
-    if (purchaseRequests.length) preparePurchaseDraft(purchaseRequests[0].id);
+    warehouseReady = loaded;
+    if (loaded && purchaseRequests.length) preparePurchaseDraft(purchaseRequests[0].id);
   }
 
   document.addEventListener("live:warehouse-purchase-request", (event) => {

@@ -49,7 +49,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261014-window-save-01";
+const warehouseAssetVersion = "20261017-file-readers-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -94,7 +94,14 @@ function normalizeWarehouseInventoryPayload(payload) {
 }
 
 function readWarehouseInventoryFile(filePath) {
-  return normalizeWarehouseInventoryPayload(JSON.parse(fs.readFileSync(filePath, "utf8")));
+  const payload = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  const normalized = normalizeWarehouseInventoryPayload(payload);
+  // Older files have no revision. Their modification time is stable across
+  // reads, so checking a revision never rewrites or refreshes the stock.
+  if (typeof payload?.savedAt !== "string" || !payload.savedAt.trim()) {
+    normalized.savedAt = fs.statSync(filePath).mtime.toISOString();
+  }
+  return normalized;
 }
 
 function warehouseInventoryInitialPaths() {
@@ -106,38 +113,26 @@ function warehouseInventoryInitialPaths() {
 }
 
 function readWarehouseInventoryInitial() {
-  let lastError;
   for (const candidate of warehouseInventoryInitialPaths()) {
-    if (!fs.existsSync(candidate)) continue;
     try {
-      return readWarehouseInventoryFile(candidate);
+      fs.statSync(candidate);
     } catch (error) {
-      lastError = error;
-      console.warn(`No se pudo leer ${path.basename(candidate)}: ${error.message}`);
+      if (error.code === "ENOENT") continue;
+      throw error;
     }
+    // An existing source is authoritative. A broken source must not activate
+    // an older initial file further down the list.
+    return readWarehouseInventoryFile(candidate);
   }
-  throw lastError || new Error("No existe un inventario inicial disponible.");
+  throw new Error("No existe un inventario inicial disponible.");
 }
 
 function readWarehouseInventory() {
-  const candidates = [
-    warehouseInventoryPath,
-    warehouseInventoryPrivateInitialPath,
-    warehouseInventoryBackupPath,
-    warehouseInventoryOverrideInitialPath,
-    warehouseInventoryBundledInitialPath
-  ].filter((filePath, index, paths) => filePath && paths.indexOf(filePath) === index);
-  let lastError;
-  for (const candidate of candidates) {
-    if (!fs.existsSync(candidate)) continue;
-    try {
-      return readWarehouseInventoryFile(candidate);
-    } catch (error) {
-      lastError = error;
-      console.warn(`No se pudo leer ${path.basename(candidate)}: ${error.message}`);
-    }
+  try {
+    return readWarehouseInventoryFile(warehouseInventoryPath);
+  } catch (error) {
+    throw new Error("El inventario activo no se puede leer. Se detuvo la operación sin cargar otra fuente.", { cause: error });
   }
-  throw lastError || new Error("No existe un inventario inicial disponible.");
 }
 
 function warehouseInventoryDatasetId(payload) {
@@ -156,30 +151,16 @@ function replaceWarehouseInventorySync(normalized) {
 }
 
 function ensureWarehouseInventoryStorage() {
-  const initial = readWarehouseInventoryInitial();
-  if (!fs.existsSync(warehouseInventoryPath)) {
-    replaceWarehouseInventorySync(initial);
+  try {
+    fs.statSync(warehouseInventoryPath);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    replaceWarehouseInventorySync(readWarehouseInventoryInitial());
     return;
   }
-
-  const targetDatasetId = warehouseInventoryDatasetId(initial);
-  if (!targetDatasetId) return;
-
-  let current;
-  try {
-    current = readWarehouseInventoryFile(warehouseInventoryPath);
-  } catch (error) {
-    console.warn(`El inventario activo no se pudo leer y será sustituido: ${error.message}`);
-  }
-  if (warehouseInventoryDatasetId(current) === targetDatasetId) return;
-
-  const migrationBackupPath = warehouseInventoryMigrationBackupPath(targetDatasetId);
-  if (!fs.existsSync(migrationBackupPath)) {
-    fs.copyFileSync(warehouseInventoryPath, migrationBackupPath);
-  }
-  fs.copyFileSync(warehouseInventoryPath, warehouseInventoryBackupPath);
-  replaceWarehouseInventorySync(initial);
-  console.log(`Inventario de bodega migrado al conjunto ${targetDatasetId}.`);
+  // A valid active inventory is never migrated merely because the bundled
+  // source has another dataset ID. Corruption also stops startup unchanged.
+  readWarehouseInventory();
 }
 
 async function writeWarehouseInventoryFile(filePath, normalized) {
@@ -219,7 +200,11 @@ async function persistWarehouseInventory(normalized, setAsInitial = false, conte
 }
 
 async function saveWarehouseInventory(payload, response, request) {
-  if (typeof payload?.expectedSavedAt === "string" && payload.expectedSavedAt !== readWarehouseInventory().savedAt) {
+  if (typeof payload?.expectedSavedAt !== "string" || !payload.expectedSavedAt.trim()) {
+    errorResponse(response, 428, "Consulte el inventario actual antes de guardar. Falta la versión que está revisando.");
+    return;
+  }
+  if (payload.expectedSavedAt !== readWarehouseInventory().savedAt) {
     errorResponse(response, 409, "El inventario cambió en otra pestaña o equipo. Conserve sus cambios y vuelva a comparar con el inventario actual antes de guardar.");
     return;
   }
@@ -412,20 +397,23 @@ async function writeEquipmentCatalogOverrides(data) {
 
 async function saveEquipmentCatalogOverride(payload, response) {
   let normalized;
+  let stored;
+  let previous;
   try {
-    normalized = normalizeEquipmentCatalogOverride(payload);
+    const baseCatalogVersion = normalizeEquipmentBaseCatalogVersion(payload?.baseCatalogVersion);
+    stored = readEquipmentCatalogOverridesForVersion(baseCatalogVersion);
+    previous = stored.services[String(payload?.serviceId || "").trim()];
+    normalized = normalizeEquipmentCatalogOverride(previous?.importSource
+      ? { ...payload, importSource: previous.importSource } : payload);
   } catch (error) {
     errorResponse(response, 400, error.message);
     return;
   }
-  const stored = readEquipmentCatalogOverridesForVersion(normalized.baseCatalogVersion);
   if (normalized.createOnly && stored.services[normalized.serviceId]) {
     errorResponse(response, 409, "Ya existe un servicio con ese nombre. Cambie el nombre y vuelva a publicarlo.");
     return;
   }
   const savedAt = new Date().toISOString();
-  const previous = stored.services[normalized.serviceId];
-  if (previous?.importSource) normalized.service.importSource = previous.importSource;
   const next = {
     ...stored,
     version: 3,
@@ -612,7 +600,12 @@ async function saveImportedEquipmentServices(payload, request, response) {
       let serviceId = baseId, suffix = 2;
       while (reservedIds.has(serviceId)) serviceId = baseId + "-" + suffix++;
       reservedIds.add(serviceId);
-      const validatedSections = normalizeEquipmentCatalogSections(sourceService.mainSections);
+      const importSource = { authoritative: true, importId: entry.importId, bookKey,
+        fileName: entry.preview.source.fileName, sourceName: sourceService.name,
+        sourceRefs: sourceService.sourceRefs || [], sourceFileUrl: "/api/cuadros-equipo/fuentes/" + entry.importId };
+      const validatedSections = normalizeEquipmentCatalogSections(sourceService.mainSections.map((section) => ({
+        ...section, importSource: { ...(section.importSource || {}), ...importSource }
+      })), true);
       const mainSections = validatedSections.map((section, sectionIndex) => ({
         ...section, id: entry.importId + "-s" + index + "-" + sectionIndex,
         notes: sourceService.mainSections[sectionIndex].notes || [],
@@ -621,9 +614,7 @@ async function saveImportedEquipmentServices(payload, request, response) {
       if (!mainSections.some((section) => section.items.length)) throw new Error("Cada servicio debe incluir al menos una línea de equipo con cantidad válida.");
       imported[serviceId] = {
         name, mainSections, audioOptions: {}, custom: true, groupId, updatedAt: importedAt,
-        importSource: { importId: entry.importId, bookKey, fileName: entry.preview.source.fileName,
-          sourceName: sourceService.name, sourceRefs: sourceService.sourceRefs || [],
-          sourceFileUrl: "/api/cuadros-equipo/fuentes/" + entry.importId }
+        importSource
       };
       next.services[serviceId] = imported[serviceId];
     }
@@ -3584,7 +3575,7 @@ function serveStatic(request, response, pathname) {
         )
       : data;
     const headers = { "Content-Type": contentType };
-    if (requestedPath === "/index.html" || ["equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js"].some(
+    if (requestedPath === "/index.html" || ["equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "equipment-service-import.js"].some(
       (asset) => requestedPath === `/${asset}`
     )) {
       headers["Cache-Control"] = "no-store";

@@ -5,7 +5,7 @@
 })(typeof window === "object" ? window : globalThis, function () {
   const text = (value) => String(value ?? "").trim().replace(/\s+/g, " ");
   const key = (value) => text(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    .toLowerCase();
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const approvedAliases = (item, currentName, ...names) => [...new Set([
     ...(Array.isArray(item.descriptionAliases) ? item.descriptionAliases : []), ...names
