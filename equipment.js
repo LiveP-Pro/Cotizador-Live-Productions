@@ -1636,7 +1636,7 @@ function sectionsForEquipmentEvent(event) {
 function loadEquipmentEvent(eventId) {
   const event = equipmentState.events.find((item) => item.id === eventId);
   if (!event) return;
-  if (equipmentState.documentSections.length && equipmentState.selectedEventId !== eventId) syncActiveEquipmentEvent();
+  if (equipmentState.selectedEventId && equipmentState.selectedEventId !== eventId) syncActiveEquipmentEvent();
   equipmentState.selectedEventId = event.id;
   restoreEquipmentEventSnapshot(event);
   populateEquipmentEventFields(event);
@@ -2698,6 +2698,8 @@ function renderEquipmentEvents() {
 }
 
 function startNewEquipmentWindowDraft() {
+  if (equipmentExtraEntryBusy) return false;
+  syncActiveEquipmentEvent();
   resetEquipmentWindowDraft();
   renderEquipmentModule();
   const status = equipmentQuery("#equipmentSaveStatus");
@@ -2705,7 +2707,7 @@ function startNewEquipmentWindowDraft() {
 }
 
 function addEquipmentEvent() {
-  return saveCurrentEquipmentWindowWithExtraChoices({ clearAfterSave: true });
+  return saveCurrentEquipmentWindowWithExtraChoices({ clearAfterSave: false });
 }
 
 function refreshEquipmentSummaryAndPreview() {
@@ -6572,6 +6574,7 @@ function initEquipmentModule() {
     });
   });
   equipmentQuery("#equipmentAddEventButton")?.addEventListener("click", addEquipmentEvent);
+  equipmentQuery("#equipmentNewWindowButton")?.addEventListener("click", startNewEquipmentWindowDraft);
   equipmentQuery("#equipmentSaveWindowButton")?.addEventListener("click", saveCurrentEquipmentWindowWithExtraChoices);
   equipmentQuery("#equipmentAddMainItemButton")?.addEventListener("click", addManualMainEquipmentItem);
   bindEquipmentExtraNamePickers();

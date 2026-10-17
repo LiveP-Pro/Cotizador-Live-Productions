@@ -15,7 +15,7 @@
     <script src="equipment-inventory.js?v=20261007-extras-decisions-03" defer></script>
     <script src="equipment-service-import.js?v=20261006-service-import-01" defer></script>
     <script src="equipment-name-picker.js?v=20261007-extras-02" defer></script>
-    <script src="equipment.js?v=20261017-categories-02" defer></script>
+    <script src="equipment.js?v=20261017-window-visible-01" defer></script>
     <script src="warehouse-import-review.js?v=20261017-file-readers-01" defer></script>
     <script src="inventory.js?v=20261017-file-readers-01" defer></script>
   </head>
@@ -283,7 +283,8 @@
             <div class="equipment-field-wide equipment-event-actions">
               <button id="equipmentAddEventButton" type="button">Agregar ventana</button>
               <button id="equipmentSaveWindowButton" class="equipment-save-window-button" type="button" disabled>Guardar cambios</button>
-              <small>Agregue una ventana por evento; el formulario queda listo para capturar el siguiente.</small>
+              <button id="equipmentNewWindowButton" type="button" title="Crear otra ventana en blanco">Nueva ventana</button>
+              <small>Al guardar, el cuadro permanece visible. Use Nueva ventana para capturar otro evento.</small>
             </div>
             <label class="equipment-field-wide">
               Observaciones para bodega
