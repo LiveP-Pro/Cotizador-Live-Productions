@@ -2476,8 +2476,11 @@ function bindEquipmentTransferLegEditors(host) {
 function equipmentSourceHeadingRepeatsDisplayTitle(row, title) {
   if (!["heading", "category", "header"].includes(row.type) || (row.notes || []).some((note) => String(note ?? "").trim())) return false;
   if (row.quantity !== null && row.quantity !== undefined && String(row.quantity).trim() !== "") return false;
-  const headingKey = (value) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase().replace(/\s+/g, " ").trim();
+  const headingKey = (value) => {
+    const key = String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase().replace(/\s+/g, " ").trim();
+    return key === "luces" ? "iluminacion" : key;
+  };
   const titleText = String(title || "");
   const titles = new Set([titleText, titleText.split("/").at(-1)].map(headingKey).filter(Boolean));
   const cellValues = (row.cells || []).map((cell) => String(cell.value ?? "")).filter((value) => value.trim());

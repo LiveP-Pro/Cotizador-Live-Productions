@@ -80,6 +80,18 @@ test("only equivalent heading/category rows are suppressed; all additional sourc
   assert.equal(check({ ...row, description: '"Láser"', cells: [{ value: '"Láser"' }] }), false);
 });
 
+test("the visual Luces and Iluminacion category labels do not repeat each other", () => {
+  const fixture = section("synthetic-light-alias", "ILUMINACION");
+  fixture.rows[0] = { type: "heading", description: "Luces", cells: [{ value: "Luces" }] };
+  const h = harness([fixture]);
+  for (const compact of [false, true]) {
+    const markup = h.evaluate(`tableForEquipmentSections(sections, ${compact})`);
+    assert.doesNotMatch(markup, /data-source-row-type="heading"/);
+    assert.match(markup, /ILUMINACION/);
+    assert.match(markup, /synthetic-light-alias equipment/);
+  }
+});
+
 test("a homonymous note and a category carrying an extra cell are rendered", () => {
   const fixture = section("synthetic-notes", "ILUMINACION / Láser");
   fixture.rows.unshift({ type: "note", description: "Láser", cells: [{ value: "Láser" }] });
