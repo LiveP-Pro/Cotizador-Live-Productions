@@ -7,13 +7,15 @@ const test = require("node:test");
 
 const root = path.join(__dirname, "..");
 
-async function runMigration(dataDir) {
+async function runStartupCheck(dataDir) {
   const child = spawn(process.execPath, ["--no-warnings", "server.js"], {
     cwd: root,
     env: {
       ...process.env,
       COTIZADOR_DATA_DIR: dataDir,
       EQUIPMENT_PDF_DIR: path.join(dataDir, "equipment-pdfs"),
+      WAREHOUSE_INITIAL_STATE_PATH: path.join(dataDir, "unused-synthetic-initial.json"),
+      COTIZADOR_ADMIN_USER: "warehouse-synthetic-user",
       COTIZADOR_ADMIN_PASSWORD: "warehouse-test-password",
       COTIZADOR_SESSION_SECRET: "warehouse-test-session-secret",
       DISABLE_PDF_WARMUP: "1",
@@ -37,14 +39,15 @@ async function runMigration(dataDir) {
   });
 }
 
-test("warehouse dataset migration replaces legacy inventory exactly once and keeps a backup", { timeout: 30000 }, async () => {
+test("warehouse startup preserves active stock across different initial datasets and repeated restarts", { timeout: 30000 }, async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "warehouse-migration-"));
   const inventoryPath = path.join(dataDir, "inventario-bodega.json");
   const privateInitialPath = path.join(dataDir, "inventario-bodega-inicial.json");
-  const legacy = {
+  const active = {
     state: {
       version: 3,
-      source: "inventario anterior",
+      datasetId: "active-inventory-synthetic",
+      source: "fuente activa sintetica",
       items: [{ id: "old-1", category: "PRUEBA", name: "Equipo anterior", quantity: 1 }],
       movements: []
     },
@@ -63,26 +66,34 @@ test("warehouse dataset migration replaces legacy inventory exactly once and kee
     },
     savedAt: "2026-09-28T00:00:00.000Z"
   };
-  fs.writeFileSync(inventoryPath, JSON.stringify(legacy, null, 2));
+  fs.writeFileSync(inventoryPath, JSON.stringify(active, null, 2));
   fs.writeFileSync(privateInitialPath, JSON.stringify(privateInitial, null, 2));
+  const originalActiveBytes = fs.readFileSync(inventoryPath);
+  const originalInitialBytes = fs.readFileSync(privateInitialPath);
   try {
-    await runMigration(dataDir);
+    await runStartupCheck(dataDir);
 
-    const migrated = JSON.parse(fs.readFileSync(inventoryPath, "utf8"));
-    assert.equal(migrated.state.datasetId, privateInitial.state.datasetId);
-    assert.equal(migrated.state.items.length, 2);
+    const preserved = JSON.parse(fs.readFileSync(inventoryPath, "utf8"));
+    assert.notEqual(active.state.datasetId, privateInitial.state.datasetId);
+    assert.deepEqual(preserved, active);
+    assert.deepEqual(fs.readFileSync(inventoryPath), originalActiveBytes);
+    assert.deepEqual(fs.readFileSync(privateInitialPath), originalInitialBytes);
     const migrationBackups = fs.readdirSync(dataDir).filter((name) => name.startsWith("inventario-bodega-antes-"));
-    assert.equal(migrationBackups.length, 1);
-    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dataDir, migrationBackups[0]), "utf8")), legacy);
-    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dataDir, "inventario-bodega-anterior.json"), "utf8")), legacy);
+    assert.equal(migrationBackups.length, 0);
+    assert.equal(fs.existsSync(path.join(dataDir, "inventario-bodega-anterior.json")), false);
 
-    migrated.state.items[0].quantity = 777;
-    fs.writeFileSync(inventoryPath, JSON.stringify(migrated, null, 2));
-    await runMigration(dataDir);
+    preserved.state.items[0].quantity = 777;
+    fs.writeFileSync(inventoryPath, JSON.stringify(preserved, null, 2));
+    const editedActiveBytes = fs.readFileSync(inventoryPath);
+    await runStartupCheck(dataDir);
 
     const restarted = JSON.parse(fs.readFileSync(inventoryPath, "utf8"));
     assert.equal(restarted.state.items[0].quantity, 777);
-    assert.equal(fs.readdirSync(dataDir).filter((name) => name.startsWith("inventario-bodega-antes-")).length, 1);
+    assert.deepEqual(restarted, preserved);
+    assert.deepEqual(fs.readFileSync(inventoryPath), editedActiveBytes);
+    assert.deepEqual(fs.readFileSync(privateInitialPath), originalInitialBytes);
+    assert.equal(fs.readdirSync(dataDir).filter((name) => name.startsWith("inventario-bodega-antes-")).length, 0);
+    assert.equal(fs.existsSync(path.join(dataDir, "inventario-bodega-anterior.json")), false);
   } finally {
     fs.rmSync(dataDir, { recursive: true, force: true });
   }

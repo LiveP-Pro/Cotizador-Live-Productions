@@ -48,6 +48,8 @@ function createPurchaseHarness() {
       initialize(form) {
         Object.assign(elements, form);
         state = { items: [], movements: [], updatedAt: "" };
+        // Readiness in HTTP mode represents a completed current-server read.
+        serverSavedAt = "2026-10-17T12:00:00.000Z";
         warehouseReady = true;
         renderAll = publishWarehouseAvailability;
         openPrintDocument = (title, html) => window.__prints.push({ title, html });
