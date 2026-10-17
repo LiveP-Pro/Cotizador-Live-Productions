@@ -1409,13 +1409,36 @@ function equipmentLiveSectionsForDisplay(sections) {
 }
 
 function equipmentDisplaySectionGroups(sections) {
-  const groups = [];
+  const displaySections = equipmentLiveSectionsForDisplay(sections);
+  const categoryBuckets = new Map();
   const byCategory = new Map();
-  equipmentLiveSectionsForDisplay(sections).forEach((section, index) => {
+  const rootKeyFor = (title) => {
+    const root = normalizeEquipmentKey(title);
+    // These are equivalent display categories, not equipment-name aliases.
+    return root === "luces" ? "iluminacion" : root;
+  };
+  const rootsByLeaf = new Map();
+  displaySections.forEach((section) => {
+    const parts = String(section.title || "").split("/").map((part) => part.trim()).filter(Boolean);
+    if (parts.length < 2) return;
+    const leaf = normalizeEquipmentKey(parts.at(-1));
+    if (!rootsByLeaf.has(leaf)) rootsByLeaf.set(leaf, new Set());
+    rootsByLeaf.get(leaf).add(rootKeyFor(parts[0]));
+  });
+  const appendGroup = (group) => {
+    const title = String(group.title || "Equipo sin categoria");
+    const roots = title.includes("/") ? null : rootsByLeaf.get(normalizeEquipmentKey(title));
+    // A stand-alone subtype may join the one parent declared by current sections.
+    // Ambiguous subtypes retain their own bucket instead of guessing a category.
+    const rootKey = roots?.size === 1 ? [...roots][0] : rootKeyFor(title.split("/")[0]);
+    if (!categoryBuckets.has(rootKey)) categoryBuckets.set(rootKey, []);
+    categoryBuckets.get(rootKey).push(group);
+  };
+  displaySections.forEach((section, index) => {
     // Editable source fragments retain their own IDs and local row indices.
     // Only the displayed category heading is shared between service fragments.
     if (section.manualSection || section.documentSection) {
-      groups.push({ id: section.id || `equipment-display-section-${index}`, title: section.title, sections: [section] });
+      appendGroup({ id: section.id || `equipment-display-section-${index}`, title: section.title, sections: [section] });
       return;
     }
     const title = String((section.items?.length ? section.title : section.inventoryCategory || section.title)
@@ -1425,11 +1448,11 @@ function equipmentDisplaySectionGroups(sections) {
     if (!group) {
       group = { id: `equipment-display-category-${encodeURIComponent(key)}`, title, sections: [] };
       byCategory.set(key, group);
-      groups.push(group);
+      appendGroup(group);
     }
     group.sections.push(section);
   });
-  return groups;
+  return [...categoryBuckets.values()].flat();
 }
 
 function currentEquipmentEventDraft() {
@@ -2450,7 +2473,24 @@ function bindEquipmentTransferLegEditors(host) {
   });
 }
 
-function equipmentSectionItemsHtml(section, compact = false, sourceLinks = new Set()) {
+function equipmentSourceHeadingRepeatsDisplayTitle(row, title) {
+  if (!["heading", "category", "header"].includes(row.type) || (row.notes || []).some((note) => String(note ?? "").trim())) return false;
+  if (row.quantity !== null && row.quantity !== undefined && String(row.quantity).trim() !== "") return false;
+  const headingKey = (value) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/\s+/g, " ").trim();
+  const titleText = String(title || "");
+  const titles = new Set([titleText, titleText.split("/").at(-1)].map(headingKey).filter(Boolean));
+  const cellValues = (row.cells || []).map((cell) => String(cell.value ?? "")).filter((value) => value.trim());
+  const description = String(row.description ?? "");
+  if (!cellValues.length) return titles.has(headingKey(description));
+  // An additional source cell or note is information, even on a heading row.
+  if (!cellValues.some((value) => titles.has(headingKey(value)))) return false;
+  if (!cellValues.every((value) => titles.has(headingKey(value)) || headingKey(value) === "cantidad")) return false;
+  if (!description.trim() || titles.has(headingKey(description))) return true;
+  return [" | ", " · ", " "].some((separator) => headingKey(cellValues.join(separator)) === headingKey(description));
+}
+
+function equipmentSectionItemsHtml(section, compact = false, sourceLinks = new Set(), displayTitle = section.title) {
   const itemMarkup = section.items
     .map((rawItem) => {
       const item = normalizeEquipmentItem(rawItem);
@@ -2493,8 +2533,12 @@ function equipmentSectionItemsHtml(section, compact = false, sourceLinks = new S
         const notes = (row.notes || []).map((note) => '<tr class="equipment-imported-note-row"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(note) + '</td></tr>').join("");
         return itemMarkup[index] + notes;
       }
+      if (equipmentSourceHeadingRepeatsDisplayTitle(row, displayTitle)) return "";
       const content = row.description || (row.cells || []).map((cell) => String(cell.value ?? "")).join(" · ");
-      return '<tr class="equipment-imported-note-row" data-source-row-type="' + escapeEquipmentHtml(row.type) + '"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(content) + '</td></tr>';
+      const notes = [...new Set((row.notes || []).map((note) => String(note ?? "")))]
+        .filter((note) => note.trim() && note !== content)
+        .map((note) => '<tr class="equipment-imported-note-row"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(note) + '</td></tr>').join("");
+      return '<tr class="equipment-imported-note-row" data-source-row-type="' + escapeEquipmentHtml(row.type) + '"><td colspan="' + (compact ? 2 : 3) + '">' + escapeEquipmentHtml(content) + '</td></tr>' + notes;
     }).join("") + itemMarkup.filter((_, index) => !included.has(index)).join("");
   }
   if (Array.isArray(section.notes)) {
@@ -2524,7 +2568,7 @@ function tableForEquipmentSections(sections, compact = false) {
       const categorySection = { ...section, title: group.title, items: group.sections.flatMap((fragment) => fragment.items || []) };
       const inventoryCategories = compact ? [] : equipmentInventoryCategoriesForSection(categorySection);
       const expanded = !compact && equipmentState.expandedEquipmentSectionIds.has(sectionId);
-      const items = group.sections.map((fragment) => equipmentSectionItemsHtml(fragment, compact, sourceLinks)).join("");
+      const items = group.sections.map((fragment) => equipmentSectionItemsHtml(fragment, compact, sourceLinks, group.title)).join("");
       if (compact) {
         return `
           <tr class="equipment-category-row">
