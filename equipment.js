@@ -872,6 +872,7 @@ function populateNativeEquipmentServiceSelect() {
     });
     if (optionGroup.children.length) serviceSelect.append(optionGroup);
   });
+  updateNativeEquipmentServiceSelect();
 }
 
 function equipmentServiceRequiresDjAudio(serviceId) {
