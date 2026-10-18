@@ -97,7 +97,7 @@ async function selectDj(fixture, serviceId, audioId) {
   assert.equal(await execute(fixture, "applyEquipmentUserServiceSelection([syntheticServiceId])"), true);
 }
 
-test("Agregar ventana saves two independent DJ windows before clearing, across all four audio choices", async () => {
+test("Agregar ventana keeps the saved DJ window visible and Nueva ventana starts an independent second window across all audio choices", async () => {
   for (const [firstAudio, firstCode, secondAudio, secondCode] of [
     ["audio-qsc", "Q", "turbosound", "T"], ["audio-jbl", "J", "ip2000", "I"]
   ]) {
@@ -127,6 +127,11 @@ test("Agregar ventana saves two independent DJ windows before clearing, across a
     assert.equal(firstEvent.name, "Evento sintético primero");
     assert.ok(firstEvent.sections.flatMap((section) => section.items).some((item) => item.description === `Equipo cero ${firstCode}` && item.quantity === 0));
     assert.ok(JSON.stringify(firstEvent.sections).includes(`Nota sintética ${firstCode}`));
+    assert.equal(execute(fixture, "equipmentState.selectedEventId"), firstEvent.id);
+    assert.deepEqual(plain(execute(fixture, "selectedEquipmentServiceIds()")), ["dj-completo"]);
+    assert.equal(fixture.elements.get("#equipmentNotes").value, "Borrador sintético");
+    assert.equal(firstEvent.notes, "Borrador sintético");
+    execute(fixture, "startNewEquipmentWindowDraft()");
     assert.equal(execute(fixture, "equipmentState.selectedEventId"), "");
     assert.deepEqual(plain(execute(fixture, "selectedEquipmentServiceIds()")), []);
     assert.deepEqual(plain(execute(fixture, "equipmentState.djAudioSelections")), {});
@@ -154,10 +159,11 @@ test("Agregar ventana saves two independent DJ windows before clearing, across a
   }
 });
 
-test("Agregar ventana while editing updates the existing window once and then clears the editor", async () => {
+test("Agregar ventana while editing updates the existing window once and keeps its editor selected", async () => {
   const fixture = context();
   await selectDj(fixture, "dj-completo", "audio-qsc");
   assert.equal(await execute(fixture, "addEquipmentEvent()"), true);
+  execute(fixture, "startNewEquipmentWindowDraft()");
   await selectDj(fixture, "dj-privado", "audio-jbl");
   assert.equal(await execute(fixture, "addEquipmentEvent()"), true);
   const secondBefore = plain(execute(fixture, "equipmentState.events[1]"));
@@ -175,8 +181,8 @@ test("Agregar ventana while editing updates the existing window once and then cl
   assert.deepEqual(events[0].sections, edited.sections);
   assert.deepEqual(events[0].djAudioSelections, { "dj-completo": "ip2000" });
   assert.deepEqual(events[1], secondBefore);
-  assert.equal(execute(fixture, "equipmentState.selectedEventId"), "");
-  assert.equal(execute(fixture, "currentEquipmentService()"), null);
+  assert.equal(execute(fixture, "equipmentState.selectedEventId"), originalId);
+  assert.equal(execute(fixture, "currentEquipmentService().id"), "dj-completo");
 });
 
 test("Guardar ventana is enabled for a new service, creates it, and keeps the selected window editable", async () => {
@@ -248,7 +254,7 @@ test("an inventory receipt failure preserves the draft and permits a successful 
   assert.equal(saved.procurementChoice, "save");
   assert.equal(saved.warehouseInventoryId, "synthetic-stock");
   assert.equal(saved.inventoryIngressReceipts[0].quantity, 3);
-  assert.equal(execute(fixture, "currentEquipmentService()"), null);
+  assert.equal(execute(fixture, "currentEquipmentService().id"), "dj-privado");
   assert.deepEqual(fixture.externalRequests, []);
 });
 
@@ -302,12 +308,12 @@ test("Agregar waits for the receipt before saving or resetting and ignores a con
   assert.equal(await pending, true);
   assert.equal(execute(fixture, "equipmentState.events.length"), 1);
   assert.equal(execute(fixture, "equipmentState.events[0].manualMainSections[0].items[0].inventoryIngressReceipts[0].quantity"), 2);
-  assert.equal(execute(fixture, "currentEquipmentService()"), null);
+  assert.equal(execute(fixture, "currentEquipmentService().id"), "dj-privado");
   assert.equal(execute(fixture, "equipmentExtraEntryBusy"), false);
   assert.deepEqual(fixture.externalRequests, []);
 });
 
-test("a standalone document window retains its source notes and zeros when Agregar clears the draft", async () => {
+test("a standalone document window retains its source notes and zeros until explicit Nueva ventana", async () => {
   const fixture = context();
   execute(fixture, `
     equipmentState.documentServiceName = "Documento sintético actual";
@@ -327,6 +333,9 @@ test("a standalone document window retains its source notes and zeros when Agreg
   assert.deepEqual(event.serviceIds, []);
   assert.equal(event.serviceName, "Documento sintético actual");
   assert.equal(event.documentSections[0].items[0].quantity, 0);
+  assert.deepEqual(plain(execute(fixture, "cloneEquipmentSnapshotSections(equipmentState.documentSections)")), before.documentSections);
+  assert.equal(execute(fixture, "equipmentState.selectedEventId"), event.id);
+  execute(fixture, "startNewEquipmentWindowDraft()");
   assert.deepEqual(plain(execute(fixture, "equipmentState.documentSections")), []);
   assert.equal(execute(fixture, "equipmentState.documentServiceName"), "");
   assert.deepEqual(fixture.externalRequests, []);
@@ -409,7 +418,8 @@ test("partial dates reject an event outside either known boundary and permit a c
       assert.equal(event.setupAt, setupAt, detail);
       assert.equal(event.date, date, detail);
       assert.equal(event.equipmentInAt, returnAt, detail);
-      assert.equal(execute(fixture, "currentEquipmentService()"), null, detail);
+      assert.equal(execute(fixture, "currentEquipmentService().id"), "dj-privado", detail);
+      assert.equal(execute(fixture, "equipmentState.selectedEventId"), event.id, detail);
     } else {
       assert.equal(execute(fixture, "equipmentState.events.length"), 0, detail);
       assert.deepEqual(plain(execute(fixture, "captureEquipmentEventSnapshot()")), before, detail);

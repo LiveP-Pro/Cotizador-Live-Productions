@@ -49,7 +49,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261017-service-update-01";
+const warehouseAssetVersion = "20261017-full-qa-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -257,7 +257,8 @@ async function ingressEquipmentStock(payload, request, response) {
 ensureWarehouseInventoryStorage();
 
 function emptyEquipmentCatalogOverrides(baseCatalogVersion = "") {
-  return { version: 3, baseCatalogVersion, savedAt: "", services: {}, groups: {}, imports: {} };
+  return { version: 3, baseCatalogVersion, savedAt: "", services: {}, groups: {}, imports: {},
+    removedServiceIds: [], retiredServices: {} };
 }
 
 function normalizeEquipmentBaseCatalogVersion(value) {
@@ -366,7 +367,10 @@ function readEquipmentCatalogOverridesFile(filePath) {
       ? parsed.services
       : {},
     groups: parsed?.groups && typeof parsed.groups === "object" && !Array.isArray(parsed.groups) ? parsed.groups : {},
-    imports: parsed?.imports && typeof parsed.imports === "object" && !Array.isArray(parsed.imports) ? parsed.imports : {}
+    imports: parsed?.imports && typeof parsed.imports === "object" && !Array.isArray(parsed.imports) ? parsed.imports : {},
+    removedServiceIds: Array.isArray(parsed?.removedServiceIds) ? parsed.removedServiceIds.filter((id) => typeof id === "string") : [],
+    retiredServices: parsed?.retiredServices && typeof parsed.retiredServices === "object" && !Array.isArray(parsed.retiredServices)
+      ? parsed.retiredServices : {}
   };
 }
 
@@ -422,7 +426,9 @@ async function saveEquipmentCatalogOverride(payload, response) {
     services: {
       ...stored.services,
       [normalized.serviceId]: normalized.service
-    }
+    },
+    removedServiceIds: stored.removedServiceIds.filter((id) => id !== normalized.serviceId),
+    retiredServices: Object.fromEntries(Object.entries(stored.retiredServices).filter(([id]) => id !== normalized.serviceId))
   };
   await writeEquipmentCatalogOverrides(next);
   jsonResponse(response, 200, {
@@ -511,14 +517,17 @@ async function previewEquipmentServiceFile(request, response) {
     }
     const existingTargets = [];
     const existingTargetFingerprints = {};
+    const removedIds = new Set(current.removedServiceIds);
     for (const [id, service] of Object.entries({ ...(base.services || {}), ...(current.services || {}) })) {
+      if (removedIds.has(id)) continue;
       const groupId = service.groupId || groupIds.get(id) || "";
       existingTargets.push({ id, name: String(service.name || ""), groupId });
       existingTargetFingerprints[id] = JSON.stringify({ groupId, service });
     }
     pruneEquipmentImportPreviews();
     const bytes = size + Buffer.byteLength(JSON.stringify(preview))
-      + Buffer.byteLength(JSON.stringify(existingTargets)) + Buffer.byteLength(JSON.stringify(existingTargetFingerprints));
+      + Buffer.byteLength(JSON.stringify(existingTargets)) + Buffer.byteLength(JSON.stringify(existingTargetFingerprints))
+      + Buffer.byteLength(JSON.stringify(current.retiredServices));
     const used = [...equipmentServiceImportPreviews.values()].reduce((sum, entry) => sum + entry.bytes, 0);
     if (response.destroyed) return;
     const pending = [...equipmentServiceImportPreviews.values()].filter((entry) => !entry.completed).length;
@@ -531,7 +540,7 @@ async function previewEquipmentServiceFile(request, response) {
       preview, buffer, bytes, owner: equipmentImportOwner(request),
       importId: crypto.randomUUID(), expiresAt: Date.now() + 20 * 60 * 1000,
       baseVersion: base.version, replacementFingerprint: JSON.stringify(replaced),
-      existingTargets, existingTargetFingerprints
+      existingTargets, existingTargetFingerprints, retiredServices: JSON.parse(JSON.stringify(current.retiredServices))
     });
     jsonResponse(response, 200, {
       ...preview, importToken, existingTargets,
@@ -595,12 +604,19 @@ async function saveImportedEquipmentServices(payload, request, response) {
     for (const [id, group] of Object.entries(current.groups || {})) {
       for (const serviceId of group.serviceIds || []) groupIds.set(serviceId, id);
     }
-    const currentServices = { ...(base.services || {}), ...(current.services || {}) };
+    const removedIds = new Set(current.removedServiceIds);
+    const currentServices = Object.fromEntries(Object.entries({ ...(base.services || {}), ...(current.services || {}) })
+      .filter(([id]) => !removedIds.has(id)));
     const nameKey = (value) => String(value || "").normalize("NFD").replace(/\p{Mark}/gu, "")
       .toLowerCase().replace(/\s+/g, " ").trim();
     const next = JSON.parse(JSON.stringify(current));
-    const removedServiceIds = Object.keys(replaced);
-    removedServiceIds.forEach((id) => delete next.services[id]);
+    const replacedServiceIds = Object.keys(replaced);
+    replacedServiceIds.forEach((id) => {
+      delete next.services[id];
+      removedIds.add(id);
+      next.retiredServices[id] = { name: String(replaced[id].name || ""),
+        groupId: replaced[id].groupId || groupIds.get(id) || "", bookKey };
+    });
     const groups = new Map((base.groups || []).map((group) => [
       equipmentImportSlug(group.id || group.label), { ...group, id: equipmentImportSlug(group.id || group.label) }
     ]));
@@ -609,7 +625,7 @@ async function saveImportedEquipmentServices(payload, request, response) {
     let addedCount = 0;
     let updatedCount = 0;
     const assignedTargets = new Set();
-    const reservedIds = new Set([...Object.keys(base.services || {}), ...Object.keys(next.services)]);
+    const reservedIds = new Set([...Object.keys(base.services || {}), ...Object.keys(next.services), ...current.removedServiceIds]);
     const importedAt = new Date().toISOString();
     for (const [index, sourceService] of sourceServices.entries()) {
       const decision = chosen.get(index);
@@ -643,6 +659,18 @@ async function saveImportedEquipmentServices(payload, request, response) {
         }
         if (targets.length > 1) throw new Error(`Hay varios servicios llamados «${sourceService.name}» en esta categoría. Resuelva la coincidencia antes de actualizar.`);
         targetId = targets[0]?.[0] || "";
+        if (!targetId) {
+          const retiredMatches = (retired) => Object.entries(retired || {}).filter(([, target]) =>
+            target.bookKey === bookKey && target.groupId === groupId && nameKey(target.name) === sourceName);
+          const previousRetired = retiredMatches(entry.retiredServices);
+          const currentRetired = retiredMatches(current.retiredServices);
+          if (JSON.stringify(previousRetired) !== JSON.stringify(currentRetired)) {
+            errorResponse(response, 409, "Un servicio retirado cambió durante la revisión. Vuelva a importar el archivo.");
+            return;
+          }
+          if (currentRetired.length > 1) throw new Error(`Hay varios servicios retirados llamados «${sourceService.name}» en esta categoría. Revise la coincidencia antes de actualizar.`);
+          targetId = currentRetired[0]?.[0] || "";
+        }
         if (targetId && assignedTargets.has(targetId)) throw new Error("Dos cuadros del archivo intentan actualizar el mismo servicio. Revise sus nombres y categorías.");
       }
       if (targetId) {
@@ -654,6 +682,8 @@ async function saveImportedEquipmentServices(payload, request, response) {
         addedCount += 1;
       }
       reservedIds.add(serviceId);
+      removedIds.delete(serviceId);
+      delete next.retiredServices[serviceId];
       const importSource = { authoritative: true, importId: entry.importId, bookKey,
         fileName: entry.preview.source.fileName, sourceName: sourceService.name,
         sourceRefs: sourceService.sourceRefs || [], sourceFileUrl: "/api/cuadros-equipo/fuentes/" + entry.importId };
@@ -675,6 +705,8 @@ async function saveImportedEquipmentServices(payload, request, response) {
     for (const [id, group] of Object.entries(next.groups)) {
       group.serviceIds = Object.entries(next.services).filter(([, service]) => service.groupId === id).map(([serviceId]) => serviceId);
     }
+    const removedServiceIds = [...removedIds];
+    next.removedServiceIds = removedServiceIds;
     const format = entry.preview.source.format === "pdf" ? "pdf" : "xlsx";
     const sha256 = crypto.createHash("sha256").update(entry.buffer).digest("hex");
     next.imports[entry.importId] = {

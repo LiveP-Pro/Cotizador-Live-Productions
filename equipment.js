@@ -1465,7 +1465,8 @@ function currentEquipmentEventDraft() {
     date: equipmentQuery("#equipmentEventDate")?.value || "",
     equipmentOutAt: setupAt,
     equipmentInAt: equipmentQuery("#equipmentEventInAt")?.value || "",
-    responsible: equipmentQuery("#equipmentEventResponsible")?.value.trim() || "Por definir"
+    responsible: equipmentQuery("#equipmentEventResponsible")?.value.trim() || "Por definir",
+    notes: equipmentQuery("#equipmentNotes")?.value || ""
   };
 }
 
@@ -1553,6 +1554,7 @@ function captureEquipmentEventSnapshot() {
     itemOverrides: equipmentMapToEntries(equipmentState.itemOverrides),
     sectionAddedItems: equipmentAddedItemsToEntries(equipmentState.sectionAddedItems),
     removedItemIds: [...equipmentState.removedItemIds],
+    deletedStack: JSON.parse(JSON.stringify(equipmentState.deletedStack)),
     sections: cloneEquipmentSnapshotSections(selectedEquipmentSections())
   };
 }
@@ -1594,6 +1596,7 @@ function restoreEquipmentEventSnapshot(event) {
   equipmentState.itemOverrides = equipmentEntriesToMap(event.itemOverrides || []);
   equipmentState.sectionAddedItems = equipmentEntriesToAddedItemsMap(event.sectionAddedItems || []);
   equipmentState.removedItemIds = new Set(event.removedItemIds || []);
+  equipmentState.deletedStack = JSON.parse(JSON.stringify(event.deletedStack || []));
   updateNativeEquipmentServiceSelect();
 }
 
@@ -1604,12 +1607,14 @@ function populateEquipmentEventFields(event) {
   const dateInput = equipmentQuery("#equipmentEventDate");
   const inAtInput = equipmentQuery("#equipmentEventInAt");
   const responsibleInput = equipmentQuery("#equipmentEventResponsible");
+  const notesInput = equipmentQuery("#equipmentNotes");
   if (placeInput) placeInput.value = event?.place || "";
   if (nameInput) nameInput.value = event?.name || "";
   if (setupAtInput) setupAtInput.value = event ? equipmentEventSetupAt(event) : "";
   if (dateInput) dateInput.value = event?.date || "";
   if (inAtInput) inAtInput.value = event?.equipmentInAt || "";
   if (responsibleInput) responsibleInput.value = event?.responsible || "";
+  if (notesInput) notesInput.value = event?.notes || "";
   syncEquipmentEventDateBounds();
   markEquipmentTimelineValidation({ valid: true, invalidFields: [] });
 }
@@ -5971,6 +5976,7 @@ function cloneEquipmentEventForEditable(event, index = 0) {
     equipmentOutAt: event?.equipmentOutAt || "",
     equipmentInAt: event?.equipmentInAt || "",
     responsible: event?.responsible || "",
+    notes: String(event?.notes ?? ""),
     serviceIds: equipmentNormalizeServiceIds(event?.serviceIds?.length ? event.serviceIds : event?.serviceId),
     serviceId: equipmentNormalizeServiceIds(event?.serviceIds?.length ? event.serviceIds : event?.serviceId)[0] || "",
     serviceName: event?.serviceName || "",
@@ -6453,7 +6459,10 @@ function importEquipmentEditablePayload(payload) {
   const idMap = new Map();
   const events = rawEvents
     .map((rawEvent, index) => {
-      const importedEvent = importedEquipmentEvent(rawEvent, index);
+      const importedEvent = importedEquipmentEvent({
+        ...rawEvent,
+        notes: rawEvent?.notes === undefined ? payload.notes || "" : rawEvent.notes
+      }, index);
       if (rawEvent?.id) idMap.set(String(rawEvent.id), importedEvent.id);
       return importedEvent;
     })

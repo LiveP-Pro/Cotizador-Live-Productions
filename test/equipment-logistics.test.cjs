@@ -4,7 +4,33 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
-function createEquipmentContext(loadCurrentCatalogs = false) {
+
+// This source is intentionally synthetic. Logistics tests do not load a saved
+// catalog or use production equipment as fixtures.
+function syntheticLogisticsCatalog() {
+  const serviceIds = Array.from({ length: 7 }, (_, index) => `synthetic-sunday-${index + 1}`);
+  const importSource = { authoritative: true, fileName: 'Synthetic current source.xlsx', version: 'synthetic-logistics-current' };
+  return {
+    version: importSource.version,
+    groups: [
+      { id: 'sunday-funday', label: 'SUNDAY FUNDAY', serviceIds },
+      { id: 'other', label: 'Other synthetic services', serviceIds: ['synthetic-dj'] }
+    ],
+    services: {
+      ...Object.fromEntries(serviceIds.map((id, index) => [id, {
+        name: `SUNDAY FUNDAY - Variante sintética ${index + 1}`, importSource,
+        mainSections: [
+          { id: `synthetic-console-${index}`, title: 'CONSOLAS', importSource, items: [[1, 'Controlador sintético Q'], [1, 'Enlace sintético R'], [0, `Accesorio cero ${index}`]] },
+          { id: `synthetic-backline-${index}`, title: 'BACKLINE', importSource, items: [[index + 1, `Instrumento sintético ${index}`]] },
+          { id: `synthetic-consumable-${index}`, title: 'Consumibles', importSource, items: [[2, `Suministro sintético ${index} consumible`]] }
+        ], extras: []
+      }])),
+      'synthetic-dj': { name: 'DJ sintético', mainSections: [{ title: 'AUDIO', items: [[1, 'Altavoz sintético DJ']] }], extras: [] }
+    }
+  };
+}
+
+function createEquipmentContext(loadSyntheticCatalogs = false) {
   const context = {
     console,
     URL,
@@ -41,11 +67,7 @@ function createEquipmentContext(loadCurrentCatalogs = false) {
   };
   context.globalThis = context;
   vm.createContext(context);
-  if (loadCurrentCatalogs) {
-    ["equipment-catalog.js", "equipment-inventory.js"].forEach((file) => {
-      vm.runInContext(fs.readFileSync(path.join(__dirname, "..", file), "utf8"), context, { filename: file });
-    });
-  }
+  if (loadSyntheticCatalogs) context.window.requerimientoEquipoCatalog = syntheticLogisticsCatalog();
   const source = fs.readFileSync(path.join(__dirname, "..", "equipment.js"), "utf8");
   vm.runInContext(source, context, { filename: "equipment.js" });
   return context;
@@ -82,7 +104,7 @@ test("a custom service is restored in its selected category with zero quantities
       mainSections: [{
         id: "consola",
         title: "CONSOLA",
-        items: [[0, "Consola X32 mesa digital con cable ac"]]
+        items: [[0, "Controlador sintético Q"]]
       }],
       audioOptions: {}
     });
@@ -534,8 +556,7 @@ test("backline-only uses source sections, excludes audio and preserves choices o
 });
 
 test("Sunday Funday option is available for all workbook variants, not other services", () => {
-  const context = createEquipmentContext();
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "equipment-catalog.js"), "utf8"), context);
+  const context = createEquipmentContext(true);
   const result = plain(evaluate(context, `(() => {
     const catalog = window.requerimientoEquipoCatalog;
     const group = catalog.groups.find((item) => item.label === "SUNDAY FUNDAY");
@@ -544,34 +565,36 @@ test("Sunday Funday option is available for all workbook variants, not other ser
       all: services.every((item) => equipmentEventIsSundayFunday({ serviceName: item.name })),
       other: equipmentEventIsSundayFunday({ serviceName: "DJ Privado", serviceIds: ["dj-privado"] }) };
   })()`));
-  assert.equal(result.count, 5);
+  assert.equal(result.count, 7);
   assert.equal(result.all, true);
   assert.equal(result.other, false);
 });
 
-test("catalog is generated only from the current authorized workbook", () => {
-  const context = createEquipmentContext();
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "equipment-catalog.js"), "utf8"), context);
-  const catalog = plain(context.window.requerimientoEquipoCatalog);
-  assert.equal(catalog.version, "20261014-dj-audio-01");
-  assert.equal(catalog.source.sha256, "996f99ce60d1f4df7569eff4acd687a4aa998aca273473e5db33b152229ca0c1");
-  assert.equal(Object.keys(catalog.services).length, 61);
-  assert.equal(catalog.source.workbook, "EQUIPO DE AUDIO ACTUALIZADO (1).xlsx");
-  assert.ok(!catalog.source.serviceSheets.includes("INVENTARIO"));
-  assert.equal(Object.values(catalog.services).reduce((count, service) => count + service.sourceCells.length, 0), 5117);
-  assert.deepEqual(catalog.groups.find(group => group.label === "DJ").serviceIds, ["dj-completo", "dj-privado"]);
-  assert.deepEqual(catalog.groups.find(group => group.label === "AUDIO").serviceIds, ["audio-qsc", "audio-jbl", "turbosound", "ip2000"]);
-  assert.equal(catalog.services["novaloops-solo-show"].mainSections.reduce((count, section) => count + section.items.length, 0), 45);
-  assert.deepEqual(catalog.groups.map((group) => group.label), [
-    "SUNDAY FUNDAY", "DJ", "NOVALOOPS", "SAXOFONIC", "AUDIO",
-    "ESTUARDO REYNA", "CEREMONIA", "COCTEL", "ESTRUCTURAS EN L",
-    "CUADRILATERO", "PISTA DE BAILE", "PANTALLA LED", "TARIMA"
-  ]);
-  const zeroItems = Object.values(catalog.services)
-    .flatMap((service) => service.mainSections)
-    .flatMap((section) => section.items)
-    .filter(([quantity]) => quantity === 0);
-  assert.equal(zeroItems.length, 16);
+test("fresh authoritative catalog rows replace the prior source and preserve unrelated current services", () => {
+  const context = createEquipmentContext(true);
+  const unrelated = plain(evaluate(context, 'equipmentServices["synthetic-sunday-2"]'));
+  const result = plain(evaluate(context, `(() => {
+    const importSource = { authoritative: true, fileName: 'Synthetic replacement.xlsx', version: 'synthetic-new-source' };
+    applyEquipmentCatalogOverrides({
+      baseCatalogVersion: 'synthetic-logistics-current',
+      services: { 'synthetic-sunday-1': {
+        name: 'SUNDAY FUNDAY - Variante sintética renovada', importSource,
+        mainSections: [{ id: 'fresh-only', title: 'Categoría actual', importSource,
+          items: [[0, ' Equipo nuevo literal ']],
+          rows: [{ type: 'item', sourceItemIndex: 0, quantity: 0, description: ' Equipo nuevo literal ',
+            cells: [{ ref: 'CURRENT!A2', value: 0 }, { ref: 'CURRENT!B2', value: ' Equipo nuevo literal ' }] },
+            { type: 'note', description: 'Nota nueva literal', cells: [{ ref: 'CURRENT!B3', value: 'Nota nueva literal' }] }] }]
+      } }
+    });
+    setEquipmentServiceSelection(['synthetic-sunday-1']);
+    return { snapshot: captureEquipmentEventSnapshot(), service: equipmentServices['synthetic-sunday-1'] };
+  })()`));
+  assert.equal(result.service.importSource.version, 'synthetic-new-source');
+  assert.deepEqual(result.snapshot.sections.flatMap(section => section.items.map(item => [item.quantity, item.description])), [[0, ' Equipo nuevo literal ']]);
+  assert.equal(result.snapshot.sections[0].rows[1].description, 'Nota nueva literal');
+  assert.deepEqual(result.service.audioOptions, {});
+  assert.deepEqual(result.service.extras, []);
+  assert.deepEqual(plain(evaluate(context, 'equipmentServices["synthetic-sunday-2"]')), unrelated);
 });
 
 test("purchase report contains only COMPRA; rent report contains only RENTA", () => {
@@ -642,7 +665,7 @@ test("JSON round trip retains backline preference, all route events and empty se
 });
 
 
-test("all authorized Sunday variants build nonempty synchronized plans", () => {
+test("all seven synthetic Sunday variants build nonempty synchronized plans", () => {
   const context = createEquipmentContext(true);
   const results = plain(evaluate(context, `(() => {
     const ids = equipmentServiceGroups.find((group) => group.label === "SUNDAY FUNDAY").serviceIds;
@@ -653,7 +676,7 @@ test("all authorized Sunday variants build nonempty synchronized plans", () => {
         { ...snapshot, id: "b", active: true, place: "B", date: "2026-09-26", setupAt: "2026-09-26T07:00", equipmentInAt: "2026-09-27T02:00" }
       ];
       equipmentState.summaryTransferEnabled = true;
-      const route = createEquipmentSummaryTransferRoute(["a", "b"], "actual-catalog-test");
+      const route = createEquipmentSummaryTransferRoute(["a", "b"], "synthetic-catalog-test");
       equipmentState.summaryTransferRoutes = [route];
       const all = equipmentTransferPlanData().routes[0].items;
       const summary = equipmentRowsSummary().filter((row) => row.transferApplied);
@@ -665,7 +688,7 @@ test("all authorized Sunday variants build nonempty synchronized plans", () => {
         noConsumables: all.every((item) => !equipmentRowIsConsumable(item)) };
     });
   })()`));
-  assert.equal(results.length, 5);
+  assert.equal(results.length, 7);
   results.forEach((result) => {
     assert.ok(result.count > 0, result.serviceId);
     assert.ok(result.summaryCount > 0, result.serviceId);
@@ -703,19 +726,17 @@ test("summary alone automatically writes TRASIEGO in ACCION before any route or 
   assert.ok(result.plan.includes("Teclado de prueba"));
 });
 
-test("automatic summary reproduces screenshot dates and both exact current console rows", () => {
+test("automatic summary handles sequential dates and distinct synthetic console rows", () => {
   const context = createEquipmentContext(true);
   const result = plain(evaluate(context, `(() => {
-    const serviceId = Object.keys(equipmentServices).find((id) =>
-      /sunday funday - bateria acustica opcion a/.test(normalizeEquipmentKey(equipmentServices[id].name)));
-    if (!serviceId) throw new Error("Current Sunday Funday variant not found");
+    const serviceId = 'synthetic-sunday-1';
     applyEquipmentWarehouseInventoryPayload({
       savedAt: "2026-09-28T10:00:00.000Z",
       state: {
         updatedAt: "2026-09-28T10:00:00.000Z",
         items: [
-          { id: "console-test", name: "Consola X32 mesa digital con cable ac", category: "CONSOLAS", itemType: "equipo", quantity: 2 },
-          { id: "router-test", name: "Router con cargador y funda", category: "CONSOLAS", itemType: "equipo", quantity: 2 }
+          { id: "console-test", name: "Controlador sintético Q", category: "CONSOLAS", itemType: "equipo", quantity: 2 },
+          { id: "router-test", name: "Enlace sintético R", category: "CONSOLAS", itemType: "equipo", quantity: 2 }
         ],
         movements: []
       }
@@ -725,7 +746,7 @@ test("automatic summary reproduces screenshot dates and both exact current conso
       { ...snapshot, id: "a", active: true, place: "A", name: "BODA", date: "2026-09-25", setupAt: "2026-09-25T07:00", equipmentInAt: "2026-09-26T03:00" },
       { ...snapshot, id: "b", active: true, place: "B", name: "BODA", date: "2026-09-26", setupAt: "2026-09-26T08:00", equipmentInAt: "2026-09-27T04:00" }
     ];
-    return equipmentRowsSummary().filter((row) => /^(consola x32 mesa digital con cable ac|router con cargador y funda)$/.test(normalizeEquipmentKey(row.description)))
+    return equipmentRowsSummary().filter((row) => /^(controlador sintetico q|enlace sintetico r)$/.test(normalizeEquipmentKey(row.description)))
       .map((row) => ({ description: row.description, quantity: row.quantity,
         applied: row.transferApplied, html: tableForEquipmentInventory([row], false) }));
   })()`));
@@ -858,3 +879,4 @@ test("manual empty plan is not recreated and consumables or nonshared equipment 
   assert.match(result.html, />COMPRA<\/td>/);
   assert.equal(result.count, 0);
 });
+
