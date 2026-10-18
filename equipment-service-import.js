@@ -36,7 +36,28 @@
     return "";
   }
 
-  function selectionError(preview, selections, groups) {
+  function replacementPlan(preview, selections) {
+    const targets = Array.isArray(preview?.existingTargets) ? preview.existingTargets : [];
+    let updated = 0;
+    for (let index = 0; index < (selections || []).length; index += 1) {
+      const selection = selections[index];
+      if (!selection.category || selection.category === NEW_CATEGORY) continue;
+      const sourceName = key(preview?.services?.[index]?.name);
+      const matches = new Set(targets.filter((target) => sourceName && key(target.name) === sourceName && string(target.groupId) === string(selection.category)).map((target) => string(target.id)));
+      if (matches.size > 1) return { updated, added: selections.length - updated, error: `Servicio ${index + 1}: hay varios servicios existentes con el mismo nombre y categoría. No se puede decidir cuál actualizar; revise la categoría o desmarque la actualización.` };
+      if (matches.size === 1) updated += 1;
+    }
+    return { updated, added: (selections || []).length - updated, error: "" };
+  }
+
+  function replacementMessage(preview, selections, options = {}) {
+    const plan = replacementPlan(preview, selections);
+    if (options.replaceExistingByName === true && plan.error) return plan.error;
+    if (options.replaceExistingByName === true) return `Se actualizarán ${plan.updated} servicios existentes y se agregarán ${plan.added} servicios nuevos, según el nombre del cuadro y la categoría elegida. Cada servicio actualizado se sustituirá por el cuadro completo de este archivo.`;
+    return `La actualización por nombre está desactivada. Hay ${plan.updated} coincidencias de nombre y categoría; active la opción para actualizar esos servicios con este archivo.`;
+  }
+
+  function selectionError(preview, selections, groups, options = {}) {
     const invalidPreview = verificationError(preview);
     if (invalidPreview) return invalidPreview;
     if (!Array.isArray(selections) || selections.length !== preview.services.length) {
@@ -55,15 +76,16 @@
         return `${prefix}elija una categoría existente o cree una nueva.`;
       }
     }
-    return "";
+    return options.replaceExistingByName === true ? replacementPlan(preview, selections).error : "";
   }
 
-  function createPayload(preview, selections, groups, baseCatalogVersion) {
-    const error = selectionError(preview, selections, groups);
+  function createPayload(preview, selections, groups, baseCatalogVersion, options = {}) {
+    const error = selectionError(preview, selections, groups, options);
     if (error) throw new Error(error);
     return {
       baseCatalogVersion: string(baseCatalogVersion),
       importToken: string(preview.importToken),
+      ...(options.replaceExistingByName === true ? { replaceExistingByName: true } : {}),
       services: selections.map((selection, index) => ({
         index,
         name: string(selection.name).trim(),
@@ -122,7 +144,7 @@
     return `<article class="equipment-service-import-card" data-import-service="${index}"><h3>Servicio ${index + 1}</h3><div class="equipment-service-import-fields"><label for="equipmentImportServiceName${index}">Nombre del tipo de servicio<input id="equipmentImportServiceName${index}" type="text" data-import-field="name" data-import-index="${index}" value="${escape(selection.name)}" autocomplete="off" maxlength="240" /></label><label for="equipmentImportServiceCategory${index}">Dónde guardar este servicio<select id="equipmentImportServiceCategory${index}" data-import-field="category" data-import-index="${index}">${categoryOptions(groups, selection.category)}</select></label><label for="equipmentImportServiceNewCategory${index}" class="equipment-service-import-new-category" data-import-new-category="${index}"${selection.category !== NEW_CATEGORY ? " hidden" : ""}>Nombre de la nueva categoría<input id="equipmentImportServiceNewCategory${index}" type="text" data-import-field="newCategory" data-import-index="${index}" value="${escape(selection.newCategory)}" autocomplete="off" maxlength="160" placeholder="Ej. Servicio especial" /></label></div>${(service.mainSections || []).map(renderSection).join("")}${notes}${Array.isArray(service.sourceCells) && service.sourceCells.length ? `<details class="equipment-service-import-source"><summary>Contenido original de este servicio</summary>${renderCells(service.sourceCells)}</details>` : ""}</article>`;
   }
 
-  function renderPreview(preview, selections, groups) {
+  function renderPreview(preview, selections, groups, options = {}) {
     const source = preview.source || {};
     const services = preview.services || [];
     const count = services.reduce((total, service) => total + (service.mainSections || []).reduce((sum, section) => sum + (section.items || []).length, 0), 0);
@@ -135,7 +157,8 @@
       ? `<div class="equipment-service-import-notice is-warning"><strong>Este archivo reemplazará los servicios importados anteriormente desde este mismo libro.</strong><p>${escape(preview.replaces.count)} ${Number(preview.replaces.count) === 1 ? "servicio se sustituirá" : "servicios se sustituirán"} con el contenido completo de esta versión.</p>${Array.isArray(preview.replaces.serviceNames) && preview.replaces.serviceNames.length ? `<ul>${preview.replaces.serviceNames.map((name) => `<li>${escape(name)}</li>`).join("")}</ul>` : ""}</div>`
       : "";
     const bulk = services.length > 1 ? `<section class="equipment-service-import-bulk"><h3>Usar la misma categoría para todos</h3><div class="equipment-service-import-fields"><label for="equipmentImportBulkCategory">Categoría<select id="equipmentImportBulkCategory">${categoryOptions(groups, "")}</select></label><label for="equipmentImportBulkNewCategory" id="equipmentImportBulkNewCategoryLabel" hidden>Nombre de la nueva categoría<input id="equipmentImportBulkNewCategory" type="text" autocomplete="off" maxlength="160" /></label></div><button id="equipmentImportApplyBulkCategory" type="button">Aplicar a todos</button></section>` : "";
-    return `<p class="equipment-service-import-summary"><strong>${escape(source.fileName || "Archivo importado")}</strong><br>${services.length} ${services.length === 1 ? "servicio" : "servicios"} · ${count} ${count === 1 ? "fila de equipo" : "filas de equipo"}${escape(verification)}</p><p class="equipment-service-import-notice">Cada cuadro se guardará como un tipo de servicio. Elija una categoría existente o cree una nueva; los datos del archivo se conservarán completos.</p>${replacement}${blocker ? `<p class="equipment-service-import-notice is-error">${escape(blocker)}</p>` : ""}${warnings.length ? `<div class="equipment-service-import-notice is-warning"><strong>Revise estas observaciones</strong><ul>${warnings.map((warning) => `<li>${escape(warning)}</li>`).join("")}</ul></div>` : ""}${bulk}${services.map((service, index) => renderCard(service, selections[index], index, groups)).join("")}${renderSource(preview)}`;
+    const updateByName = `<section class="equipment-service-import-notice"><label for="equipmentImportReplaceExisting"><input id="equipmentImportReplaceExisting" type="checkbox"${options.replaceExistingByName === true ? " checked" : ""} /> Actualizar servicios existentes con el mismo nombre y categoría</label><p id="equipmentImportReplacementSummary" role="status">${escape(replacementMessage(preview, selections, options))}</p></section>`;
+    return `<p class="equipment-service-import-summary"><strong>${escape(source.fileName || "Archivo importado")}</strong><br>${services.length} ${services.length === 1 ? "servicio" : "servicios"} · ${count} ${count === 1 ? "fila de equipo" : "filas de equipo"}${escape(verification)}</p><p class="equipment-service-import-notice">Cada cuadro se guardará como un tipo de servicio. Elija una categoría existente o cree una nueva; los datos del archivo se conservarán completos.</p>${replacement}${blocker ? `<p class="equipment-service-import-notice is-error">${escape(blocker)}</p>` : ""}${warnings.length ? `<div class="equipment-service-import-notice is-warning"><strong>Revise estas observaciones</strong><ul>${warnings.map((warning) => `<li>${escape(warning)}</li>`).join("")}</ul></div>` : ""}${bulk}${updateByName}${services.map((service, index) => renderCard(service, selections[index], index, groups)).join("")}${renderSource(preview)}`;
   }
 
   function init(options = {}) {
@@ -149,7 +172,7 @@
     if (Object.values(elements).some((element) => !element)) return null;
     if (elements.opener.dataset.importInitialized === "true") return null;
     elements.opener.dataset.importInitialized = "true";
-    let state = { preview: null, selections: [], busy: false, committed: false, request: null, requestId: 0 };
+    let state = { preview: null, selections: [], replaceExistingByName: false, busy: false, committed: false, request: null, requestId: 0 };
     const groups = () => clone(typeof options.groups === "function" ? options.groups() || [] : options.groups || []);
     const baseVersion = () => typeof options.baseVersion === "function" ? options.baseVersion() : options.baseVersion;
 
@@ -158,8 +181,13 @@
       elements.status.dataset.error = error ? "true" : "false";
     }
 
+    function updateReplacementSummary() {
+      const summary = document.getElementById("equipmentImportReplacementSummary");
+      if (summary) summary.textContent = replacementMessage(state.preview, state.selections, state);
+    }
+
     function updateSave() {
-      elements.save.disabled = state.busy || state.committed || !!selectionError(state.preview, state.selections, groups());
+      elements.save.disabled = state.busy || state.committed || !!selectionError(state.preview, state.selections, groups(), state);
       elements.choose.disabled = state.busy && state.preview !== null;
       elements.close.disabled = state.busy && state.preview !== null;
       elements.cancel.disabled = state.busy && state.preview !== null;
@@ -179,6 +207,7 @@
       elements.input.value = "";
       state.preview = null;
       state.selections = [];
+      state.replaceExistingByName = false;
       state.committed = false;
       elements.opener.focus();
     }
@@ -195,6 +224,7 @@
       const requestId = state.requestId;
       state.preview = null;
       state.selections = [];
+      state.replaceExistingByName = false;
       state.committed = false;
       state.busy = true;
       state.request = new AbortController();
@@ -218,7 +248,7 @@
         if (!response.ok) throw new Error(preview.error || "No se pudo leer el archivo. Vuelva a intentarlo.");
         state.preview = preview;
         state.selections = draftFor(preview);
-        elements.content.innerHTML = renderPreview(preview, state.selections, groups());
+        elements.content.innerHTML = renderPreview(preview, state.selections, groups(), state);
         status(verificationError(preview) || "Elija dónde guardar cada servicio.", !!verificationError(preview));
         elements.content.querySelector('[data-import-field="category"]')?.focus();
       } catch (error) {
@@ -242,8 +272,9 @@
       if (field === "category") {
         elements.content.querySelector(`[data-import-new-category="${index}"]`).hidden = target.value !== NEW_CATEGORY;
       }
-      const error = selectionError(state.preview, state.selections, groups());
-      status(error || "Todo listo. Guarde los servicios para que queden disponibles.");
+      const error = selectionError(state.preview, state.selections, groups(), state);
+      updateReplacementSummary();
+      status(error || "Todo listo. Guarde los servicios para que queden disponibles.", !!error);
       updateSave();
     }
 
@@ -259,8 +290,8 @@
         selection.category = category;
         selection.newCategory = category === NEW_CATEGORY ? label : "";
       });
-      elements.content.innerHTML = renderPreview(state.preview, state.selections, groups());
-      status(selectionError(state.preview, state.selections, groups()) || "La categoría se aplicó a todos los servicios.");
+      elements.content.innerHTML = renderPreview(state.preview, state.selections, groups(), state);
+      status(selectionError(state.preview, state.selections, groups(), state) || "La categoría se aplicó a todos los servicios.");
       updateSave();
     }
 
@@ -268,7 +299,7 @@
       if (state.busy || state.committed || !state.preview) return;
       let body;
       try {
-        body = createPayload(state.preview, state.selections, groups(), baseVersion());
+        body = createPayload(state.preview, state.selections, groups(), baseVersion(), state);
       } catch (error) {
         status(error.message, true);
         updateSave();
@@ -278,7 +309,7 @@
       updateSave();
       const disabledFields = [...elements.content.querySelectorAll("input,select,button")];
       disabledFields.forEach((field) => { field.disabled = true; });
-      status("Guardando los nuevos tipos de servicio…");
+      status("Guardando los tipos de servicio…");
       try {
         const response = await fetch("/api/cuadros-equipo/importar-servicios", {
           method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
@@ -290,7 +321,9 @@
         const count = state.selections.length;
         state.busy = false;
         close();
-        elements.pageStatus.textContent = `${count === 1 ? "El nuevo tipo de servicio quedó guardado" : `Los ${count} nuevos tipos de servicio quedaron guardados`} y disponible${count === 1 ? "" : "s"} en la lista de servicios.`;
+        elements.pageStatus.textContent = Number.isInteger(payload.updatedCount) && Number.isInteger(payload.addedCount)
+          ? `Se actualizaron ${payload.updatedCount} servicios existentes y se agregaron ${payload.addedCount} servicios nuevos. Ya están disponibles en la lista de servicios.`
+          : `${count === 1 ? "El nuevo tipo de servicio quedó guardado" : `Los ${count} nuevos tipos de servicio quedaron guardados`} y disponible${count === 1 ? "" : "s"} en la lista de servicios.`;
       } catch (error) {
         status(state.committed ? "Los servicios quedaron guardados. Recargue la página para actualizar la lista." : error.message || "No se pudieron guardar los servicios. Vuelva a intentarlo.", true);
       } finally {
@@ -326,14 +359,21 @@
     });
     elements.content.addEventListener("input", (event) => updateField(event.target));
     elements.content.addEventListener("change", (event) => {
-      if (event.target.id === "equipmentImportBulkCategory") {
+      if (event.target.id === "equipmentImportReplaceExisting") {
+        if (state.busy || state.committed || !state.preview) return;
+        state.replaceExistingByName = event.target.checked === true;
+        updateReplacementSummary();
+        const error = selectionError(state.preview, state.selections, groups(), state);
+        status(error || "Revise las cantidades de servicios por actualizar y agregar.", !!error);
+        updateSave();
+      } else if (event.target.id === "equipmentImportBulkCategory") {
         document.getElementById("equipmentImportBulkNewCategoryLabel").hidden = event.target.value !== NEW_CATEGORY;
       } else updateField(event.target);
     });
     elements.content.addEventListener("click", (event) => {
       if (event.target.closest("#equipmentImportApplyBulkCategory")) applyBulkCategory();
     });
-    return { openFile: importFile, close, getState: () => clone({ preview: state.preview, selections: state.selections, busy: state.busy, committed: state.committed }) };
+    return { openFile: importFile, close, getState: () => clone({ preview: state.preview, selections: state.selections, replaceExistingByName: state.replaceExistingByName, busy: state.busy, committed: state.committed }) };
   }
 
   return { init, draftFor, selectionError, createPayload, renderPreview, NEW_CATEGORY };

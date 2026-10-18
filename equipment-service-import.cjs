@@ -153,7 +153,7 @@ function inferExcelLayouts(sourceRows) {
   });
 }
 
-function buildServices(sourceRows, warnings, blockers) {
+function buildServices(sourceRows, warnings, blockers, { preserveExcelDescriptions = false } = {}) {
   const services = [];
   const servicesByName = new Map();
   let service = null;
@@ -186,12 +186,15 @@ function buildServices(sourceRows, warnings, blockers) {
   };
   const append = (sourceRow, type, description, count = null, extra = {}) => {
     const target = ensureSection();
-    const row = { type, quantity: count, description: clean(description), sourceRefs: sourceRow.cells.map((cell) => cell.ref),
+    // Excel strings are source data. Normalize only while recognizing fields;
+    // the rendered item and its ledger keep leading/trailing/repeated spaces.
+    const itemDescription = type === "item" && preserveExcelDescriptions ? String(description ?? "") : clean(description);
+    const row = { type, quantity: count, description: itemDescription, sourceRefs: sourceRow.cells.map((cell) => cell.ref),
       cells: clone(sourceRow.cells), sourceOrder: sourceRow.order, sourceLocation: sourceRow.sourceLocation,
       sectionTitle: target.title, ...extra };
     if (type === "item") {
       row.itemIndex = target.items.length;
-      target.items.push([count, clean(description)]);
+      target.items.push([count, itemDescription]);
     } else {
       row.displayGroups = extra.displayGroups || (sourceRow.columns || sourceRow.cells).map((cell) => cell.refs || [cell.ref]);
       target.notes.push(clean(description));
@@ -250,7 +253,9 @@ function buildServices(sourceRows, warnings, blockers) {
       continue;
     }
     const count = quantity(rawCount);
-    const description = table ? clean(values.get(table.columns.description)) : "";
+    const rawDescription = table ? values.get(table.columns.description) : "";
+    const description = preserveExcelDescriptions ? String(rawDescription ?? "") : clean(rawDescription);
+    const hasDescription = clean(description) !== "";
     const noteOnly = table && cells.every((cell) => [table.columns.notes, table.columns.service, table.columns.category].includes(cell.column));
     const noteLabel = /^(?:nota|notas|observacion|observaciones|comentario)\s*:/i.test(key(description || cells.map((cell) => clean(cell.value)).join(" ")));
     const pageFooter = !hasCount && /^(?:pagina|page)\s+\d+\s+(?:de|of)\s+\d+$/.test(key(description || cells.map((cell) => clean(cell.value)).join(" ")));
@@ -272,13 +277,13 @@ function buildServices(sourceRows, warnings, blockers) {
     }
     if (!service) ensureService(inferredName || location);
     flushPending();
-    if (table && description && count !== null) {
+    if (table && hasDescription && count !== null) {
       const extras = cells.filter((cell) => ![table.columns.description, table.columns.quantity, table.columns.service, table.columns.category].includes(cell.column));
       const notes = extras.map((cell) => `${table.labels[cell.column] || `Columna ${cell.column}`}: ${String(cell.value ?? "")}`);
       const refsFor = (column) => cells.filter((cell) => cell.column === column).flatMap((cell) => cell.refs || [cell.ref]).filter(Boolean);
       append(sourceRow, "item", description, count, { notes, quantityRefs: refsFor(table.columns.quantity), descriptionRefs: refsFor(table.columns.description) });
       if (notes.length) section.notes.push(...notes);
-    } else if (noteOnly || noteLabel || pageFooter || (!hasCount && !description)) {
+    } else if (noteOnly || noteLabel || pageFooter || (!hasCount && !hasDescription)) {
       append(sourceRow, "note", cells.map((cell) => String(cell.value ?? "")).join(" | "));
     } else {
       append(sourceRow, "unresolved", cells.map((cell) => String(cell.value ?? "")).join(" | "));
@@ -544,7 +549,9 @@ function verifyServiceImport(preview) {
         if (JSON.stringify(row.sourceRefs || []) !== JSON.stringify((row.cells || []).map((cell) => cell.ref))) mismatchedRefs.push(...(row.sourceRefs || []));
         if (row.type === "item") {
           const valueFor = (refs) => (refs || []).map((ref) => expected.get(ref)?.value ?? "").join(" ");
-          if (!row.quantityRefs?.length || !row.descriptionRefs?.length || quantity(valueFor(row.quantityRefs)) !== row.quantity || clean(valueFor(row.descriptionRefs)) !== row.description) {
+          const descriptionFromSource = valueFor(row.descriptionRefs);
+          const expectedDescription = preview?.source?.format === "xlsx" ? descriptionFromSource : clean(descriptionFromSource);
+          if (!row.quantityRefs?.length || !row.descriptionRefs?.length || quantity(valueFor(row.quantityRefs)) !== row.quantity || expectedDescription !== row.description) {
             blockers.push(`${row.sourceLocation || "Fila"}: la cantidad o descripción no coincide con sus celdas originales.`);
             mismatchedRefs.push(...(row.sourceRefs || []));
           }
@@ -583,7 +590,7 @@ async function parseServiceFile(buffer, { fileName = "servicios", mimeType = "" 
   const data = format === "xlsx" ? await readExcel(buffer) : await readPdf(buffer);
   if (!data.sourceCells.length) throw invalid("El archivo no contiene celdas o texto con información.");
   const warnings = [];
-  const services = buildServices(data.sourceRows, warnings, data.blockers);
+  const services = buildServices(data.sourceRows, warnings, data.blockers, { preserveExcelDescriptions: format === "xlsx" });
   const preview = { source: { fileName: String(fileName), format, mimeType: String(mimeType),
     sha256: crypto.createHash("sha256").update(buffer).digest("hex"), byteLength: buffer.length },
     services, warnings, sourceCells: data.sourceCells, documentLines: data.documentLines, blockers: data.blockers };

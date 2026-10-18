@@ -49,7 +49,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261017-window-visible-01";
+const warehouseAssetVersion = "20261017-service-update-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -501,8 +501,24 @@ async function previewEquipmentServiceFile(request, response) {
     const base = currentEquipmentBaseCatalog();
     const current = currentEquipmentImportCatalog(base.version);
     const replaced = equipmentImportBookServices(current, equipmentImportBookKey(fileName));
+    const groupIds = new Map();
+    for (const group of base.groups || []) {
+      const id = equipmentImportSlug(group.id || group.label);
+      for (const serviceId of group.serviceIds || []) groupIds.set(serviceId, id);
+    }
+    for (const [id, group] of Object.entries(current.groups || {})) {
+      for (const serviceId of group.serviceIds || []) groupIds.set(serviceId, id);
+    }
+    const existingTargets = [];
+    const existingTargetFingerprints = {};
+    for (const [id, service] of Object.entries({ ...(base.services || {}), ...(current.services || {}) })) {
+      const groupId = service.groupId || groupIds.get(id) || "";
+      existingTargets.push({ id, name: String(service.name || ""), groupId });
+      existingTargetFingerprints[id] = JSON.stringify({ groupId, service });
+    }
     pruneEquipmentImportPreviews();
-    const bytes = size + Buffer.byteLength(JSON.stringify(preview));
+    const bytes = size + Buffer.byteLength(JSON.stringify(preview))
+      + Buffer.byteLength(JSON.stringify(existingTargets)) + Buffer.byteLength(JSON.stringify(existingTargetFingerprints));
     const used = [...equipmentServiceImportPreviews.values()].reduce((sum, entry) => sum + entry.bytes, 0);
     if (response.destroyed) return;
     const pending = [...equipmentServiceImportPreviews.values()].filter((entry) => !entry.completed).length;
@@ -514,10 +530,11 @@ async function previewEquipmentServiceFile(request, response) {
     equipmentServiceImportPreviews.set(importToken, {
       preview, buffer, bytes, owner: equipmentImportOwner(request),
       importId: crypto.randomUUID(), expiresAt: Date.now() + 20 * 60 * 1000,
-      baseVersion: base.version, replacementFingerprint: JSON.stringify(replaced)
+      baseVersion: base.version, replacementFingerprint: JSON.stringify(replaced),
+      existingTargets, existingTargetFingerprints
     });
     jsonResponse(response, 200, {
-      ...preview, importToken,
+      ...preview, importToken, existingTargets,
       replaces: { count: Object.keys(replaced).length, serviceNames: Object.values(replaced).map((service) => service.name) }
     });
   } catch (error) {
@@ -533,7 +550,8 @@ async function saveImportedEquipmentServices(payload, request, response) {
     return;
   }
   const decisions = payload?.services;
-  const decisionFingerprint = JSON.stringify(decisions);
+  const replaceExistingByName = payload?.replaceExistingByName === true;
+  const decisionFingerprint = JSON.stringify({ services: decisions, replaceExistingByName });
   if (entry.completed) {
     if (decisionFingerprint !== entry.decisionFingerprint) {
       errorResponse(response, 409, "Este archivo ya se guardó con otra selección. Vuelva a importarlo para cambiarla.");
@@ -569,6 +587,17 @@ async function saveImportedEquipmentServices(payload, request, response) {
       errorResponse(response, 409, "Otro usuario actualizó este mismo libro. Vuelva a importarlo para comparar la versión actual.");
       return;
     }
+    const groupIds = new Map();
+    for (const group of base.groups || []) {
+      const id = equipmentImportSlug(group.id || group.label);
+      for (const serviceId of group.serviceIds || []) groupIds.set(serviceId, id);
+    }
+    for (const [id, group] of Object.entries(current.groups || {})) {
+      for (const serviceId of group.serviceIds || []) groupIds.set(serviceId, id);
+    }
+    const currentServices = { ...(base.services || {}), ...(current.services || {}) };
+    const nameKey = (value) => String(value || "").normalize("NFD").replace(/\p{Mark}/gu, "")
+      .toLowerCase().replace(/\s+/g, " ").trim();
     const next = JSON.parse(JSON.stringify(current));
     const removedServiceIds = Object.keys(replaced);
     removedServiceIds.forEach((id) => delete next.services[id]);
@@ -577,6 +606,9 @@ async function saveImportedEquipmentServices(payload, request, response) {
     ]));
     Object.entries(next.groups).forEach(([id, group]) => groups.set(id, { ...group, id }));
     const imported = {};
+    let addedCount = 0;
+    let updatedCount = 0;
+    const assignedTargets = new Set();
     const reservedIds = new Set([...Object.keys(base.services || {}), ...Object.keys(next.services)]);
     const importedAt = new Date().toISOString();
     for (const [index, sourceService] of sourceServices.entries()) {
@@ -598,7 +630,29 @@ async function saveImportedEquipmentServices(payload, request, response) {
       if (!groups.has(groupId)) throw new Error("Seleccione una categoría existente o cree una nueva.");
       const baseId = equipmentImportSlug(name) || "servicio";
       let serviceId = baseId, suffix = 2;
-      while (reservedIds.has(serviceId)) serviceId = baseId + "-" + suffix++;
+      let targetId = "";
+      if (replaceExistingByName) {
+        const sourceName = nameKey(sourceService.name);
+        const previousTargets = (entry.existingTargets || []).filter((target) => target.groupId === groupId && nameKey(target.name) === sourceName);
+        const targets = Object.entries(currentServices).filter(([id, service]) =>
+          (service.groupId || groupIds.get(id) || "") === groupId && nameKey(service.name) === sourceName);
+        if (JSON.stringify(previousTargets.map((target) => target.id).sort()) !== JSON.stringify(targets.map(([id]) => id).sort())
+          || targets.some(([id, service]) => entry.existingTargetFingerprints[id] !== JSON.stringify({ groupId, service }))) {
+          errorResponse(response, 409, "Un servicio que se iba a actualizar cambió durante la revisión. Vuelva a importar el archivo.");
+          return;
+        }
+        if (targets.length > 1) throw new Error(`Hay varios servicios llamados «${sourceService.name}» en esta categoría. Resuelva la coincidencia antes de actualizar.`);
+        targetId = targets[0]?.[0] || "";
+        if (targetId && assignedTargets.has(targetId)) throw new Error("Dos cuadros del archivo intentan actualizar el mismo servicio. Revise sus nombres y categorías.");
+      }
+      if (targetId) {
+        serviceId = targetId;
+        assignedTargets.add(serviceId);
+        updatedCount += 1;
+      } else {
+        while (reservedIds.has(serviceId)) serviceId = baseId + "-" + suffix++;
+        addedCount += 1;
+      }
       reservedIds.add(serviceId);
       const importSource = { authoritative: true, importId: entry.importId, bookKey,
         fileName: entry.preview.source.fileName, sourceName: sourceService.name,
@@ -640,7 +694,7 @@ async function saveImportedEquipmentServices(payload, request, response) {
       await fsp.rename(temporary, target);
     }
     await writeEquipmentCatalogOverrides(next);
-    const result = { groups: next.groups, services: imported, removedServiceIds,
+    const result = { groups: next.groups, services: imported, removedServiceIds, addedCount, updatedCount,
       importId: entry.importId, savedAt: importedAt,
       sourceFileUrl: "/api/cuadros-equipo/fuentes/" + entry.importId };
     entry.completed = result;

@@ -4026,7 +4026,10 @@ function applyEquipmentCatalogServiceOverride(serviceId, override) {
       items: cloneEquipmentCatalogItems(section?.items, preserveLiteral || section?.importSource?.authoritative || sourceSections.get(section?.id)?.importSource?.authoritative).map((item) => [item.quantity, item.description])
     }));
   }
-  if (override.audioOptions && typeof override.audioOptions === "object" && Object.keys(override.audioOptions).length) {
+  if (override.importSource?.authoritative === true) {
+    service.audioOptions = cloneEquipmentCatalogAudioOptions(override.audioOptions || {}, true);
+    service.extras = Array.isArray(override.extras) ? JSON.parse(JSON.stringify(override.extras)) : [];
+  } else if (override.audioOptions && typeof override.audioOptions === "object" && Object.keys(override.audioOptions).length) {
     service.audioOptions = {
       ...(service.audioOptions || {}),
       ...cloneEquipmentCatalogAudioOptions(override.audioOptions, preserveLiteral)
