@@ -102,7 +102,7 @@
     return (Array.isArray(items) ? items : []).filter((item) => !item.archived && !item.deleted && tokens.every((token) => key(item.description + " " + text(item.category)).includes(token)));
   }
 
-  function renderItems(items, query, records) {
+  function renderItems(items, query, records, drafts = new Map()) {
     const filtered = filterItems(items, query);
     if (!filtered.length) return '<p class="equipment-extras-empty">' + (query ? "No se encontraron extras. Pruebe otra búsqueda." : "Su biblioteca está vacía. Guarde un extra para usarlo en sus eventos.") + "</p>";
     const lookup = inventoryLookup(records);
@@ -111,14 +111,18 @@
     for (const item of filtered) { const name = signature(item); names.set(name, (names.get(name) || 0) + 1); }
     return filtered.map((item) => {
       const known = lookup(item);
+      const draft = drafts.get(text(item.id)) || {};
+      const quantity = Object.hasOwn(draft, "quantity") ? draft.quantity : text(positiveQuantity(item.defaultQuantity) || 1);
+      const action = Object.hasOwn(draft, "action") ? draft.action : !known && item.itemType === "consumible" ? "purchase" : "";
       const ambiguousName = names.get(signature(item)) > 1;
       const identity = ambiguousName && known ? `<p class="equipment-extras-item-stock">Registro de inventario: ${escape(known.id)}</p>` : "";
-      return `<article class="equipment-extras-item"><div><h3>${escape(item.description)}</h3><p>${escape(item.category)} · ${item.itemType === "consumible" ? "Consumible" : "Equipo"}</p><p class="equipment-extras-item-stock">${known ? "Vinculado a Contabilidad de Equipo" : "Al agregar: elegir renta o compra"}</p>${identity}</div><div class="equipment-extras-item-actions"><button type="button" data-extra-select="${escape(item.id)}">Agregar</button><button type="button" class="equipment-extras-remove" data-extra-remove="${escape(item.id)}" aria-label="Retirar ${escape(item.description)} de la biblioteca" title="Retirar de la biblioteca">×</button></div></article>`;
+      const choice = known ? "" : `<label class="equipment-extras-card-choice">${item.itemType === "consumible" ? "Consumible faltante: comprar" : "No figura en inventario: elija una acción"}<select data-extra-action="${escape(item.id)}" aria-label="Acción para ${escape(item.description)}"><option value=""${!action ? " selected" : ""}>Elegir acción</option><option value="rent"${action === "rent" ? " selected" : ""}${item.itemType === "consumible" ? " disabled" : ""}>Rentar</option><option value="purchase"${action === "purchase" ? " selected" : ""}>Comprar</option></select></label>`;
+      return `<article class="equipment-extras-item"><div class="equipment-extras-card-heading"><h3>${escape(item.description)}</h3><button type="button" class="equipment-extras-remove" data-extra-remove="${escape(item.id)}" aria-label="Retirar ${escape(item.description)} de la biblioteca" title="Retirar de la biblioteca">×</button></div><div class="equipment-extras-card-meta"><p>${escape(item.category)} · ${item.itemType === "consumible" ? "Consumible" : "Equipo"}</p><p class="equipment-extras-item-stock">${known ? "Vinculado a Contabilidad de Equipo" : "La compra o renta se agrega al reporte del evento"}</p>${identity}</div><label class="equipment-extras-card-quantity">Cantidad para este evento<input type="number" min="1" step="1" inputmode="numeric" value="${escape(quantity)}" data-extra-quantity="${escape(item.id)}" aria-label="Cantidad de ${escape(item.description)}" /></label>${choice}<p class="equipment-extras-card-status" data-extra-message="${escape(item.id)}" data-error="${draft.error === true}" role="status">${escape(draft.message || "")}</p><button class="equipment-extras-card-add" type="button" data-extra-select="${escape(item.id)}">Agregar al evento</button></article>`;
     }).join("");
   }
 
   function shell() {
-    return `<dialog class="equipment-extras-dialog" id="equipmentExtrasLibraryDialog" aria-labelledby="equipmentExtrasLibraryTitle"><div class="equipment-extras-shell"><header class="equipment-extras-header"><div><h2 id="equipmentExtrasLibraryTitle">Extras</h2><p>Guarde extras para reutilizarlos en sus eventos. Las existencias se consultan en Contabilidad de Equipo.</p></div><button type="button" id="equipmentExtrasLibraryClose" aria-label="Cerrar biblioteca de extras">×</button></header><div class="equipment-extras-content"><section class="equipment-extras-create"><h3>Guardar un nuevo extra</h3><p>Se guarda en la biblioteca. Esto no registra una compra ni un ingreso a bodega.</p><form id="equipmentExtrasLibraryForm" novalidate><div class="equipment-extras-fields"><label class="equipment-extras-description">Descripción<input id="equipmentExtrasDescription" name="description" type="text" autocomplete="off" required /></label><label>Categoría<input id="equipmentExtrasCategory" name="category" type="text" value="Extras" autocomplete="off" required /></label><label>Tipo<select id="equipmentExtrasItemType" name="itemType"><option value="equipo">Equipo</option><option value="consumible">Consumible</option></select></label><label>Cantidad inicial al seleccionarlo<input id="equipmentExtrasDefaultQuantity" name="defaultQuantity" type="number" min="1" step="1" value="1" required /></label></div><button type="submit" id="equipmentExtrasCreate">Guardar en biblioteca</button></form></section><section class="equipment-extras-browse"><div class="equipment-extras-search"><label for="equipmentExtrasSearch">Buscar extras<input id="equipmentExtrasSearch" type="search" autocomplete="off" placeholder="Descripción o categoría" /></label><button type="button" id="equipmentExtrasRefresh">Actualizar lista</button></div><p id="equipmentExtrasCount" class="equipment-extras-count"></p><div id="equipmentExtrasList"></div></section></div><footer class="equipment-extras-footer"><p id="equipmentExtrasLibraryStatus" role="status" aria-live="polite"></p><button type="button" id="equipmentExtrasLibraryCancel">Cerrar</button></footer></div></dialog><dialog class="equipment-extras-dialog equipment-extras-small" id="equipmentExtrasQuantityDialog" aria-labelledby="equipmentExtrasQuantityTitle"><header class="equipment-extras-header"><div><h2 id="equipmentExtrasQuantityTitle">¿Cuántas quieres?</h2><p id="equipmentExtrasSelectedName"></p></div><button type="button" id="equipmentExtrasQuantityClose" aria-label="Cerrar selección del extra">×</button></header><form id="equipmentExtrasQuantityForm" novalidate><div class="equipment-extras-content"><label class="equipment-extras-quantity-label" for="equipmentExtrasQuantity">Cantidad<input id="equipmentExtrasQuantity" type="number" min="1" step="1" required /></label><fieldset id="equipmentExtrasUnknown"><legend>¿Qué acción deseas tomar?</legend><p>No reconozco este equipo en el inventario actual. Elija cómo cubrir esta necesidad.</p><label><input type="radio" name="extraProcurement" id="equipmentExtrasRent" value="rent" /> Rentar</label><label><input type="radio" name="extraProcurement" id="equipmentExtrasPurchase" value="purchase" /> Comprar</label><p>Comprar prepara la necesidad de compra; las existencias aumentan al confirmar el ingreso real en Contabilidad de Equipo.</p></fieldset></div><footer class="equipment-extras-footer"><p id="equipmentExtrasQuantityStatus" role="status" aria-live="polite"></p><div><button type="button" id="equipmentExtrasQuantityCancel">Cancelar</button><button type="submit" id="equipmentExtrasAdd">Agregar al evento</button></div></footer></form></dialog><dialog class="equipment-extras-dialog equipment-extras-small" id="equipmentExtrasRemoveDialog" aria-labelledby="equipmentExtrasRemoveTitle"><header class="equipment-extras-header"><h2 id="equipmentExtrasRemoveTitle">Retirar de la biblioteca</h2><button type="button" id="equipmentExtrasRemoveClose" aria-label="Cerrar retiro del extra">×</button></header><div class="equipment-extras-content"><p id="equipmentExtrasRemoveName"></p><p>Este extra dejará de aparecer para nuevas selecciones. Los eventos anteriores, el inventario y sus movimientos se conservan.</p></div><footer class="equipment-extras-footer"><p id="equipmentExtrasRemoveStatus" role="status" aria-live="polite"></p><div><button type="button" id="equipmentExtrasRemoveCancel">Cancelar</button><button type="button" id="equipmentExtrasRemoveConfirm">Retirar de biblioteca</button></div></footer></dialog>`;
+    return `<dialog class="equipment-extras-dialog" id="equipmentExtrasLibraryDialog" aria-labelledby="equipmentExtrasLibraryTitle"><div class="equipment-extras-shell"><header class="equipment-extras-header"><div><h2 id="equipmentExtrasLibraryTitle">Extras</h2><p>Guarde extras para reutilizarlos en sus eventos. Las existencias se consultan en Contabilidad de Equipo.</p></div><button type="button" id="equipmentExtrasLibraryClose" aria-label="Cerrar biblioteca de extras">×</button></header><div class="equipment-extras-content"><details class="equipment-extras-create"><summary>+ Guardar un nuevo extra</summary><p>Se guarda en la biblioteca. Esto no registra una compra ni un ingreso a bodega.</p><form id="equipmentExtrasLibraryForm" novalidate><div class="equipment-extras-fields"><label class="equipment-extras-description">Descripción<input id="equipmentExtrasDescription" name="description" type="text" autocomplete="off" required /></label><label>Categoría<input id="equipmentExtrasCategory" name="category" type="text" value="Extras" autocomplete="off" required /></label><label>Tipo<select id="equipmentExtrasItemType" name="itemType"><option value="equipo">Equipo</option><option value="consumible">Consumible</option></select></label><label>Cantidad inicial al seleccionarlo<input id="equipmentExtrasDefaultQuantity" name="defaultQuantity" type="number" min="1" step="1" value="1" required /></label></div><button type="submit" id="equipmentExtrasCreate">Guardar en biblioteca</button></form></details><section class="equipment-extras-browse"><div class="equipment-extras-search"><label for="equipmentExtrasSearch">Buscar extras<input id="equipmentExtrasSearch" type="search" autocomplete="off" placeholder="Descripción o categoría" /></label><button type="button" id="equipmentExtrasRefresh">Actualizar lista</button></div><p id="equipmentExtrasCount" class="equipment-extras-count"></p><div id="equipmentExtrasList"></div></section></div><footer class="equipment-extras-footer"><p id="equipmentExtrasLibraryStatus" role="status" aria-live="polite"></p><button type="button" id="equipmentExtrasLibraryCancel">Cerrar</button></footer></div></dialog><dialog class="equipment-extras-dialog equipment-extras-small" id="equipmentExtrasRemoveDialog" aria-labelledby="equipmentExtrasRemoveTitle"><header class="equipment-extras-header"><h2 id="equipmentExtrasRemoveTitle">Retirar de la biblioteca</h2><button type="button" id="equipmentExtrasRemoveClose" aria-label="Cerrar retiro del extra">×</button></header><div class="equipment-extras-content"><p id="equipmentExtrasRemoveName"></p><p>Este extra dejará de aparecer para nuevas selecciones. Los eventos anteriores, el inventario y sus movimientos se conservan.</p></div><footer class="equipment-extras-footer"><p id="equipmentExtrasRemoveStatus" role="status" aria-live="polite"></p><div><button type="button" id="equipmentExtrasRemoveCancel">Cancelar</button><button type="button" id="equipmentExtrasRemoveConfirm">Retirar de biblioteca</button></div></footer></dialog>`;
   }
 
   function init(options = {}) {
@@ -135,9 +139,9 @@
     document.body.appendChild(host);
     const get = (id) => document.getElementById(id);
     const dialog = get("equipmentExtrasLibraryDialog");
-    const quantityDialog = get("equipmentExtrasQuantityDialog");
     const removeDialog = get("equipmentExtrasRemoveDialog");
-    let items = [], revision, selected = null, removing = null, draftInventoryId = "", pending = false, loading = false, generation = 0;
+    let items = [], revision, removing = null, draftInventoryId = "", pending = false, loading = false, generation = 0;
+    const cardDrafts = new Map();
     let requestFingerprint = "", requestId = "", sequence = 0;
     let picker = null;
     const inventory = () => typeof options.inventory === "function" ? options.inventory() : options.inventory || [];
@@ -147,15 +151,15 @@
       element.textContent = text(message);
       element.dataset.error = String(error);
     };
-    const controls = ["equipmentExtrasCreate", "equipmentExtrasRefresh", "equipmentExtrasLibraryClose", "equipmentExtrasLibraryCancel", "equipmentExtrasQuantityClose", "equipmentExtrasQuantityCancel", "equipmentExtrasAdd", "equipmentExtrasRemoveClose", "equipmentExtrasRemoveCancel", "equipmentExtrasRemoveConfirm"];
+    const controls = ["equipmentExtrasCreate", "equipmentExtrasRefresh", "equipmentExtrasLibraryClose", "equipmentExtrasLibraryCancel", "equipmentExtrasRemoveClose", "equipmentExtrasRemoveCancel", "equipmentExtrasRemoveConfirm"];
     function busy(value) {
       pending = value;
       for (const id of controls) get(id).disabled = value;
-      host.querySelectorAll("[data-extra-select], [data-extra-remove]").forEach((element) => { element.disabled = value; });
+      get("equipmentExtrasList").querySelectorAll("[data-extra-select], [data-extra-remove], [data-extra-quantity], [data-extra-action]").forEach((element) => { element.disabled = value; });
     }
     function render() {
       const query = get("equipmentExtrasSearch").value;
-      get("equipmentExtrasList").innerHTML = renderItems(items, query, inventory());
+      get("equipmentExtrasList").innerHTML = renderItems(items, query, inventory(), cardDrafts);
       get("equipmentExtrasCount").textContent = `${filterItems(items, query).length} de ${items.length} extras`;
       if (pending) busy(true);
     }
@@ -168,16 +172,6 @@
       get("equipmentExtrasDefaultQuantity").value = "1";
       picker?.close();
     }
-    function closeQuantity() {
-      if (pending) return;
-      selected = null;
-      get("equipmentExtrasQuantity").value = "";
-      get("equipmentExtrasRent").checked = false;
-      get("equipmentExtrasRent").disabled = false;
-      get("equipmentExtrasPurchase").checked = false;
-      status("equipmentExtrasQuantityStatus", "");
-      if (quantityDialog.open) quantityDialog.close();
-    }
     function closeRemove() {
       if (pending) return;
       removing = null;
@@ -188,7 +182,7 @@
       if (pending) return;
       generation += 1;
       loading = false;
-      closeQuantity(); closeRemove(); clearDraft();
+      closeRemove(); clearDraft(); cardDrafts.clear();
       get("equipmentExtrasSearch").value = "";
       status("equipmentExtrasLibraryStatus", "");
       if (dialog.open) dialog.close();
@@ -222,6 +216,8 @@
         ids.add(id); return false;
       })) throw new Error("La respuesta de la biblioteca está incompleta. Actualice la lista.");
       items = body.items.filter((item) => item && text(item.id).trim() && text(item.description).trim() && !item.archived && !item.deleted);
+      const activeIds = new Set(items.map(item => text(item.id)));
+      for (const id of cardDrafts.keys()) if (!activeIds.has(id)) cardDrafts.delete(id);
       revision = body.revision;
       render();
     }
@@ -246,7 +242,7 @@
     async function open() {
       if (dialog.open) return;
       clearDraft();
-      selected = null; removing = null;
+      removing = null; cardDrafts.clear();
       get("equipmentExtrasSearch").value = "";
       status("equipmentExtrasLibraryStatus", "");
       render();
@@ -277,46 +273,62 @@
       } catch (error) { status("equipmentExtrasLibraryStatus", error.message, true); }
       finally { busy(false); }
     }
-    function select(id) {
-      if (pending || loading) return;
-      if (!inventoryReady()) { status("equipmentExtrasLibraryStatus", "El inventario de Contabilidad de Equipo todavía no está disponible. Espere a que termine de cargar o actualice la página.", true); return; }
-      selected = items.find((item) => text(item.id) === text(id));
-      if (!selected) return;
-      get("equipmentExtrasSelectedName").textContent = selected.description;
-      get("equipmentExtrasQuantity").value = text(positiveQuantity(selected.defaultQuantity) || 1);
-      get("equipmentExtrasRent").checked = false;
-      const known = currentInventoryItem(selected, inventory());
-      const consumablePurchase = !known && selected.itemType === "consumible";
-      get("equipmentExtrasRent").disabled = consumablePurchase;
-      get("equipmentExtrasPurchase").checked = consumablePurchase;
-      get("equipmentExtrasUnknown").hidden = Boolean(known);
-      status("equipmentExtrasQuantityStatus", consumablePurchase ? "Los consumibles faltantes generan una necesidad de compra." : "");
-      quantityDialog.showModal();
-      get("equipmentExtrasQuantity").focus();
+    function draftFor(id) {
+      id = text(id);
+      if (!cardDrafts.has(id)) {
+        const extra = items.find(item => text(item.id) === id);
+        cardDrafts.set(id, { quantity: text(positiveQuantity(extra?.defaultQuantity) || 1), action: extra?.itemType === "consumible" && !currentInventoryItem(extra, inventory()) ? "purchase" : "", message: "", error: false });
+      }
+      return cardDrafts.get(id);
     }
-    async function add(event) {
-      event.preventDefault();
-      if (pending || !selected || !quantityDialog.open) return;
+    function readCard(id) {
+      const draft = draftFor(id);
+      for (const field of get("equipmentExtrasList").querySelectorAll("[data-extra-quantity], [data-extra-action]")) {
+        if (field.dataset.extraQuantity === text(id)) draft.quantity = field.value;
+        if (field.dataset.extraAction === text(id)) draft.action = field.value;
+      }
+      return draft;
+    }
+    function editCard(event) {
+      if (pending) return;
+      const field = event.target;
+      const id = field.dataset?.extraQuantity ?? field.dataset?.extraAction;
+      if (id === undefined || !get("equipmentExtrasList").contains(field)) return;
+      const draft = draftFor(id);
+      if (field.dataset.extraQuantity !== undefined) draft.quantity = field.value;
+      else draft.action = field.value;
+      draft.message = ""; draft.error = false;
+      for (const message of get("equipmentExtrasList").querySelectorAll("[data-extra-message]")) {
+        if (message.dataset.extraMessage === text(id)) { message.textContent = ""; message.dataset.error = "false"; }
+      }
+      if (get("equipmentExtrasLibraryStatus").dataset.error === "true") status("equipmentExtrasLibraryStatus", "");
+    }
+    async function add(id) {
+      if (pending || loading || !dialog.open) return;
+      const selected = items.find(extra => text(extra.id) === text(id));
+      if (!selected) return;
+      const draft = readCard(id);
       let item;
       try {
         if (!inventoryReady()) throw new Error("El inventario de Contabilidad de Equipo todavía no está disponible. Espere a que termine de cargar o actualice la página.");
-        const action = get("equipmentExtrasRent").checked ? "rent" : get("equipmentExtrasPurchase").checked ? "purchase" : "";
-        item = selectionPayload(selected, get("equipmentExtrasQuantity").value, action, inventory());
+        item = selectionPayload(selected, draft.quantity, draft.action, inventory());
         if (typeof options.onAdd !== "function") throw new Error("No se pudo identificar el evento activo. Cierre y vuelva a seleccionar su evento.");
       } catch (error) {
-        get("equipmentExtrasUnknown").hidden = Boolean(currentInventoryItem(selected, inventory()));
-        status("equipmentExtrasQuantityStatus", error.message, true); return;
+        draft.message = error.message; draft.error = true;
+        render(); status("equipmentExtrasLibraryStatus", error.message, true); return;
       }
       busy(true);
-      status("equipmentExtrasQuantityStatus", "Agregando al evento…");
+      status("equipmentExtrasLibraryStatus", "Agregando al evento…");
       try {
         const result = await options.onAdd(clone(item));
         if (result === false) throw new Error("No se pudo agregar el extra. Revise el evento activo y reintente.");
-        busy(false);
-        closeQuantity();
+        draft.message = `Agregado al evento: ${item.quantity}.`; draft.error = false;
         status("equipmentExtrasLibraryStatus", `Se agregó ${item.description}: ${item.quantity}.`);
-      } catch (error) { status("equipmentExtrasQuantityStatus", error.message || "No se pudo agregar el extra.", true); }
-      finally { busy(false); }
+      } catch (error) {
+        draft.message = error.message || "No se pudo agregar el extra."; draft.error = true;
+        status("equipmentExtrasLibraryStatus", draft.message, true);
+      }
+      finally { busy(false); render(); }
     }
     function remove(id) {
       if (pending || loading) return;
@@ -339,20 +351,20 @@
       finally { busy(false); }
     }
     for (const id of ["equipmentExtrasLibraryClose", "equipmentExtrasLibraryCancel"]) get(id).addEventListener("click", close);
-    for (const id of ["equipmentExtrasQuantityClose", "equipmentExtrasQuantityCancel"]) get(id).addEventListener("click", closeQuantity);
     for (const id of ["equipmentExtrasRemoveClose", "equipmentExtrasRemoveCancel"]) get(id).addEventListener("click", closeRemove);
-    for (const [element, closer] of [[dialog, close], [quantityDialog, closeQuantity], [removeDialog, closeRemove]]) {
+    for (const [element, closer] of [[dialog, close], [removeDialog, closeRemove]]) {
       element.addEventListener("cancel", (event) => { event.preventDefault(); closer(); });
     }
     get("equipmentExtrasRefresh").addEventListener("click", refresh);
     get("equipmentExtrasLibraryForm").addEventListener("submit", create);
-    get("equipmentExtrasQuantityForm").addEventListener("submit", add);
     get("equipmentExtrasRemoveConfirm").addEventListener("click", confirmRemove);
     get("equipmentExtrasSearch").addEventListener("input", render);
-    get("equipmentExtrasList").addEventListener("click", (event) => {
+    get("equipmentExtrasList").addEventListener("input", editCard);
+    get("equipmentExtrasList").addEventListener("change", editCard);
+    get("equipmentExtrasList").addEventListener("click", async (event) => {
       const button = event.target.closest("[data-extra-select], [data-extra-remove]");
       if (!button || !get("equipmentExtrasList").contains(button)) return;
-      if (button.dataset.extraSelect !== undefined) select(button.dataset.extraSelect);
+      if (button.dataset.extraSelect !== undefined) await add(button.dataset.extraSelect);
       else remove(button.dataset.extraRemove);
     });
     const invalidateLink = () => { draftInventoryId = ""; };
@@ -365,7 +377,7 @@
       get("equipmentExtrasItemType").value = choice.itemType;
     }, onChange: invalidateLink });
     opener.addEventListener("click", open);
-    const api = { open, close, refresh, getState: () => clone({ items, revision, pending, loading, selected, removing }), destroy() {
+    const api = { open, close, refresh, getState: () => clone({ items, revision, pending, loading, cardDrafts: [...cardDrafts], removing }), destroy() {
       if (pending) return false;
       close(); picker?.detach(); opener.removeEventListener("click", open); host.remove(); instances.delete(opener); return true;
     } };

@@ -51,7 +51,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261020-personaliza-01";
+const warehouseAssetVersion = "20261020-personaliza-02";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -271,38 +271,42 @@ function normalizeEquipmentBaseCatalogVersion(value) {
   return version;
 }
 
-function normalizeEquipmentCatalogItems(items, label = "categoría", preserveLiteral = false) {
+function normalizeEquipmentCatalogItems(items, label = "categoría", preserveLiteral = false, allowLargePersonalized = false) {
   if (!Array.isArray(items)) throw new Error(`Los equipos de ${label} no tienen un formato válido.`);
-  if (items.length > 2000) throw new Error(`La categoría ${label} excede el límite de equipos.`);
+  if (!allowLargePersonalized && items.length > 2000) throw new Error(`La categoría ${label} excede el límite de equipos.`);
   return items.map((item, index) => {
     const quantity = Number(Array.isArray(item) ? item[0] : item?.quantity);
-    const rawDescription = String(Array.isArray(item) ? item[1] : item?.description || "");
+    const rawDescription = String(Array.isArray(item) ? item[1] : item?.description ?? "");
     const description = preserveLiteral ? rawDescription : rawDescription.trim();
-    if (!Number.isFinite(quantity) || quantity < 0 || quantity > 100000) {
+    if (!Number.isFinite(quantity) || quantity < 0 || (!allowLargePersonalized && quantity > 100000)) {
       throw new Error(`La cantidad del equipo ${index + 1} en ${label} no es válida.`);
     }
-    if (!description.trim() || description.length > 500) {
+    if (!description.trim() || (!allowLargePersonalized && description.length > 500)) {
       throw new Error(`El nombre del equipo ${index + 1} en ${label} no es válido.`);
+    }
+    if (!Array.isArray(item) && item && typeof item === "object" && Object.keys(item).some(key => !["quantity", "description"].includes(key))) {
+      return { ...JSON.parse(JSON.stringify(item)), quantity, description };
     }
     return [quantity, description];
   });
 }
 
-function normalizeEquipmentCatalogSections(sections, preserveLiteral = false) {
+function normalizeEquipmentCatalogSections(sections, preserveLiteral = false, allowLargePersonalized = false) {
   if (!Array.isArray(sections) || !sections.length) {
     throw new Error("El cuadro debe incluir al menos una categoría.");
   }
-  if (sections.length > 300) throw new Error("El cuadro excede el límite de categorías.");
+  if (!allowLargePersonalized && sections.length > 300) throw new Error("El cuadro excede el límite de categorías.");
   return sections.map((section, index) => {
     const preserveSectionLiteral = preserveLiteral || section?.importSource?.authoritative;
     const rawTitle = String(section?.title || "");
     const title = preserveSectionLiteral ? rawTitle : rawTitle.trim();
-    if (!title.trim() || title.length > 200) throw new Error(`El nombre de la categoría ${index + 1} no es válido.`);
+    if (!title.trim() || (!allowLargePersonalized && title.length > 200)) throw new Error(`El nombre de la categoría ${index + 1} no es válido.`);
     const normalized = {
       title,
-      items: normalizeEquipmentCatalogItems(section?.items, title, preserveSectionLiteral),
-      ...(Array.isArray(section.notes) ? { notes: section.notes.map((note) => String(note)) } : {}),
+      items: normalizeEquipmentCatalogItems(section?.items, title, preserveSectionLiteral, allowLargePersonalized),
+      ...(Array.isArray(section.notes) ? { notes: JSON.parse(JSON.stringify(section.notes)) } : {}),
       ...(Array.isArray(section.rows) ? { rows: section.rows } : {}),
+      ...(Array.isArray(section.sourceCells) ? { sourceCells: JSON.parse(JSON.stringify(section.sourceCells)) } : {}),
       ...(section.importSource && typeof section.importSource === "object" && !Array.isArray(section.importSource)
         ? { importSource: { ...section.importSource } } : {})
     };
@@ -349,7 +353,7 @@ function normalizeEquipmentCatalogOverride(payload) {
     createOnly: payload?.createOnly === true,
     service: {
       name,
-      mainSections: normalizeEquipmentCatalogSections(payload?.mainSections, preserveLiteral),
+      mainSections: normalizeEquipmentCatalogSections(payload?.mainSections, preserveLiteral, payload?.importSource?.personalized === true),
       audioOptions: normalizeEquipmentCatalogAudioOptions(payload?.audioOptions, preserveLiteral),
       ...(payload?.importSource && typeof payload.importSource === "object" && !Array.isArray(payload.importSource)
         ? { importSource: { ...payload.importSource } } : {}),
@@ -465,6 +469,87 @@ async function saveEquipmentCatalogOverride(payload, response) {
     serviceRevision: refreshed.serviceRevisions[normalized.serviceId],
     serviceRevisions: refreshed.serviceRevisions
   });
+}
+
+async function savePersonalizedEquipmentService(payload, response) {
+  try {
+    const template = payload?.template;
+    if (!template || typeof template !== "object" || Array.isArray(template)) throw new Error("Revise el nuevo tipo de servicio antes de guardarlo.");
+    const id = String(template.id || "").trim();
+    if (!/^[a-z0-9][a-z0-9-]{0,159}$/i.test(id)) throw new Error("El identificador del nuevo servicio no es válido.");
+    const name = String(template.name ?? "");
+    if (!name.trim() || name.length > 240) throw new Error("Escriba el nombre del nuevo tipo de servicio, de hasta 240 caracteres.");
+    const groupId = String(template.groupId || "").trim();
+    if (!/^[a-z0-9][a-z0-9-]{0,159}$/i.test(groupId)) throw new Error("Seleccione una categoría válida para el nuevo servicio.");
+    const base = currentEquipmentBaseCatalog();
+    const baseCatalogVersion = normalizeEquipmentBaseCatalogVersion(payload.baseCatalogVersion || base.version);
+    if (base.version !== baseCatalogVersion) {
+      errorResponse(response, 409, "El catálogo cambió. Actualice las categorías antes de guardar el nuevo servicio."); return;
+    }
+    const stored = readEquipmentCatalogOverrides();
+    const hasStoredCatalogData = Object.keys(stored.services).length || Object.keys(stored.groups).length || Object.keys(stored.imports).length || stored.removedServiceIds.length;
+    if (stored.baseCatalogVersion !== baseCatalogVersion && (stored.baseCatalogVersion || hasStoredCatalogData)) {
+      errorResponse(response, 409, "El catálogo guardado corresponde a otra versión. Revíselo antes de agregar servicios."); return;
+    }
+    if (!Array.isArray(template.mainSections) || !template.mainSections.length) throw new Error("El nuevo servicio debe conservar al menos una categoría.");
+    const sourceSections = JSON.parse(JSON.stringify(template.mainSections));
+    const source = template.source === undefined ? null : JSON.parse(JSON.stringify(template.source));
+    const notes = template.notes === undefined ? "" : JSON.parse(JSON.stringify(template.notes));
+    const recipe = { id, name, groupId, mainSections: sourceSections, source, notes };
+    const stable = value => Array.isArray(value) ? "[" + value.map(stable).join(",") + "]" : value && typeof value === "object"
+      ? "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + stable(value[key])).join(",") + "}" : JSON.stringify(value);
+    const fingerprint = crypto.createHash("sha256").update(stable(recipe)).digest("hex");
+    const groupMap = new Map((Array.isArray(base.groups) ? base.groups : []).map(group => [equipmentImportSlug(group.id || group.label), group]));
+    Object.entries(stored.groups).forEach(([key, group]) => groupMap.set(key, group));
+    const existing = Object.hasOwn(stored.services, id) ? stored.services[id] : null;
+    const respond = (created) => {
+      const catalog = readEquipmentCatalogOverridesForVersion(baseCatalogVersion);
+      jsonResponse(response, 200, { ...catalog, serviceId: id, service: catalog.services[id],
+        serviceRevision: catalog.serviceRevisions[id], created, duplicate: !created });
+    };
+    if (existing) {
+      if (existing.importSource?.personalized === true && existing.importSource.templateId === id && existing.importSource.templateFingerprint === fingerprint) {
+        respond(false); return;
+      }
+      errorResponse(response, 409, "Ese identificador ya pertenece a otro servicio o a un cuadro diferente. No se modificó el catálogo."); return;
+    }
+    if (groupId !== "personalizados" && !groupMap.has(groupId)) throw new Error("La categoría seleccionada ya no existe. Actualice la lista antes de guardar.");
+    if (Object.hasOwn(base.services || {}, id) || stored.removedServiceIds.includes(id) || Object.hasOwn(stored.retiredServices, id)) {
+      errorResponse(response, 409, "Ese identificador ya existe o fue retirado. Cree un nuevo cuadro para guardar otro servicio."); return;
+    }
+    const nameKey = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+    const retired = new Set(stored.removedServiceIds);
+    const collision = Object.entries({ ...(base.services || {}), ...stored.services }).find(([serviceId, service]) => !retired.has(serviceId) && nameKey(service.name) === nameKey(name));
+    if (collision) {
+      errorResponse(response, 409, "Ya existe un tipo de servicio con ese nombre. Elija otro nombre para crear uno nuevo sin reemplazar el existente."); return;
+    }
+    const importSource = { authoritative: true, personalized: true, sourceKind: "clipboard", templateId: id, templateFingerprint: fingerprint,
+      source, templateNotes: notes, sourceSections };
+    const mainSections = sourceSections.map((section, sectionIndex) => {
+      if (!section || typeof section !== "object" || Array.isArray(section) || typeof section.title !== "string" || !section.title.trim() || !Array.isArray(section.items)) {
+        throw new Error(`Revise la categoría ${sectionIndex + 1} y sus líneas de equipo.`);
+      }
+      const items = section.items.map((item, itemIndex) => {
+        const rawQuantity = Array.isArray(item) ? item[0] : item?.quantity;
+        const rawDescription = Array.isArray(item) ? item[1] : item?.description;
+        if (!["number", "string"].includes(typeof rawQuantity) || (typeof rawQuantity === "string" && !rawQuantity.trim()) || !Number.isFinite(Number(rawQuantity)) || Number(rawQuantity) < 0
+            || typeof rawDescription !== "string" || !rawDescription.trim()) throw new Error(`Revise cantidad y descripción de la línea ${itemIndex + 1} en ${section.title}.`);
+        return Array.isArray(item) ? [Number(rawQuantity), rawDescription]
+          : { ...JSON.parse(JSON.stringify(item)), quantity: Number(rawQuantity), description: rawDescription };
+      });
+      return { ...section, items, importSource: { ...importSource, source: undefined, sourceSections: undefined, templateNotes: undefined } };
+    });
+    if (!mainSections.some(section => section.items.length)) throw new Error("Agregue al menos una línea de equipo; las cantidades cero también son válidas.");
+    const savedAt = new Date().toISOString();
+    const service = { name, mainSections, audioOptions: {}, custom: true, groupId, updatedAt: savedAt, notes, importSource };
+    const group = groupMap.get(groupId) || { id: "personalizados", label: "Personalizados", serviceIds: [] };
+    const next = { ...stored, version: 3, baseCatalogVersion, savedAt,
+      services: { ...stored.services, [id]: service },
+      groups: { ...stored.groups, [groupId]: { ...group, id: groupId, serviceIds: [...new Set([...(group.serviceIds || []), id])] } }
+    };
+    await writeEquipmentCatalogOverrides(next);
+    respond(true);
+  } catch (error) { errorResponse(response, error.statusCode || 400, error.message || "No se pudo guardar el nuevo tipo de servicio."); }
 }
 
 function equipmentImportSlug(value) {
@@ -3874,6 +3959,13 @@ async function handleRequest(request, response) {
     if (request.method === "GET" && url.pathname === "/api/cuadros-equipo/catalogo") {
       if (!requireAuth(request, response)) return;
       jsonResponse(response, 200, readEquipmentCatalogOverridesForVersion(url.searchParams.get("baseVersion")));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cuadros-equipo/servicios-personalizados") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => savePersonalizedEquipmentService(payload, response));
       return;
     }
 

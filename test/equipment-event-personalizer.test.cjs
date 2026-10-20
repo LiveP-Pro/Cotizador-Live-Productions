@@ -6,7 +6,8 @@ const inventory = [
   { id: "synthetic-console", name: "Consola análoga", category: "Audio", itemType: "equipo", available: 3 },
   { id: "synthetic-tape", name: "Cinta negra", category: "Consumibles", itemType: "consumible", available: 2 }
 ];
-const metadata = () => ({ place: "Lugar de prueba", name: "Evento sintético", type: "Privado", setupAt: "2026-10-20T09:00", startAt: "2026-10-20T11:00", endAt: "2026-10-20T18:00", equipmentInAt: "2026-10-20T21:00", notes: "Observación del evento" });
+const metadata = () => ({ place: "Lugar de prueba", type: "Privado", setupAt: "2026-10-20T09:00", startAt: "2026-10-20T11:00", endAt: "2026-10-20T18:00", equipmentInAt: "2026-10-20T21:00", notes: "Observación del evento" });
+const serviceGroups = [{ id: "personalizados", label: "Personalizados" }, { id: "synthetic-events", label: "Eventos de prueba" }];
 function draft(source = "Cantidad\tDescripción\tCategoría\tObservaciones\n0\tConsola análoga\tAudio\tConservar cero\n2\tCinta negra\tConsumibles\tUso del evento") {
   return { ...personalizer.parseClipboard(source), id: "synthetic-event-one", metadata: metadata() };
 }
@@ -186,6 +187,10 @@ function browserHarness(options = {}) {
         child.hidden = /\shidden(?:\s|\/|$)/.test(match[1]);
         const metadataName = match[1].match(/data-personalizer-metadata="([^"]+)"/)?.[1];
         if (metadataName) child.dataset.personalizerMetadata = metadataName;
+        const usageMode = match[1].match(/data-personalizer-usage-mode="([^"]+)"/)?.[1];
+        if (usageMode) child.dataset.personalizerUsageMode = usageMode;
+        const templateField = match[1].match(/data-personalizer-template-field="([^"]+)"/)?.[1];
+        if (templateField) child.dataset.personalizerTemplateField = templateField;
         elements.set(child.id, child);
       }
     }
@@ -202,7 +207,7 @@ function browserHarness(options = {}) {
   }
   const doc = { body: { appendChild(element) { elements.set(element.id, element); } }, createElement() { return new Element(); }, getElementById(id) { return elements.get(id); } };
   const opener = new Element("equipmentPersonalizeEventButton"); elements.set(opener.id, opener);
-  const api = personalizer.init({ document: doc, inventory: () => inventory, ...options });
+  const api = personalizer.init({ document: doc, inventory: () => inventory, serviceGroups: () => serviceGroups, ...options });
   const dialog = elements.get("equipmentPersonalizerDialog");
   return { api, doc, dialog, get: (id) => elements.get(id),
     async action(action) { const target = { dataset: { personalizerAction: action }, closest() { return this; } }; await dialog.emit("click", { target }); },
@@ -269,9 +274,9 @@ test("cerrar durante preview descarta el borrador e ignora la respuesta tardía 
   await harness.action("review"); assert.equal(calls, 1);
   await harness.action("close");
   assert.equal(harness.dialog.open, false); assert.equal(harness.api.getDraft().rows.length, 0);
-  await harness.api.open(); await harness.input("equipmentPersonalizer-name", "Borrador nuevo");
+  await harness.api.open(); await harness.input("equipmentPersonalizer-type", "Borrador nuevo");
   resolvePreview(); await reviewing;
-  assert.equal(harness.api.getDraft().metadata.name, "Borrador nuevo");
+  assert.equal(harness.api.getDraft().metadata.type, "Borrador nuevo");
   assert.equal(harness.get("equipmentPersonalizerReview").hidden, true);
   assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, true);
 });
@@ -292,12 +297,12 @@ test("no admite ediciones ni guardado concurrente mientras se calcula disponibil
   const harness = browserHarness({ onPreview: (event) => new Promise(resolve => { resolvePreview = () => resolve(previewPlan(event)); }), onCommit: async () => { committed += 1; } });
   await harness.api.open(); await harness.valid();
   const reviewing = harness.action("review");
-  const before = harness.api.getDraft().metadata.name;
-  await harness.input("equipmentPersonalizer-name", "Cambio mientras consulta"); await harness.action("commit");
-  assert.equal(harness.api.getDraft().metadata.name, before); assert.equal(committed, 0);
+  const before = harness.api.getDraft().metadata.type;
+  await harness.input("equipmentPersonalizer-type", "Cambio mientras consulta"); await harness.action("commit");
+  assert.equal(harness.api.getDraft().metadata.type, before); assert.equal(committed, 0);
   resolvePreview(); await reviewing;
   assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, false);
-  await harness.input("equipmentPersonalizer-name", "Cambio posterior");
+  await harness.input("equipmentPersonalizer-type", "Cambio posterior");
   assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, true);
   assert.equal(harness.get("equipmentPersonalizerReview").hidden, true);
 });
@@ -376,4 +381,152 @@ test("el modal muestra toda carga grande mediante páginas, sin truncar ni guard
   const html = personalizer.renderRow(dangerous.rows[0], 0, inventory);
   assert.doesNotMatch(html, /<script>/);
   assert.match(html, /&lt;script&gt;/);
+});
+
+test("el modal no muestra ni exige Nombre del evento y deriva el nombre interno del tipo", async () => {
+  const html = personalizer.renderMarkup();
+  assert.doesNotMatch(html, /Nombre del evento|equipmentPersonalizer-name|data-personalizer-metadata="name"/);
+  const value = draft();
+  value.metadata.name = "Nombre antiguo que ya no se solicita";
+  assert.deepEqual(personalizer.validateDraft(value, inventory), []);
+  assert.equal(personalizer.buildEvent(value, inventory).name, "Privado");
+  const harness = browserHarness(); await harness.api.open();
+  assert.equal(harness.get("equipmentPersonalizer-name"), undefined);
+});
+
+test("Usar una vez es predeterminado y nunca adjunta una plantilla de servicio", async () => {
+  const session = personalizer.createSession({ inventory, serviceGroups });
+  session.open(); session.paste("0\tConsola análoga"); session.draft.metadata = metadata();
+  assert.equal(session.draft.usageMode, "once");
+  session.draft.serviceName = "Valor retenido al cambiar de modo";
+  session.draft.serviceGroupId = "no-existe";
+  assert.deepEqual(session.review(), []);
+  assert.equal("serviceTemplate" in personalizer.buildEvent(session.draft, inventory, serviceGroups), false);
+  const harness = browserHarness(); await harness.api.open();
+  assert.equal(harness.get("equipmentPersonalizerUsageOnce").checked, true);
+  assert.equal(harness.get("equipmentPersonalizerServiceFields").hidden, true);
+  assert.equal(harness.get("equipmentPersonalizerServiceName").required, false);
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").textContent, "Cargar evento");
+});
+
+test("guardar servicio exige nombre explícito y categoría vigente sin equiparar categorías", () => {
+  const value = draft(); value.usageMode = "service"; value.serviceName = ""; value.serviceGroupId = "inexistente";
+  let errors = personalizer.validateDraft(value, inventory, serviceGroups);
+  assert.ok(errors.some(error => error.field === "serviceName"));
+  assert.ok(errors.some(error => error.field === "serviceGroupId"));
+  value.serviceName = "Nuevo servicio de prueba"; value.serviceGroupId = "PERSONALIZADOS";
+  assert.ok(personalizer.validateDraft(value, inventory, serviceGroups).some(error => error.field === "serviceGroupId"));
+  value.serviceGroupId = "personalizados";
+  assert.deepEqual(personalizer.validateDraft(value, inventory, serviceGroups), []);
+  value.serviceName = " ";
+  assert.throws(() => personalizer.buildEvent(value, inventory, serviceGroups), /nombre del nuevo tipo de servicio/);
+});
+
+test("plantilla reutilizable conserva exactamente secciones, ceros, notas, columnas e inventario", () => {
+  const value = draft("Cantidad\tDescripción\tCategoría\tObservaciones\tDetalle\nAUDIO\n0\tConsola análoga\tAudio\tMantener cero\tSerie de prueba\nNota: conservar al final\n1\tEquipo externo sintético\tOtro\tLlevar cable\tDetalle extra");
+  value.rows.find(row => row.description === "Equipo externo sintético").procurementChoice = "rent";
+  value.usageMode = "service"; value.serviceName = "  Servicio reutilizable sintético  "; value.serviceGroupId = "personalizados";
+  const event = personalizer.buildEvent(value, inventory, serviceGroups);
+  const template = event.serviceTemplate;
+  assert.equal(template.id, "servicio-synthetic-event-one"); assert.equal(template.name, "Servicio reutilizable sintético");
+  assert.equal(template.groupId, "personalizados");
+  assert.deepEqual(template.mainSections, event.sections);
+  assert.deepEqual(template.source, event.source); assert.equal(template.notes, event.notes);
+  assert.deepEqual(template.source.rows.map(row => row.cells), value.rows.map(row => row.cells));
+  const items = template.mainSections.flatMap(section => section.items);
+  assert.equal(items[0].quantity, 0); assert.equal(items[0].warehouseInventoryId, "synthetic-console");
+  assert.equal(items[1].procurementChoice, "rent"); assert.equal(items[1].itemType, "equipo");
+  assert.deepEqual(items[0].notes, ["Mantener cero", "Detalle: Serie de prueba"]);
+  template.mainSections[0].title = "Cambiar copia";
+  assert.notEqual(event.sections[0].title, "Cambiar copia");
+});
+
+test("elegir guardar servicio muestra campos, categoría Personalizados y confirmación permanente", async () => {
+  let commits = 0;
+  const harness = browserHarness({ onCommit: async () => { commits += 1; } });
+  await harness.api.open(); await harness.valid();
+  await harness.input("equipmentPersonalizerUsageService", "service");
+  assert.equal(harness.api.getDraft().usageMode, "service");
+  assert.equal(harness.get("equipmentPersonalizerServiceFields").hidden, false);
+  assert.equal(harness.get("equipmentPersonalizerServiceName").required, true);
+  assert.equal(harness.get("equipmentPersonalizerServiceGroup").value, "personalizados");
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").textContent, "Guardar servicio y cargar evento");
+  assert.equal(harness.get("equipmentPersonalizerServiceName").value, "Privado");
+  await harness.input("equipmentPersonalizerServiceName", "Servicio creado de prueba");
+  await harness.action("review");
+  assert.match(harness.get("equipmentPersonalizerReview").innerHTML, /nuevo tipo de servicio: Servicio creado de prueba/);
+  assert.match(harness.get("equipmentPersonalizerReview").innerHTML, /de forma permanente/);
+  assert.equal(commits, 0, "revisar no escribe servicios ni eventos");
+});
+
+test("cambiar modo o datos de plantilla invalida la revisión previa sin guardar", async () => {
+  let previews = 0, commits = 0;
+  const harness = browserHarness({ onPreview: async event => { previews += 1; return previewPlan(event); }, onCommit: async () => { commits += 1; } });
+  await harness.api.open(); await harness.valid(); await harness.action("review");
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, false);
+  await harness.input("equipmentPersonalizerUsageService", "service");
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, true);
+  assert.equal(harness.get("equipmentPersonalizerReview").hidden, true);
+  await harness.action("review");
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, false);
+  await harness.input("equipmentPersonalizerServiceName", "Nombre modificado");
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, true);
+  await harness.action("review"); await harness.input("equipmentPersonalizerServiceGroup", "synthetic-events");
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, true);
+  await harness.action("review"); await harness.input("equipmentPersonalizerUsageOnce", "once");
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, true);
+  assert.equal(previews, 4); assert.equal(commits, 0);
+});
+
+test("nombre de servicio escrito o vaciado por el usuario no se sobrescribe al alternar modos", async () => {
+  const harness = browserHarness(); await harness.api.open(); await harness.valid();
+  await harness.input("equipmentPersonalizerUsageService", "service");
+  await harness.input("equipmentPersonalizerServiceName", "Nombre propio");
+  await harness.input("equipmentPersonalizerUsageOnce", "once");
+  await harness.input("equipmentPersonalizer-type", "Tipo distinto");
+  await harness.input("equipmentPersonalizerUsageService", "service");
+  assert.equal(harness.get("equipmentPersonalizerServiceName").value, "Nombre propio");
+  await harness.input("equipmentPersonalizerServiceName", "");
+  await harness.input("equipmentPersonalizerUsageOnce", "once"); await harness.input("equipmentPersonalizerUsageService", "service");
+  assert.equal(harness.get("equipmentPersonalizerServiceName").value, "");
+  await harness.action("review"); assert.match(harness.get("equipmentPersonalizerErrors").innerHTML, /nombre del nuevo tipo de servicio/);
+});
+
+test("error al guardar servicio conserva plantilla e IDs exactos para un reintento sin duplicar", async () => {
+  const received = [];
+  const harness = browserHarness({ onCommit: async event => { received.push(event); if (received.length === 1) throw new Error("Error temporal al guardar el servicio"); return { saved: true }; } });
+  await harness.api.open(); await harness.valid(); await harness.input("equipmentPersonalizerUsageService", "service");
+  await harness.input("equipmentPersonalizerServiceName", "Servicio para reintento");
+  await harness.action("review"); await harness.action("commit");
+  assert.equal(harness.dialog.open, true); assert.equal(harness.api.getDraft().usageMode, "service");
+  assert.equal(harness.api.getDraft().serviceName, "Servicio para reintento");
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, true);
+  await harness.action("review"); await harness.action("commit");
+  assert.equal(received.length, 2); assert.deepEqual(received[0], received[1]);
+  assert.equal(received[0].serviceTemplate.id, received[1].serviceTemplate.id);
+  assert.equal(harness.dialog.open, false);
+});
+
+test("X y Cancelar descartan modo servicio sin crear plantilla ni conservar su borrador", async () => {
+  let commits = 0;
+  for (const action of ["close", "escape"]) {
+    const harness = browserHarness({ onCommit: async () => { commits += 1; } });
+    await harness.api.open(); await harness.valid(); await harness.input("equipmentPersonalizerUsageService", "service");
+    await harness.input("equipmentPersonalizerServiceName", "No debe guardarse"); await harness.action("review");
+    if (action === "escape") await harness.dialog.emit("cancel"); else await harness.action("close");
+    assert.equal(harness.api.getDraft().usageMode, "once"); assert.equal(harness.api.getDraft().serviceName, "");
+    await harness.api.open(); assert.equal(harness.get("equipmentPersonalizerServiceFields").hidden, true);
+    assert.equal(harness.get("equipmentPersonalizerUsageOnce").checked, true);
+  }
+  assert.equal(commits, 0);
+});
+
+test("la categoría se vuelve a validar al confirmar si cambia el catálogo durante la revisión", async () => {
+  let groups = serviceGroups;
+  const session = personalizer.createSession({ inventory, serviceGroups: () => groups, onCommit: async () => { throw new Error("No debe enviarse"); } });
+  session.open(); session.paste("0\tConsola análoga"); session.draft.metadata = metadata();
+  session.draft.usageMode = "service"; session.draft.serviceName = "Servicio válido"; session.draft.serviceGroupId = "synthetic-events";
+  assert.deepEqual(session.review(), []); groups = serviceGroups.filter(group => group.id !== "synthetic-events");
+  await assert.rejects(session.commit(), /categoría vigente/);
+  assert.equal(session.isOpen, true); assert.equal(session.draft.rows.length, 1);
 });

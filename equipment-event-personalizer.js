@@ -151,12 +151,28 @@
     return result.getTime();
   }
 
-  function validateDraft(draft, inventory) {
+  function serviceGroups(groups) {
+    const seen = new Set();
+    return (Array.isArray(groups) ? groups : []).flatMap((group) => {
+      const id = text(group?.id).trim(), label = text(group?.label).trim();
+      if (!id || !label || seen.has(id)) return [];
+      seen.add(id);
+      return [{ id, label }];
+    });
+  }
+
+  function validateDraft(draft, inventory, groups = []) {
     const errors = [];
     const indexedInventory = inventoryIndex(inventory);
     const metadata = draft?.metadata || draft || {};
-    for (const [field, label] of [["place", "la ubicación"], ["name", "el nombre del evento"], ["type", "el tipo de evento"]]) {
+    for (const [field, label] of [["place", "la ubicación"], ["type", "el tipo de evento"]]) {
       if (!meaningful(metadata[field])) errors.push({ field, message: `Escriba ${label}.` });
+    }
+    if (draft?.usageMode && !["once", "service"].includes(draft.usageMode)) errors.push({ field: "usageMode", message: "Elija Usar una vez o Guardar también como nuevo tipo de servicio." });
+    if (draft?.usageMode === "service") {
+      if (!meaningful(draft.serviceName)) errors.push({ field: "serviceName", message: "Escriba el nombre del nuevo tipo de servicio para encontrarlo y reutilizarlo." });
+      else if (text(draft.serviceName).trim().length > 240) errors.push({ field: "serviceName", message: "El nombre del nuevo servicio debe tener como máximo 240 caracteres." });
+      if (!serviceGroups(groups).some((group) => group.id === text(draft.serviceGroupId))) errors.push({ field: "serviceGroupId", message: "Seleccione una categoría vigente para el nuevo tipo de servicio." });
     }
     const times = [["setupAt", "montaje"], ["startAt", "inicio del evento"], ["endAt", "finalización del evento"], ["equipmentInAt", "regreso a bodega"]];
     times.forEach(([field, label]) => { if (!Number.isFinite(dateMillis(metadata[field]))) errors.push({ field, message: `Indique una fecha y hora válida de ${label}.` }); });
@@ -184,9 +200,9 @@
     return { sourceRow: row.sourceRow, cells: (row.cells || []).map((value, column) => ({ column, value: text(value) })) };
   }
 
-  function buildEvent(draft, inventory) {
+  function buildEvent(draft, inventory, groups = []) {
     const indexedInventory = inventoryIndex(inventory);
-    const errors = validateDraft(draft, indexedInventory);
+    const errors = validateDraft(draft, indexedInventory, groups);
     if (errors.length) { const error = new Error(errors[0].message); error.validationErrors = errors; throw error; }
     const metadata = draft.metadata || draft;
     const sections = [];
@@ -216,20 +232,28 @@
       section.items.push(item);
       section.rows.push({ ...original, type: "item", sourceItemIndex, ...(notes.length ? { notes } : {}) });
     }
-    return { id: text(draft.id) || `personalized-${Date.now().toString(36)}-${(++sequence).toString(36)}`,
-      place: text(metadata.place).trim(), name: text(metadata.name).trim(), type: text(metadata.type).trim(),
+    const id = text(draft.id) || `personalized-${Date.now().toString(36)}-${(++sequence).toString(36)}`;
+    const event = { id,
+      place: text(metadata.place).trim(), name: text(metadata.type).trim() || text(metadata.place).trim(), type: text(metadata.type).trim(),
       setupAt: metadata.setupAt, startAt: metadata.startAt, endAt: metadata.endAt, date: metadata.startAt.slice(0, 10), equipmentInAt: metadata.equipmentInAt,
       notes: text(metadata.notes), serviceName: "Cuadro personalizado", sections,
       source: { format: "clipboard-tsv", sourceRowCount: draft.sourceRowCount || 0, sourceCellCount: draft.sourceCellCount || 0, rows: copy(draft.rows) } };
+    if (draft.usageMode === "service") event.serviceTemplate = {
+      id: `servicio-${id}`, name: text(draft.serviceName).trim(), groupId: text(draft.serviceGroupId),
+      mainSections: copy(sections), source: copy(event.source), notes: event.notes
+    };
+    return event;
   }
 
   function emptyDraft() {
-    return { id: `personalized-${Date.now().toString(36)}-${(++sequence).toString(36)}`, metadata: { place: "", name: "", type: "", setupAt: "", startAt: "", endAt: "", equipmentInAt: "", notes: "" }, rows: [], sourceRowCount: 0, sourceCellCount: 0 };
+    return { id: `personalized-${Date.now().toString(36)}-${(++sequence).toString(36)}`, metadata: { place: "", type: "", setupAt: "", startAt: "", endAt: "", equipmentInAt: "", notes: "" },
+      usageMode: "once", serviceName: "", serviceNameTouched: false, serviceGroupId: "", rows: [], sourceRowCount: 0, sourceCellCount: 0 };
   }
 
   function createSession(options = {}) {
     let draft = emptyDraft(), open = false, busy = false, checked = false;
     const inventory = () => typeof options.inventory === "function" ? options.inventory() : options.inventory || [];
+    const groups = () => serviceGroups(typeof options.serviceGroups === "function" ? options.serviceGroups() : options.serviceGroups || []);
     return {
       get draft() { return draft; }, get isOpen() { return open; }, get busy() { return busy; }, get reviewed() { return checked; },
       open() { if (busy) return false; draft = emptyDraft(); checked = false; open = true; return true; },
@@ -237,12 +261,12 @@
       changed() { checked = false; },
       paste(source) { const parsed = parseClipboard(source); draft.rows = parsed.rows; draft.sourceRowCount = parsed.sourceRowCount; draft.sourceCellCount = parsed.sourceCellCount; checked = false; return parsed; },
       removeRow(id) { if (busy) return false; draft.rows = draft.rows.filter((row) => row.id !== id); checked = false; return true; },
-      review() { const errors = validateDraft(draft, inventory()); checked = !errors.length; return errors; },
+      review() { const errors = validateDraft(draft, inventory(), groups()); checked = !errors.length; return errors; },
       async commit() {
         if (busy) throw new Error("El evento se está guardando. Espere la confirmación.");
         if (!open) throw new Error("Abra el cuadro personalizado antes de cargarlo.");
         if (!checked) throw new Error("Revise las filas y la disponibilidad antes de cargar el evento.");
-        const event = buildEvent(draft, inventory());
+        const event = buildEvent(draft, inventory(), groups());
         if (typeof options.onCommit !== "function") throw new Error("No está disponible la conexión para guardar el evento. El borrador se conserva.");
         busy = true;
         try {
@@ -256,12 +280,13 @@
   }
 
   function renderMarkup() {
-    const fields = [["place", "Ubicación del evento", "text"], ["name", "Nombre del evento", "text"], ["type", "Tipo de evento", "text"],
+    const fields = [["place", "Ubicación del evento", "text"], ["type", "Tipo de evento", "text"],
       ["setupAt", "Fecha y hora del montaje", "datetime-local"], ["startAt", "Fecha y hora del evento", "datetime-local"],
       ["endAt", "Fecha y hora de finalización", "datetime-local"], ["equipmentInAt", "Regreso previsto a bodega", "datetime-local"]];
     return `<div class="equipment-personalizer-shell"><header class="equipment-personalizer-header"><div><p class="equipment-personalizer-eyebrow">Evento personalizado</p><h2 id="equipmentPersonalizerTitle">Personaliza tu Cuadro de Evento</h2></div><button type="button" class="equipment-personalizer-close" data-personalizer-action="close" aria-label="Cerrar sin guardar">×</button></header>
       <div class="equipment-personalizer-body"><ol class="equipment-personalizer-steps" aria-label="Pasos del evento"><li>1. Armar evento</li><li>2. Revisar equipo</li><li>3. Cargar y reservar</li></ol>
       <section aria-labelledby="equipmentPersonalizerMetadataHeading"><h3 id="equipmentPersonalizerMetadataHeading">Datos del evento</h3><div class="equipment-personalizer-fields">${fields.map(([field, label, type]) => `<label>${label}<input id="equipmentPersonalizer-${field}" data-personalizer-metadata="${field}" type="${type}" required /></label>`).join("")}</div><label class="equipment-personalizer-notes">Observaciones del evento<textarea id="equipmentPersonalizer-notes" data-personalizer-metadata="notes" rows="2"></textarea></label><p class="equipment-personalizer-hint">El equipo queda ocupado desde el montaje hasta su regreso a bodega. Incluya desmontaje y transporte en ese horario.</p></section>
+      <fieldset class="equipment-personalizer-usage"><legend>¿Cómo quieres usar este cuadro?</legend><div class="equipment-personalizer-usage-options"><label><input id="equipmentPersonalizerUsageOnce" type="radio" name="equipmentPersonalizerUsage" value="once" data-personalizer-usage-mode="once" checked><span><strong>Usar una vez</strong><small>Cargar únicamente este evento.</small></span></label><label><input id="equipmentPersonalizerUsageService" type="radio" name="equipmentPersonalizerUsage" value="service" data-personalizer-usage-mode="service"><span><strong>Guardar también como nuevo tipo de servicio</strong><small>Reutilizar este cuadro en futuros eventos.</small></span></label></div><div id="equipmentPersonalizerServiceFields" class="equipment-personalizer-service-fields" hidden><label>Nombre del nuevo servicio<input id="equipmentPersonalizerServiceName" type="text" maxlength="240" data-personalizer-template-field="name" placeholder="Ej. Producción personalizada para evento corporativo"></label><label>Categoría del nuevo servicio<select id="equipmentPersonalizerServiceGroup" data-personalizer-template-field="groupId"><option value="">Seleccione una categoría</option></select></label><p class="equipment-personalizer-permanent-hint">Al confirmar se guardará este cuadro de forma permanente en Tipo de Servicio. No se guardará ningún cambio al cerrar o cancelar.</p></div></fieldset>
       <section aria-labelledby="equipmentPersonalizerPasteHeading"><h3 id="equipmentPersonalizerPasteHeading">Pega tu cuadro de Excel</h3><p class="equipment-personalizer-hint">Copia las celdas y pégalas aquí. Usa encabezados Cantidad, Descripción, Categoría y Observaciones; también puedes pegar cantidad y descripción sin encabezados. Se conservarán las columnas adicionales, las notas y las cantidades en 0.</p><textarea id="equipmentPersonalizerClipboard" class="equipment-personalizer-clipboard" rows="5" spellcheck="false" aria-label="Pegar celdas de Excel" placeholder="Cantidad&#9;Descripción&#9;Categoría&#9;Observaciones"></textarea><div class="equipment-personalizer-inline-actions"><button type="button" data-personalizer-action="parse">Preparar cuadro pegado</button><button type="button" class="equipment-personalizer-secondary" data-personalizer-action="add">Agregar fila</button></div></section>
       <section aria-labelledby="equipmentPersonalizerRowsHeading"><h3 id="equipmentPersonalizerRowsHeading">Revisión del cuadro</h3><p id="equipmentPersonalizerCounts" role="status" aria-live="polite">Todavía no hay filas.</p><div id="equipmentPersonalizerRows"></div><div id="equipmentPersonalizerPagination" class="equipment-personalizer-pagination"></div></section>
       <div id="equipmentPersonalizerStatus" class="equipment-personalizer-status" role="status" aria-live="polite"></div><div id="equipmentPersonalizerErrors" class="equipment-personalizer-errors" role="alert" hidden></div><div id="equipmentPersonalizerReview" class="equipment-personalizer-review" hidden></div></div>
@@ -324,6 +349,7 @@
     const get = (id) => doc.getElementById(id);
     const session = createSession(options);
     const inventory = () => typeof options.inventory === "function" ? options.inventory() : options.inventory || [];
+    const groups = () => serviceGroups(typeof options.serviceGroups === "function" ? options.serviceGroups() : options.serviceGroups || []);
     let page = 0, busyOpening = false, destroyed = false, clipboardDirty = false, previewBusy = false, previewGeneration = 0;
     const status = (value) => { get("equipmentPersonalizerStatus").textContent = value; };
     function errors(entries) {
@@ -363,13 +389,28 @@
       get("equipmentPersonalizerRows").innerHTML = rows.length ? `<div class="equipment-personalizer-table-scroll"><table><thead><tr><th>Fila / tipo</th><th>Cantidad</th><th>Descripción</th><th>Categoría</th><th>Observaciones</th><th>Inventario / acción</th><th><span class="equipment-personalizer-sr-only">Eliminar</span></th></tr></thead><tbody>${visible.map((row, index) => renderRow(row, start + index, currentInventory)).join("")}</tbody></table></div>` : '<p class="equipment-personalizer-empty">Pega tu cuadro o agrega una fila para comenzar.</p>';
       get("equipmentPersonalizerPagination").innerHTML = rows.length ? `<button type="button" class="equipment-personalizer-secondary" data-personalizer-action="previous"${page === 0 ? " disabled" : ""}>Anterior</button><span>Mostrando ${start + 1}–${Math.min(start + PAGE_SIZE, rows.length)} de ${rows.length} filas. Todas se cargarán.</span><button type="button" class="equipment-personalizer-secondary" data-personalizer-action="next"${page === maxPage ? " disabled" : ""}>Siguiente</button>` : "";
     }
+    function renderUsage() {
+      const reusable = session.draft.usageMode === "service";
+      const choices = groups();
+      if (!session.draft.serviceGroupId && choices.some((group) => group.id === "personalizados")) session.draft.serviceGroupId = "personalizados";
+      get("equipmentPersonalizerUsageOnce").checked = !reusable;
+      get("equipmentPersonalizerUsageService").checked = reusable;
+      get("equipmentPersonalizerServiceFields").hidden = !reusable;
+      get("equipmentPersonalizerServiceName").required = reusable;
+      get("equipmentPersonalizerServiceGroup").required = reusable;
+      get("equipmentPersonalizerServiceName").value = session.draft.serviceName;
+      get("equipmentPersonalizerServiceGroup").innerHTML = '<option value="">Seleccione una categoría</option>' + choices.map((group) => `<option value="${escape(group.id)}">${escape(group.label)}</option>`).join("");
+      get("equipmentPersonalizerServiceGroup").value = session.draft.serviceGroupId;
+      get("equipmentPersonalizerCommitButton").textContent = reusable ? "Guardar servicio y cargar evento" : "Cargar evento";
+    }
     function clearForm() {
-      for (const field of Object.keys(session.draft.metadata)) get(`equipmentPersonalizer-${field}`).value = "";
+      for (const field of Object.keys(session.draft.metadata)) { const input = get(`equipmentPersonalizer-${field}`); if (input) input.value = ""; }
       get("equipmentPersonalizerClipboard").value = "";
       clipboardDirty = false;
       get("equipmentPersonalizerReview").hidden = true;
       get("equipmentPersonalizerCommitButton").disabled = true;
       errors([]); status(""); page = 0; renderRows();
+      renderUsage();
       get("equipmentPersonalizerReviewButton").textContent = typeof options.onPreview === "function" ? "Revisar disponibilidad" : "Revisar cuadro";
     }
     function stopPreview() {
@@ -434,14 +475,15 @@
         if (clipboardDirty) { errors([{ message: "Hay contenido pegado que todavía no está en la tabla. Pulse Preparar cuadro pegado antes de revisar." }]); return; }
         const validation = session.review(); errors(validation); renderRows();
         if (validation.length) { status("Corrija los puntos indicados. Ningún equipo se ha guardado todavía."); return; }
-        const eventPreview = buildEvent(session.draft, inventory());
+        const eventPreview = buildEvent(session.draft, inventory(), groups());
         const items = eventPreview.sections.flatMap((section) => section.items);
         const counts = { recognized: items.filter((item) => item.warehouseInventoryId).length, rent: items.filter((item) => item.procurementChoice === "rent").length, purchase: items.filter((item) => item.procurementChoice === "purchase").length };
         const panel = get("equipmentPersonalizerReview");
-        const overview = `<h3>Cuadro listo para cargar</h3><p><strong>${escape(eventPreview.name)}</strong> · ${escape(eventPreview.place)}</p><p>${session.draft.rows.length} filas conservadas; ${items.length} líneas de equipo: ${counts.recognized} vinculadas al inventario, ${counts.rent} para renta y ${counts.purchase} para compra.</p>`;
+        const permanence = eventPreview.serviceTemplate ? `<div class="equipment-personalizer-permanent-review"><strong>También guardarás un nuevo tipo de servicio: ${escape(eventPreview.serviceTemplate.name)}</strong><p>Categoría: ${escape(groups().find((group) => group.id === eventPreview.serviceTemplate.groupId)?.label || eventPreview.serviceTemplate.groupId)}. El cuadro, sus cantidades y notas quedarán disponibles de forma permanente para futuros eventos al confirmar.</p></div>` : '<p>Este cuadro se usará únicamente para este evento.</p>';
+        const overview = `<h3>Cuadro listo para cargar</h3><p><strong>${escape(eventPreview.name)}</strong> · ${escape(eventPreview.place)}</p><p>${session.draft.rows.length} filas conservadas; ${items.length} líneas de equipo: ${counts.recognized} vinculadas al inventario, ${counts.rent} para renta y ${counts.purchase} para compra.</p>${permanence}`;
         if (typeof options.onPreview !== "function") {
           panel.hidden = false; panel.innerHTML = overview + '<p>Las filas están completas. Al cargar, se comprobará la disponibilidad con las reservas de los demás eventos.</p>';
-          get("equipmentPersonalizerCommitButton").disabled = false; status("Cuadro revisado. Confirme con Cargar evento.");
+          get("equipmentPersonalizerCommitButton").disabled = false; status(eventPreview.serviceTemplate ? "Cuadro revisado. Confirme con Guardar servicio y cargar evento." : "Cuadro revisado. Confirme con Cargar evento.");
           return;
         }
         session.changed();
@@ -455,7 +497,7 @@
           const latestValidation = session.review();
           if (latestValidation.length) { const error = new Error(latestValidation[0].message); error.validationErrors = latestValidation; throw error; }
           panel.innerHTML = overview + html; panel.hidden = false;
-          status("Disponibilidad revisada. Confirme con Cargar evento para guardar y reservar.");
+          status(eventPreview.serviceTemplate ? "Disponibilidad revisada. Confirme con Guardar servicio y cargar evento para crear el servicio permanente y reservar este evento." : "Disponibilidad revisada. Confirme con Cargar evento para guardar y reservar.");
         } catch (error) {
           if (generation !== previewGeneration || !session.isOpen || destroyed) return;
           session.changed(); errors(error.validationErrors || [error]);
@@ -464,7 +506,7 @@
           if (generation === previewGeneration) { previewBusy = false; setBusy(false); }
         }
       } else if (action === "commit") {
-        setBusy(true); status("Guardando el evento y comprobando disponibilidad…"); errors([]);
+        setBusy(true); status(session.draft.usageMode === "service" ? "Guardando el nuevo servicio y el evento…" : "Guardando el evento y comprobando disponibilidad…"); errors([]);
         try {
           await session.commit();
           if (dialog.open) dialog.close(); clearForm();
@@ -476,11 +518,25 @@
     function onInput(event) {
       if (previewBusy || session.busy) return;
       const target = event.target;
-      if (target?.dataset?.personalizerMetadata) { session.draft.metadata[target.dataset.personalizerMetadata] = target.value; changed(); }
+      if (target?.dataset?.personalizerUsageMode) {
+        if (!["once", "service"].includes(target.dataset.personalizerUsageMode)) return;
+        session.draft.usageMode = target.dataset.personalizerUsageMode;
+        if (session.draft.usageMode === "service" && !session.draft.serviceNameTouched && !meaningful(session.draft.serviceName)) session.draft.serviceName = text(session.draft.metadata.type).trim();
+        changed(); renderUsage();
+      } else if (target?.dataset?.personalizerTemplateField) {
+        const field = target.dataset.personalizerTemplateField;
+        if (field === "name") { session.draft.serviceName = target.value; session.draft.serviceNameTouched = true; }
+        if (field === "groupId") session.draft.serviceGroupId = target.value;
+        changed();
+      } else if (target?.dataset?.personalizerMetadata) { session.draft.metadata[target.dataset.personalizerMetadata] = target.value; changed(); }
       else if (target?.dataset?.personalizerField) readRowField(target);
       else if (target?.id === "equipmentPersonalizerClipboard") { clipboardDirty = true; changed(); status("Pulse Preparar cuadro pegado para incorporar este contenido a la tabla."); }
     }
-    function onChange(event) { if (previewBusy || session.busy) return; const changedRow = readRowField(event.target); if (changedRow) renderRows(); }
+    function onChange(event) {
+      if (previewBusy || session.busy) return;
+      if (event.target?.dataset?.personalizerUsageMode || event.target?.dataset?.personalizerTemplateField) { onInput(event); return; }
+      const changedRow = readRowField(event.target); if (changedRow) renderRows();
+    }
     function onCancel(event) { event.preventDefault(); close(); }
     function onClose() { if (!session.busy && session.isOpen) { stopPreview(); session.discard(); clearForm(); } }
     dialog.addEventListener("click", onClick);
@@ -500,5 +556,5 @@
     return api;
   }
 
-  return { parseClipboard, readTsv, parseQuantity, normalize, inventoryRecords, inventoryIndex, resolveRow, dateMillis, validateDraft, buildEvent, createSession, renderMarkup, renderRow, renderAvailability, init };
+  return { parseClipboard, readTsv, parseQuantity, normalize, inventoryRecords, inventoryIndex, resolveRow, dateMillis, serviceGroups, validateDraft, buildEvent, createSession, renderMarkup, renderRow, renderAvailability, init };
 });

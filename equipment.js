@@ -1271,13 +1271,18 @@ function normalizeEquipmentItem(item) {
 
 function editableEquipmentItems(section, sectionKey) {
   const sourceItems = (section.items || [])
-    .map(([quantity, description], itemIndex) => {
+    .map((raw, itemIndex) => {
+      const original = normalizeEquipmentItem(raw);
       const id = equipmentItemKey(sectionKey, itemIndex);
       const override = equipmentState.itemOverrides.get(id) || {};
+      const sameDescription = !Object.hasOwn(override, "description") || equipmentPurchaseLinkDescriptionKey(override.description) === equipmentPurchaseLinkDescriptionKey(original.description);
       return {
         id,
-        quantity: override.quantity ?? quantity,
-        description: override.description ?? description,
+        quantity: override.quantity ?? original.quantity,
+        description: override.description ?? original.description,
+        ...(sameDescription ? equipmentItemInventoryMetadata(original) : {}),
+        ...(Array.isArray(raw?.notes) ? { notes: [...raw.notes] } : {}),
+        ...(Array.isArray(raw?.sourceCells) ? { sourceCells: JSON.parse(JSON.stringify(raw.sourceCells)) } : {}),
         ...equipmentItemInventoryMetadata(override),
         ...(Array.isArray(section.rows) ? { sourceItemIndex: itemIndex } : {}),
         editable: true,
@@ -1348,7 +1353,10 @@ function selectedEquipmentSections() {
   if (!services.length && !equipmentState.documentSections.length) return [];
   const hasMultipleServices = services.length > 1;
   const mainSections = services.flatMap((service) => {
-    return (service.mainSections || []).map((section, index) => {
+    const templateNotes = service.importSource?.personalized === true ? String(service.importSource.templateNotes || "") : "";
+    const noteSections = templateNotes.trim() ? [{ id: `template-notes-${service.id}`, title: hasMultipleServices ? `${service.name} / Observaciones del servicio` : "Observaciones del servicio",
+      items: [], rows: [{ type: "note", description: templateNotes }], importSource: { personalized: true, authoritative: true } }] : [];
+    return [...noteSections, ...(service.mainSections || []).map((section, index) => {
       const sectionKey = equipmentSectionKey(section, index, "main", service.id);
       return {
         ...section,
@@ -1357,7 +1365,7 @@ function selectedEquipmentSections() {
         title: hasMultipleServices ? `${service.name} / ${section.title}` : section.title,
         items: editableEquipmentItems(section, sectionKey)
       };
-    }).filter((section) => section.items.length || section.rows?.length || section.notes?.length);
+    }).filter((section) => section.items.length || section.rows?.length || section.notes?.length)];
   });
   const manualMainSection = manualMainSectionsForTable();
   const selectedExtrasSections = services.flatMap((service) => {
@@ -1536,7 +1544,7 @@ function currentEquipmentEventDraft() {
   return {
     id: "event-draft",
     place: equipmentQuery("#equipmentEventPlace")?.value.trim() || "Lugar por definir",
-    name: equipmentQuery("#equipmentEventName")?.value.trim() || "Evento por definir",
+    name: equipmentQuery("#equipmentEventName")?.value.trim() || equipmentQuery("#equipmentEventType")?.value.trim() || equipmentQuery("#equipmentEventPlace")?.value.trim() || "Evento por definir",
     type: equipmentQuery("#equipmentEventType")?.value.trim() || "",
     startAt,
     endAt: equipmentQuery("#equipmentEventEndAt")?.value || "",
@@ -4083,16 +4091,30 @@ function cloneEquipmentCatalogItems(items = [], preserveLiteral = false) {
     return {
       id: normalized.id || `catalog-item-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
       quantity: Math.max(0, Number(normalized.quantity) || 0),
-      description: preserveLiteral ? String(normalized.description || "") : String(normalized.description || "").trim()
+      description: preserveLiteral ? String(normalized.description || "") : String(normalized.description || "").trim(),
+      ...equipmentItemInventoryMetadata(normalized),
+      ...(Number.isInteger(normalized.sourceItemIndex) ? { sourceItemIndex: normalized.sourceItemIndex } : {}),
+      ...(Array.isArray(item?.notes) ? { notes: [...item.notes] } : {}),
+      ...(Array.isArray(item?.sourceCells) ? { sourceCells: JSON.parse(JSON.stringify(item.sourceCells)) } : {}),
+      ...(!Array.isArray(item) && (item?.preserveCatalogMetadata || Object.keys(item || {}).some(key => !["id", "quantity", "description", "editable", "manual"].includes(key))) ? { preserveCatalogMetadata: true } : {})
     };
   });
+}
+
+function equipmentCatalogSerializedItem(item) {
+  const quantity = Math.max(0, Number(item.quantity) || 0);
+  if (!item.preserveCatalogMetadata) return [quantity, item.description];
+  return { id: item.id, quantity, description: item.description, ...equipmentItemInventoryMetadata(item),
+    ...(Number.isInteger(item.sourceItemIndex) ? { sourceItemIndex: item.sourceItemIndex } : {}),
+    ...(Array.isArray(item.notes) ? { notes: [...item.notes] } : {}),
+    ...(Array.isArray(item.sourceCells) ? { sourceCells: JSON.parse(JSON.stringify(item.sourceCells)) } : {}) };
 }
 
 function cloneEquipmentCatalogAudioOptions(audioOptions = {}, preserveLiteral = false) {
   return Object.fromEntries(Object.entries(audioOptions || {}).map(([key, option]) => [key, {
     ...option,
     label: String(option?.label || key),
-    items: cloneEquipmentCatalogItems(option?.items, preserveLiteral).map((item) => [item.quantity, item.description])
+    items: cloneEquipmentCatalogItems(option?.items, preserveLiteral).map(equipmentCatalogSerializedItem)
   }]));
 }
 
@@ -4155,9 +4177,10 @@ function applyEquipmentCatalogServiceOverride(serviceId, override) {
       title: String(section?.title || `Categoría ${index + 1}`),
       ...(Array.isArray(section?.notes) ? { notes: [...section.notes] } : {}),
       ...(Array.isArray(section?.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
+      ...(Array.isArray(section?.sourceCells) ? { sourceCells: JSON.parse(JSON.stringify(section.sourceCells)) } : {}),
       ...((section?.importSource || override.importSource || sourceSections.get(section?.id)?.importSource || service.importSource)
         ? { importSource: { ...(section?.importSource || override.importSource || sourceSections.get(section?.id)?.importSource || service.importSource) } } : {}),
-      items: cloneEquipmentCatalogItems(section?.items, preserveLiteral || section?.importSource?.authoritative || sourceSections.get(section?.id)?.importSource?.authoritative).map((item) => [item.quantity, item.description])
+      items: cloneEquipmentCatalogItems(section?.items, preserveLiteral || section?.importSource?.authoritative || sourceSections.get(section?.id)?.importSource?.authoritative).map(equipmentCatalogSerializedItem)
     }));
   }
   if (override.importSource?.authoritative === true) {
@@ -4273,6 +4296,7 @@ function equipmentCatalogDraftForService(serviceId) {
         title: String(section.title || `Categoría ${index + 1}`),
         ...(Array.isArray(section.notes) ? { notes: [...section.notes] } : {}),
         ...(Array.isArray(section.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
+        ...(Array.isArray(section.sourceCells) ? { sourceCells: JSON.parse(JSON.stringify(section.sourceCells)) } : {}),
         ...((section.importSource || baseService.importSource) ? { importSource: { ...(section.importSource || baseService.importSource) } } : {}),
         items: cloneEquipmentCatalogItems(section.items, Boolean(section.importSource?.authoritative || baseService.importSource?.authoritative))
       };
@@ -4318,7 +4342,7 @@ function equipmentCatalogEditorPayload(draft = equipmentCatalogEditorState.draft
   const audioOptions = cloneEquipmentCatalogAudioOptions(baseService.audioOptions || {}, preserveLiteral);
   const mainSections = draft.sections.map((section) => {
     const preserveSectionLiteral = preserveLiteral || section.importSource?.authoritative;
-    const items = section.items.map((item) => [Math.max(0, Number(item.quantity) || 0), preserveSectionLiteral ? String(item.description || "") : String(item.description || "").trim()]);
+    const items = section.items.map(item => equipmentCatalogSerializedItem({ ...item, description: preserveSectionLiteral ? String(item.description || "") : String(item.description || "").trim() }));
     if (section.audioVariant) {
       if (draft.audioType && audioOptions[draft.audioType]) audioOptions[draft.audioType].items = items;
       return {
@@ -4333,6 +4357,7 @@ function equipmentCatalogEditorPayload(draft = equipmentCatalogEditorState.draft
       title: preserveSectionLiteral ? String(section.title || "") : String(section.title || "").trim(),
       ...(Array.isArray(section.notes) ? { notes: [...section.notes] } : {}),
       ...(Array.isArray(section.rows) ? { rows: JSON.parse(JSON.stringify(section.rows)) } : {}),
+      ...(Array.isArray(section.sourceCells) ? { sourceCells: JSON.parse(JSON.stringify(section.sourceCells)) } : {}),
       ...(section.importSource ? { importSource: { ...section.importSource } } : {}),
       items
     };
@@ -4448,6 +4473,13 @@ function equipmentCatalogEditorReference(value) {
   return { section, itemIndex };
 }
 
+function equipmentCatalogChangeItemDescription(item, description) {
+  if (equipmentPurchaseLinkDescriptionKey(item.description) !== equipmentPurchaseLinkDescriptionKey(description)) {
+    for (const field of ["warehouseInventoryId", "inventoryCategory", "itemType", "procurementChoice", "procurementPreference", "inventoryIngressReceipts", "libraryExtraId"]) delete item[field];
+  }
+  item.description = description;
+}
+
 function bindEquipmentCatalogEditorInputs() {
   const content = equipmentQuery("#equipmentCatalogEditorContent");
   if (!content) return;
@@ -4473,7 +4505,7 @@ function bindEquipmentCatalogEditorInputs() {
   content.querySelectorAll("[data-catalog-item-description]").forEach((input) => {
     input.addEventListener("input", () => {
       const { section, itemIndex } = equipmentCatalogEditorReference(input.dataset.catalogItemDescription);
-      if (section?.items[itemIndex]) section.items[itemIndex].description = input.value;
+      if (section?.items[itemIndex]) equipmentCatalogChangeItemDescription(section.items[itemIndex], input.value);
       const recognized = !String(input.value || "").trim() || equipmentRecognizedInventoryChoice(input.value);
       input.classList.toggle("is-unrecognized", !recognized);
       input.setAttribute("aria-invalid", String(!recognized));
@@ -7167,15 +7199,52 @@ async function saveEquipmentSharedWindow(options = {}) {
   return true;
 }
 
+function equipmentPersonalizedServiceGroups() {
+  const groups = [{ id: "personalizados", label: "Personalizados" }];
+  equipmentServiceGroups.forEach(group => {
+    const id = equipmentCatalogGroupId(group);
+    if (id && !groups.some(existing => existing.id === id)) groups.push({ id, label: group.label || id });
+  });
+  return groups;
+}
+
+async function saveEquipmentPersonalizedService(template) {
+  const response = await fetch("/api/cuadros-equipo/servicios-personalizados", { method: "POST", credentials: "same-origin",
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseCatalogVersion: equipmentCatalogBaseVersion, template }) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "No se pudo guardar el nuevo tipo de servicio. El cuadro se conserva.");
+  const id = data.serviceId || template.id;
+  const patch = data.services ? data : { baseCatalogVersion: equipmentCatalogBaseVersion,
+    services: data.service ? { [id]: data.service } : {}, groups: data.groups,
+    serviceRevisions: data.serviceRevisions || (data.serviceRevision ? { [id]: data.serviceRevision } : {}) };
+  applyEquipmentCatalogOverrides(patch);
+  populateNativeEquipmentServiceSelect();
+  return { ...data, serviceId: id };
+}
+
 async function savePersonalizedEquipmentEvent(event) {
   const sections = cloneEquipmentSnapshotSections(event.sections || []);
   if (!sections.some(section => section.items.length)) throw new Error("Agregue al menos una línea de equipo.");
-  return persistEquipmentSharedEvent({ ...event, id: event.id || createEquipmentWarehouseDispatchId(),
-    warehouseDispatchId: event.warehouseDispatchId || createEquipmentWarehouseDispatchId(),
-    serviceIds: [], serviceId: "", serviceName: event.name || event.type || "Cuadro personalizado",
-    documentSections: sections, documentServiceName: event.name || "Cuadro personalizado", sections,
-    manualMainItems: [], manualMainSections: [], manualExtras: [], selectedExtraIds: [],
-    itemOverrides: [], sectionAddedItems: [], removedItemIds: [] });
+  let savedTemplate = null;
+  if (event.serviceTemplate) savedTemplate = await saveEquipmentPersonalizedService(event.serviceTemplate);
+  const { serviceTemplate, ...eventData } = event;
+  try {
+    const saved = await persistEquipmentSharedEvent({ ...eventData, id: event.id || createEquipmentWarehouseDispatchId(),
+      ...(savedTemplate ? { reusableServiceId: savedTemplate.serviceId } : {}),
+      warehouseDispatchId: event.warehouseDispatchId || `salida-${event.id || createEquipmentWarehouseDispatchId()}`,
+      serviceIds: [], serviceId: "", serviceName: event.type || event.name || "Cuadro personalizado",
+      documentSections: sections, documentServiceName: event.type || event.name || "Cuadro personalizado", sections,
+      manualMainItems: [], manualMainSections: [], manualExtras: [], selectedExtraIds: [],
+      itemOverrides: [], sectionAddedItems: [], removedItemIds: [] });
+    if (savedTemplate) {
+      const status = equipmentQuery("#equipmentSaveStatus");
+      if (status) status.textContent = "Nuevo tipo de servicio guardado permanentemente y evento cargado. Puede volver a elegirlo en Tipo de Servicio.";
+    }
+    return saved;
+  } catch (error) {
+    if (savedTemplate) throw new Error(`El tipo de servicio ya quedó guardado. No se pudo cargar el evento: ${error.message}. Reintente Cargar; no se duplicará el servicio.`);
+    throw error;
+  }
 }
 
 async function cancelEquipmentSharedEvent(eventId) {
@@ -7203,6 +7272,7 @@ async function initEquipmentSharedWorkspace() {
   equipmentSharedWorkspace.client = window.EquipmentWorkspace.create({ onState: applyEquipmentSharedState });
   equipmentSharedWorkspace.personalizer = window.EquipmentEventPersonalizer.init({
     openerId: "equipmentPersonalizeEventButton", inventory: equipmentSharedInventoryRecords,
+    serviceGroups: equipmentPersonalizedServiceGroups,
     beforeOpen: equipmentSharedBeforeOpen, onPreview: previewEquipmentSharedEvent, onCommit: savePersonalizedEquipmentEvent,
     onError: error => equipmentSharedStatus(error.message, true)
   });

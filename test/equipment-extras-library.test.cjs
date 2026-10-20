@@ -98,14 +98,20 @@ function harness(options = {}) {
     constructor(id) { this.id = id || ""; this.dataset = {}; this.listeners = {}; this.value = ""; this.open = false; this.checked = false; this.disabled = false; this.hidden = false; this.textContent = ""; this.children = []; }
     set innerHTML(value) {
       this.html = value; this.children = [];
-      for (const match of value.matchAll(/<([a-z]+)\b([^>]*(?:\bid="([^"]+)"|\bdata-extra-(?:select|remove)="([^"]+)")[^>]*)>/g)) {
-        const element = new Element(match[3]);
+      for (const match of value.matchAll(/<([a-z]+)\b([^>]*)>/g)) {
         const attrs = match[2];
+        const id = attrs.match(/\bid="([^"]+)"/)?.[1];
+        if (!id && !/data-extra-(?:select|remove|quantity|action|message)=/.test(attrs)) continue;
+        const element = new Element(id);
         element.value = attrs.match(/\bvalue="([^"]*)"/)?.[1] || "";
+        if (match[1] === "select") {
+          const content = value.slice(match.index + match[0].length).split("</select>")[0];
+          element.value = content.match(/<option value="([^"]*)"[^>]* selected/)?.[1] || "";
+        }
         element.hidden = /\shidden(?:\s|$)/.test(attrs);
-        for (const property of ["select", "remove"]) {
+        for (const property of ["select", "remove", "quantity", "action", "message"]) {
           const found = attrs.match(new RegExp(`data-extra-${property}="([^"]+)"`));
-          if (found) element.dataset[property === "select" ? "extraSelect" : "extraRemove"] = found[1];
+          if (found) element.dataset['extra' + property[0].toUpperCase() + property.slice(1)] = found[1];
         }
         if (element.id) elements.set(element.id, element);
         this.children.push(element);
@@ -115,7 +121,7 @@ function harness(options = {}) {
     addEventListener(type, listener) { (this.listeners[type] ||= []).push(listener); }
     removeEventListener(type, listener) { this.listeners[type] = (this.listeners[type] || []).filter((item) => item !== listener); }
     async emit(type, target = this) { for (const listener of this.listeners[type] || []) await listener({ target, preventDefault() {} }); }
-    querySelectorAll() { return this.children.filter((item) => item.dataset.extraSelect !== undefined || item.dataset.extraRemove !== undefined); }
+    querySelectorAll(selector = "") { const names = [...selector.matchAll(/data-extra-([a-z]+)/g)].map(match => 'extra' + match[1][0].toUpperCase() + match[1].slice(1)); return this.children.filter((item) => names.some(name => item.dataset[name] !== undefined)); }
     contains(element) { return this.children.includes(element); }
     closest(selector) { return /data-extra-/.test(selector) && (this.dataset.extraSelect !== undefined || this.dataset.extraRemove !== undefined) ? this : null; }
     appendChild(element) { this.children.push(element); return element; }
@@ -138,11 +144,13 @@ function harness(options = {}) {
   };
   const instance = library.init({ document, fetch, inventory: () => currentRecords, inventoryReady: () => ready, onAdd: async (item) => { if (options.onAdd) return options.onAdd(item); added.push(item); } });
   const get = (id) => elements.get(id);
+  const field = (id, kind = "quantity") => get("equipmentExtrasList").children.find(item => item.dataset['extra' + kind[0].toUpperCase() + kind.slice(1)] === id);
   return { instance, get, requests, responses, added, document, setRecords: (value) => { currentRecords = value; }, setReady: (value) => { ready = value; },
-    async select(id) { const list = get("equipmentExtrasList"); const button = list.children.find((item) => item.dataset.extraSelect === id); assert.ok(button); await list.emit("click", button); },
+    field,
+    async edit(id, quantity, action) { const list = get("equipmentExtrasList"); if (quantity !== undefined) { const input = field(id); assert.ok(input); input.value = quantity; await list.emit("input", input); } if (action !== undefined) { const select = field(id, "action"); assert.ok(select); select.value = action; await list.emit("change", select); } },
+    async add(id, quantity, action) { await this.edit(id, quantity, action); const list = get("equipmentExtrasList"); const button = list.children.find((item) => item.dataset.extraSelect === id); assert.ok(button); await list.emit("click", button); },
     async remove(id) { const list = get("equipmentExtrasList"); const button = list.children.find((item) => item.dataset.extraRemove === id); assert.ok(button); await list.emit("click", button); },
-    async create(description = "Extra nuevo", category = "Extras") { get("equipmentExtrasDescription").value = description; get("equipmentExtrasCategory").value = category; await get("equipmentExtrasLibraryForm").emit("submit"); },
-    async add(quantity, action) { get("equipmentExtrasQuantity").value = quantity; get("equipmentExtrasRent").checked = action === "rent"; get("equipmentExtrasPurchase").checked = action === "purchase"; await get("equipmentExtrasQuantityForm").emit("submit"); }
+    async create(description = "Extra nuevo", category = "Extras") { get("equipmentExtrasDescription").value = description; get("equipmentExtrasCategory").value = category; await get("equipmentExtrasLibraryForm").emit("submit"); }
   };
 }
 
@@ -165,56 +173,77 @@ test("abrir carga de API privada, búsqueda, cerrar borra borrador y no escribe"
   assert.equal(h.get("equipmentExtrasDescription").value, "");
 });
 
-test("seleccionar muestra cantidad; cancelar y Escape no agregan", async () => {
-  const h = harness(); await h.instance.open(); await h.select("extra-a");
-  assert.equal(h.get("equipmentExtrasQuantityDialog").open, true);
-  assert.equal(h.get("equipmentExtrasUnknown").hidden, true);
-  await h.get("equipmentExtrasQuantityClose").emit("click");
-  assert.equal(h.added.length, 0);
-  assert.equal(h.instance.getState().selected, null);
-  await h.select("extra-b");
-  await h.get("equipmentExtrasQuantityDialog").emit("cancel");
-  assert.equal(h.get("equipmentExtrasQuantityDialog").open, false);
-  assert.equal(h.added.length, 0);
-  assert.equal(h.requests.length, 1);
+test("tarjetas muestran cantidad directa sin segundo modal", async () => {
+ const h=harness();await h.instance.open();
+ assert.equal(h.get("equipmentExtrasQuantityDialog"),undefined);
+ assert.equal(h.field("extra-a").value,"1");
+ await h.add("extra-a","2");
+ assert.equal(h.added.length,1);assert.equal(h.added[0].quantity,2);assert.equal(h.added[0].warehouseInventoryId,"warehouse-a");
+ assert.equal(h.get("equipmentExtrasLibraryDialog").open,true);assert.equal(h.requests.length,1);
 });
 
-test("agregar conocido usa cantidad exacta y mantiene la biblioteca abierta", async () => {
-  const h = harness(); await h.instance.open(); await h.select("extra-a"); await h.add("2");
-  assert.equal(h.added.length, 1);
-  assert.equal(h.added[0].warehouseInventoryId, "warehouse-a");
-  assert.equal(h.added[0].quantity, 2);
-  assert.equal(h.get("equipmentExtrasQuantityDialog").open, false);
-  assert.equal(h.get("equipmentExtrasLibraryDialog").open, true);
-  assert.equal(h.requests.length, 1);
+test("cancelar o cerrar descarta cantidades temporales sin agregar ni cambiar defaults", async () => {
+ for(const action of ["button","escape"]){
+  const h=harness();await h.instance.open();await h.edit("extra-a","7");
+  if(action==="button")await h.get("equipmentExtrasLibraryClose").emit("click");else await h.get("equipmentExtrasLibraryDialog").emit("cancel");
+  assert.equal(h.added.length,0);assert.equal(h.requests.length,1);assert.equal(h.instance.getState().cardDrafts.length,0);
+  await h.instance.open();assert.equal(h.field("extra-a").value,"1");assert.equal(h.instance.getState().items[0].defaultQuantity,1);
+ }
 });
 
-test("desconocido y consumible requieren acción sin fabricar ingreso a inventario", async () => {
-  const h = harness({ items: [{ ...unknown(), itemType: "consumible" }] }); await h.instance.open(); await h.select("extra-b");
-  assert.equal(h.get("equipmentExtrasRent").disabled, true);
-  assert.equal(h.get("equipmentExtrasPurchase").checked, true);
-  await h.add("3", "rent"); assert.equal(h.added.length, 0); assert.match(h.get("equipmentExtrasQuantityStatus").textContent, /consumibles.*comprar/);
-  await h.add("0", "purchase"); assert.equal(h.added.length, 0); assert.match(h.get("equipmentExtrasQuantityStatus").textContent, /mayor que cero/);
-  await h.add("3"); assert.equal(h.added.length, 0); assert.match(h.get("equipmentExtrasQuantityStatus").textContent, /Elija Rentar o Comprar/);
-  await h.add("3", "purchase"); assert.equal(h.added[0].procurementChoice, "purchase");
-  assert.equal(h.added[0].itemType, "consumible"); assert.equal("inventoryIngressReceipts" in h.added[0], false);
-  assert.equal(h.requests.filter((request) => request.init.method).length, 0);
+test("cada tarjeta desconocida exige su propia acción y cantidad", async () => {
+ const h=harness({items:[unknown(),{...unknown(),id:"extra-other",description:"Otro extra"}]});await h.instance.open();
+ await h.add("extra-b","2");assert.equal(h.added.length,0);assert.match(h.get("equipmentExtrasLibraryStatus").textContent,/Elija Rentar o Comprar/);
+ await h.add("extra-b","2","rent");assert.equal(h.added[0].procurementChoice,"rent");assert.equal(h.added[0].quantity,2);
+ await h.add("extra-other","4");assert.equal(h.added.length,1);assert.equal(h.field("extra-other","action").value,"");
+ await h.add("extra-other","4","purchase");assert.equal(h.added[1].procurementChoice,"purchase");assert.equal(h.added[1].quantity,4);
+ assert.equal(h.requests.length,1);
 });
 
-test("si el inventario cambia durante la selección pide nueva acción", async () => {
-  const h = harness(); await h.instance.open(); await h.select("extra-a");
-  h.setRecords([]); await h.add("2");
-  assert.equal(h.added.length, 0);
-  assert.equal(h.get("equipmentExtrasUnknown").hidden, false);
-  await h.add("2", "rent"); assert.equal(h.added[0].procurementChoice, "rent");
+test("consumible presenta compra y rechaza renta aunque se fuerce el control", async () => {
+ const h=harness({items:[{...unknown(),itemType:"consumible"}]});await h.instance.open();
+ assert.equal(h.field("extra-b","action").value,"purchase");
+ assert.match(h.get("equipmentExtrasList").innerHTML,/<option value="rent"[^>]* disabled/);
+ await h.add("extra-b","3","rent");assert.equal(h.added.length,0);assert.match(h.get("equipmentExtrasLibraryStatus").textContent,/consumibles.*comprar/);
+ await h.add("extra-b","3","purchase");assert.equal(h.added[0].procurementChoice,"purchase");assert.equal(h.added[0].itemType,"consumible");
+ assert.equal("inventoryIngressReceipts" in h.added[0],false);assert.equal(h.requests.length,1);
 });
 
-test("inventario sin cargar impide crear o agregar y no se interpreta como cero", async () => {
-  const h = harness(); await h.instance.open(); h.setReady(false);
-  await h.select("extra-a"); assert.equal(h.get("equipmentExtrasQuantityDialog").open, false);
-  assert.match(h.get("equipmentExtrasLibraryStatus").textContent, /todavía no está disponible/);
-  await h.create(); assert.equal(h.requests.length, 1);
-  h.setReady(true); await h.select("extra-a"); h.setReady(false); await h.add("2"); assert.equal(h.added.length, 0);
+test("cantidad inválida queda visible y no dispara callback", async () => {
+ const h=harness();await h.instance.open();
+ for(const quantity of ["","0","-1","1.5","abc"]){await h.add("extra-a",quantity);assert.equal(h.added.length,0);assert.match(h.get("equipmentExtrasLibraryStatus").textContent,/entera mayor que cero/);assert.equal(h.field("extra-a").value,quantity);}
+ await h.add("extra-a","5");assert.equal(h.added[0].quantity,5);
+});
+
+test("búsqueda y refresco conservan cantidades manuales y acciones por ID", async () => {
+ const h=harness();await h.instance.open();await h.edit("extra-a","8");await h.edit("extra-b","3","rent");
+ h.get("equipmentExtrasSearch").value="Extra de";await h.get("equipmentExtrasSearch").emit("input");assert.equal(h.field("extra-a"),undefined);assert.equal(h.field("extra-b").value,"3");
+ await h.instance.refresh();assert.equal(h.field("extra-b").value,"3");assert.equal(h.field("extra-b","action").value,"rent");
+ h.get("equipmentExtrasSearch").value="";await h.get("equipmentExtrasSearch").emit("input");assert.equal(h.field("extra-a").value,"8");assert.equal(h.field("extra-b").value,"3");
+ await h.add("extra-a");await h.add("extra-b");assert.deepEqual(h.added.map(item=>[item.libraryExtraId,item.quantity]),[["extra-a",8],["extra-b",3]]);
+ assert.ok(h.requests.every(request=>!request.init.method));assert.ok(h.instance.getState().items.every(item=>item.defaultQuantity===1));
+});
+
+test("escribir mientras llega un refresco conserva la cantidad por ID", async () => {
+ const h=harness();await h.instance.open();let resolveRefresh;
+ const items=h.instance.getState().items;
+ h.responses.push(()=>new Promise(resolve=>{resolveRefresh=()=>resolve({ok:true,json:async()=>({items:[items[1],items[0]],revision:2})})}));
+ const refreshing=h.instance.refresh();await Promise.resolve();
+ await h.edit("extra-a","9");await h.edit("extra-b","4","purchase");
+ resolveRefresh();await refreshing;
+ assert.equal(h.field("extra-a").value,"9");assert.equal(h.field("extra-b").value,"4");assert.equal(h.field("extra-b","action").value,"purchase");
+ await h.add("extra-a");assert.equal(h.added[0].quantity,9);assert.equal(h.added[0].libraryExtraId,"extra-a");
+});
+
+test("si se retira el equipo de inventario pide acción en la misma tarjeta", async () => {
+ const h=harness();await h.instance.open();await h.edit("extra-a","2");h.setRecords([]);await h.add("extra-a");
+ assert.equal(h.added.length,0);assert.ok(h.field("extra-a","action"));assert.equal(h.field("extra-a").value,"2");
+ await h.add("extra-a",undefined,"rent");assert.equal(h.added[0].procurementChoice,"rent");assert.equal(h.added[0].quantity,2);
+});
+
+test("inventario sin cargar impide crear y agregar sin interpretar existencia cero", async () => {
+ const h=harness();await h.instance.open();h.setReady(false);await h.add("extra-a","2");assert.equal(h.added.length,0);assert.match(h.get("equipmentExtrasLibraryStatus").textContent,/todavía no está disponible/);
+ await h.create();assert.equal(h.requests.length,1);
 });
 
 test("guardar biblioteca usa POST revisión y persiste al abrir nuevamente", async () => {
@@ -261,22 +290,17 @@ test("respuesta incompleta no descarta filas silenciosamente", async () => {
   assert.equal(h.instance.getState().items.length, 0);
 });
 
-test("doble clic mientras agrega no repite callback y X no abandona operación en curso", async () => {
-  let resolveAdd; let count = 0;
-  const h = harness({ onAdd: () => { count++; return new Promise((resolve) => { resolveAdd = resolve; }); } });
-  await h.instance.open(); await h.select("extra-a");
-  const first = h.add("2"); await Promise.resolve();
-  await h.add("2"); await h.get("equipmentExtrasQuantityClose").emit("click");
-  assert.equal(count, 1); assert.equal(h.get("equipmentExtrasQuantityDialog").open, true);
-  resolveAdd(); await first; assert.equal(h.get("equipmentExtrasQuantityDialog").open, false);
+test("doble clic mientras agrega no repite callback y X espera la operación",async()=>{
+ let resolveAdd,count=0;const h=harness({onAdd:()=>{count++;return new Promise(resolve=>{resolveAdd=resolve})}});
+ await h.instance.open();const first=h.add("extra-a","2");await Promise.resolve();await Promise.resolve();
+ await h.add("extra-a","2");await h.get("equipmentExtrasLibraryClose").emit("click");assert.equal(count,1);assert.equal(h.get("equipmentExtrasLibraryDialog").open,true);
+ resolveAdd();await first;assert.equal(h.get("equipmentExtrasLibraryDialog").open,true);assert.equal(h.field("extra-a").value,"2");
 });
 
-test("fallo del evento conserva selección para corregir y no genera POST de stock", async () => {
-  const h = harness({ onAdd: async () => { throw new Error("Complete la ubicación del evento."); } });
-  await h.instance.open(); await h.select("extra-a"); await h.add("2");
-  assert.equal(h.get("equipmentExtrasQuantityDialog").open, true);
-  assert.match(h.get("equipmentExtrasQuantityStatus").textContent, /ubicación/);
-  assert.equal(h.requests.length, 1);
+test("fallo del evento conserva la cantidad y acción manuales para reintentar",async()=>{
+ let attempts=0;const h=harness({onAdd:async()=>{if(++attempts===1)throw new Error("Complete la ubicación del evento.")}});
+ await h.instance.open();await h.add("extra-b","6","rent");assert.match(h.get("equipmentExtrasLibraryStatus").textContent,/ubicación/);assert.equal(h.field("extra-b").value,"6");assert.equal(h.field("extra-b","action").value,"rent");
+ await h.add("extra-b");assert.equal(attempts,2);assert.equal(h.requests.length,1);assert.equal(h.get("equipmentExtrasLibraryDialog").open,true);
 });
 
 test("init es idempotente, destroy elimina vínculo y permite nueva inicialización", async () => {
