@@ -15,7 +15,13 @@
     <script src="equipment-inventory.js?v=20261007-extras-decisions-03" defer></script>
     <script src="equipment-service-import.js?v=20261017-service-update-01" defer></script>
     <script src="equipment-name-picker.js?v=20261007-extras-02" defer></script>
-    <script src="equipment.js?v=20261017-window-visible-01" defer></script>
+    <link rel="stylesheet" href="equipment-event-personalizer.css?v=20261020-personaliza-01" />
+    <link rel="stylesheet" href="equipment-extras-library.css?v=20261020-personaliza-01" />
+    <link rel="stylesheet" href="equipment-workspace.css?v=20261020-personaliza-01" />
+    <script src="equipment-event-personalizer.js?v=20261020-personaliza-01" defer></script>
+    <script src="equipment-extras-library.js?v=20261020-personaliza-01" defer></script>
+    <script src="equipment-workspace.js?v=20261020-personaliza-01" defer></script>
+    <script src="equipment.js?v=20261020-personaliza-01" defer></script>
     <script src="warehouse-import-review.js?v=20261017-file-readers-01" defer></script>
     <script src="inventory.js?v=20261017-file-readers-01" defer></script>
   </head>
@@ -237,8 +243,22 @@
           <p class="eyebrow">Requerimiento de equipo</p>
           <h1>Cuadros de equipo</h1>
           <p class="module-intro">
-            Arme el equipo que bodega debe preparar para cada servicio y guarde el cuadro en PDF.
+            Arme su evento, revise la disponibilidad y confirme el equipo que bodega debe preparar.
           </p>
+          <div class="equipment-workflow-card">
+            <ol aria-label="Pasos para preparar su evento"><li>Armar evento</li><li>Revisar disponibilidad</li><li>Confirmar y generar reportes</li></ol>
+            <div class="equipment-workflow-actions">
+              <button id="equipmentPersonalizeEventButton" type="button">Personaliza tu Cuadro de Evento</button>
+              <button id="equipmentExtrasLibraryButton" type="button">Extras</button>
+            </div>
+            <p>Copie su equipo desde Excel o seleccione un servicio. Las existencias se consultan en Contabilidad de Equipo.</p>
+          </div>
+          <div class="equipment-agenda-toolbar">
+            <label>Desde<input id="equipmentAgendaFrom" type="date" /></label>
+            <label>Hasta<input id="equipmentAgendaTo" type="date" /></label>
+            <button id="equipmentRefreshAgendaButton" type="button">Actualizar agenda e inventario</button>
+            <p id="equipmentSharedStatus" role="status" aria-live="polite">Conectando con la agenda y Contabilidad de Equipo…</p>
+          </div>
           <div class="equipment-base-grid equipment-event-grid">
             <label>
               Lugar del evento
@@ -249,15 +269,24 @@
               <input id="equipmentEventName" type="text" autocomplete="off" placeholder="Ej. Boda, corporativo, cumpleaños" />
             </label>
             <label>
+              Tipo de evento
+              <input id="equipmentEventType" type="text" autocomplete="off" placeholder="Boda, corporativo, concierto…" />
+            </label>
+            <label>
               Fecha y hora del Montaje
               <input id="equipmentEventSetupAt" type="datetime-local" />
             </label>
             <label>
-              Fecha del evento
-              <input id="equipmentEventDate" type="date" />
+              Inicio del evento
+              <input id="equipmentEventStartAt" type="datetime-local" />
+              <input id="equipmentEventDate" type="hidden" />
             </label>
             <label>
-              Fecha y hora de ingreso de equipo
+              Finalización del evento
+              <input id="equipmentEventEndAt" type="datetime-local" />
+            </label>
+            <label>
+              Regreso previsto del equipo a bodega
               <input id="equipmentEventInAt" type="datetime-local" />
             </label>
             <label class="equipment-field-wide equipment-service-label">
@@ -284,7 +313,7 @@
               <button id="equipmentAddEventButton" type="button">Agregar ventana</button>
               <button id="equipmentSaveWindowButton" class="equipment-save-window-button" type="button" disabled>Guardar cambios</button>
               <button id="equipmentNewWindowButton" type="button" title="Crear otra ventana en blanco">Nueva ventana</button>
-              <small>Al guardar, el cuadro permanece visible. Use Nueva ventana para capturar otro evento.</small>
+              <small>Guardar confirma las reservas en la agenda compartida. Use Nueva ventana para preparar otro evento.</small>
             </div>
             <label class="equipment-field-wide">
               Observaciones para bodega
@@ -303,7 +332,7 @@
             <button id="equipmentReviewWindowButton" type="button" class="is-active">Revisión de equipo</button>
             <button id="equipmentSummaryWindowButton" type="button">Resumen de Equipo</button>
             <button id="equipmentTransferWindowButton" type="button">Trasegar equipo</button>
-            <button id="equipmentClearAllButton" type="button">Limpiar todos</button>
+            <button id="equipmentClearAllButton" type="button">Limpiar vista</button>
           </div>
 
           <div class="equipment-window-shell">
@@ -392,12 +421,15 @@
                   <button id="equipmentSummaryTransferButton" class="equipment-summary-transfer-button" type="button" aria-pressed="false">Trasegar Equipo</button>
                   <button id="equipmentGenerateRentReportButton" class="equipment-summary-report-button" type="button">Generar Resumen de Renta</button>
                   <button id="equipmentSummaryPurchaseReportButton" class="equipment-summary-report-button" type="button">Generar Informe de Compra</button>
+                  <button id="equipmentRegisterPurchaseButton" class="equipment-summary-report-button" type="button">Registrar compra en Contabilidad</button>
                 </div>
               </div>
               <div class="equipment-summary-search-row">
                 <label for="equipmentSummarySearch">Buscar equipo</label>
                 <input id="equipmentSummarySearch" type="search" placeholder="Escriba el equipo que desea buscar" autocomplete="off" />
+                <label class="equipment-pending-toggle"><input id="equipmentShowPendingOnly" type="checkbox" /> Ver solo pendientes</label>
               </div>
+              <div id="equipmentSharedRecommendations" aria-live="polite"></div>
               <p id="equipmentSummaryTransferNotice" class="equipment-summary-notice equipment-transfer-summary-notice is-hidden"></p>
               <div id="equipmentSummaryTransferSelector" class="equipment-summary-transfer-selector is-hidden"></div>
               <div id="equipmentSummaryTransferUnused" class="equipment-transfer-unused-panel is-hidden"></div>
@@ -435,6 +467,9 @@
                   <span>Evento</span>
                   <strong id="equipmentPdfEvent">Por definir</strong>
                 </div>
+                <div><span>Tipo de evento</span><strong id="equipmentPdfEventType">Por definir</strong></div>
+                <div><span>Inicio del evento</span><strong id="equipmentPdfEventStartAt">Por definir</strong></div>
+                <div><span>Finalización del evento</span><strong id="equipmentPdfEventEndAt">Por definir</strong></div>
                 <div>
                   <span>Fecha y hora del montaje</span>
                   <strong id="equipmentPdfSetupAt">Por definir</strong>
@@ -663,6 +698,13 @@
               </footer>
             </div>
           </div>
+          <dialog id="equipmentCatalogConfirmDialog" class="equipment-logistics-dialog no-print" aria-labelledby="equipmentCatalogConfirmTitle">
+            <section class="equipment-logistics-modal">
+              <header><h2 id="equipmentCatalogConfirmTitle">Guardar cambios permanentes</h2><button id="equipmentCatalogConfirmClose" type="button" aria-label="Cerrar y descartar cambios">X</button></header>
+              <div class="equipment-logistics-content"><p>Los cambios son permanentes. ¿Estás seguro de que deseas continuar?</p><p>La plantilla se usará en los nuevos cuadros. Los eventos guardados conservarán su equipo.</p></div>
+              <footer><button id="equipmentCatalogConfirmCancel" type="button">Cancelar</button><button id="equipmentCatalogConfirmAccept" type="button">Aceptar</button></footer>
+            </section>
+          </dialog>
         </div>
       </section>
 

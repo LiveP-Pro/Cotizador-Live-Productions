@@ -141,6 +141,7 @@ test("older editors that omit import metadata still preserve authoritative liter
   } });
   const payload = { baseCatalogVersion: "synthetic-current", serviceId: "certified-service", custom: true, groupId: "audio",
     name: "  Nombre editado literal  ", mainSections: [{ id: "synthetic-section", title: "  Categoria literal  ", items: [[0, "  Descripcion literal  "]] }], audioOptions: {} };
+  payload.expectedServiceRevision = (await h.dispatch("GET", "/api/cuadros-equipo/catalogo?baseVersion=synthetic-current")).json().serviceRevisions["certified-service"];
   const response = await h.dispatch("PUT", "/api/cuadros-equipo/catalogo", payload);
   assert.equal(response.statusCode, 200, response.body.toString());
   const service = response.json().service;

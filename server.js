@@ -10,6 +10,7 @@ const { DatabaseSync } = require("node:sqlite");
 const { parseInventoryFile } = require("./warehouse-import.cjs");
 const { parseServiceFile, verifyServiceImport } = require("./equipment-service-import.cjs");
 const { applyStockIngress, prepareWarehouseSave, nextWarehouseTimestamp } = require("./warehouse-ledger.cjs");
+const { createEquipmentEventStore, calculateEquipmentAvailability } = require("./equipment-event-store.cjs");
 
 const rootDir = __dirname;
 const port = Number.parseInt(process.env.PORT || "8787", 10);
@@ -27,6 +28,7 @@ function resolveDataDir() {
 }
 
 const dataDir = resolveDataDir();
+const equipmentEventStore = createEquipmentEventStore({ directory: dataDir });
 const pdfDir = path.join(dataDir, "cotizaciones-generadas");
 const defaultEquipmentPdfDir =
   process.env.NODE_ENV === "production"
@@ -49,7 +51,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261017-full-qa-01";
+const warehouseAssetVersion = "20261020-personaliza-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -386,8 +388,18 @@ function readEquipmentCatalogOverrides() {
 function readEquipmentCatalogOverridesForVersion(baseCatalogVersion) {
   const requestedVersion = String(baseCatalogVersion || "").trim();
   const stored = readEquipmentCatalogOverrides();
-  if (!requestedVersion || stored.baseCatalogVersion === requestedVersion) return stored;
-  return emptyEquipmentCatalogOverrides(requestedVersion);
+  const current = !requestedVersion || stored.baseCatalogVersion === requestedVersion ? stored : emptyEquipmentCatalogOverrides(requestedVersion);
+  const base = currentEquipmentBaseCatalog();
+  const baseServices = !requestedVersion || base.version === requestedVersion ? base.services || {} : {};
+  const ids = new Set([...Object.keys(baseServices), ...Object.keys(current.services), ...(current.removedServiceIds || []), ...Object.keys(current.retiredServices || {})]);
+  const serviceRevisions = Object.fromEntries([...ids].map((id) => {
+    const service = Object.hasOwn(current.services, id) ? current.services[id] : Object.hasOwn(baseServices, id) ? baseServices[id] : null;
+    const retired = current.removedServiceIds.includes(id);
+    const revision = crypto.createHash("sha256").update(JSON.stringify({ baseCatalogVersion: requestedVersion || current.baseCatalogVersion || base.version,
+      id, retired, service, retirement: current.retiredServices[id] || null })).digest("hex");
+    return [id, revision];
+  }));
+  return { ...current, serviceRevisions };
 }
 
 async function writeEquipmentCatalogOverrides(data) {
@@ -405,6 +417,10 @@ async function saveEquipmentCatalogOverride(payload, response) {
   let previous;
   try {
     const baseCatalogVersion = normalizeEquipmentBaseCatalogVersion(payload?.baseCatalogVersion);
+    if (currentEquipmentBaseCatalog().version !== baseCatalogVersion) {
+      errorResponse(response, 409, "El catálogo base cambió. Actualice los tipos de servicio antes de guardar este cuadro.");
+      return;
+    }
     stored = readEquipmentCatalogOverridesForVersion(baseCatalogVersion);
     previous = stored.services[String(payload?.serviceId || "").trim()];
     normalized = normalizeEquipmentCatalogOverride(previous?.importSource
@@ -413,13 +429,23 @@ async function saveEquipmentCatalogOverride(payload, response) {
     errorResponse(response, 400, error.message);
     return;
   }
-  if (normalized.createOnly && stored.services[normalized.serviceId]) {
+  const expectedRevision = stored.serviceRevisions[normalized.serviceId];
+  if (normalized.createOnly && expectedRevision) {
     errorResponse(response, 409, "Ya existe un servicio con ese nombre. Cambie el nombre y vuelva a publicarlo.");
     return;
   }
+  if (!normalized.createOnly && expectedRevision && !String(payload?.expectedServiceRevision || "").trim()) {
+    errorResponse(response, 428, "Consulte el servicio actual antes de guardar. Falta la versión del cuadro que está editando.");
+    return;
+  }
+  if (payload?.expectedServiceRevision !== undefined && payload.expectedServiceRevision !== (expectedRevision || "")) {
+    errorResponse(response, 409, "Este servicio cambió en otra pestaña o equipo. Conserve sus cambios y vuelva a revisar la versión actual antes de guardar.");
+    return;
+  }
   const savedAt = new Date().toISOString();
+  const { serviceRevisions: previousRevisions, ...storedCatalog } = stored;
   const next = {
-    ...stored,
+    ...storedCatalog,
     version: 3,
     baseCatalogVersion: normalized.baseCatalogVersion,
     savedAt,
@@ -431,10 +457,13 @@ async function saveEquipmentCatalogOverride(payload, response) {
     retiredServices: Object.fromEntries(Object.entries(stored.retiredServices).filter(([id]) => id !== normalized.serviceId))
   };
   await writeEquipmentCatalogOverrides(next);
+  const refreshed = readEquipmentCatalogOverridesForVersion(normalized.baseCatalogVersion);
   jsonResponse(response, 200, {
     serviceId: normalized.serviceId,
     service: normalized.service,
-    savedAt
+    savedAt,
+    serviceRevision: refreshed.serviceRevisions[normalized.serviceId],
+    serviceRevisions: refreshed.serviceRevisions
   });
 }
 
@@ -3622,7 +3651,7 @@ async function saveEquipmentBoard(payload, request, response) {
 
 function serveStatic(request, response, pathname) {
   const requestedPath = pathname === "/" ? "/index.html" : decodeURIComponent(pathname);
-  if (requestedPath === "/inventory-initial-state.json") {
+  if (requestedPath === "/inventory-initial-state.json" || requestedPath.split("/").includes(".equipment-private")) {
     errorResponse(response, 404, "Archivo no encontrado.");
     return;
   }
@@ -3654,14 +3683,14 @@ function serveStatic(request, response, pathname) {
           data
             .toString("utf8")
             .replace(
-              /(equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment\.js|inventory\.js)\?v=[^"'&<>\s]+/g,
+              /(equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:event-personalizer|extras-library|workspace|service-import)\.(?:js|css)|equipment\.js|inventory\.js)\?v=[^"'&<>\s]+/g,
               `$1?v=${warehouseAssetVersion}`
             ),
           "utf8"
         )
       : data;
     const headers = { "Content-Type": contentType };
-    if (requestedPath === "/index.html" || ["equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "equipment-service-import.js"].some(
+    if (requestedPath === "/index.html" || ["equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
       (asset) => requestedPath === `/${asset}`
     )) {
       headers["Cache-Control"] = "no-store";
@@ -3848,6 +3877,77 @@ async function handleRequest(request, response) {
       return;
     }
 
+    if (url.pathname === "/api/cuadros-equipo/extras" && ["GET", "POST"].includes(request.method)) {
+      if (!requireAuth(request, response)) return;
+      if (request.method === "GET") jsonResponse(response, 200, equipmentEventStore.readExtras());
+      else {
+        const payload = await readJsonBody(request);
+        await enqueueSave(() => jsonResponse(response, 200, equipmentEventStore.addExtra(payload, authenticatedUser(request))));
+      }
+      return;
+    }
+
+    const extraEntryMatch = url.pathname.match(/^\/api\/cuadros-equipo\/extras\/([A-Za-z0-9][A-Za-z0-9_-]{0,239})$/);
+    if (request.method === "DELETE" && extraEntryMatch) {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => jsonResponse(response, 200, equipmentEventStore.archiveExtra(extraEntryMatch[1], payload, authenticatedUser(request))));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/cuadros-equipo/eventos") {
+      if (!requireAuth(request, response)) return;
+      jsonResponse(response, 200, equipmentEventStore.readEvents());
+      return;
+    }
+
+    const equipmentEventMatch = url.pathname.match(/^\/api\/cuadros-equipo\/eventos\/([A-Za-z0-9][A-Za-z0-9_-]{0,239})$/);
+    if (["PUT", "DELETE"].includes(request.method) && equipmentEventMatch) {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => jsonResponse(response, 200, request.method === "PUT"
+        ? equipmentEventStore.putEvent(equipmentEventMatch[1], payload, authenticatedUser(request), readWarehouseInventory())
+        : equipmentEventStore.cancelEvent(equipmentEventMatch[1], payload, authenticatedUser(request))));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/cuadros-equipo/trasiegos") {
+      if (!requireAuth(request, response)) return;
+      jsonResponse(response, 200, equipmentEventStore.readTransfers());
+      return;
+    }
+
+    const equipmentTransferMatch = url.pathname.match(/^\/api\/cuadros-equipo\/trasiegos\/([A-Za-z0-9][A-Za-z0-9_-]{0,239})$/);
+    if (["PUT", "DELETE"].includes(request.method) && equipmentTransferMatch) {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => jsonResponse(response, 200, request.method === "PUT"
+        ? equipmentEventStore.putTransfer(equipmentTransferMatch[1], payload, authenticatedUser(request), readWarehouseInventory())
+        : equipmentEventStore.cancelTransfer(equipmentTransferMatch[1], payload, authenticatedUser(request))));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cuadros-equipo/disponibilidad") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      const current = equipmentEventStore.previewEvent(payload?.event);
+      const availability = calculateEquipmentAvailability(current.events, readWarehouseInventory(), {
+        from: payload?.from || "", to: payload?.to || "", transfers: current.transfers
+      });
+      jsonResponse(response, 200, { ...availability, revision: current.revision, preview: true });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/cuadros-equipo/disponibilidad") {
+      if (!requireAuth(request, response)) return;
+      const current = equipmentEventStore.readEvents();
+      const availability = calculateEquipmentAvailability(current.events, readWarehouseInventory(), {
+        from: url.searchParams.get("from") || "", to: url.searchParams.get("to") || "", transfers: current.transfers
+      });
+      jsonResponse(response, 200, { ...availability, revision: current.revision });
+      return;
+    }
+
     if (request.method === "PUT" && url.pathname === "/api/cuadros-equipo/catalogo") {
       if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
@@ -3943,7 +4043,7 @@ async function handleRequest(request, response) {
 
     errorResponse(response, 405, "Método no permitido.");
   } catch (error) {
-    errorResponse(response, 500, error.message || "Error interno del servidor.");
+    errorResponse(response, Number.isInteger(error.statusCode) && error.statusCode >= 400 && error.statusCode < 600 ? error.statusCode : 500, error.message || "Error interno del servidor.");
   }
 }
 

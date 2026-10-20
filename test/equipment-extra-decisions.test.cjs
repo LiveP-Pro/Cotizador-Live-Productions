@@ -136,9 +136,9 @@ test("batch cancel preserves all entries and purchase sends its exact inventory-
   ]);
   assert.equal(context.dispatchedEvents.length, 1);
   assert.equal(context.dispatchedEvents[0].type, "live:warehouse-purchase-request");
-  assert.deepEqual(plain(context.dispatchedEvents[0].detail), {
-    items: [{ description: "Equipo sintético B", quantity: 3 }], returnPage: "requerimiento-equipo"
-  });
+  assert.ok(context.dispatchedEvents[0].detail.requestId);
+  assert.equal(context.dispatchedEvents[0].detail.returnPage, "requerimiento-equipo");
+  assert.deepEqual(plain(context.dispatchedEvents[0].detail.items), [{ description: "Equipo sintético B", quantity: 3, inventoryCategory: "Extras manuales", itemType: "equipo", eventItemRefs: [] }]);
 });
 
 test("extra append and quantity refresh immediately update the selected event, rent report and editable JSON", () => {
@@ -207,7 +207,7 @@ test("canceling a later pending decision commits neither purchase intent nor sav
   assert.deepEqual(plain(evaluate(context, "equipmentState.manualExtras.map((item) => item.procurementChoice)")), ["rent", "purchase"]);
   assert.equal(evaluate(context, "saveCalls"), 1);
   assert.equal(context.dispatchedEvents.length, 1);
-  assert.deepEqual(plain(context.dispatchedEvents[0].detail.items), [{ description: "Equipo sintético pendiente B", quantity: 3 }]);
+  assert.deepEqual(plain(context.dispatchedEvents[0].detail.items), [{ description: "Equipo sintético pendiente B", quantity: 3, inventoryCategory: "Compras", itemType: "equipo", eventItemRefs: [] }]);
 });
 
 test("same-name legacy stored Save, rent and purchase extras keep separate summary and report identities", () => {
@@ -379,3 +379,4 @@ test("bulk extras allow removing unused and populated rows while preserving and 
   assert.deepEqual(host.querySelectorAll("[data-equipment-bulk-description]").map((entry) => entry.dataset.equipmentBulkDescription), ["0", "1", "2"]);
   assert.deepEqual(host.querySelectorAll("[data-equipment-bulk-quantity]").map((entry) => entry.dataset.equipmentBulkQuantity), ["0", "1", "2"]);
 });
+

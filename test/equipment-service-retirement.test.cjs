@@ -114,8 +114,10 @@ test("changing a retired identity during review rejects restoration without sour
 test("an explicit manual edit restores its chosen id and clears its retirement metadata", async (t) => {
   const h = fixture(t);
   await retire(h);
+  const expectedServiceRevision = (await readCurrent(h)).serviceRevisions.retired;
   const response = await h.dispatch("PUT", "/api/cuadros-equipo/catalogo", {
     baseCatalogVersion: version, serviceId: "retired", custom: true, groupId: "audio", name: "Servicio ingresado manualmente",
+    expectedServiceRevision,
     mainSections: [{ title: "Manual actual", items: [[0, "Unidad manual actual"]] }], audioOptions: {}
   });
   assert.equal(response.statusCode, 200, response.body.toString());

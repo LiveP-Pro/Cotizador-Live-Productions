@@ -18,6 +18,7 @@ COPY index.html app.js styles.css equipment-catalog.js equipment-inventory.js eq
 COPY warehouse-module.html warehouse-inventory.css inventory.js inventory-initial-state.json warehouse-import.cjs warehouse-import-review.js ./
 COPY warehouse-xlsx-normalize.cjs ./
 COPY equipment-service-import.cjs equipment-service-import.js equipment-service-import.css ./
+COPY equipment-event-store.cjs equipment-event-personalizer.js equipment-event-personalizer.css equipment-extras-library.js equipment-extras-library.css equipment-workspace.js equipment-workspace.css ./
 COPY equipment-name-picker.js equipment-name-picker.css ./
 COPY assets ./assets
 COPY luxury/package.json luxury/server.js ./luxury/

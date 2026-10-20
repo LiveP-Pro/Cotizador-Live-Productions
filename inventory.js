@@ -28,6 +28,7 @@
   let warehouseReady = false;
   let purchaseRequests = [];
   let purchaseDraftId = "";
+  const pendingEquipmentPurchaseLinks = new Map();
   let purchaseNotice = null;
   let purchaseReturnPage = "requerimiento-equipo";
   let importReview = null;
@@ -216,6 +217,7 @@
       sourceRow: normalizeNumber(item?.sourceRow),
       quantity: normalizeNumber(item?.quantity),
       notes: normalizeText(item?.notes),
+      ...(Array.isArray(item?.equipmentPurchaseLinks) ? { equipmentPurchaseLinks: normalizeEquipmentPurchaseLinks(item.equipmentPurchaseLinks) } : {}),
       ...(item?.importSource ? { importSource: {
         fileName: normalizeText(item.importSource.fileName),
         description: normalizeText(item.importSource.description),
@@ -225,6 +227,22 @@
       createdAt: item?.createdAt || now,
       updatedAt: item?.updatedAt || now
     };
+  }
+
+  function normalizeEquipmentPurchaseLinks(links) {
+    const seen = new Set();
+    return (Array.isArray(links) ? links : []).filter((link) => link && normalizeText(link.requestId)).map((link) => ({
+      requestId: normalizeText(link.requestId), eventId: normalizeText(link.eventId), itemId: normalizeText(link.itemId),
+      description: String(link.description ?? ""), receivedAt: normalizeText(link.receivedAt), receivedQuantity: normalizeNumber(link.receivedQuantity)
+    })).filter((link) => {
+      const identity = JSON.stringify([link.requestId, link.eventId, link.itemId, link.description]);
+      if (seen.has(identity)) return false;
+      seen.add(identity); return true;
+    });
+  }
+
+  function equipmentPurchaseNameKey(value) {
+    return normalizeText(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ");
   }
 
   function normalizeAttachment(attachment) {
@@ -482,6 +500,13 @@
     }
     const revision = changeRevision;
     const snapshot = JSON.parse(JSON.stringify(state));
+    const pendingPurchaseSnapshot = new Map();
+    snapshot.items.forEach((item) => {
+      const pending = pendingEquipmentPurchaseLinks.get(item.id);
+      if (!pending?.length) return;
+      pendingPurchaseSnapshot.set(item.id, JSON.parse(JSON.stringify(pending)));
+      item.equipmentPurchaseLinks = normalizeEquipmentPurchaseLinks([...(item.equipmentPurchaseLinks || []), ...pending]);
+    });
     return enqueueWarehouseWrite(async () => {
       const response = await fetch(API_PATH, {
         method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" },
@@ -500,6 +525,20 @@
       if (payload.state) {
         state.auditEntries = Array.isArray(payload.state.auditEntries) ? payload.state.auditEntries : state.auditEntries || [];
         state.equipmentStockReceipts = Array.isArray(payload.state.equipmentStockReceipts) ? payload.state.equipmentStockReceipts : state.equipmentStockReceipts || [];
+        for (const [itemId, pending] of pendingPurchaseSnapshot) {
+          const confirmed = payload.state.items?.find((item) => item.id === itemId);
+          const local = state.items.find((item) => item.id === itemId);
+          if (!confirmed || !local) continue;
+          local.equipmentPurchaseLinks = normalizeEquipmentPurchaseLinks(confirmed.equipmentPurchaseLinks);
+          const confirmedKeys = new Set(local.equipmentPurchaseLinks.map((link) => JSON.stringify([link.requestId, link.eventId, link.itemId, link.description])));
+          const sentKeys = new Set(pending.map((link) => JSON.stringify([link.requestId, link.eventId, link.itemId, link.description])));
+          const remaining = (pendingEquipmentPurchaseLinks.get(itemId) || []).filter((link) => {
+            const identity = JSON.stringify([link.requestId, link.eventId, link.itemId, link.description]);
+            return !sentKeys.has(identity) || !confirmedKeys.has(identity);
+          });
+          if (remaining.length) pendingEquipmentPurchaseLinks.set(itemId, remaining);
+          else pendingEquipmentPurchaseLinks.delete(itemId);
+        }
         saveLocalState();
         renderWarehouseHistory();
       }
@@ -539,6 +578,7 @@
           <p>La cantidad comienza en 0. Escribe la cantidad real comprada antes de agregar el equipo.</p>
           <ul>${purchaseRequests.map((item) => `
             <li>${escapeHtml(item.description)} — ${escapeHtml(item.quantity)} unidades requeridas
+              <small>${escapeHtml(item.itemType === "consumible" ? "Consumible" : "Equipo")}${item.inventoryCategory ? ` · ${escapeHtml(item.inventoryCategory)}` : ""}${item.warehouseInventoryId ? " · Se sumará al registro existente" : ""}</small>
               <button class="warehouse-row-button" type="button" data-warehouse-purchase-prepare="${escapeHtml(item.id)}"${item.id === purchaseDraftId ? " disabled" : ""}>${item.id === purchaseDraftId ? "En el formulario" : "Preparar"}</button>
             </li>`).join("")}</ul>
           <p>Los demás equipos permanecen pendientes hasta que los agregues al inventario.</p>`
@@ -554,7 +594,9 @@
     purchaseDraftId = item.id;
     switchWindow("inventory");
     elements.newName.value = item.description;
-    elements.newCategory.value = "";
+    const current = item.warehouseInventoryId ? state.items.find((entry) => entry.id === item.warehouseInventoryId && !entry.archived) : null;
+    elements.newCategory.value = current?.category || item.inventoryCategory || "";
+    if (elements.newItemType) elements.newItemType.value = current?.itemType || item.itemType || "equipo";
     elements.newQuantity.value = "0";
     elements.newNotes.value = `Compra solicitada desde Requerimiento de Equipo. Cantidad requerida: ${item.quantity}. Registra la cantidad real comprada y guarda este equipo en inventario para que el cambio se refleje en Requerimiento de Equipo.`;
     renderPurchaseRequests();
@@ -567,12 +609,21 @@
 
   function receivePurchaseRequest(payload) {
     const items = (Array.isArray(payload?.items) ? payload.items : [])
-      .map((item) => ({
+      .map((item, index) => ({
         id: uid("purchase-request"),
         description: normalizeText(item?.description),
-        quantity: normalizeNumber(item?.quantity)
+        quantity: normalizeNumber(item?.quantity),
+        requestId: normalizeText(item?.requestId) || (normalizeText(payload?.requestId) ? `${normalizeText(payload.requestId)}:${index}` : uid("equipment-purchase")),
+        warehouseInventoryId: normalizeText(item?.warehouseInventoryId),
+        inventoryCategory: normalizeText(item?.inventoryCategory || item?.category),
+        itemType: item?.itemType === "consumible" ? "consumible" : "equipo",
+        eventItemRefs: (Array.isArray(item?.eventItemRefs) ? item.eventItemRefs : []).map((ref) => ({
+          eventId: normalizeText(ref?.eventId), itemId: normalizeText(ref?.itemId), description: String(ref?.description ?? item?.description ?? "")
+        })).filter((ref) => ref.eventId && ref.itemId)
       }))
-      .filter((item) => item.description);
+      .filter((item) => item.description && !purchaseRequests.some((pending) => pending.requestId === item.requestId)
+        && !(state?.items || []).some((entry) => entry.equipmentPurchaseLinks?.some((link) => link.requestId === item.requestId))
+        && ![...pendingEquipmentPurchaseLinks.values()].some((links) => links.some((link) => link.requestId === item.requestId)));
     if (!items.length) return false;
     purchaseRequests.push(...items);
     purchaseReturnPage = "requerimiento-equipo";
@@ -591,7 +642,7 @@
   function completePurchaseDraft(name) {
     const request = purchaseRequests.find((item) => item.id === purchaseDraftId);
     if (!request) return;
-    if (warehouseCanonicalKey(request.description) !== warehouseCanonicalKey(name)) {
+    if (equipmentPurchaseNameKey(request.description) !== equipmentPurchaseNameKey(name)) {
       preparePurchaseDraft(request.id);
       return;
     }
@@ -1849,19 +1900,30 @@
       return;
     }
     const purchaseDraft = purchaseRequests.find((request) => request.id === purchaseDraftId);
-    if (purchaseDraft && warehouseCanonicalKey(purchaseDraft.description) === warehouseCanonicalKey(name)
-        && normalizeNumber(elements.newQuantity.value) <= 0) {
+    const relatedPurchase = purchaseDraft && equipmentPurchaseNameKey(purchaseDraft.description) === equipmentPurchaseNameKey(name) ? purchaseDraft : null;
+    const rawQuantity = Number(elements.newQuantity.value);
+    if (relatedPurchase && (!Number.isSafeInteger(rawQuantity) || rawQuantity <= 0)) {
       setStatus("Escribe la cantidad real comprada, mayor a 0, antes de guardar este equipo en inventario.", "warning");
       elements.newQuantity.focus();
       return;
     }
 
     const now = new Date().toISOString();
-    const item = {
+    const existing = relatedPurchase?.warehouseInventoryId ? state.items.find((entry) => entry.id === relatedPurchase.warehouseInventoryId && !entry.archived) : null;
+    if (relatedPurchase?.warehouseInventoryId && (!existing || equipmentPurchaseNameKey(existing.name) !== equipmentPurchaseNameKey(relatedPurchase.description))) {
+      setStatus("El equipo solicitado cambió o ya no está activo. Actualice el inventario y vuelva a identificar su registro antes de ingresar la compra.", "warning");
+      return;
+    }
+    const previousQuantity = existing ? normalizeNumber(existing.quantity) : 0;
+    const receivedQuantity = normalizeNumber(elements.newQuantity.value);
+    if (existing && !Number.isSafeInteger(previousQuantity + receivedQuantity)) {
+      setStatus("La cantidad total excede el máximo permitido.", "warning"); return;
+    }
+    const item = existing || {
       id: uid("item"),
       category: categoryLabel(elements.newCategory.value || "GENERAL"),
       name,
-      itemType: hasConsumableMarker(name) ? "consumible" : "equipo",
+      itemType: relatedPurchase?.itemType || (hasConsumableMarker(name) ? "consumible" : "equipo"),
       sourceKey: warehouseCanonicalKey(name),
       quantity: normalizeNumber(elements.newQuantity.value),
       notes: normalizeText(elements.newNotes.value),
@@ -1869,21 +1931,28 @@
       createdAt: now,
       updatedAt: now
     };
-    state.items.push(item);
+    if (existing) { item.quantity = previousQuantity + receivedQuantity; item.updatedAt = now; }
+    else state.items.push(item);
+    if (relatedPurchase) {
+      const refs = relatedPurchase.eventItemRefs.length ? relatedPurchase.eventItemRefs : [{ eventId: "", itemId: "", description: relatedPurchase.description }];
+      const links = refs.map((ref) => ({ ...ref, requestId: relatedPurchase.requestId, receivedAt: now, receivedQuantity }));
+      pendingEquipmentPurchaseLinks.set(item.id, normalizeEquipmentPurchaseLinks([...(pendingEquipmentPurchaseLinks.get(item.id) || []), ...links]));
+    }
     state.movements.push({
       id: uid("movement"),
-      type: "ajuste",
+      type: relatedPurchase ? "ingreso" : "ajuste",
       itemId: item.id,
       itemName: item.name,
-      quantity: item.quantity,
-      previousQuantity: 0,
+      quantity: relatedPurchase ? receivedQuantity : item.quantity,
+      previousQuantity,
+      newQuantity: item.quantity,
       date: todayInputValue(),
       responsible: "",
-      reference: "Equipo nuevo",
+      reference: relatedPurchase ? "Compra recibida desde Requerimiento de Equipo" : "Equipo nuevo",
       repair: "",
       sparePart: "",
       description: "",
-      notes: "Equipo agregado al inventario.",
+      notes: relatedPurchase ? normalizeText(elements.newNotes.value) : "Equipo agregado al inventario.",
       batchId: "",
       attachment: null,
       createdAt: now

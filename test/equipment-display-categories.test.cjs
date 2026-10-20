@@ -139,7 +139,13 @@ test("a standalone subtype joins its unique currently declared root, including m
   ]);
   const markup = h.evaluate("tableForEquipmentSections(sections, false)");
   assert.match(markup, /data-equipment-category-toggle="manual"/);
-  assert.match(markup, /data-equipment-category-toggle="document"/);
+  const documentGroup = h.json("equipmentDisplaySectionGroups(sections).find(group=>group.sections.some(fragment=>fragment.id==='document'))");
+  assert.ok(markup.includes(`data-equipment-category-toggle="${documentGroup.id}"`));
+  assert.deepEqual(documentGroup.sections.map(fragment => fragment.id), ["document"]);
+  assert.equal((markup.match(/<span>ILUMINACION \/ Extra<\/span>/g) || []).length, 1);
+  h.evaluate(`equipmentState.expandedEquipmentSectionIds.add(${JSON.stringify(documentGroup.id)})`);
+  const documentExpanded = h.evaluate("tableForEquipmentSections(sections, false)");
+  assert.ok(documentExpanded.includes('data-equipment-category-add="document"'), "el encabezado agrupado agrega en la sección fuente original");
   h.evaluate("equipmentState.expandedEquipmentSectionIds.add('manual')");
   const expanded = h.evaluate("tableForEquipmentSections(sections, false)");
   assert.match(expanded, /data-equipment-manual-section-title="manual"/);
