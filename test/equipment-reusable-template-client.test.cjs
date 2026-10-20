@@ -175,3 +175,84 @@ test('nota general del servicio aparece una vez en revisión y PDF sin modificar
   assert.equal(snapshot.filter(section => section.title === 'Observaciones del servicio').length, 1);
   assert.deepEqual(JSON.parse(fs.readFileSync(h.server.paths.warehouseInventoryPath)), stock);
 });
+
+test('plantilla antes externa usa inventario actual al reutilizarse después del ingreso real', async t => {
+  for (const choice of ['rent', 'purchase']) {
+    const h = setup(t), event = currentEvent();
+    const section = { id: 'external-current', title: 'Audio', items: [{ id: 'external-line', quantity: 0, description: 'Equipo externo sintético', inventoryCategory: 'Audio', itemType: 'equipo', procurementChoice: choice }], rows: [{ type: 'note', description: 'Conservar nota externa' }, { type: 'item', sourceItemIndex: 0, notes: ['Nota ligada'] }] };
+    event.sections.push(clone(section)); event.serviceTemplate.mainSections.push(clone(section));
+    h.setEvent(event); await h.save();
+    const next = clone(stock); next.savedAt = '2026-10-20T15:00:00Z'; next.state.items.push({ id: 'new-actual-stock', name: '  EQUIPO EXTERNO SINTETICO  ', category: 'Audio', quantity: 4, itemType: 'consumible' });
+    h.context.nextStock = next;
+    h.run('applyEquipmentWarehouseInventoryPayload(nextStock); resetEquipmentWindowDraft(); setEquipmentServiceSelection([syntheticEvent.serviceTemplate.id]);');
+    const actual = clone(h.run('selectedEquipmentSections().flatMap(section=>section.items).find(item=>item.description==="Equipo externo sintético")'));
+    assert.equal(actual.warehouseInventoryId, 'new-actual-stock', choice);
+    assert.equal(actual.procurementChoice, undefined); assert.equal(actual.itemType, 'consumible'); assert.equal(actual.quantity, 0);
+    assert.equal(actual.procurementPreference, choice === 'purchase' ? 'purchase' : undefined);
+    assert.equal(h.context.syntheticEvent.serviceTemplate.mainSections.at(-1).items[0].procurementChoice, choice);
+    assert.deepEqual(JSON.parse(fs.readFileSync(h.server.paths.warehouseInventoryPath)), stock);
+  }
+});
+
+test('vínculo nuevo exige nombre exacto y conserva homónimos físicos ambiguos e IDs originales', t => {
+  const h = setup(t);
+  const next = clone(stock); next.savedAt = '2026-10-20T15:00:00Z';
+  next.state.items.push({ id: 'unique-organized', name: 'Equipo único sintético', category: 'Nueva organización', quantity: 2, itemType: 'equipo' },
+    { id: 'category-a', name: 'Equipo por categoría', category: 'Audio', quantity: 1, itemType: 'equipo' },
+    { id: 'category-b', name: 'Equipo por categoría', category: 'Luces', quantity: 1, itemType: 'equipo' },
+    { id: 'model-x2', name: 'Modelo sintético X2', category: 'Audio', aliases: ['Modelo sintético X'], quantity: 5, itemType: 'equipo' });
+  h.context.nextStock = next; h.run('applyEquipmentWarehouseInventoryPayload(nextStock)');
+  const metadata = (raw, section = { title: 'Audio', importSource: { personalized: true } }) => {
+    h.context.testRaw = clone(raw); h.context.testSection = clone(section);
+    return clone(h.run('equipmentReusableTemplateItemMetadata(testRaw,testSection)'));
+  };
+  const raw = { quantity: 0, description: '  EQUIPO UNICO SINTETICO  ', inventoryCategory: 'Audio', procurementChoice: 'rent' };
+  assert.equal(metadata(raw).warehouseInventoryId, 'unique-organized', 'un nombre único puede cambiar de categoría organizativa');
+  assert.equal(metadata({ ...raw, description: 'Equipo por categoría' }).warehouseInventoryId, 'category-a');
+  assert.equal(metadata({ ...raw, description: 'Consola homónima sintética' }).warehouseInventoryId, undefined, 'dos registros en la misma categoría siguen ambiguos');
+  for (const description of ['Modelo sintético X', 'Modelo sintético X2.', 'Equipo por categoria!']) {
+    const result = metadata({ ...raw, description });
+    assert.equal(result.warehouseInventoryId, undefined, description); assert.equal(result.procurementChoice, 'rent');
+  }
+  const retired = { ...raw, warehouseInventoryId: 'removed-physical-record' };
+  assert.deepEqual(metadata(retired), { warehouseInventoryId: 'removed-physical-record', inventoryCategory: 'Audio', procurementChoice: 'rent' });
+  assert.deepEqual(metadata(raw, { title: 'Audio' }), { inventoryCategory: 'Audio', procurementChoice: 'rent' });
+  assert.deepEqual(raw, { quantity: 0, description: '  EQUIPO UNICO SINTETICO  ', inventoryCategory: 'Audio', procurementChoice: 'rent' });
+  assert.deepEqual(JSON.parse(fs.readFileSync(h.server.paths.warehouseInventoryPath)), stock);
+});
+
+test('compra parcial reutilizada cuenta stock actual y sólo compra el faltante; renta usa el faltante', t => {
+  const h = setup(t), event = currentEvent(false);
+  for (const choice of ['purchase', 'rent']) for (const available of [0, 1, 2, 3]) {
+    const next = clone(stock); next.savedAt = `2026-10-20T${15 + available}:00:00Z`;
+    next.state.items.push({ id: 'current-external', name: 'Equipo externo actual', category: 'Audio', quantity: available, itemType: 'equipo' });
+    h.context.nextStock = next; h.run('applyEquipmentWarehouseInventoryPayload(nextStock)');
+    h.context.testSection = { title: 'Audio', importSource: { personalized: true }, items: [{ quantity: 2, description: 'Equipo externo actual', procurementChoice: choice }] };
+    const items = clone(h.run('editableEquipmentItems(testSection,"test-current")'));
+    const planned = calculateEquipmentAvailability([{ ...event, sections: [{ id: 'current-section', title: 'Audio', items }] }], next, { now: Date.parse('2026-10-20T12:00:00Z') });
+    const row = planned.rows.find(row => row.warehouseInventoryId === 'current-external');
+    assert.ok(row); assert.equal(row.required, 2); assert.equal(row.available, available);
+    assert.equal(row.missing, Math.max(0, 2 - available));
+    assert.equal(row.action, available >= 2 ? 'DISPONIBLE' : choice === 'purchase' ? 'COMPRA' : 'RENTA');
+  }
+  assert.deepEqual(JSON.parse(fs.readFileSync(h.server.paths.warehouseInventoryPath)), stock);
+});
+
+test('snapshot guardado conserva renta original; nueva selección explícita usa inventario con evento activo', async t => {
+  const h = setup(t), event = currentEvent();
+  const section = { id: 'snapshot-external', title: 'Audio', items: [{ id: 'snapshot-line', quantity: 1, description: 'Equipo snapshot sintético', procurementChoice: 'rent' }], rows: [{ type: 'note', description: 'Nota de snapshot inalterable' }] };
+  event.sections.push(clone(section)); event.serviceTemplate.mainSections.push(clone(section));
+  h.setEvent(event); await h.save();
+  const saved = clone(h.server.api.equipmentEventStore.readEvents().events[0]); assert.equal(saved.snapshotLocked, true);
+  const next = clone(stock); next.savedAt = '2026-10-20T15:00:00Z'; next.state.items.push({ id: 'snapshot-current-id', name: 'Equipo snapshot sintético', category: 'Audio', quantity: 2, itemType: 'equipo' });
+  h.context.nextStock = next; h.context.savedSnapshot = saved;
+  h.run('applyEquipmentWarehouseInventoryPayload(nextStock);restoreEquipmentEventSnapshot(savedSnapshot)');
+  let actual = clone(h.run('selectedEquipmentSections().flatMap(section=>section.items).filter(item=>item.description==="Equipo snapshot sintético")'));
+  assert.equal(actual.length, 1); assert.equal(actual[0].procurementChoice, 'rent'); assert.equal(actual[0].warehouseInventoryId, undefined);
+  h.run('setEquipmentServiceSelection([syntheticEvent.serviceTemplate.id])');
+  actual = clone(h.run('selectedEquipmentSections().flatMap(section=>section.items).filter(item=>item.description==="Equipo snapshot sintético")'));
+  assert.ok(actual.some(item => item.warehouseInventoryId === 'snapshot-current-id' && !item.procurementChoice), 'seleccionar plantilla nueva resuelve stock aunque el evento guardado siga activo');
+  assert.ok(actual.some(item => item.procurementChoice === 'rent' && !item.warehouseInventoryId), 'el snapshot original no se reescribe');
+  assert.deepEqual(h.server.api.equipmentEventStore.readEvents().events[0].sections, saved.sections);
+  assert.deepEqual(JSON.parse(fs.readFileSync(h.server.paths.warehouseInventoryPath)), stock);
+});

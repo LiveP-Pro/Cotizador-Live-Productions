@@ -1269,6 +1269,28 @@ function normalizeEquipmentItem(item) {
   };
 }
 
+function equipmentReusableTemplateItemMetadata(raw, section = {}) {
+  const metadata = equipmentItemInventoryMetadata(raw);
+  // Locked event snapshots use document sections and never enter this service
+  // path. An explicit template selection resolves items without a physical ID.
+  if (section.importSource?.personalized !== true || raw?.warehouseInventoryId
+      || !equipmentWarehouseInventoryState.loaded) return metadata;
+  const key = equipmentPurchaseLinkDescriptionKey(raw?.description);
+  if (!key) return metadata;
+  let matches = equipmentWarehouseInventoryState.records.filter(record => !record.item?.archived
+    && equipmentPurchaseLinkDescriptionKey(record.item?.name) === key);
+  if (matches.length > 1) {
+    const category = equipmentPurchaseLinkDescriptionKey(raw?.inventoryCategory || section.inventoryCategory || section.title);
+    matches = matches.filter(record => equipmentPurchaseLinkDescriptionKey(record.item?.category) === category);
+  }
+  if (matches.length !== 1) return metadata;
+  const record = matches[0];
+  if (metadata.procurementChoice === "purchase") metadata.procurementPreference = "purchase";
+  delete metadata.procurementChoice;
+  return { ...metadata, warehouseInventoryId: record.id, inventoryCategory: record.item.category,
+    itemType: record.item.itemType || (record.consumable ? "consumible" : "equipo") };
+}
+
 function editableEquipmentItems(section, sectionKey) {
   const sourceItems = (section.items || [])
     .map((raw, itemIndex) => {
@@ -1280,7 +1302,7 @@ function editableEquipmentItems(section, sectionKey) {
         id,
         quantity: override.quantity ?? original.quantity,
         description: override.description ?? original.description,
-        ...(sameDescription ? equipmentItemInventoryMetadata(original) : {}),
+        ...(sameDescription ? equipmentReusableTemplateItemMetadata(original, section) : {}),
         ...(Array.isArray(raw?.notes) ? { notes: [...raw.notes] } : {}),
         ...(Array.isArray(raw?.sourceCells) ? { sourceCells: JSON.parse(JSON.stringify(raw.sourceCells)) } : {}),
         ...equipmentItemInventoryMetadata(override),
