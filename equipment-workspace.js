@@ -48,7 +48,7 @@
   }
   function create(options = {}) {
     const request = options.fetch || ((...args) => fetch(...args));
-    let state = { events: [], transfers: [], revision: '', plan: null, range: weekFor(options.date), loaded: false, stale: true, refreshing: false, pending: 0, lastError: null };
+    let state = { events: [], transfers: [], routeEstimates: [], revision: '', plan: null, range: weekFor(options.date), loaded: false, stale: true, refreshing: false, pending: 0, lastError: null };
     let refreshing = null, mutation = 0, pending = 0, writeTail = Promise.resolve();
     const operations = new Map();
     const cancelledTransferIds = new Set();
@@ -79,12 +79,14 @@
       const task = (async () => {
         for (;;) {
           while (pending) await writeTail;
-          const generation = mutation, range = { ...state.range };
+          const generation = mutation, range = { ...state.range }, routeEstimates = copy(state.routeEstimates);
           const query = `?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`;
           try {
             let agenda, plan, consistent = false;
             for (let attempt = 0; attempt < 3; attempt += 1) {
-              [agenda, plan] = await Promise.all([json('/api/cuadros-equipo/eventos'), json('/api/cuadros-equipo/disponibilidad' + query)]);
+              [agenda, plan] = await Promise.all([json('/api/cuadros-equipo/eventos'), routeEstimates.length
+                ? json('/api/cuadros-equipo/plan-logistico', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...range, routeEstimates }) })
+                : json('/api/cuadros-equipo/disponibilidad' + query)]);
               if (generation !== mutation || range.from !== state.range.from || range.to !== state.range.to || pending) break;
               if (!Array.isArray(agenda.events) || !Array.isArray(plan.rows) || agenda.revision === undefined || plan.revision === undefined) throw errorWith('La agenda o el cálculo de disponibilidad está incompleto. Actualice para volver a consultar.', 502, 'INVALID_RESPONSE');
               if (plan.from !== undefined && plan.from !== range.from || plan.to !== undefined && plan.to !== range.to) throw errorWith('El cálculo recibido corresponde a otro período. Vuelva a actualizar la agenda.', 502, 'INVALID_RANGE');
@@ -212,7 +214,16 @@
         return copy(state.transfers);
       } catch (error) { report(error); throw error; }
     }
-    return { refresh, save, cancel, confirmTransfer, cancelTransfer, refreshTransfers, transfers: () => copy(state.transfers), getState: () => copy(state), visibleEvents: () => copy(state.events.filter(e => intersects(e, state.range))), setRange(range) {
+    return { refresh, save, cancel, confirmTransfer, cancelTransfer, refreshTransfers, transfers: () => copy(state.transfers), getState: () => copy(state), visibleEvents: () => copy(state.events.filter(e => intersects(e, state.range))), setLogisticsEstimates(estimates) {
+      if (!Array.isArray(estimates) || estimates.some(estimate => !estimate || typeof estimate !== 'object' || Array.isArray(estimate)
+        || !meaningful(estimate.fromPlace) || !meaningful(estimate.toPlace)
+        || !Number.isFinite(estimate.travelMinutes) || estimate.travelMinutes < 0
+        || !Number.isFinite(estimate.handlingMinutes) || estimate.handlingMinutes < 0)) {
+        throw errorWith('Indique los dos eventos y tiempos de transporte y preparación válidos para calcular el trasiego.', 400, 'INVALID_LOGISTICS_ESTIMATES');
+      }
+      if (stable(state.routeEstimates) === stable(estimates)) return;
+      state.routeEstimates = copy(estimates); invalidate(); mutation++; emit();
+    }, setRange(range) {
       if (!validDate(range?.from) || !validDate(range?.to) || range.to < range.from) throw new Error('Seleccione un rango de fechas válido.');
       if (state.range.from === range.from && state.range.to === range.to) return;
       state.range = { from: range.from, to: range.to }; invalidate(); mutation++; emit();

@@ -6,7 +6,7 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20261014-dj-audio-01" />
+    <link rel="stylesheet" href="styles.css?v=20261020-logistica-01" />
     <link rel="stylesheet" href="warehouse-inventory.css?v=20261008-stock-ingress-04" />
     <link rel="stylesheet" href="equipment-service-import.css?v=20261006-service-import-01" />
     <link rel="stylesheet" href="equipment-name-picker.css?v=20261007-extras-02" />
@@ -15,13 +15,13 @@
     <script src="equipment-inventory.js?v=20261007-extras-decisions-03" defer></script>
     <script src="equipment-service-import.js?v=20261017-service-update-01" defer></script>
     <script src="equipment-name-picker.js?v=20261007-extras-02" defer></script>
-    <link rel="stylesheet" href="equipment-event-personalizer.css?v=20261020-personaliza-03" />
-    <link rel="stylesheet" href="equipment-extras-library.css?v=20261020-personaliza-03" />
-    <link rel="stylesheet" href="equipment-workspace.css?v=20261020-personaliza-03" />
-    <script src="equipment-event-personalizer.js?v=20261020-personaliza-03" defer></script>
-    <script src="equipment-extras-library.js?v=20261020-personaliza-03" defer></script>
-    <script src="equipment-workspace.js?v=20261020-personaliza-03" defer></script>
-    <script src="equipment.js?v=20261020-personaliza-03" defer></script>
+    <link rel="stylesheet" href="equipment-event-personalizer.css?v=20261020-logistica-01" />
+    <link rel="stylesheet" href="equipment-extras-library.css?v=20261020-logistica-01" />
+    <link rel="stylesheet" href="equipment-workspace.css?v=20261020-logistica-01" />
+    <script src="equipment-event-personalizer.js?v=20261020-logistica-01" defer></script>
+    <script src="equipment-extras-library.js?v=20261020-logistica-01" defer></script>
+    <script src="equipment-workspace.js?v=20261020-logistica-01" defer></script>
+    <script src="equipment.js?v=20261020-logistica-01" defer></script>
     <script src="warehouse-import-review.js?v=20261017-file-readers-01" defer></script>
     <script src="inventory.js?v=20261017-file-readers-01" defer></script>
   </head>
@@ -251,12 +251,13 @@
               <button id="equipmentPersonalizeEventButton" type="button">Personaliza tu Cuadro de Evento</button>
               <button id="equipmentExtrasLibraryButton" type="button">Extras</button>
             </div>
-            <p>Copie su equipo desde Excel o seleccione un servicio. Las existencias se consultan en Contabilidad de Equipo.</p>
+            <p>Agregue los eventos personalizados que necesite, uno tras otro. El resumen reúne sus equipos y consulta las existencias de Contabilidad de Equipo.</p>
           </div>
           <div class="equipment-agenda-toolbar">
             <label>Desde<input id="equipmentAgendaFrom" type="date" /></label>
             <label>Hasta<input id="equipmentAgendaTo" type="date" /></label>
             <button id="equipmentRefreshAgendaButton" type="button">Actualizar agenda e inventario</button>
+            <button id="equipmentAgendaAllButton" type="button">Ver todos los eventos</button>
             <p id="equipmentSharedStatus" role="status" aria-live="polite">Conectando con la agenda y Contabilidad de Equipo…</p>
           </div>
           <div class="equipment-base-grid equipment-event-grid">

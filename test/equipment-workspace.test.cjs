@@ -462,3 +462,78 @@ test('un servidor que responde siempre cancelado alcanza un límite explícito y
   await assert.rejects(h.api.confirmTransfer(transfer()), error => error.code === 'TRANSFER_GENERATION_LIMIT' && /versiones canceladas/.test(error.message));
   assert.equal(h.calls.length, 257); assert.equal(h.api.getState().pending, 0);
 });
+
+const logisticsEstimate = (travelMinutes = 45) => ({ fromPlace: 'Lugar de ensayo A', toPlace: 'Lugar de ensayo B', travelMinutes, handlingMinutes: 90 });
+function logisticsResponse(call, revision = 8, events = [event()]) {
+  if (call.url === '/api/cuadros-equipo/eventos') return response({ revision, events, transfers: [] });
+  const range = call.body || Object.fromEntries(new URL(call.url, 'https://example.test').searchParams);
+  return response({ revision, rows: [], from: range.from, to: range.to, routeEstimates: call.body?.routeEstimates || [] });
+}
+
+test('la agenda conserva más de 1,000 eventos personalizados, sus ceros y el último cuadro sin truncarlos', async () => {
+  const events = Array.from({ length: 1251 }, (_, index) => ({ ...event(`personalized-synthetic-${index}`), type: `Prueba ${index}`, notes: `Nota ${index}` }));
+  const h = harness(call => readResponse(call, 12, events));
+  const state = await h.api.refresh();
+  assert.equal(state.events.length, 1251); assert.equal(h.api.visibleEvents().length, 1251);
+  assert.equal(state.events[0].id, 'personalized-synthetic-0'); assert.equal(state.events.at(-1).id, 'personalized-synthetic-1250');
+  assert.equal(state.events.at(-1).notes, 'Nota 1250');
+  assert.ok(state.events.every(item => item.sections[0].items[0].quantity === 0));
+  state.events[0].notes = 'Cambio externo'; assert.equal(h.api.getState().events[0].notes, 'Nota 0');
+});
+
+test('tiempos por lugar calculan por POST de sólo lectura y continúan en cambios de período', async () => {
+  const h = harness(call => logisticsResponse(call));
+  await h.api.refresh();
+  assert.ok(h.calls.some(call => call.url.startsWith('/api/cuadros-equipo/disponibilidad?')));
+  const estimates = [logisticsEstimate(), { fromPlace: 'Mismo lugar', toPlace: 'Mismo lugar', travelMinutes: 0, handlingMinutes: 0 }];
+  h.api.setLogisticsEstimates(estimates); estimates[0].travelMinutes = 999;
+  assert.equal(h.api.getState().stale, true); assert.equal(h.api.getState().plan, null);
+  let state = await h.api.refresh();
+  const planCall = h.calls.find(call => call.url === '/api/cuadros-equipo/plan-logistico');
+  assert.equal(planCall.init.method, 'POST'); assert.equal(planCall.body.routeEstimates[0].travelMinutes, 45);
+  assert.deepEqual(planCall.body.routeEstimates[1], { fromPlace: 'Mismo lugar', toPlace: 'Mismo lugar', travelMinutes: 0, handlingMinutes: 0 });
+  assert.deepEqual(state.routeEstimates, [logisticsEstimate(), { fromPlace: 'Mismo lugar', toPlace: 'Mismo lugar', travelMinutes: 0, handlingMinutes: 0 }]);
+  h.api.setRange({ from: '2026-10-26', to: '2026-11-01' }); state = await h.api.refresh();
+  assert.equal(state.plan.from, '2026-10-26'); assert.equal(state.routeEstimates[0].travelMinutes, 45);
+  assert.equal(h.calls.at(-1).body.routeEstimates[0].fromPlace, 'Lugar de ensayo A');
+  h.api.setLogisticsEstimates([]); await h.api.refresh();
+  assert.ok(h.calls.at(-1).url.startsWith('/api/cuadros-equipo/disponibilidad?'));
+  assert.ok(h.calls.every(call => !['PUT', 'DELETE'].includes(call.init.method)), 'estimar rutas no reserva, despacha ni modifica inventario');
+});
+
+test('un cambio de tiempos mientras se consulta descarta el plan anterior y todos reciben la estimación vigente', async () => {
+  const gate = deferred();
+  const h = harness(async (call, count) => { if (count <= 2) await gate.promise; return logisticsResponse(call); });
+  h.api.setLogisticsEstimates([logisticsEstimate(45)]);
+  const first = h.api.refresh();
+  h.api.setLogisticsEstimates([logisticsEstimate(95)]);
+  const second = h.api.refresh(); assert.equal(first, second);
+  gate.resolve();
+  const [left, right] = await Promise.all([first, second]);
+  assert.equal(left.plan.routeEstimates[0].travelMinutes, 95); assert.equal(right.plan.routeEstimates[0].travelMinutes, 95);
+  assert.equal(h.calls.length, 4);
+  assert.ok(h.states.filter(state => state.plan).every(state => state.plan.routeEstimates[0].travelMinutes === 95));
+});
+
+test('rechaza tiempos inválidos sin reemplazar un cálculo y protege las estimaciones contra cambios externos', async () => {
+  const h = harness(call => logisticsResponse(call));
+  h.api.setLogisticsEstimates([logisticsEstimate()]); await h.api.refresh();
+  const before = h.api.getState();
+  for (const invalid of [null, {}, [null], [{ ...logisticsEstimate(), fromPlace: '' }], [{ ...logisticsEstimate(), toPlace: '  ' }], [{ ...logisticsEstimate(), travelMinutes: -1 }], [{ ...logisticsEstimate(), handlingMinutes: Infinity }], [{ ...logisticsEstimate(), travelMinutes: '45' }]]) {
+    assert.throws(() => h.api.setLogisticsEstimates(invalid), error => error.code === 'INVALID_LOGISTICS_ESTIMATES');
+    assert.deepEqual(h.api.getState(), before);
+  }
+  h.api.setLogisticsEstimates([logisticsEstimate()]); assert.deepEqual(h.api.getState(), before);
+  before.routeEstimates[0].travelMinutes = 200; assert.equal(h.api.getState().routeEstimates[0].travelMinutes, 45);
+});
+
+test('guardar y cancelar eventos conserva los tiempos de trasiego para el siguiente cálculo completo', async () => {
+  const h = harness(call => call.init.method === 'PUT' ? response({ event: event(), events: [event()], transfers: [], revision: 9 })
+    : call.init.method === 'DELETE' ? response({ events: [], transfers: [], revision: 10 }) : logisticsResponse(call, 10));
+  h.api.setLogisticsEstimates([logisticsEstimate()]);
+  await h.api.save(event()); await h.api.refresh();
+  assert.equal(h.api.getState().routeEstimates[0].travelMinutes, 45);
+  await h.api.cancel(event()); await h.api.refresh();
+  assert.equal(h.calls.at(-1).url, '/api/cuadros-equipo/plan-logistico');
+  assert.equal(h.calls.at(-1).body.routeEstimates[0].handlingMinutes, 90);
+});

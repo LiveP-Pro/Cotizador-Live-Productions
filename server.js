@@ -51,7 +51,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261020-personaliza-03";
+const warehouseAssetVersion = "20261020-logistica-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -4024,7 +4024,8 @@ async function handleRequest(request, response) {
       const payload = await readJsonBody(request);
       const current = equipmentEventStore.previewEvent(payload?.event);
       const availability = calculateEquipmentAvailability(current.events, readWarehouseInventory(), {
-        from: payload?.from || "", to: payload?.to || "", transfers: current.transfers
+        from: payload?.from || "", to: payload?.to || "", transfers: current.transfers,
+        routeEstimates: payload?.routeEstimates
       });
       jsonResponse(response, 200, { ...availability, revision: current.revision, preview: true });
       return;
@@ -4037,6 +4038,18 @@ async function handleRequest(request, response) {
         from: url.searchParams.get("from") || "", to: url.searchParams.get("to") || "", transfers: current.transfers
       });
       jsonResponse(response, 200, { ...availability, revision: current.revision });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cuadros-equipo/plan-logistico") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      const current = equipmentEventStore.readEvents();
+      const availability = calculateEquipmentAvailability(current.events, readWarehouseInventory(), {
+        from: payload?.from || "", to: payload?.to || "", transfers: current.transfers,
+        routeEstimates: payload?.routeEstimates
+      });
+      jsonResponse(response, 200, { ...availability, revision: current.revision, simulation: true });
       return;
     }
 

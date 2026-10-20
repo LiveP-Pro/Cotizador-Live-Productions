@@ -322,6 +322,44 @@ test("preview distingue compra de consumible y trasiego sugerido sin confirmar c
   assert.doesNotMatch(html, /Trasiego confirmado/);
 });
 
+test("preview explica el plan del período y sus conexiones sin liberar el faltante antes de confirmar", () => {
+  const event = personalizer.buildEvent(draft("2\tConsola análoga"), inventory);
+  const route = { fromName: 'Evento <A>', fromPlace: 'Lugar "A"', toName: 'Evento B', toPlace: 'Lugar B', quantity: 2,
+    departureAt: '2026-10-20T15:00:00.000Z', arrivalAt: '2026-10-20T16:00:00.000Z', travelMinutes: 60, handlingMinutes: 120, slackMinutes: 30, requiresTimeConfirmation: true };
+  const plan = previewPlan(event, { missing: 3, action: "RENTA", transfers: [route], planning: { allActiveEventCount: 60, plannedEventCount: 6, rentalPotential: 1, purchasePotential: 0,
+    routes: [route], warnings: ['Falta revisar <transporte>'], assumptions: ['Transporte estimado en 60 minutos'] } });
+  const html = personalizer.renderAvailability(plan, event);
+  assert.match(html, /Rentar 3/); assert.match(html, /Plan del período y sus conexiones: rentar 1/);
+  assert.match(html, /6 eventos del período y sus conexiones confirmadas/); assert.doesNotMatch(html, /60 eventos/);
+  assert.match(html, /faltante actual se mantiene hasta confirmarlos/);
+  assert.match(html, /Lugar &quot;A&quot;/); assert.match(html, /Evento &lt;A&gt;/);
+  assert.match(html, /9:00/); assert.match(html, /10:00/); assert.doesNotMatch(html, /15:00:00.000Z/);
+  assert.match(html, /Transporte: 60 min/); assert.match(html, /Margen: 30 min/);
+  assert.match(html, /Verifique los tiempos/); assert.match(html, /Falta revisar &lt;transporte&gt;/);
+  assert.match(html, /Tiempos y supuestos/); assert.doesNotMatch(html, /Trasiego confirmado/);
+});
+
+test("el plan logístico de consumibles conserva su compra y evita presentar renta o trasiego de consumibles", () => {
+  const event = personalizer.buildEvent(draft("3\tCinta negra"), inventory);
+  const html = personalizer.renderAvailability({ rows: [{ warehouseInventoryId: "synthetic-tape", description: "Cinta negra", itemType: "consumible",
+    required: 5, available: 2, capacity: 2, missing: 3, action: "COMPRA", planning: { allActiveEventCount: 5, purchasePotential: 7, rentalPotential: 0, routes: [], warnings: [], assumptions: [] } }] }, event);
+  assert.match(html, /Comprar 3/); assert.match(html, /Plan del período y sus conexiones: comprar 7/);
+  assert.doesNotMatch(html, /Plan del período y sus conexiones: rentar/); assert.doesNotMatch(html, /Trasiego por confirmar/);
+});
+
+test("preview detalla los recorridos de unidades rentadas como coordinación pendiente del proveedor", () => {
+  const event = personalizer.buildEvent(draft("2\tConsola análoga"), inventory);
+  const plan = previewPlan(event, { missing: 2, action: "RENTA", planning: { plannedEventCount: 3, allActiveEventCount: 30, rentalPotential: 1, routes: [], rentalRoutes: [
+    { source: "rental", requiresRentalSupplierConfirmation: true, fromName: 'Evento <rentado A>', toName: 'Evento B', fromPlace: 'Sitio A', toPlace: 'Sitio B', quantity: 1, travelMinutes: 45, handlingMinutes: 120,
+      departureAt: '2026-10-20T15:00:00.000Z', arrivalAt: '2026-10-20T15:45:00.000Z' }
+  ], warnings: [], assumptions: [] } });
+  const html = personalizer.renderAvailability(plan, event);
+  assert.match(html, /Rentar 2/); assert.match(html, /Plan del período y sus conexiones: rentar 1/);
+  assert.match(html, /Traslados de equipo rentado por coordinar \(1\)/); assert.match(html, /Confirme estos recorridos y sus tiempos con el proveedor de renta/);
+  assert.match(html, /Evento &lt;rentado A&gt;/); assert.match(html, /Sitio A.*Sitio B/); assert.match(html, /Transporte: 45 min/);
+  assert.doesNotMatch(html, /Trasiego confirmado/); assert.doesNotMatch(html, /Trasiego por confirmar:/);
+});
+
 test("la X, Cancelar y Escape descartan sin guardar y al reabrir no reaparece el borrador", async () => {
   let commits = 0;
   for (const action of ["close", "cancel"]) {
@@ -340,7 +378,7 @@ test("la X, Cancelar y Escape descartan sin guardar y al reabrir no reaparece el
   assert.match(personalizer.renderMarkup(), />Cancelar<\/button>/);
 });
 
-test("UI revisa, conserva el borrador si falla y cierra únicamente al guardar correctamente", async () => {
+test("UI revisa, conserva el borrador si falla y confirma el éxito únicamente al guardar correctamente", async () => {
   let calls = 0, refreshes = 0;
   const harness = browserHarness({ beforeOpen: async () => { refreshes += 1; }, onCommit: async () => { if (++calls === 1) throw new Error("Error de prueba"); return { saved: true }; } });
   assert.equal(personalizer.init({ document: harness.doc }), harness.api);
@@ -354,7 +392,11 @@ test("UI revisa, conserva el borrador si falla y cierra únicamente al guardar c
   assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, true);
   await harness.action("review"); await harness.action("commit");
   assert.equal(calls, 2);
-  assert.equal(harness.dialog.open, false);
+  assert.equal(harness.dialog.open, true);
+  assert.equal(harness.get("equipmentPersonalizerSaved").hidden, false);
+  assert.equal(harness.get("equipmentPersonalizerEditor").hidden, true);
+  assert.equal(harness.get("equipmentPersonalizerFooter").hidden, true);
+  assert.match(harness.get("equipmentPersonalizerSavedDescription").textContent, /Lugar de prueba/);
   assert.equal(harness.api.getDraft().rows.length, 0);
 });
 
@@ -504,7 +546,65 @@ test("error al guardar servicio conserva plantilla e IDs exactos para un reinten
   await harness.action("review"); await harness.action("commit");
   assert.equal(received.length, 2); assert.deepEqual(received[0], received[1]);
   assert.equal(received[0].serviceTemplate.id, received[1].serviceTemplate.id);
-  assert.equal(harness.dialog.open, false);
+  assert.equal(harness.dialog.open, true);
+  assert.equal(harness.get("equipmentPersonalizerSaved").hidden, false);
+});
+
+test("después de guardar permite agregar 320 eventos personalizados independientes sin reemplazar los anteriores", async () => {
+  const saved = [], ids = new Set();
+  let opens = 0;
+  const harness = browserHarness({ beforeOpen: async () => { opens += 1; }, onCommit: async event => { saved.push(event); } });
+  await harness.api.open();
+  for (let index = 0; index < 320; index += 1) {
+    assert.equal(harness.get("equipmentPersonalizerSaved").hidden, true);
+    assert.equal(harness.get("equipmentPersonalizerEditor").hidden, false);
+    assert.equal(harness.api.getDraft().rows.length, 0);
+    assert.equal(harness.api.getDraft().usageMode, "once");
+    await harness.valid();
+    await harness.input("equipmentPersonalizer-type", `Evento sintético ${index + 1}`);
+    await harness.input("equipmentPersonalizerClipboard", `Cantidad\tDescripción\n0\tConsola análoga\nNota: conservar evento ${index + 1}`);
+    await harness.action("parse"); await harness.action("review"); await harness.action("commit");
+    const event = saved.at(-1);
+    assert.ok(!ids.has(event.id)); ids.add(event.id);
+    assert.equal(event.sections.flatMap(section => section.items)[0].quantity, 0);
+    assert.equal(event.source.rows.at(-1).cells[0], `Nota: conservar evento ${index + 1}`);
+    assert.equal(harness.dialog.open, true);
+    assert.equal(harness.get("equipmentPersonalizerSaved").hidden, false);
+    if (index < 319) await harness.action("another");
+  }
+  assert.equal(saved.length, 320); assert.equal(ids.size, 320); assert.equal(opens, 320);
+  assert.equal(saved[0].type, "Evento sintético 1"); assert.equal(saved.at(-1).type, "Evento sintético 320");
+  assert.ok(saved.every(event => !event.serviceTemplate));
+  await harness.action("commit"); assert.equal(saved.length, 320, "la confirmación de éxito no repite el guardado");
+  await harness.action("close"); assert.equal(harness.dialog.open, false);
+});
+
+test("Ver resumen entrega el evento guardado y cierra sin crear otro; volver a abrir prepara un cuadro vacío", async () => {
+  const summaries = [], saved = [];
+  const harness = browserHarness({ onCommit: async event => { saved.push(event); return { id: event.id, saved: true }; }, onSummary: async (event, result) => { summaries.push({ event, result }); } });
+  await harness.api.open(); await harness.valid();
+  await harness.input("equipmentPersonalizerUsageService", "service");
+  await harness.input("equipmentPersonalizerServiceName", "Servicio nuevo de ensayo");
+  await harness.action("review"); await harness.action("commit");
+  assert.match(harness.get("equipmentPersonalizerSavedDescription").textContent, /También se guardó el nuevo tipo de servicio/);
+  assert.equal(harness.get("equipmentPersonalizerSummaryButton").hidden, false);
+  await harness.action("summary");
+  assert.equal(harness.dialog.open, false); assert.equal(saved.length, 1); assert.equal(summaries.length, 1);
+  assert.deepEqual(summaries[0].event, saved[0]); assert.equal(summaries[0].result.id, saved[0].id);
+  await harness.api.open();
+  assert.equal(harness.api.getDraft().usageMode, "once"); assert.equal(harness.api.getDraft().serviceName, "");
+  assert.equal(harness.api.getDraft().metadata.place, ""); assert.equal(harness.api.getDraft().rows.length, 0);
+  assert.notEqual(harness.api.getDraft().id, saved[0].id);
+});
+
+test("un fallo al preparar el siguiente evento no altera el evento ya confirmado", async () => {
+  let openCount = 0, commits = 0;
+  const errors = [];
+  const harness = browserHarness({ beforeOpen: async () => { if (++openCount > 1) throw new Error("No se pudo comprobar la agenda"); }, onCommit: async () => { commits += 1; }, onError: error => errors.push(error.message) });
+  await harness.api.open(); await harness.valid(); await harness.action("review"); await harness.action("commit");
+  await harness.action("another");
+  assert.equal(commits, 1); assert.equal(harness.dialog.open, false); assert.deepEqual(errors, ["No se pudo comprobar la agenda"]);
+  assert.equal(harness.api.getDraft().rows.length, 0);
 });
 
 test("X y Cancelar descartan modo servicio sin crear plantilla ni conservar su borrador", async () => {

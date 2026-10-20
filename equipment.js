@@ -5684,6 +5684,16 @@ function reportEquipmentTimelineValidation(validation) {
 }
 
 function equipmentRentReportValidationMessage(mode = "rent") {
+  if (equipmentSharedWorkspace.enabled) {
+    const shared = equipmentSharedWorkspace, state = shared.state;
+    if (shared.dirty || shared.saving) return "Guarde los cambios de la ventana antes de generar el reporte.";
+    if (!state?.loaded || state.stale || state.refreshing || Number(state.pending) > 0 || !Array.isArray(state.plan?.rows)
+        || (state.plan.revision !== undefined && state.revision !== state.plan.revision)) return "Actualice la agenda y el inventario antes de generar el reporte.";
+    if (state.plan.rows.some(row => Number(row.quantity) > 0 && (row.pendingLogistics || row.pendingIdentification || row.action === "PENDIENTE"))) return "Complete los horarios y la identificación del equipo antes de generar el reporte.";
+    if ((state.plan.invalidTransfers || []).length || state.plan.rows.some(row => row.planning?.physicalConflict || Number(row.planning?.mandatoryShortage) > 0)) return "Revise los trasiegos y las existencias físicas antes de generar el reporte.";
+    const planInventoryAt = Date.parse(state.plan.inventorySavedAt || "");
+    if (Number.isFinite(planInventoryAt) && equipmentWarehouseInventoryState.freshness > planInventoryAt) return "El inventario cambió. Actualice la agenda antes de generar el reporte.";
+  }
   if (!equipmentRowsSummary().some((row) => row.type !== "category")) {
     return "Agregue al menos una ventana con equipo antes de generar el resumen.";
   }
@@ -5885,6 +5895,7 @@ function equipmentAutomaticLogisticsPair(focusEventId = "") {
 }
 
 function maybeOpenEquipmentAutomaticLogisticsRecommendation(focusEventId = "") {
+  if (equipmentSharedWorkspace.enabled) return false;
   const pair = equipmentAutomaticLogisticsPair(focusEventId);
   if (!pair) return false;
   return openEquipmentLogisticsDecision({
@@ -5942,7 +5953,7 @@ function previewEquipmentRentReport(options = {}) {
   const status = equipmentQuery("#equipmentSaveStatus");
   const skipLogisticsDecision = Boolean(options?.skipLogisticsDecision);
   const schedule = equipmentScheduleAnalysis(equipmentState.events);
-  if (!skipLogisticsDecision && schedule.events.length > 1 && schedule.focusPair) {
+  if (!equipmentSharedWorkspace.enabled && !skipLogisticsDecision && schedule.events.length > 1 && schedule.focusPair) {
     const hasRentalRows = equipmentProcurementReportRows("rent").length > 0;
     openEquipmentLogisticsDecision({
       from: schedule.focusPair.from,
@@ -7082,6 +7093,35 @@ function applyEquipmentSharedState(state) {
   awaitEquipmentSharedPurchaseLinks();
 }
 
+function equipmentLogisticsPlaceKey(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase("es-GT").replace(/\s+/g, " ");
+}
+
+function equipmentLogisticsPairKey(route) {
+  return JSON.stringify([equipmentLogisticsPlaceKey(route.fromPlace), equipmentLogisticsPlaceKey(route.toPlace)]);
+}
+
+function equipmentLogisticsTime(value) {
+  if (!value) return "Por definir";
+  const literal = String(value);
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(literal)) return literal.slice(0, 16).replace("T", " · ");
+  return literal;
+}
+
+async function showAllEquipmentSharedEvents() {
+  if (equipmentSharedDraftBlocksNavigation()) return false;
+  const client = equipmentSharedWorkspace.client;
+  const current = await client.refresh();
+  const events = current.events || [];
+  const dates = events.flatMap(event => [event.setupAt || event.startAt || event.date, event.equipmentInAt || event.endAt || event.date])
+    .map(value => String(value || "").slice(0, 10)).filter(value => /^\d{4}-\d{2}-\d{2}$/.test(value)).sort();
+  if (!dates.length) { equipmentSharedStatus("Todavía no hay eventos guardados con fechas. Puede agregar un evento personalizado."); return false; }
+  client.setRange({ from: dates[0], to: dates.at(-1) });
+  await client.refresh();
+  switchEquipmentWindow("summary");
+  return true;
+}
+
 function renderEquipmentSharedPlan() {
   const host = equipmentQuery("#equipmentSharedRecommendations");
   if (!host) return;
@@ -7092,23 +7132,88 @@ function renderEquipmentSharedPlan() {
   }
   const rows = state.plan.rows || [];
   const missing = rows.filter(row => Number(row.missing) > 0);
-  const proposed = rows.flatMap(row => (row.transfers || []).filter(route => route.requiresConfirmation !== false && Number(route.quantity) > 0).map(route => ({ ...route, warehouseInventoryId: row.warehouseInventoryId, description: row.description })));
+  const pending = rows.filter(row => (row.pendingLogistics || row.pendingIdentification || row.action === "PENDIENTE") && Number(row.quantity) > 0);
+  const physicalConflict = rows.some(row => row.planning?.physicalConflict || Number(row.planning?.mandatoryShortage) > 0);
+  const proposed = rows.flatMap(row => (row.transfers || []).filter(route => route.requiresConfirmation !== false && Number(route.quantity) > 0)
+    .map(route => ({ ...route, warehouseInventoryId: row.warehouseInventoryId, description: row.description })));
   const confirmed = (state.transfers || []).filter(route => route.status !== "cancelled" && state.events.some(event => event.id === route.toEventId && window.EquipmentWorkspace.intersects(event, state.range)));
-  host.innerHTML = `<div class="equipment-plan-overview"><strong>${equipmentState.events.length} eventos en el período</strong><span>${missing.filter(row => row.action === "RENTA").length} equipos con renta pendiente</span><span>${missing.filter(row => row.action === "COMPRA").length} consumibles o compras pendientes</span></div>`
-    + (missing.length ? `<ul class="equipment-plan-shortages">${missing.map(row => `<li><strong>${escapeEquipmentHtml(row.description)}</strong>: ${Number(row.missing)} por ${row.action === "COMPRA" ? "comprar" : "rentar"}. <small>${escapeEquipmentHtml((row.events || []).map(event => event.name || event.place || event.id).join(" · "))}</small></li>`).join("")}</ul>` : '<p class="equipment-plan-ready">El inventario cubre los eventos guardados de este período.</p>')
-    + (proposed.length ? `<details class="equipment-shared-transfer-options"><summary>${proposed.length} propuestas de trasiego para revisar</summary>${proposed.map((route, index) => `<div class="equipment-shared-transfer-proposal"><strong>${escapeEquipmentHtml(route.description)}</strong><p>${escapeEquipmentHtml(route.fromEventName || route.fromName || route.fromEventId || "Origen")} → ${escapeEquipmentHtml(route.toEventName || route.toName || route.toEventId || "Destino")} · hasta ${Number(route.quantity) || 0} unidades</p><label>Transporte (minutos)<input type="number" min="0" step="1" value="${Number(route.travelMinutes) || 60}" data-shared-transfer-travel="${index}" /></label><label>Desmontaje y preparación (minutos)<input type="number" min="0" step="1" value="${Number(route.handlingMinutes) || 120}" data-shared-transfer-handling="${index}" /></label><button type="button" data-shared-confirm-transfer="${index}">Confirmar trasiego</button></div>`).join("")}</details>` : "")
+  const logistics = state.plan.logistics || {};
+  const pairs = logistics.routePairs || [];
+  const rentalRoutes = rows.flatMap(row => (row.planning?.rentalRoutes || []).map(route => ({ ...route, description: row.description })));
+  const warnings = [...new Set([...(logistics.warnings || []), ...rows.flatMap(row => row.planning?.warnings || [])].map(warning => typeof warning === "string" ? warning : warning.message).filter(Boolean))];
+  const drafts = equipmentSharedWorkspace.logisticsDrafts || (equipmentSharedWorkspace.logisticsDrafts = new Map());
+  const savedEstimates = new Map((state.routeEstimates || []).map(route => [equipmentLogisticsPairKey(route), route]));
+  const rangeText = `${formatEquipmentDate(state.range.from)} al ${formatEquipmentDate(state.range.to)}`;
+  host.innerHTML = `<section class="equipment-logistics-plan"><h3>Plan de equipo y logística</h3><p>Período: ${escapeEquipmentHtml(rangeText)}. El resumen reúne los eventos de estas fechas. Use «Ver todos los eventos» para ampliar el período.</p>`
+    + `<div class="equipment-plan-overview"><strong>${equipmentState.events.length} eventos en el período · ${state.events.length} guardados en total</strong><span>${missing.filter(row => row.action === "RENTA").length} equipos con renta pendiente</span><span>${missing.filter(row => row.action === "COMPRA").length} equipos o consumibles con compra pendiente</span></div>`
+    + (pending.length ? '<p class="equipment-logistics-warning" role="alert">El cálculo está pendiente de completar: hay horarios o equipos sin identificar. No se puede asegurar todavía que el inventario cubra todos los eventos.</p>' : "")
+    + (physicalConflict ? '<p class="equipment-logistics-warning" role="alert">Hay una incompatibilidad entre las existencias físicas y las rutas confirmadas. Revise las rutas y los movimientos de bodega antes de utilizar este plan.</p>' : "")
+    + (missing.length ? `<div class="equipment-logistics-warning"><strong>Faltantes con las reservas actuales</strong><ul class="equipment-plan-shortages">${missing.map(row => `<li><strong>${escapeEquipmentHtml(row.description)}</strong>: ${Number(row.missing)} por ${row.action === "COMPRA" ? "comprar" : "rentar"}. <small>${escapeEquipmentHtml((row.events || []).map(event => event.place || event.name || event.eventId).join(" · "))}</small></li>`).join("")}</ul><p>Los trasiegos sugeridos sólo reducen estos faltantes después de confirmarlos.</p></div>`
+      : !pending.length && !physicalConflict && !(state.plan.invalidTransfers || []).length ? '<p class="equipment-plan-ready">El inventario cubre las reservas guardadas de este período con la logística actualmente confirmada.</p>' : "")
+    + (rows.some(row => row.planning) ? `<details class="equipment-logistics-analysis" open><summary>Comparación del plan de trasiego y renta</summary><p>Se comparan horarios, lugares y existencias físicas. El plan busca reducir la renta y, entre alternativas equivalentes, el tiempo de traslado. Cada unidad se asigna a una sola cadena de eventos. Las rutas estimadas requieren revisar sus tiempos; no se consulta tráfico real.</p><div class="equipment-logistics-table-scroll"><table><thead><tr><th>Equipo</th><th>Total solicitado</th><th>Unidades necesarias con reservas actuales</th><th>Capacidad propia</th><th>Renta con el plan sugerido</th><th>Decisión</th></tr></thead><tbody>${rows.map(row => {
+      const planning = row.planning;
+      const rent = planning ? Number(planning.rentalPotential) : Number(row.missing);
+      const action = row.itemType === "consumible" || row.action === "COMPRA" ? `${Number(row.missing) || 0} por comprar` : pending.includes(row) ? "Completar datos" : !planning ? "Revisar identificación o acción elegida" : planning.optimal === false ? "Revisar restricciones antes de confirmar" : rent > 0 ? `Rentar ${rent}${(row.transfers || []).length ? " y confirmar trasiegos" : ""}` : (row.transfers || []).length ? "Confirmar trasiegos propuestos" : "Cubierto";
+      return `<tr><td><strong>${escapeEquipmentHtml(row.description)}</strong><small>${escapeEquipmentHtml(row.category || "")}</small></td><td>${Number(row.quantity) || 0}</td><td>${Number(row.required) || 0}</td><td>${Number(row.capacity) || 0}</td><td>${row.itemType === "consumible" || row.action === "COMPRA" ? "No aplica" : planning ? escapeEquipmentHtml(rent) : "Pendiente"}</td><td>${escapeEquipmentHtml(action)}</td></tr>`;
+    }).join("")}</tbody></table></div></details>` : "")
+    + (warnings.length ? `<ul class="equipment-logistics-warnings" role="alert">${warnings.map(warning => `<li>${escapeEquipmentHtml(warning)}</li>`).join("")}</ul>` : "")
+    + (pairs.length ? `<details class="equipment-logistics-times"${equipmentSharedWorkspace.logisticsTimesOpen ? " open" : ""}><summary>Revisar tiempos entre lugares (${pairs.length} trayectos)</summary><p>Indique minutos reales o una estimación conservadora. Marque los trayectos revisados y recalcule. Estos tiempos se conservan durante esta sesión; cada trasiego confirmado guarda sus tiempos de forma permanente.</p><div class="equipment-logistics-pairs">${pairs.map((route, index) => {
+      const draft = drafts.get(equipmentLogisticsPairKey(route));
+      const saved = savedEstimates.get(equipmentLogisticsPairKey(route));
+      const values = draft || saved || route;
+      return `<article class="equipment-logistics-pair"><strong>${escapeEquipmentHtml(route.fromPlace || "Lugar por definir")} → ${escapeEquipmentHtml(route.toPlace || "Lugar por definir")}</strong><label>Transporte (min)<input data-logistics-travel="${index}" type="number" min="0" step="1" value="${escapeEquipmentHtml(values.travelMinutes ?? 60)}" /></label><label>Desmontaje y preparación (min)<input data-logistics-handling="${index}" type="number" min="0" step="1" value="${escapeEquipmentHtml(values.handlingMinutes ?? 120)}" /></label><label class="equipment-logistics-check"><input data-logistics-reviewed="${index}" type="checkbox"${(draft ? draft.reviewed : !!saved) ? " checked" : ""} />Revisé estos tiempos</label></article>`;
+    }).join("")}</div><button type="button" data-logistics-recalculate>Recalcular plan con los tiempos revisados</button><p data-logistics-error role="alert"></p></details>` : "")
+    + (proposed.length ? `<details class="equipment-shared-transfer-options" open><summary>${proposed.length} trasiegos del plan para confirmar</summary>${proposed.map((route, index) => `<div class="equipment-shared-transfer-proposal"><strong>${escapeEquipmentHtml(route.description)} · ${Number(route.quantity)} unidades</strong><p>${escapeEquipmentHtml(route.fromPlace || route.fromEventName || route.fromName || route.fromEventId || "Origen")} → ${escapeEquipmentHtml(route.toPlace || route.toEventName || route.toName || route.toEventId || "Destino")}</p><p>Finalización de origen: ${escapeEquipmentHtml(equipmentLogisticsTime(route.departureAt))}. Montaje de destino: ${escapeEquipmentHtml(equipmentLogisticsTime(route.setupAt))}.</p><p>Transporte: ${Number(route.travelMinutes) || 0} min · Desmontaje y preparación: ${Number(route.handlingMinutes) || 0} min · Margen disponible: ${Number(route.availableMinutes) || 0} min${Number.isFinite(route.slackMinutes) ? ` · Holgura: ${route.slackMinutes} min` : ""}.</p>${route.requiresTimeConfirmation ? `<p class="equipment-logistics-warning">Tiempos estimados: revise el trayecto antes de confirmar. Puede cambiarlos en «Revisar tiempos entre lugares».</p><label class="equipment-logistics-check"><input data-shared-review-transfer="${index}" type="checkbox" />Revisé los tiempos de esta ruta</label>` : '<p>Tiempos revisados para este cálculo.</p>'}<button type="button" data-shared-confirm-transfer="${index}"${route.requiresTimeConfirmation ? " disabled" : ""}>Confirmar trasiego</button></div>`).join("")}</details>` : "")
+    + (rentalRoutes.length ? `<details class="equipment-logistics-rental-itinerary"><summary>Traslados necesarios del equipo a rentar (${rentalRoutes.length})</summary><p>La renta calculada supone reutilizar las mismas unidades alquiladas en estas rutas. Coordine con el proveedor la disponibilidad, el transporte y los tiempos. Esta propuesta no aumenta las existencias de bodega ni modifica los reportes confirmados.</p>${rentalRoutes.map(route => `<div class="equipment-shared-transfer-proposal"><strong>${escapeEquipmentHtml(route.description)} · ${Number(route.quantity)} unidades rentadas</strong><p>${escapeEquipmentHtml(route.fromPlace)} → ${escapeEquipmentHtml(route.toPlace)}</p><p>Finaliza en origen: ${escapeEquipmentHtml(equipmentLogisticsTime(route.departureAt))} · Montaje en destino: ${escapeEquipmentHtml(equipmentLogisticsTime(route.setupAt))} · Transporte ${Number(route.travelMinutes) || 0} min · Preparación ${Number(route.handlingMinutes) || 0} min.</p><p>Requiere coordinación con el proveedor${route.requiresTimeConfirmation ? " y revisión de los tiempos estimados" : ""}.</p></div>`).join("")}</details>` : "")
     + (confirmed.length ? `<details><summary>${confirmed.length} trasiegos confirmados</summary>${confirmed.map((route, index) => `<div class="equipment-shared-transfer-proposal"><span>${escapeEquipmentHtml(state.events.find(event => event.id === route.fromEventId)?.place || route.fromEventId)} → ${escapeEquipmentHtml(state.events.find(event => event.id === route.toEventId)?.place || route.toEventId)}</span><button type="button" data-shared-cancel-transfer="${index}">Cancelar trasiego</button></div>`).join("")}</details>` : "")
-    + ((state.plan.invalidTransfers || []).length ? '<p class="is-error" role="alert">Hay trasiegos que deben revisarse por cambios en el inventario o los horarios. No se han contado como disponibilidad.</p>' : "");
+    + ((state.plan.invalidTransfers || []).length ? `<div class="equipment-logistics-warning" role="alert"><strong>Hay trasiegos que requieren revisión; no cuentan como disponibilidad.</strong><ul>${state.plan.invalidTransfers.map(route => `<li>${escapeEquipmentHtml(route.message || route.id)}</li>`).join("")}</ul></div>` : "")
+    + '</section>';
+  const times = host.querySelector(".equipment-logistics-times");
+  times?.addEventListener("toggle", () => { equipmentSharedWorkspace.logisticsTimesOpen = times.open; });
+  const capturePair = index => {
+    const route = pairs[index];
+    const draft = { ...route, travelMinutes: host.querySelector(`[data-logistics-travel="${index}"]`)?.value,
+      handlingMinutes: host.querySelector(`[data-logistics-handling="${index}"]`)?.value,
+      reviewed: !!host.querySelector(`[data-logistics-reviewed="${index}"]`)?.checked };
+    drafts.set(equipmentLogisticsPairKey(route), draft);
+    return draft;
+  };
+  host.querySelectorAll("[data-logistics-travel],[data-logistics-handling],[data-logistics-reviewed]").forEach(input => {
+    const index = Number(input.dataset.logisticsTravel ?? input.dataset.logisticsHandling ?? input.dataset.logisticsReviewed);
+    input.addEventListener("input", () => capturePair(index));
+    input.addEventListener("change", () => capturePair(index));
+  });
+  host.querySelector("[data-logistics-recalculate]")?.addEventListener("click", async event => {
+    const button = event.currentTarget;
+    try {
+      const estimates = pairs.map((_, index) => capturePair(index)).filter(route => route.reviewed).map(route => {
+        if (route.travelMinutes === "" || route.handlingMinutes === "") throw new Error("Complete transporte y preparación para los trayectos revisados. El valor 0 es válido.");
+        const travelMinutes = Number(route.travelMinutes), handlingMinutes = Number(route.handlingMinutes);
+        if (![travelMinutes, handlingMinutes].every(value => Number.isFinite(value) && value >= 0)) throw new Error("Los minutos deben ser números mayores o iguales a cero.");
+        return { fromPlace: route.fromPlace, toPlace: route.toPlace, travelMinutes, handlingMinutes };
+      });
+      button.disabled = true;
+      equipmentSharedWorkspace.client.setLogisticsEstimates(estimates);
+      await equipmentSharedWorkspace.client.refresh();
+      equipmentSharedStatus("Plan recalculado. Confirme los trasiegos elegidos para aplicar las reservas; los reportes usan únicamente rutas confirmadas.");
+    } catch (error) {
+      const errorHost = host.querySelector("[data-logistics-error]");
+      if (errorHost) errorHost.textContent = error.message;
+      equipmentSharedStatus(error.message, true); button.disabled = false;
+    }
+  });
+  host.querySelectorAll("[data-shared-review-transfer]").forEach(input => input.addEventListener("change", () => {
+    const button = host.querySelector(`[data-shared-confirm-transfer="${input.dataset.sharedReviewTransfer}"]`);
+    if (button) button.disabled = !input.checked;
+  }));
   host.querySelectorAll("[data-shared-confirm-transfer]").forEach(button => button.addEventListener("click", async () => {
-    const index = Number(button.dataset.sharedConfirmTransfer);
-    const candidate = proposed[index];
-    const travelMinutes = Number(host.querySelector(`[data-shared-transfer-travel="${index}"]`)?.value);
-    const handlingMinutes = Number(host.querySelector(`[data-shared-transfer-handling="${index}"]`)?.value);
+    const index = Number(button.dataset.sharedConfirmTransfer), candidate = proposed[index];
+    if (candidate.requiresTimeConfirmation && !host.querySelector(`[data-shared-review-transfer="${index}"]`)?.checked) return;
     button.disabled = true;
     try {
-      await equipmentSharedWorkspace.client.confirmTransfer({ ...candidate, travelMinutes, handlingMinutes, items: [{ warehouseInventoryId: candidate.warehouseInventoryId, quantity: candidate.quantity }] });
+      await equipmentSharedWorkspace.client.confirmTransfer({ ...candidate, items: [{ warehouseInventoryId: candidate.warehouseInventoryId, quantity: candidate.quantity }] });
       await equipmentSharedWorkspace.client.refresh();
-      equipmentSharedStatus("Trasiego confirmado. Se recalcularon las reservas y los faltantes.");
+      equipmentSharedStatus("Trasiego confirmado. Se recalcularon las reservas y los faltantes con el inventario actual.");
     } catch (error) { equipmentSharedStatus(error.message, true); button.disabled = false; }
   }));
   host.querySelectorAll("[data-shared-cancel-transfer]").forEach(button => button.addEventListener("click", async () => {
@@ -7138,7 +7243,8 @@ function equipmentBindSharedInventory(event) {
 async function previewEquipmentSharedEvent(event) {
   const range = window.EquipmentWorkspace.weekFor((event.startAt || event.date || event.setupAt).slice(0, 10));
   const response = await fetch("/api/cuadros-equipo/disponibilidad", { method: "POST", credentials: "same-origin",
-    headers: { "Content-Type": "application/json" }, body: JSON.stringify({ event: equipmentBindSharedInventory(event), ...range }) });
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify({ event: equipmentBindSharedInventory(event), ...range,
+      routeEstimates: equipmentSharedWorkspace.client?.getState()?.routeEstimates || [] }) });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || "No se pudo revisar la disponibilidad. Intente nuevamente.");
   return payload;
@@ -7296,6 +7402,7 @@ async function initEquipmentSharedWorkspace() {
     openerId: "equipmentPersonalizeEventButton", inventory: equipmentSharedInventoryRecords,
     serviceGroups: equipmentPersonalizedServiceGroups,
     beforeOpen: equipmentSharedBeforeOpen, onPreview: previewEquipmentSharedEvent, onCommit: savePersonalizedEquipmentEvent,
+    onSummary: () => switchEquipmentWindow("summary"),
     onError: error => equipmentSharedStatus(error.message, true)
   });
   equipmentSharedWorkspace.extras = window.EquipmentExtrasLibrary.init({
@@ -7314,7 +7421,8 @@ async function initEquipmentSharedWorkspace() {
     const target = event.target;
     if (target?.closest?.("#requerimientoEquipoPage") && !target.closest("dialog,#equipmentCatalogEditor")
         && !target.id?.startsWith("equipmentAgenda") && target.id !== "equipmentSummarySearch"
-        && !target.matches?.("[data-equipment-rental-field],.equipment-observation-input")) {
+        && !target.matches?.("[data-equipment-rental-field],.equipment-observation-input")
+        && !target.closest?.("#equipmentSharedRecommendations")) {
       equipmentSharedWorkspace.dirty = true;
       equipmentSharedStatus("Cambios sin guardar. Confirme la ventana para actualizar sus reservas.");
     }
@@ -7331,6 +7439,7 @@ async function initEquipmentSharedWorkspace() {
   equipmentQuery("#equipmentAgendaFrom")?.addEventListener("change", updateRange);
   equipmentQuery("#equipmentAgendaTo")?.addEventListener("change", updateRange);
   equipmentQuery("#equipmentRefreshAgendaButton")?.addEventListener("click", () => equipmentSharedBeforeOpen().catch(error => equipmentSharedStatus(error.message, true)));
+  equipmentQuery("#equipmentAgendaAllButton")?.addEventListener("click", () => showAllEquipmentSharedEvents().catch(error => equipmentSharedStatus(error.message, true)));
   equipmentQuery("#equipmentShowPendingOnly")?.addEventListener("change", () => renderEquipmentModule());
   equipmentQuery("#equipmentRegisterPurchaseButton")?.addEventListener("click", () => {
     const items = equipmentProcurementReportRows("purchase").map(row => ({ ...row, quantity: row.missing, warehouseInventoryId: row.inventorySourceItem?.warehouseInventoryId || row.warehouseInventoryId, inventoryCategory: row.categoryTitle || "Compras", procurementChoice: "purchase" }));

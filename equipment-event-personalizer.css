@@ -82,6 +82,13 @@
 .equipment-personalizer-availability-table li+li{margin-top:8px}
 .equipment-personalizer-shortage{font-weight:800;color:#a1281c;background:#fff3ef}
 .equipment-personalizer-transfer-hint{font-size:12px;color:#655019}
+.equipment-personalizer-logistics-plan{padding:9px;margin-top:8px;border:1px solid #c4d5ca;border-radius:6px;background:#f0f7f2;font-size:12px}
+.equipment-personalizer-logistics-plan p{margin:5px 0}
+.equipment-personalizer-saved{flex:1;min-height:0;overflow:auto;display:grid;place-items:center;padding:32px 24px;background:#f5f9f7}
+.equipment-personalizer-saved-card{width:min(720px,100%);box-sizing:border-box;padding:30px;border:1px solid #bfd5c8;border-radius:12px;background:#fff;line-height:1.6;color:#345140}
+.equipment-personalizer-saved-card h3{font-size:25px;line-height:1.25;color:#173d2b;margin:5px 0 14px}
+.equipment-personalizer-saved-card p{margin:12px 0}
+.equipment-personalizer-saved-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
 .equipment-personalizer-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid #dce2ec;background:#f9fafc;padding:14px 24px}
 .equipment-personalizer-footer p{font-size:12px;line-height:1.5;margin:0;max-width:490px;color:#637083}
 .equipment-personalizer-footer>div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;flex-shrink:0}
