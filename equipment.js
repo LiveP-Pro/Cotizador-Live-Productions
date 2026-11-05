@@ -79,7 +79,7 @@ let equipmentUnknownItemDecision = null;
 let equipmentDjAudioDecision = null;
 let equipmentDjServiceSelectionBusy = false;
 let equipmentExtraEntryBusy = false;
-const equipmentSharedWorkspace = { enabled: false, client: null, state: null, dirty: false, saving: false, refreshTimer: null, personalizer: null, extras: null, purchaseSyncPromise: null };
+const equipmentSharedWorkspace = { enabled: false, client: null, state: null, dirty: false, saving: false, refreshTimer: null, personalizer: null, extras: null, purchaseSyncPromise: null, renderFingerprint: null };
 
 const equipmentPlannerDirtyIds = new Set();
 let equipmentPlannerInstance = null;
@@ -6213,6 +6213,7 @@ function renderEquipmentModule() {
   renderEquipmentCatalogEditor();
   if (equipmentSharedWorkspace.enabled) renderEquipmentSharedPlan();
   equipmentPlannerInstance?.render();
+  if (equipmentSharedWorkspace.state) equipmentSharedWorkspace.renderFingerprint = equipmentSharedRenderFingerprint(equipmentSharedWorkspace.state);
 }
 
 function renderDjAudioOptions() {
@@ -7071,6 +7072,49 @@ function equipmentApplySharedPlanning(rows) {
   });
 }
 
+function equipmentSharedRenderFingerprint(state) {
+  // Workspace emits at the start and end of a GET as well as when data arrives.
+  // Only the request's `refreshing` phase can change without rebuilding tables.
+  // Include local snapshots and stock so edits and inventory updates never use
+  // an old render merely because the remote agenda revision stayed the same.
+  const selected = selectedEquipmentEvent();
+  const events = equipmentState.events.map(event => event.id === selected?.id
+    ? { ...event, ...currentEquipmentEventDraft(), ...captureEquipmentEventSnapshot(), id: event.id } : event);
+  return JSON.stringify({
+    events,
+    selectedEventId: equipmentState.selectedEventId,
+    activeWindow: equipmentState.activeWindow,
+    dirty: equipmentSharedWorkspace.dirty,
+    saving: equipmentSharedWorkspace.saving,
+    inventory: equipmentWarehouseInventoryState.fingerprint,
+    revision: state.revision,
+    range: state.range,
+    plan: state.plan,
+    transfers: state.transfers,
+    routeEstimates: state.routeEstimates,
+    loaded: state.loaded,
+    stale: state.stale,
+    pending: state.pending,
+    lastError: state.lastError
+  });
+}
+
+function updateEquipmentSharedStatus(state) {
+  if (state.lastError) {
+    equipmentSharedStatus(state.lastError.message || "No se pudo actualizar la agenda. Sus cuadros se conservan.", true);
+  } else if (equipmentSharedWorkspace.saving || state.pending) {
+    equipmentSharedStatus("Guardando cambios en la agenda compartida…");
+  } else if (state.refreshing) {
+    equipmentSharedStatus(equipmentSharedWorkspace.dirty
+      ? "Actualizando agenda. Sus cambios sin guardar se conservan."
+      : "Actualizando agenda e inventario de Contabilidad…");
+  } else if (!state.loaded || state.stale) {
+    equipmentSharedStatus("Agenda pendiente de actualizar. Sus cuadros se conservan.");
+  } else {
+    equipmentSharedStatus(equipmentSharedWorkspace.dirty ? "Cambios sin guardar. Confirme la ventana para actualizar sus reservas." : "Agenda compartida · Inventario sincronizado con Contabilidad de Equipo.");
+  }
+}
+
 function applyEquipmentSharedState(state) {
   equipmentSharedWorkspace.state = state;
   if (equipmentSharedWorkspace.dirty && equipmentState.selectedEventId) { equipmentPlannerDirtyIds.add(equipmentState.selectedEventId); syncActiveEquipmentEvent(); }
@@ -7093,9 +7137,8 @@ function applyEquipmentSharedState(state) {
   const toInput = equipmentQuery("#equipmentAgendaTo");
   if (fromInput) fromInput.value = state.range.from;
   if (toInput) toInput.value = state.range.to;
-  equipmentSharedStatus(equipmentSharedWorkspace.dirty ? "Cambios sin guardar. Confirme la ventana para actualizar sus reservas." : "Agenda compartida · Inventario sincronizado con Contabilidad de Equipo.");
-  renderEquipmentModule();
-  renderEquipmentSharedPlan();
+  updateEquipmentSharedStatus(state);
+  if (equipmentSharedWorkspace.renderFingerprint !== equipmentSharedRenderFingerprint(state)) renderEquipmentModule();
   awaitEquipmentSharedPurchaseLinks();
 }
 

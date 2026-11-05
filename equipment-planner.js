@@ -9,6 +9,24 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const dateLabel = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value.split('-').reverse().join('/') : 'Fecha pendiente';
   const timeFields = ['setupAt', 'startAt', 'endAt', 'equipmentInAt'];
+  function referenceChoices(records, query = '', candidates = []) {
+    const active = records.filter(record => record.item && !record.item.archived && !record.archived && String(record.id ?? '').trim());
+    const terms = Identity.normalizeName(query).split(' ').filter(Boolean);
+    if (terms.length) {
+      const matches = active.filter(record => {
+        const text = Identity.normalizeName(record.item.name+' '+(record.item.category || ''));
+        return terms.every(term => text.includes(term));
+      });
+      return {records:matches.slice(0,20),matched:matches.length,total:active.length,suggested:false};
+    }
+    const ids = new Set(candidates.map(candidate => String(candidate?.id ?? '').trim()).filter(Boolean));
+    const suggestions = active.filter(record => ids.has(String(record.id).trim())).slice(0,8);
+    return {records:suggestions.length ? suggestions : active.slice(0,20),matched:active.length,total:active.length,suggested:suggestions.length>0};
+  }
+  const referenceOptions = choices => '<option value="">Seleccione una referencia</option>'+choices.records.map(record=>`<option value="${esc(record.id)}">${esc(record.item.name)} · ${esc(record.item.category)} · Disponible ${esc(record.available)}</option>`).join('');
+  const referenceCount = choices => choices.suggested
+    ? `${choices.records.length} sugerencias de ${choices.total} referencias. Busque por nombre o categoría para consultar todo el inventario.`
+    : `${choices.records.length} de ${choices.matched} coincidencias · ${choices.total} referencias en inventario.${choices.matched>choices.records.length?' Refine la búsqueda para encontrar su equipo.':''}`;
   function purchasedInventoryItem(event, line, items) {
     // Receiving a purchase is evidence from Contabilidad, not a name alias.
     // Available already includes received units; subtracting the receipt from
@@ -111,15 +129,24 @@
       model.identityPending.forEach(row=>{
         const index=model.rows.indexOf(row);
         const refs=row.sources.flatMap(source=>source.sourceCells.map(c=>c.reference || c.ref || '')).filter(Boolean);
-        rows.push(`<article class="equipment-planner-identity"><div><strong>${esc(row.description)}</strong><small>${esc(row.category)} · Solicitado: ${row.quantity}. Existencias pendientes de identificar.</small>${refs.length?`<small>Celdas: ${esc([...new Set(refs)].join(', '))}</small>`:''}</div><div class="equipment-planner-bind"><label>Equipo físico de Contabilidad<select data-planner-identity="${index}"><option value="">Seleccione una referencia</option>${bridge.inventory().map(record=>`<option value="${esc(record.id)}">${esc(record.item.name)} · ${esc(record.item.category)} · Disponible ${record.available}</option>`).join('')}</select></label><button type="button" data-planner-bind="${index}">Vincular equipo</button><button type="button" data-planner-procurement="rent" data-planner-row="${index}">Rentar este equipo</button><button type="button" data-planner-procurement="purchase" data-planner-row="${index}">Comprar este artículo</button></div></article>`);
+        const choices=referenceChoices(bridge.inventory(),'',row.resolution.candidates);
+        rows.push(`<article class="equipment-planner-identity"><div><strong>${esc(row.description)}</strong><small>${esc(row.category)} · Solicitado: ${row.quantity}. Existencias pendientes de identificar.</small>${refs.length?`<small>Celdas: ${esc([...new Set(refs)].join(', '))}</small>`:''}</div><div class="equipment-planner-bind"><div class="equipment-planner-reference"><label>Buscar referencia por nombre o categoría<input type="search" data-planner-reference-search="${index}" autocomplete="off" aria-controls="equipmentPlannerIdentity-${index}" placeholder="Escriba el equipo o la categoría"></label><label>Equipo físico de Contabilidad<select id="equipmentPlannerIdentity-${index}" data-planner-identity="${index}" aria-describedby="equipmentPlannerIdentityCount-${index}">${referenceOptions(choices)}</select></label><small id="equipmentPlannerIdentityCount-${index}" data-planner-reference-count="${index}" role="status" aria-live="polite">${esc(referenceCount(choices))}</small></div><button type="button" data-planner-bind="${index}">Vincular equipo</button><button type="button" data-planner-procurement="rent" data-planner-row="${index}">Rentar este equipo</button><button type="button" data-planner-procurement="purchase" data-planner-row="${index}">Comprar este artículo</button></div></article>`);
       });
       model.classificationPending.forEach(row=>rows.push(`<article><div><strong>${esc(row.item.name)}</strong><small>${esc(row.classification.warnings.map(w=>w.message).join(' '))}</small></div><button type="button" data-planner-classification="${esc(row.item.id)}">Revisar tipo en Contabilidad</button></article>`));
       pending.innerHTML=`<summary>Resolver pendientes (${totalPending})</summary><p>Estas decisiones no se convierten automáticamente en una orden de renta o compra. Se conservan en el reporte provisional.</p>${rows.join('') || '<p>Sin pendientes de identificación, clasificación o datos del evento.</p>'}`;
       pending.querySelectorAll('[data-planner-event]').forEach(button=>button.addEventListener('click',()=>bridge.openEvent(button.dataset.plannerEvent)));
+      pending.querySelectorAll('[data-planner-reference-search]').forEach(input=>input.addEventListener('input',()=>{
+        const index=Number(input.dataset.plannerReferenceSearch),row=model.rows[index];
+        const choices=referenceChoices(bridge.inventory(),input.value,row.resolution.candidates);
+        const select=pending.querySelector(`[data-planner-identity="${index}"]`);
+        select.innerHTML=referenceOptions(choices);select.value='';
+        pending.querySelector(`[data-planner-reference-count="${index}"]`).textContent=referenceCount(choices);
+      }));
       pending.querySelectorAll('[data-planner-bind]').forEach(button=>button.addEventListener('click',()=>{
         const index=Number(button.dataset.plannerBind),id=pending.querySelector(`[data-planner-identity="${index}"]`).value;
         if(!id){status('Seleccione el equipo físico antes de vincular.');return;}
-        const row=model.rows[index],item=bridge.inventory().find(r=>r.id===id)?.item;
+        const row=model.rows[index],matches=bridge.inventory().filter(r=>String(r.id)===id&&!r.archived&&!r.item?.archived),item=matches.length===1?matches[0].item:null;
+        if(!item){status('La referencia ya no está disponible o no es única. Busque de nuevo antes de vincular.');return;}
         if(!item || !window.confirm(`¿Confirmar que «${row.description}» corresponde al equipo físico «${item.name}»? Se vincularán únicamente las líneas de esta categoría en estos cuadros.`))return;
         try { bridge.bindIdentity(copy(row.sources),id);status('Referencia vinculada al borrador. No se cambió el inventario.'); } catch(error) { status(error.message); }
       }));
@@ -147,5 +174,5 @@
     }
     return {init,render,download,model:()=>model};
   }
-  return {analyze,create};
+  return {analyze,create,referenceChoices};
 });

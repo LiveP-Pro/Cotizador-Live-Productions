@@ -14,3 +14,4 @@
 #equipmentPlannerOnlyPending{width:18px;min-width:18px;height:18px;min-height:18px;padding:0;margin:0}
 #equipmentPlannerSearch{width:320px;max-width:100%}
 #equipmentPlannerPending small{overflow-wrap:anywhere}
+.equipment-planner-reference{flex:1 1 280px;min-width:0;max-width:100%}.equipment-planner-reference label{display:block}.equipment-planner-reference label+label{margin-top:8px}#equipmentPlannerPending .equipment-planner-reference input[type=search],#equipmentPlannerPending .equipment-planner-reference select{box-sizing:border-box;width:100%;min-height:42px;padding:8px;border:1px solid #b7c5d2;border-radius:6px;background:#fff}.equipment-planner-bind{flex-wrap:wrap;flex:1 1 60%}.equipment-planner-reference small{max-width:420px}
