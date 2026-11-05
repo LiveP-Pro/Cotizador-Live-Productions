@@ -18,12 +18,18 @@
     <link rel="stylesheet" href="equipment-event-personalizer.css?v=20261020-logistica-01" />
     <link rel="stylesheet" href="equipment-extras-library.css?v=20261020-extras-compactos-01" />
     <link rel="stylesheet" href="equipment-workspace.css?v=20261020-logistica-01" />
-    <script src="equipment-event-personalizer.js?v=20261020-logistica-01" defer></script>
+    <script src="equipment-event-personalizer.js?v=20261104-flujo-01" defer></script>
     <script src="equipment-extras-library.js?v=20261020-logistica-01" defer></script>
     <script src="equipment-workspace.js?v=20261020-logistica-01" defer></script>
-    <script src="equipment.js?v=20261020-logistica-01" defer></script>
+    <link rel="stylesheet" href="equipment-planner.css?v=20261104-flujo-01" />
+    <link rel="stylesheet" href="equipment-batch-events.css?v=20261104-flujo-01" />
+    <script src="equipment-identity.js?v=20261104-flujo-01" defer></script>
+    <script src="equipment-document-audit.js?v=20261104-flujo-01" defer></script>
+    <script src="equipment-planner.js?v=20261104-flujo-01" defer></script>
+    <script src="equipment-batch-events.js?v=20261104-flujo-01" defer></script>
+    <script src="equipment.js?v=20261104-flujo-01" defer></script>
     <script src="warehouse-import-review.js?v=20261017-file-readers-01" defer></script>
-    <script src="inventory.js?v=20261017-file-readers-01" defer></script>
+    <script src="inventory.js?v=20261104-flujo-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -246,13 +252,29 @@
             Arme su evento, revise la disponibilidad y confirme el equipo que bodega debe preparar.
           </p>
           <div class="equipment-workflow-card">
-            <ol aria-label="Pasos para preparar su evento"><li>Armar evento</li><li>Revisar disponibilidad</li><li>Confirmar y generar reportes</li></ol>
+            <ol aria-label="Pasos para preparar su evento"><li>Cargar eventos</li><li>Resolver pendientes</li><li>Descargar o confirmar reservas</li></ol>
             <div class="equipment-workflow-actions">
               <button id="equipmentPersonalizeEventButton" type="button">Personaliza tu Cuadro de Evento</button>
               <button id="equipmentExtrasLibraryButton" type="button">Extras</button>
+              <button id="equipmentBatchImportButton" type="button">Importar varios eventos</button>
             </div>
             <p>Agregue los eventos personalizados que necesite, uno tras otro. El resumen reúne sus equipos y consulta las existencias de Contabilidad de Equipo.</p>
           </div>
+          <section id="equipmentPlannerHub" aria-labelledby="equipmentPlannerTitle">
+            <h2 id="equipmentPlannerTitle">Plan de la semana</h2>
+            <div id="equipmentPlannerOverview" aria-live="polite"></div>
+            <div class="equipment-planner-downloads" aria-label="Descargas provisionales sin reservas">
+              <button type="button" data-planner-download="master">Descargar Excel máster</button>
+              <button type="button" data-planner-download="summary">PDF del resumen</button>
+              <button type="button" data-planner-download="rent">Renta provisional</button>
+              <button type="button" data-planner-download="purchase">Compra provisional</button>
+            </div>
+            <p id="equipmentPlannerStatus" role="status" aria-live="polite"></p>
+            <details id="equipmentPlannerPending"></details>
+            <div class="equipment-planner-search"><label>Buscar en el resumen<input id="equipmentPlannerSearch" type="search" placeholder="Equipo o categoría" /></label><label><input id="equipmentPlannerOnlyPending" type="checkbox" /> Ver sólo faltantes y pendientes</label></div>
+            <div id="equipmentPlannerSummary"></div>
+            <button id="equipmentPlannerConfirmEvent" type="button">Confirmar y reservar el evento seleccionado</button>
+          </section>
           <div class="equipment-agenda-toolbar">
             <label>Desde<input id="equipmentAgendaFrom" type="date" /></label>
             <label>Hasta<input id="equipmentAgendaTo" type="date" /></label>
@@ -320,7 +342,7 @@
           </div>
 
           <div class="equipment-actions">
-            <button id="equipmentSavePdfButton" type="button">Guardar PDF + JSON bodega</button>
+            <button id="equipmentSavePdfButton" type="button">Enviar a bodega y generar salida</button>
             <button id="equipmentOpenEditableButton" type="button">Importar archivo JSON</button>
             <input id="equipmentEditableFileInput" class="is-hidden" type="file" accept=".json,application/json" />
             <span id="equipmentSaveStatus" role="status"></span>

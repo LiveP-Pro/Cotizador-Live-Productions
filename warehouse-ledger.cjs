@@ -1,4 +1,5 @@
 const crypto = require("node:crypto");
+const equipmentIdentity = require("./equipment-identity.js");
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const text = (value) => String(value ?? "").trim();
@@ -170,8 +171,7 @@ function comparableEntity(entity, entityType, ignoreId = false) {
   if (entityType === "item") {
     normalized.category = text(entity.category || "SIN CATEGORIA").toUpperCase();
     normalized.name = text(entity.name || "Equipo sin nombre");
-    normalized.itemType = text(entity.itemType).toLowerCase() === "consumible" || /(?:^|\s)\/?\s*consumible$/i.test(normalized.name)
-      ? "consumible" : "equipo";
+    normalized.itemType = equipmentIdentity.itemType(entity);
     normalized.archived = Boolean(entity.archived);
     normalized.descriptionAliases = [...new Set((entity.descriptionAliases || []).map(text).filter(Boolean))].sort();
     // These are provenance/defaults synthesized while loading an existing row.

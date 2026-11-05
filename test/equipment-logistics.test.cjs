@@ -47,6 +47,7 @@ function createEquipmentContext(loadSyntheticCatalogs = false) {
     RegExp,
     Promise,
     window: {
+      EquipmentIdentity: require("../equipment-identity.js"),
       requerimientoEquipoCatalog: { services: {}, groups: [] },
       requerimientoEquipoInventory: { categories: [] },
       addEventListener() {},
@@ -222,7 +223,8 @@ test("requirement summary uses the consumed warehouse balance and requests purch
       savedAt: "2026-09-28T09:00:00.000Z",
       state: {
         updatedAt: "2026-09-28T09:00:00.000Z",
-        items: [{ id: "humo", name: "Galon liquido de humo / consumible", itemType: "consumible", category: "EFECTOS ESPECIALES", quantity: 3 }],
+        items: [{ id: "humo", name: "Galon liquido de humo / consumible", itemType: "consumible", category: "EFECTOS ESPECIALES", quantity: 3,
+          approvedDescriptionAliases: [{ name: "Galon liquido de humo", approved: true, approvedAt: "2026-11-04T12:00:00.000Z" }] }],
         movements: [{ id: "uso", itemId: "humo", type: "consumo", quantity: 2, dateTime: "2026-09-28T08:00" }]
       }
     });
@@ -460,6 +462,13 @@ test("configured transfer pair is recognized without asking the decision again",
 function createTransferRegressionContext() {
   const context = createEquipmentContext();
   evaluate(context, `
+    applyEquipmentWarehouseInventoryPayload({ state: { items: [
+      { id: "test-keyboard", name: "Teclado de prueba", category: "BACKLINE INSTRUMENTOS / Teclado", itemType: "equipo", quantity: 1 },
+      { id: "test-monitor", name: "Monitor de prueba", category: "Audio", itemType: "equipo", quantity: 4 },
+      { id: "test-kick", name: "Bombo acústico de prueba", category: "BACKLINE INSTRUMENTOS / Teclado", itemType: "equipo", quantity: 0 },
+      { id: "test-drums", name: "Batería eléctrica de prueba", category: "BACKLINE INSTRUMENTOS / Teclado", itemType: "equipo", quantity: 0 },
+      { id: "test-battery", name: "Pila de prueba consumible", category: "Consumibles", itemType: "consumible", quantity: 0 }
+    ], movements: [] } });
     equipmentState.events = [
       { id: "a", active: true, place: "Origen A", name: "Prueba A",
         serviceName: "SUNDAY FUNDAY - BATERIA ACUSTICA OPCION A",
@@ -879,4 +888,3 @@ test("manual empty plan is not recreated and consumables or nonshared equipment 
   assert.match(result.html, />COMPRA<\/td>/);
   assert.equal(result.count, 0);
 });
-

@@ -10,7 +10,7 @@ function createDispatchHarness(items, movements = []) {
     state: { items: structuredClone(items), movements: structuredClone(movements) },
     savedAt: "2026-10-07T00:00:00.000Z"
   };
-  const context = { crypto, Date, Map, Set, console,
+  const context = { crypto, Date, Map, Set, console, EquipmentIdentity: require("../equipment-identity.js"),
     readWarehouseInventory() { return structuredClone(inventory); },
     async writeWarehouseInventory(saved) { inventory = structuredClone(saved); }
   };
@@ -156,4 +156,22 @@ test("a returned dispatch retains its decisions and only updates its file refere
   assert.equal(harness.state().movements[0].quantity, 2);
   assert.equal(harness.state().movements[0].sourceFileName, "updated.pdf");
   assert.equal(harness.available(), 8);
+});
+
+test("physical ID with a different description is rejected atomically instead of dispatching a similar model", async () => {
+  const h = createDispatchHarness(syntheticStock()); const before = h.state();
+  await assert.rejects(h.ingest([syntheticLine("", 1), syntheticLine("", 2, "Otro modelo sintético")]), /Identifique el equipo/);
+  assert.deepEqual(h.state(), before);
+});
+
+test("suspected consumable classification requires review before any stock movement", async () => {
+  const h = createDispatchHarness(syntheticStock("consumible", "Extintor sintético")); const before = h.state();
+  await assert.rejects(h.ingest([syntheticLine("", 1, "Extintor sintético")]), /Revise la clasificación/);
+  assert.deepEqual(h.state(), before);
+});
+
+test("explicit warehouse equipment classification takes precedence over a legacy consumable name suffix", async () => {
+  const name = "Material sintético / consumible";
+  const h = createDispatchHarness(syntheticStock("equipo", name)); await h.ingest([syntheticLine("", 2, name)]);
+  assert.equal(h.state().movements[0].type, "salida"); assert.equal(h.state().movements[0].quantity, 2);
 });

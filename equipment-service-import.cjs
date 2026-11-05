@@ -298,26 +298,27 @@ function buildServices(sourceRows, warnings, blockers, { preserveExcelDescriptio
   return services;
 }
 
-async function readExcel(buffer) {
+async function readExcel(buffer, { preserveCellNotes = false } = {}) {
   const workbook = await loadWorkbook(buffer);
   const sourceCells = [];
   const sourceRows = [];
   const blockers = [];
-  let rowCount = 0;
+  let rowCount = 0, scannedCells = 0;
   for (const sheet of workbook.worksheets) {
     sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
       if (++rowCount > LIMITS.rows) throw invalid("El Excel supera el límite de 10,000 filas.");
       const cells = [];
-      row.eachCell({ includeEmpty: false }, (cell, column) => {
+      row.eachCell({ includeEmpty: preserveCellNotes }, (cell, column) => {
+        if (preserveCellNotes && ++scannedCells > 1000000) throw invalid("El Excel contiene un rango disperso demasiado grande para revisar sus notas. Divida el libro en archivos más pequeños.");
         if (cell.isMerged && cell.master.address !== cell.address) return;
         const value = displayedCell(cell);
-        if ((value === null || value === undefined || value === "") && !cell.value?.formula && !cell.value?.sharedFormula) return;
+        if ((value === null || value === undefined || value === "") && !cell.value?.formula && !cell.value?.sharedFormula && !(preserveCellNotes && cell.note)) return;
         if (sourceCells.length >= LIMITS.cells) throw invalid("El Excel supera el límite de 100,000 celdas con información.");
         const rawValue = clone(cell.value);
         if (rawValue && typeof rawValue === "object" && ("formula" in rawValue || "sharedFormula" in rawValue) && cell.result !== undefined) rawValue.result = clone(cell.result);
         const entry = { ref: `xlsx:${sheet.id}:${cell.address}`, sheet: sheet.name, row: rowNumber, column,
           address: cell.address, value, rawValue, isHeading: cell.isMerged || cell.font?.bold === true,
-          sourceOrder: sourceRows.length };
+          sourceOrder: sourceRows.length, ...(preserveCellNotes && cell.note ? { note: clone(cell.note) } : {}) };
         if ((cell.value?.formula || cell.value?.sharedFormula) && cell.result === undefined) blockers.push(`Hoja «${sheet.name}», celda ${cell.address}: la fórmula no tiene resultado guardado; calcule y guarde el Excel antes de importar.`);
         sourceCells.push(entry);
         cells.push(entry);
@@ -580,22 +581,26 @@ function verifyServiceImport(preview) {
     missingRefs, mismatchedRefs: [...new Set(mismatchedRefs)], duplicateRefs: [...new Set(duplicateRefs)], blockers: [...new Set(blockers)] };
 }
 
-async function parseServiceFile(buffer, { fileName = "servicios", mimeType = "" } = {}) {
+async function readSourceFile(buffer, { fileName = "servicios", mimeType = "", preserveCellNotes = false } = {}) {
   if (!Buffer.isBuffer(buffer) && !(buffer instanceof Uint8Array)) throw invalid("No se recibió un archivo válido.");
   if (!buffer.length) throw invalid("El archivo está vacío.");
   if (buffer.length > LIMITS.fileBytes) throw invalid("El archivo supera el límite de 15 MB.");
   const format = /\.xlsx$/i.test(fileName) ? "xlsx" : /\.pdf$/i.test(fileName) ? "pdf"
     : mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ? "xlsx" : mimeType === "application/pdf" ? "pdf" : "";
   if (!format) throw invalid("Use Excel .xlsx o PDF digital. Los archivos .xls deben guardarse como .xlsx.");
-  const data = format === "xlsx" ? await readExcel(buffer) : await readPdf(buffer);
+  const data = format === "xlsx" ? await readExcel(buffer, { preserveCellNotes }) : await readPdf(buffer);
   if (!data.sourceCells.length) throw invalid("El archivo no contiene celdas o texto con información.");
+  return { ...data, source: { fileName: String(fileName), format, mimeType: String(mimeType),
+    sha256: crypto.createHash("sha256").update(buffer).digest("hex"), byteLength: buffer.length } };
+}
+
+async function parseServiceFile(buffer, options = {}) {
+  const data = await readSourceFile(buffer, options);
   const warnings = [];
-  const services = buildServices(data.sourceRows, warnings, data.blockers, { preserveExcelDescriptions: format === "xlsx" });
-  const preview = { source: { fileName: String(fileName), format, mimeType: String(mimeType),
-    sha256: crypto.createHash("sha256").update(buffer).digest("hex"), byteLength: buffer.length },
-    services, warnings, sourceCells: data.sourceCells, documentLines: data.documentLines, blockers: data.blockers };
+  const services = buildServices(data.sourceRows, warnings, data.blockers, { preserveExcelDescriptions: data.source.format === "xlsx" });
+  const preview = { source: data.source, services, warnings, sourceCells: data.sourceCells, documentLines: data.documentLines, blockers: data.blockers };
   preview.verification = verifyServiceImport(preview);
   return preview;
 }
 
-module.exports = { parseServiceFile, verifyServiceImport };
+module.exports = { parseServiceFile, verifyServiceImport, readSourceFile };

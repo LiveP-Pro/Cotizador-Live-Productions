@@ -6,7 +6,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const { Writable } = require("node:stream");
 const { finished } = require("node:stream/promises");
-const { createEquipmentEventStore, calculateEquipmentAvailability, effectiveEquipmentProcurementChoice, resolveEquipmentPurchasedLine, localTime } = require("../equipment-event-store.cjs");
+const { createEquipmentEventStore, calculateEquipmentAvailability, normalizeEvent, effectiveEquipmentProcurementChoice, resolveEquipmentPurchasedLine, localTime } = require("../equipment-event-store.cjs");
 
 const current = Date.parse("2026-01-01T00:00:00Z");
 function stock(amount = 3, itemType = "equipo", movements = []) {
@@ -535,6 +535,7 @@ test("event and extras APIs require authentication and expose consistent persist
   const start = source.indexOf("async function handleRequest("); const end = source.indexOf("\n}\n", start) + 2;
   const inventory = stock();
   const context = vm.createContext({ URL, Number, console, equipmentEventStore: store, calculateEquipmentAvailability,
+    normalizeEvent, effectiveEquipmentProcurementChoice, resolveEquipmentPurchasedLine, EquipmentIdentity: require("../equipment-identity.js"),
     readWarehouseInventory: () => structuredClone(inventory), readJsonBody: async (request) => request.payload,
     authenticatedUser: (request) => request.user, enqueueSave: (operation) => Promise.resolve().then(operation),
     requireAuth(request, response) { if (request.user) return true; this.errorResponse(response, 401, "Inicie sesión"); return false; },
@@ -543,6 +544,9 @@ test("event and extras APIs require authentication and expose consistent persist
   });
   // Use an explicit closure rather than VM global `this` for the auth helper.
   context.requireAuth = (request, response) => { if (request.user) return true; context.errorResponse(response, 401, "Inicie sesión"); return false; };
+  const confirmationStart = source.indexOf("function validateEquipmentEventConfirmation(");
+  const confirmationEnd = source.indexOf("\n}\n", confirmationStart) + 2;
+  vm.runInContext(source.slice(confirmationStart, confirmationEnd), context);
   vm.runInContext(source.slice(start, end), context);
   class Response extends Writable {
     constructor() { super(); this.chunks = []; }

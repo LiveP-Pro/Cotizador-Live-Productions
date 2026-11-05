@@ -7,7 +7,7 @@ const { createHarness: serverHarness, inventory } = require('./helpers/equipment
 const storeApi = require('../equipment-event-store.cjs');
 const source = fs.readFileSync(path.join(__dirname,'equipment-personalization-integration.test.cjs'),'utf8');
 const fixture = source.slice(source.indexOf('function harness() {'), source.indexOf('\nconst plain ='));
-const uiHarness = new Function('fs','path','vm','__dirname',fixture+';return harness;')(fs,path,vm,__dirname);
+const uiHarness = new Function('fs','path','vm','__dirname','require',fixture+';return harness;')(fs,path,vm,__dirname,require);
 function ui(plan = {}) {
   const h = uiHarness();
   h.nodes.set('#equipmentSharedRecommendations',new h.Element('equipmentSharedRecommendations'));

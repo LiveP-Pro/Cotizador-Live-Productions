@@ -173,10 +173,15 @@ test("document edits, zeros, deletion and extras remain isolated when switching 
 test("document JSON roundtrip does not duplicate manual extras or leak one event into another", () => {
   const context = createContext();
   evaluate(context, "importEquipmentEditablePayload(testPayload)");
-  const result = plain(evaluate(context, `(() => {
+  const serialized = plain(evaluate(context, `(() => {
     appendEquipmentExtraItems([{ description: "Extra documental A", quantity: 1, procurementChoice: "rent" }]);
-    const serialized = JSON.parse(JSON.stringify(equipmentEditablePayload("rent", { fileName: "sintetico.pdf" })));
-    importEquipmentEditablePayload(serialized);
+    return JSON.parse(JSON.stringify(equipmentEditablePayload("rent", { fileName: "sintetico.pdf" })));
+  })()`));
+  // A roundtrip opens the exported document in a fresh workspace. Replacing
+  // the original dirty workspace is separately guarded against data loss.
+  const reopened = createContext(); reopened.roundtripPayload = serialized;
+  evaluate(reopened, "importEquipmentEditablePayload(roundtripPayload)");
+  const result = plain(evaluate(reopened, `(() => {
     return equipmentState.events.map((event) => {
       loadEquipmentEvent(event.id);
       return {

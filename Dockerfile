@@ -20,6 +20,7 @@ COPY warehouse-xlsx-normalize.cjs ./
 COPY equipment-service-import.cjs equipment-service-import.js equipment-service-import.css ./
 COPY equipment-event-store.cjs equipment-event-personalizer.js equipment-event-personalizer.css equipment-extras-library.js equipment-extras-library.css equipment-workspace.js equipment-workspace.css ./
 COPY equipment-name-picker.js equipment-name-picker.css ./
+COPY equipment-identity.js equipment-document-audit.js equipment-planner.js equipment-planner.css equipment-batch-events.js equipment-batch-events.css equipment-event-import.cjs equipment-reporting.cjs ./
 COPY assets ./assets
 COPY luxury/package.json luxury/server.js ./luxury/
 COPY luxury/lib ./luxury/lib

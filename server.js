@@ -10,7 +10,10 @@ const { DatabaseSync } = require("node:sqlite");
 const { parseInventoryFile } = require("./warehouse-import.cjs");
 const { parseServiceFile, verifyServiceImport } = require("./equipment-service-import.cjs");
 const { applyStockIngress, prepareWarehouseSave, nextWarehouseTimestamp } = require("./warehouse-ledger.cjs");
-const { createEquipmentEventStore, calculateEquipmentAvailability } = require("./equipment-event-store.cjs");
+const { createEquipmentEventStore, calculateEquipmentAvailability, normalizeEvent, effectiveEquipmentProcurementChoice, resolveEquipmentPurchasedLine } = require("./equipment-event-store.cjs");
+const EquipmentIdentity = require("./equipment-identity.js");
+const { createEquipmentReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml } = require("./equipment-reporting.cjs");
+const { parseEventFile } = require("./equipment-event-import.cjs");
 
 const rootDir = __dirname;
 const port = Number.parseInt(process.env.PORT || "8787", 10);
@@ -51,7 +54,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261020-logistica-01";
+const warehouseAssetVersion = "20261104-flujo-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -663,6 +666,95 @@ async function previewEquipmentServiceFile(request, response) {
   } catch (error) {
     errorResponse(response, 400, error.message || "No se pudo leer el archivo de servicios.");
   } finally { activeWarehouseImports -= 1; }
+}
+
+async function previewEquipmentEventFile(request, response) {
+  if (activeWarehouseImports >= 2) {
+    errorResponse(response, 429, "Ya se están leyendo otros archivos. Intente de nuevo en unos segundos.");
+    return;
+  }
+  activeWarehouseImports += 1;
+  try {
+    let fileName, selectedSheets;
+    try {
+      fileName = decodeURIComponent(String(request.headers["x-file-name"] || ""));
+      selectedSheets = request.headers["x-event-sheets"] ? JSON.parse(decodeURIComponent(request.headers["x-event-sheets"])) : undefined;
+    } catch { throw Object.assign(new Error("El nombre del archivo o las hojas seleccionadas no son válidos."), { statusCode: 400 }); }
+    if (!/\.(xlsx|pdf)$/i.test(fileName) || fileName.length > 250) throw Object.assign(new Error("Seleccione un archivo Excel .xlsx o PDF con texto."), { statusCode: 400 });
+    if (Number(request.headers["content-length"] || 0) > maxWarehouseImportBytes) {
+      errorResponse(response, 413, "El archivo supera el límite de 15 MB."); return;
+    }
+    const chunks = []; let size = 0;
+    for await (const chunk of request) {
+      size += chunk.length;
+      if (size > maxWarehouseImportBytes) { errorResponse(response, 413, "El archivo supera el límite de 15 MB."); return; }
+      chunks.push(chunk);
+    }
+    if (!size) throw Object.assign(new Error("El archivo está vacío."), { statusCode: 400 });
+    const preview = await parseEventFile(Buffer.concat(chunks), { fileName,
+      mimeType: String(request.headers["content-type"] || "").split(";")[0], selectedSheets });
+    jsonResponse(response, 200, { ...preview, preview: true, productionMutations: 0 });
+  } catch (error) {
+    errorResponse(response, error.statusCode || 400, error.message || "No se pudo leer el archivo de eventos.");
+  } finally { activeWarehouseImports -= 1; }
+}
+
+async function downloadProvisionalEquipmentReport(payload, response) {
+  const mode = String(payload?.mode || "master");
+  if (!["master", "summary", "rent", "purchase"].includes(mode)) {
+    errorResponse(response, 400, "Seleccione resumen, renta, compra o Excel máster."); return;
+  }
+  // The browser submits current drafts only. Quantities, classifications and
+  // stock movements ALWAYS come from the active server warehouse snapshot.
+  const model = createEquipmentReportModel(payload, readWarehouseInventory());
+  const localDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guatemala", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(model.createdAt));
+  const period = [model.from, model.to].filter(Boolean).join("_a_") || localDate;
+  const labels = { master: "Resumen-master", summary: "Resumen-equipo", rent: "Resumen-renta", purchase: "Resumen-compra" };
+  const fileName = `${labels[mode]}-PROVISIONAL-${period}.${mode === "master" ? "xlsx" : "pdf"}`;
+  let buffer;
+  if (mode === "master") buffer = Buffer.from(await (await createEquipmentMasterWorkbook(model)).xlsx.writeBuffer());
+  else {
+    // Ephemeral printing has no event-store save, warehouse dispatch, receipt,
+    // sidecar JSON or permanent generated-report path.
+    const tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), "equipo-reporte-provisional-"));
+    try {
+      const target = path.join(tempDir, "reporte.pdf");
+      await generatePdf(renderEquipmentReportHtml(model, mode), target, {
+        documentSelector: ".equipment-pdf-document", pageSelector: ".equipment-pdf-document",
+        missingMessage: "No se encontró el contenido del reporte provisional.", htmlFileName: "reporte-provisional.html",
+        paperWidth: 11, paperHeight: 8.5
+      });
+      buffer = await fsp.readFile(target);
+    } finally { await fsp.rm(tempDir, { recursive: true, force: true }).catch(() => {}); }
+  }
+  response.writeHead(200, {
+    "Content-Type": mode === "master" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/pdf",
+    "Content-Disposition": `attachment; filename="${fileName}"`, "Content-Length": buffer.length,
+    "Cache-Control": "no-store", "X-Equipment-Report-Status": "provisional",
+    "X-Equipment-Report-Events": String(model.counts.events), "X-Equipment-Report-Rows": String(model.counts.equipmentRows),
+    "X-Equipment-Report-Pending": String(model.pending.length)
+  });
+  response.end(buffer);
+}
+
+function validateEquipmentEventConfirmation(id, payload, inventory) {
+  const event = normalizeEvent(id, payload?.event);
+  const state = inventory?.state || inventory || {};
+  const activeItems = (state.items || []).filter(item => item && !item.archived);
+  for (const section of event.sections) for (const raw of section.items) {
+    const line = Array.isArray(raw) ? { quantity: raw[0], description: raw[1] } : raw;
+    if (Number(line.quantity) === 0) continue;
+    const purchased = resolveEquipmentPurchasedLine(event, line, inventory);
+    const choice = effectiveEquipmentProcurementChoice(purchased, inventory);
+    if (["rent", "purchase"].includes(choice)) continue;
+    if (choice === "save") throw Object.assign(new Error(`Registre el ingreso real de «${line.description}» en Contabilidad, o elija rentar o comprar antes de confirmar la reserva. Puede descargar el provisional sin guardar.`), { statusCode: 422 });
+    const identity = purchased !== line
+      ? { item: activeItems.find(item => String(item.id) === String(purchased.warehouseInventoryId)) }
+      : EquipmentIdentity.resolve(line, activeItems);
+    if (!identity.item || line.inventoryMatchUnresolved === true) throw Object.assign(new Error(`Identifique el equipo «${line.description}», o elija rentar o comprar antes de confirmar. Puede descargar el provisional sin guardar. No se registró ninguna reserva.`), { statusCode: 422 });
+    if (EquipmentIdentity.classification(identity.item).pending) throw Object.assign(new Error(`Revise y confirme la clasificación de «${identity.item.name}» en Contabilidad de Equipo antes de reservar. Puede descargar el provisional sin guardar. No se registró ninguna reserva.`), { statusCode: 422 });
+  }
+  return event;
 }
 
 async function saveImportedEquipmentServices(payload, request, response) {
@@ -3377,8 +3469,7 @@ function warehouseDispatchLookupKeys(value) {
 }
 
 function warehouseDispatchItemIsConsumable(item) {
-  return String(item?.itemType || "").trim().toLowerCase() === "consumible"
-    || warehouseDispatchHasConsumableMarker(item?.name);
+  return EquipmentIdentity.itemType(item) === "consumible";
 }
 
 function warehouseDispatchQuantity(value) {
@@ -3400,7 +3491,7 @@ function warehouseAvailableForDispatch(state, itemId) {
   if (!item || item.archived) return 0;
   const buckets = { out: 0, consumed: 0, workshop: 0, rented: 0, lost: 0 };
   const changes = { salida: ["out", 1], ingreso_evento: ["out", -1], consumo: ["consumed", 1],
-    taller: ["workshop", 1], devolucion_taller: ["workshop", -1], renta: ["rented", 1],
+    taller: ["workshop", 1], danado: ["workshop", 1], devolucion_taller: ["workshop", -1], renta: ["rented", 1],
     devolucion_renta: ["rented", -1], perdido: ["lost", 1], recuperado: ["lost", -1] };
   (state.movements || []).forEach((movement) => {
     if (String(movement?.itemId || "") !== String(item.id || "")) return;
@@ -3422,6 +3513,20 @@ function warehouseDispatchDateTime(dispatch, savedAt) {
   const eventDate = String(dispatch?.eventDate || "").trim();
   if (eventDate) return `${eventDate}T00:00`;
   return String(savedAt || new Date().toISOString()).slice(0, 16);
+}
+
+function validateWarehouseDispatchIdentities(dispatch, state) {
+  const activeItems = (state.items || []).filter((item) => item && !item.archived);
+  for (const line of Array.isArray(dispatch?.items) ? dispatch.items : []) {
+    if (!warehouseDispatchQuantity(line?.quantity) || warehouseDispatchProcurementChoice(line?.procurementChoice)) continue;
+    const identity = EquipmentIdentity.resolve(line, activeItems);
+    if (["ambiguous", "stale_id", "identity_conflict"].includes(identity.status) || line?.inventoryMatchUnresolved === true) {
+      throw Object.assign(new Error(`Identifique el equipo «${String(line?.description || "")}» antes de registrar la salida. No se modificó el inventario.`), { statusCode: 422 });
+    }
+    if (identity.item && EquipmentIdentity.classification(identity.item).pending) {
+      throw Object.assign(new Error(`Revise la clasificación de «${identity.item.name}» en Contabilidad de Equipo antes de registrar la salida. No se modificó el inventario.`), { statusCode: 422 });
+    }
+  }
 }
 
 async function receiveEquipmentBoardInWarehouse(editableData, fileData, request) {
@@ -3489,15 +3594,7 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData, request)
   }
 
   const activeItems = (state.items || []).filter((item) => item && !item.archived);
-  const itemsById = new Map(activeItems.map((item) => [String(item.id || ""), item]));
-  const itemsByName = new Map();
-  activeItems.forEach((item) => {
-    const descriptions = [item.name, item.sourceKey, ...(Array.isArray(item.descriptionAliases) ? item.descriptionAliases : [])];
-    [...new Set(descriptions.flatMap(warehouseDispatchLookupKeys))].forEach((key) => {
-      if (!itemsByName.has(key)) itemsByName.set(key, []);
-      itemsByName.get(key).push(item);
-    });
-  });
+  validateWarehouseDispatchIdentities(dispatch, state);
 
   const eventName = String(dispatch.name || "Evento por definir").trim() || "Evento por definir";
   const eventPlace = String(dispatch.place || "Lugar por definir").trim() || "Lugar por definir";
@@ -3571,25 +3668,10 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData, request)
       if (procurementChoice === "purchase") purchaseQuantity += remaining;
       return;
     }
-    const boundId = String(line?.warehouseInventoryId || "").trim();
-    const requestedIds = boundId ? [boundId] : Array.isArray(line?.warehouseItemIds) ? line.warehouseItemIds.map(String) : [];
-    const requestedItems = requestedIds.map((id) => itemsById.get(id)).filter(Boolean);
-    const descriptionKeys = warehouseDispatchLookupKeys(description);
-    const fallbackItems = descriptionKeys
-      .flatMap((key) => itemsByName.get(key) || []);
-    const category = warehouseDispatchLookupKey(line?.category);
-    let candidates = line?.inventoryMatchUnresolved === true ? []
-      : [...new Map((requestedIds.length ? requestedItems : fallbackItems).map((item) => [String(item.id), item])).values()];
-    const sameCategory = candidates.filter((item) => warehouseDispatchLookupKey(item.category) === category);
-    if (sameCategory.length) candidates = sameCategory;
-    const matchesDescription = (name) => warehouseDispatchLookupKeys(name).some((key) => descriptionKeys.includes(key));
-    const matchRank = (item) => matchesDescription(item.name) ? 0 : matchesDescription(item.sourceKey) ? 1
-      : (Array.isArray(item.descriptionAliases) ? item.descriptionAliases : []).some(matchesDescription) ? 2 : 3;
-    const bestRank = Math.min(...candidates.map(matchRank));
-    candidates = candidates.filter((item) => matchRank(item) === bestRank);
-    const consumable = line?.consumable === true
-      || warehouseDispatchHasConsumableMarker(description)
-      || candidates.some(warehouseDispatchItemIsConsumable);
+    const identity = EquipmentIdentity.resolve(line, activeItems);
+    const candidates = identity.item ? [identity.item] : [];
+    const consumable = identity.item ? warehouseDispatchItemIsConsumable(identity.item)
+      : line?.itemType === "consumible" || line?.consumable === true || warehouseDispatchHasConsumableMarker(description);
 
     candidates.forEach((item) => {
       if (remaining <= 0) return;
@@ -3666,6 +3748,9 @@ async function saveEquipmentBoard(payload, request, response) {
     errorResponse(response, 400, "No se recibió el cuadro de equipo para guardar.");
     return;
   }
+
+  const pendingDispatch = payload?.pdfOnly !== true && payload?.editableData?.mode === "full" ? payload.editableData.warehouseDispatch : null;
+  if (pendingDispatch?.id) validateWarehouseDispatchIdentities(pendingDispatch, readWarehouseInventory().state);
 
   const requestedName = cleanFileName(payload?.fileName || "Cuadro-Equipo-Live-Productions.pdf");
   const { fileName, target } = uniqueEquipmentPdfTarget(requestedName);
@@ -3768,14 +3853,14 @@ function serveStatic(request, response, pathname) {
           data
             .toString("utf8")
             .replace(
-              /(equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:event-personalizer|extras-library|workspace|service-import)\.(?:js|css)|equipment\.js|inventory\.js)\?v=[^"'&<>\s]+/g,
+              /(equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import)\.(?:js|css)|equipment\.js|inventory\.js)\?v=[^"'&<>\s]+/g,
               `$1?v=${warehouseAssetVersion}`
             ),
           "utf8"
         )
       : data;
     const headers = { "Content-Type": contentType };
-    if (requestedPath === "/index.html" || ["equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
+    if (requestedPath === "/index.html" || ["equipment-identity.js", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
       (asset) => requestedPath === `/${asset}`
     )) {
       headers["Cache-Control"] = "no-store";
@@ -3997,9 +4082,15 @@ async function handleRequest(request, response) {
     if (["PUT", "DELETE"].includes(request.method) && equipmentEventMatch) {
       if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
-      await enqueueSave(() => jsonResponse(response, 200, request.method === "PUT"
-        ? equipmentEventStore.putEvent(equipmentEventMatch[1], payload, authenticatedUser(request), readWarehouseInventory())
-        : equipmentEventStore.cancelEvent(equipmentEventMatch[1], payload, authenticatedUser(request))));
+      await enqueueSave(() => {
+        let result;
+        if (request.method === "PUT") {
+          const inventory = readWarehouseInventory();
+          validateEquipmentEventConfirmation(equipmentEventMatch[1], payload, inventory);
+          result = equipmentEventStore.putEvent(equipmentEventMatch[1], payload, authenticatedUser(request), inventory);
+        } else result = equipmentEventStore.cancelEvent(equipmentEventMatch[1], payload, authenticatedUser(request));
+        jsonResponse(response, 200, result);
+      });
       return;
     }
 
@@ -4063,6 +4154,21 @@ async function handleRequest(request, response) {
     if (request.method === "POST" && url.pathname === "/api/cuadros-equipo/importar-archivo") {
       if (!requireAuth(request, response)) return;
       await previewEquipmentServiceFile(request, response);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/requerimientos-equipo/importar-eventos") {
+      if (!requireAuth(request, response)) return;
+      await previewEquipmentEventFile(request, response);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cuadros-equipo/reportes/provisional") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      // Share the existing print queue so concurrent downloads cannot replace
+      // the reusable Chromium document while another PDF is printing.
+      await enqueueSave(() => downloadProvisionalEquipmentReport(payload, response));
       return;
     }
 

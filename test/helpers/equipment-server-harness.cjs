@@ -7,6 +7,8 @@ const { Writable } = require("node:stream");
 const { finished } = require("node:stream/promises");
 const ledger = require("../../warehouse-ledger.cjs");
 const serviceReader = require("../../equipment-service-import.cjs");
+const EquipmentIdentity = require("../../equipment-identity.js");
+const equipmentEvents = require("../../equipment-event-store.cjs");
 
 const source = fs.readFileSync(path.join(__dirname, "..", "..", "server.js"), "utf8");
 const names = [
@@ -21,7 +23,7 @@ const names = [
   "saveEquipmentCatalogOverride", "equipmentImportSlug", "currentEquipmentBaseCatalog", "currentEquipmentImportCatalog",
   "equipmentImportBookKey", "equipmentImportBookServices", "equipmentImportOwner", "pruneEquipmentImportPreviews",
   "previewEquipmentServiceFile", "saveImportedEquipmentServices", "downloadEquipmentServiceSource",
-  "jsonResponse", "errorResponse", "requireAuth", "enqueueSave", "handleRequest"
+  "validateEquipmentEventConfirmation", "jsonResponse", "errorResponse", "requireAuth", "enqueueSave", "handleRequest"
 ];
 function functionSource(name) {
   const start = source.search(new RegExp(`^(?:async )?function ${name}\\(`, "m"));
@@ -60,7 +62,7 @@ function createHarness(t) {
   const context = vm.createContext({
     fs, fsp: fs.promises, path, crypto, Buffer, URL, Date: Clock,
     process: { pid: process.pid }, console: { warn() {}, log() {} },
-    rootDir: dir, dataDir: dir, ...paths, ...ledger, ...serviceReader,
+    rootDir: dir, dataDir: dir, ...paths, ...ledger, ...serviceReader, ...equipmentEvents, EquipmentIdentity,
     equipmentServiceImportPreviews: new Map(), activeWarehouseImports: 0,
     maxWarehouseImportBytes: 15 * 1024 * 1024, maxServicePreviewBytes: 64 * 1024 * 1024,
     saveQueue: Promise.resolve(),

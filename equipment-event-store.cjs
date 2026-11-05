@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const equipmentIdentity = require("./equipment-identity.js");
 
 function invalid(message, statusCode = 400) { return Object.assign(new Error(message), { statusCode }); }
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
@@ -107,16 +108,19 @@ function resolveEquipmentPurchasedLine(event, line, inventory) {
   if (matches.length !== 1) return line;
   const item = matches[0];
   return { ...line, warehouseInventoryId: String(item.id), procurementChoice: "", procurementPreference: "purchase", inventoryCategory: item.category || line.inventoryCategory || line.category,
-    itemType: item.itemType === "consumible" || /(?:^|\s)\/?\s*consumible$/i.test(item.name || "") ? "consumible" : "equipo" };
+    itemType: equipmentIdentity.itemType(item) };
 }
 
 function eventItemQuantity(event, id, inventory) {
   const items = (inventory?.state || inventory || {}).items || [];
-  return lineObjects(event).map((line) => resolveEquipmentPurchasedLine(event, line, inventory)).filter((line) => {
+  return lineObjects(event).filter((rawLine) => {
+    const line = resolveEquipmentPurchasedLine(event, rawLine, inventory);
     if (effectiveEquipmentProcurementChoice(line, inventory)) return false;
-    if (line.warehouseInventoryId) return String(line.warehouseInventoryId) === id;
-    const matches = items.filter((item) => !item.archived && [item.name, item.sourceKey, ...(Array.isArray(item.descriptionAliases) ? item.descriptionAliases : [])].some((name) => key(name) === key(line.description)));
-    return matches.length === 1 && String(matches[0].id) === id;
+    // A received purchase link is server-side evidence, independent of a
+    // renamed description. Unconfirmed legacy IDs must pass normal identity.
+    const resolved = line !== rawLine ? items.find((item) => !item.archived && String(item.id) === String(line.warehouseInventoryId))
+      : equipmentIdentity.resolve(line, items).item;
+    return resolved && String(resolved.id) === id;
   }).reduce((sum, line) => sum + line.quantity, 0);
 }
 
@@ -389,7 +393,8 @@ function validateTransfer(transfer, events, inventory, others = []) {
   for (const line of transfer.items) {
     const id = line.warehouseInventoryId;
     const item = items.find((entry) => String(entry.id) === id && !entry.archived);
-    if (!item || item.itemType === "consumible" || /(?:^|\s)\/?\s*consumible$/i.test(item.name || "")) throw invalid("El trasiego requiere un equipo vigente no consumible del inventario.");
+    if (!item || equipmentIdentity.itemType(item) === "consumible") throw invalid("El trasiego requiere un equipo vigente no consumible del inventario.");
+    if (equipmentIdentity.classification(item).pending) throw invalid("Revise y confirme la clasificación del equipo en Contabilidad antes de confirmar el trasiego.");
     const sourceQuantity = eventItemQuantity(from, id, inventory);
     const destinationQuantity = eventItemQuantity(to, id, inventory);
     let outgoing = line.quantity; let incoming = line.quantity;
@@ -577,13 +582,7 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
   options.planningFrom = from; options.planningTo = to;
   const activeEvents = (events || []).filter((event) => event.status !== "cancelled");
   const inventoryById = new Map((state.items || []).filter((item) => item && !item.archived).map((item) => [String(item.id), item]));
-  const nameIndex = new Map();
-  for (const item of inventoryById.values()) {
-    for (const name of new Set([item.name, item.sourceKey, ...(Array.isArray(item.descriptionAliases) ? item.descriptionAliases : [])].map(key).filter(Boolean))) {
-      if (!nameIndex.has(name)) nameIndex.set(name, []);
-      nameIndex.get(name).push(item);
-    }
-  }
+  const currentInventoryItems = [...inventoryById.values()];
   const movements = state.movements || [];
   const stock = new Map();
   for (const item of inventoryById.values()) {
@@ -661,16 +660,23 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
     for (const rawLine of lineObjects(event)) {
       const line = resolveEquipmentPurchasedLine(event, rawLine, inventory);
       const explicit = effectiveEquipmentProcurementChoice(line, inventory);
-      const byName = nameIndex.get(key(line.description)) || [];
-      const item = !explicit && (line.warehouseInventoryId ? inventoryById.get(String(line.warehouseInventoryId)) : byName.length === 1 ? byName[0] : null);
+      const identity = line !== rawLine ? { status: "purchase_receipt", item: inventoryById.get(String(line.warehouseInventoryId)), candidates: [] }
+        : equipmentIdentity.resolve(line, currentInventoryItems);
+      const item = !explicit && identity.item;
       const id = item ? String(item.id) : "";
-      const consumable = item ? item.itemType === "consumible" || /(?:^|\s)\/?\s*consumible$/i.test(item.name || "") : line.itemType === "consumible" || line.consumable === true;
+      const classification = item ? equipmentIdentity.classification(item) : null;
+      const consumable = item ? classification.itemType === "consumible" : line.itemType === "consumible" || line.consumable === true;
       const rowKey = id || `external:${explicit || "pending"}:${consumable ? "consumible" : "equipo"}:${key(line.category)}:${key(line.description)}`;
       if (!rows.has(rowKey)) rows.set(rowKey, { id: rowKey, warehouseInventoryId: id, description: item?.name || line.description, category: item?.category || line.category,
         itemType: consumable ? "consumible" : "equipo", available: id ? stock.get(id).available : 0,
         required: 0, quantity: 0, missing: 0, action: "DISPONIBLE", external: !id, procurementChoice: explicit,
-        pendingIdentification: !id && !explicit, eventQuantities: {}, events: [], reservations: [], transfers: [], intervals: [] });
+        pendingIdentification: !id && !explicit, identityStatus: explicit ? "external_choice" : identity.status,
+        identityIssues: [], pendingClassification: Boolean(classification?.pending), classificationWarnings: classification?.warnings || [],
+        procurementBlocked: Boolean(classification?.pending || !id && !explicit),
+        eventQuantities: {}, events: [], reservations: [], transfers: [], intervals: [] });
       const row = rows.get(rowKey);
+      if (!id && !explicit) row.identityIssues.push({ eventId: event.id, lineId: line.id || "", description: line.description,
+        status: identity.status, candidates: (identity.candidates || []).map((entry) => ({ id: String(entry.id), name: entry.name, category: entry.category || "" })) });
       if (line.procurementPreference === "purchase" && explicit !== "rent" && explicit !== "save") row.preferredPurchase = true;
       if (!eventLines.has(rowKey)) eventLines.set(rowKey, { row, quantity: 0, id, consumable });
       eventLines.get(rowKey).quantity += line.quantity;
@@ -754,8 +760,19 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
     }
     row.missing = Math.max(0, row.required - capacity);
     row.planning = buildEquipmentLogisticsPlan(row, globalReservations.get(row.id) || [], confirmedTransfers, options, routePairs);
+    if (row.procurementBlocked) {
+      // Preserve demand and diagnostics, but never turn an unresolved physical
+      // identity or a suspected classification into a purchase/rental order.
+      row.planning.pendingPotential = { rental: row.planning.rentalPotential, purchase: row.planning.purchasePotential };
+      row.planning.rentalPotential = 0; row.planning.purchasePotential = 0;
+      row.planning.procurementBlocked = true; row.planning.optimal = false;
+      row.planning.warnings = [...new Set([...row.planning.warnings,
+        ...(row.pendingIdentification ? ["Identifique el equipo físico antes de calcular una renta o compra; una identidad pendiente no equivale a existencia cero."] : []),
+        ...row.classificationWarnings.map((warning) => warning.message)])];
+      row.planning.routes = []; row.planning.rentalRoutes = []; row.planning.allocations = [];
+    }
     row.transfers = row.planning.routes;
-    row.action = row.procurementChoice === "save" ? "PENDIENTE" : row.missing > 0 ? row.itemType === "consumible" || row.procurementChoice === "purchase" || row.preferredPurchase ? "COMPRA" : "RENTA" : row.pendingLogistics ? "PENDIENTE" : row.confirmedTransfers?.length ? "TRASIEGO" : "DISPONIBLE";
+    row.action = row.pendingClassification ? "REVISAR" : row.procurementChoice === "save" || row.pendingIdentification ? "PENDIENTE" : row.missing > 0 ? row.itemType === "consumible" || row.procurementChoice === "purchase" || row.preferredPurchase ? "COMPRA" : "RENTA" : row.pendingLogistics ? "PENDIENTE" : row.confirmedTransfers?.length ? "TRASIEGO" : "DISPONIBLE";
     delete row.intervals;
   }
   const visibleRows = [...rows.values()].filter((row) => row.events.length);

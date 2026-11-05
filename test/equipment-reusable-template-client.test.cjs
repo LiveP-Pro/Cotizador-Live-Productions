@@ -10,7 +10,7 @@ const personalizer = require('../equipment-event-personalizer.js');
 // Reuse the UI fixture definition without registering or executing its tests.
 const fixtureSource = fs.readFileSync(path.join(__dirname, 'equipment-personalization-integration.test.cjs'), 'utf8');
 const fixtureDefinition = fixtureSource.slice(fixtureSource.indexOf('function harness() {'), fixtureSource.indexOf('\nconst plain ='));
-const createUiHarness = new Function('fs', 'path', 'vm', '__dirname', fixtureDefinition + '; return harness;')(fs, path, vm, __dirname);
+const createUiHarness = new Function('fs', 'path', 'vm', '__dirname', 'require', fixtureDefinition + '; return harness;')(fs, path, vm, __dirname, require);
 const clone = value => JSON.parse(JSON.stringify(value));
 const stock = { savedAt: '2026-10-20T12:00:00.000Z', state: { datasetId: 'synthetic-reuse-client', movements: [], items: [
   { id: 'physical-a', name: 'Consola homónima sintética', category: 'Audio', quantity: 3, itemType: 'equipo' },

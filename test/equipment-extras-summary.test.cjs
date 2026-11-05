@@ -10,6 +10,7 @@ function context() {
     console, URL, Blob, Map, Set, Date, Math, JSON, Number, String, Object, Array, RegExp, Promise,
     setTimeout() {}, setInterval() {}, clearInterval() {}, fetch: async () => ({ ok: false }),
     window: {
+      EquipmentIdentity: require("../equipment-identity.js"),
       requerimientoEquipoCatalog: { services: {}, groups: [] },
       requerimientoEquipoInventory: { categories: [] },
       location: { protocol: "file:", hash: "#requerimiento-equipo" },
@@ -57,7 +58,7 @@ test("explicit IDs keep homonymous equipment in Audio and Luces separate without
       { id: "luces-1", name: "Unidad homonima", sourceKey: "unidad homonima", category: "Luces", quantity: 30 }
     ], movements: [] } });
     equipmentState.events = [{ id: "evento", active: true, sections: [
-      { title: "Audio", items: [[3, "Unidad homonima"]] },
+      { title: "Audio", items: [{ quantity: 3, description: "Unidad homonima", warehouseInventoryId: "audio-1" }] },
       { title: "Extras / Ceremonia", manualSection: true, items: [
         { id: "extra-a", quantity: 2, description: "Unidad homonima", warehouseInventoryId: "audio-1", inventoryCategory: "Audio" },
         { id: "extra-b", quantity: 4, description: "Unidad homonima", warehouseInventoryId: "luces-1", inventoryCategory: "Luces" }
@@ -82,8 +83,8 @@ test("ambiguous unselected homonyms remain unresolved rather than silently consu
       { id: "luces-1", name: "Unidad homonima", category: "Luces", quantity: 10 }
     ], movements: [] } });
     equipmentState.events = [{ id: "evento", active: true, sections: [
-      { title: "Audio", items: [[3, "Unidad homonima"]] },
-      { title: "Luces", items: [[4, "Unidad homonima"]] },
+      { title: "Audio", items: [{ quantity: 3, description: "Unidad homonima", warehouseInventoryId: "audio-1" }] },
+      { title: "Luces", items: [{ quantity: 4, description: "Unidad homonima", warehouseInventoryId: "luces-1" }] },
       { title: "Extras", manualSection: true, items: [{ id: "ambiguo", quantity: 2, description: "Unidad homonima" }] }
     ] }];
     return { rows: equipmentRowsSummary().filter(row => row.type === "item").map(row => ({ id: row.inventorySourceItem?.warehouseInventoryId || null, quantity: row.quantity })), dispatch: equipmentWarehouseDispatchItems(equipmentState.events[0]) };
@@ -95,7 +96,8 @@ test("ambiguous unselected homonyms remain unresolved rather than silently consu
 
 test("custom Extras title survives live display while ID resolves the current equipment name", () => {
   const result = run(context(), `(() => {
-    applyEquipmentWarehouseInventoryPayload({ state: { items: [{ id: "audio-1", name: "Unidad vigente", sourceKey: "unidad original", category: "Audio", quantity: 4 }], movements: [] } });
+    applyEquipmentWarehouseInventoryPayload({ state: { items: [{ id: "audio-1", name: "Unidad vigente", sourceKey: "unidad original", category: "Audio", quantity: 4,
+      approvedDescriptionAliases: [{ name: "Unidad original", approved: true, approvedAt: "2026-11-04T12:00:00.000Z" }] }], movements: [] } });
     const sections = [{ id: "extras", title: "Ceremonia personalizada", manualSection: true, inventoryCategory: "Audio", items: [{ id: "extra", quantity: 0, description: "Unidad original", warehouseInventoryId: "audio-1", inventoryCategory: "Audio" }] }];
     const source = JSON.stringify(sections);
     return { display: equipmentLiveSectionsForDisplay(sections), unchanged: source === JSON.stringify(sections) };

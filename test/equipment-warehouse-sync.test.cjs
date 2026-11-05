@@ -12,6 +12,7 @@ function context(options = {}) {
     setTimeout() {}, setInterval() {}, clearInterval() {},
     fetch: options.fetch || (async () => ({ ok: false })),
     window: {
+      EquipmentIdentity: require("../equipment-identity.js"),
       requerimientoEquipoCatalog: { services: {}, groups: [] },
       requerimientoEquipoInventory: options.inventory || { categories: [] },
       location: { protocol: options.protocol || "file:", hash: "#requerimiento-equipo" },
@@ -36,7 +37,64 @@ function context(options = {}) {
 function run(sandbox, source) { return vm.runInContext(source, sandbox); }
 function plain(value) { return JSON.parse(JSON.stringify(value)); }
 
-test("aliases and canonical source keys map renamed active stock once without changing event templates", () => {
+test("legacy aliases and a contradictory auto-assigned ID cannot consume another physical model", () => {
+  const { sandbox } = context();
+  const result = plain(run(sandbox, `(() => {
+    applyEquipmentWarehouseInventoryPayload({ state: { items: [{ id: "normal", name: "Par LED normal", sourceKey: "Par LED matiz",
+      descriptionAliases: ["Par LED matiz"], category: "Luces", quantity: 80 }], movements: [] } });
+    const section = { title: "Luces", manualSection: true, items: [{ quantity: 70, description: "Par LED matiz", warehouseInventoryId: "normal" }] };
+    equipmentState.events = [{ id: "synthetic", active: true, sections: [section] }];
+    const original = JSON.stringify(equipmentState.events);
+    const rows = equipmentRowsSummary().filter(row => row.type === "item");
+    const stock = rows.find(row => row.inventorySourceItem);
+    const unbound = rows.find(row => !row.inventorySourceItem && row.quantity > 0);
+    return { stockQuantity: stock.quantity, unboundQuantity: unbound.quantity,
+      stockIdentity: equipmentSummaryRowIdentity(stock), pendingIdentity: equipmentSummaryRowIdentity(unbound),
+      record: equipmentWarehouseInventoryRecordFor(unbound)?.id || null,
+      dispatch: equipmentWarehouseDispatchItems(equipmentState.events[0]), unchanged: original === JSON.stringify(equipmentState.events) };
+  })()`));
+  assert.equal(result.stockQuantity, 0); assert.equal(result.unboundQuantity, 70); assert.equal(result.record, null);
+  assert.notEqual(result.pendingIdentity, result.stockIdentity);
+  assert.deepEqual(result.dispatch[0].warehouseItemIds, []); assert.equal(result.dispatch[0].inventoryMatchUnresolved, true);
+  assert.equal(result.unchanged, true);
+});
+
+test("manual planner binding supports a legacy zero row and preserves its section source evidence", () => {
+  const { sandbox } = context();
+  const result = plain(run(sandbox, `(() => {
+    window.EquipmentPlanner = { create() { return { init() { return { render() {} }; } }; } };
+    renderEquipmentModule = () => {};
+    applyEquipmentWarehouseInventoryPayload({ state: { items: [{ id: "one", name: "Nombre vigente", category: "Categoría vigente", quantity: 3 }], movements: [] } });
+    const sourceCells = [{ ref: "Fuente!A7", value: 0 }, { ref: "Fuente!B7", value: "Nombre anterior" }];
+    equipmentState.events = [{ id: "legacy", sections: [{ title: "Sección original", sourceCells, notes: ["Nota literal"], items: [[0, "Nombre anterior"]] }] }];
+    initEquipmentPlannerBridge();
+    window.liveEquipmentPlanner.bindIdentity([{ eventId: "legacy", sectionIndex: 0, itemIndex: 0, description: "Nombre anterior" }], "one");
+    const event = equipmentState.events[0], item = event.sections[0].items[0];
+    return { item, sourceCells: event.sections[0].sourceCells, notes: event.sections[0].notes,
+      snapshot: event.documentSections[0].items[0], resolved: equipmentWarehouseRecordsForItem(item).map(record => record.id) };
+  })()`));
+  assert.equal(result.item.quantity, 0); assert.equal(result.item.description, "Nombre anterior");
+  assert.equal(result.item.warehouseInventoryId, "one"); assert.equal(result.item.inventoryIdentityConfirmed.itemId, "one");
+  assert.deepEqual(result.resolved, ["one"]); assert.equal(result.sourceCells[0].value, 0); assert.deepEqual(result.notes, ["Nota literal"]);
+  assert.deepEqual(result.snapshot.inventoryIdentityConfirmed, result.item.inventoryIdentityConfirmed);
+});
+
+test("shared recommendations never present a pending classification or identity as a purchase or rental order", () => {
+  const { sandbox } = context();
+  const markup = run(sandbox, `(() => {
+    const host = { innerHTML: "", querySelector() { return null; }, querySelectorAll() { return []; } };
+    equipmentQuery = selector => selector === "#equipmentSharedRecommendations" ? host : null;
+    equipmentSharedWorkspace.state = { events: [], transfers: [], range: { from: "2026-11-02", to: "2026-11-08" },
+      plan: { rows: [{ description: "Extintor de prueba", itemType: "consumible", quantity: 6, missing: 3, capacity: 3, required: 6,
+        pendingClassification: true, procurementBlocked: true, action: "REVISAR", events: [],
+        planning: { rentalPotential: 0, purchasePotential: 0, optimal: false, warnings: [] } }], invalidTransfers: [], logistics: {} } };
+    renderEquipmentSharedPlan(); return host.innerHTML;
+  })()`);
+  assert.ok(!/3 por comprar|3 por rentar/.test(markup));
+  assert.match(markup, /Revisar|Completar|pendiente/);
+});
+
+test("explicitly approved aliases map renamed active stock once without changing event templates", () => {
   const { sandbox } = context();
   const result = plain(run(sandbox, `(() => {
     const sections = [{ title: "Categoria original", items: [[2, "Unidad original"], [3, "Nombre intermedio"]] }];
@@ -45,6 +103,7 @@ test("aliases and canonical source keys map renamed active stock once without ch
     applyEquipmentWarehouseInventoryPayload({ state: {
       items: [{ id: "activo-1", name: "Unidad actual", sourceKey: "unidad original",
         descriptionAliases: ["Unidad original", "Nombre intermedio", "Nombre intermedio"],
+        approvedDescriptionAliases: ["Unidad original", "Nombre intermedio"].map(name => ({ name, approved: true, approvedAt: "2026-11-04T12:00:00.000Z" })),
         category: "Categoria actual", quantity: 1, notes: "Nota vigente", itemType: "equipo" }], movements: []
     } });
     const rows = equipmentRowsSummary().filter((row) => row.type === "item");
@@ -60,7 +119,7 @@ test("aliases and canonical source keys map renamed active stock once without ch
       recognizedIntermediate: equipmentRecognizedInventoryChoice("Nombre intermedio") };
   })()`));
   assert.deepEqual(result.rows, [{ name: "Unidad actual", category: "Categoria actual", required: 5, available: 1,
-    identity: "unidad original", observation: "Nota del inventario: Nota vigente" }]);
+    identity: "inventario-bodega-activo-1", observation: "Nota del inventario: Nota vigente" }]);
   assert.deepEqual(result.rental, [{ name: "Unidad actual", inventory: 1, missing: 4 }]);
   assert.equal(result.unchanged, true);
   assert.equal(result.recognizedOriginal, true);
@@ -134,11 +193,13 @@ test("current type, category, aliases, notes and zero quantities update without 
   const result = plain(run(sandbox, `(() => {
     equipmentState.events = [{ id: "evento", active: true, sections: [{ title: "Fuente", items: [[2, "Unidad original consumible"], [0, "Nota de la plantilla"]] }] }];
     const payload = { state: { items: [{ id: "item-0001", name: "Unidad actual", sourceKey: "unidad original consumible",
-      descriptionAliases: [], itemType: "consumible", category: "Primera", quantity: 5 }], movements: [] } };
+      descriptionAliases: [], approvedDescriptionAliases: [{ name: "Unidad original consumible", approved: true, approvedAt: "2026-11-04T12:00:00.000Z" }],
+      itemType: "consumible", category: "Primera", quantity: 5 }], movements: [] } };
     applyEquipmentWarehouseInventoryPayload(payload);
     const first = equipmentRowsSummary().find((row) => row.inventorySourceItem);
     payload.state.items[0] = { ...payload.state.items[0], name: "Unidad final", category: "Final",
-      itemType: "equipo", quantity: 0, descriptionAliases: ["Unidad actual"], notes: "Nota final" };
+      itemType: "equipo", quantity: 0, descriptionAliases: ["Unidad actual"], notes: "Nota final",
+      approvedDescriptionAliases: [...payload.state.items[0].approvedDescriptionAliases, { name: "Unidad actual", approved: true, approvedAt: "2026-11-04T12:01:00.000Z" }] };
     const changed = applyEquipmentWarehouseInventoryPayload(payload);
     const row = equipmentRowsSummary().find((entry) => entry.inventorySourceItem);
     const compact = tableForEquipmentSections(equipmentState.events[0].sections, true);
@@ -168,21 +229,22 @@ test("current type, category, aliases, notes and zero quantities update without 
   assert.equal(result.zeroTemplateQuantity, 0);
 });
 
-test("stable source identity retains transfer choices after active names change", () => {
+test("stable physical identity retains transfer choices after approved active name changes", () => {
   const { sandbox } = context();
   const result = plain(run(sandbox, `(() => {
     const payload = { state: { items: [{ id: "activo", name: "Unidad original", sourceKey: "unidad original", quantity: 5 }], movements: [] } };
     applyEquipmentWarehouseInventoryPayload(payload);
-    const selections = { "evento-a::evento-b": [{ identity: "unidad original", quantity: 2 }] };
-    payload.state.items[0] = { ...payload.state.items[0], name: "Unidad renombrada", descriptionAliases: ["Unidad original"] };
+    const selections = { "evento-a::evento-b": [{ identity: "inventario-bodega-activo", quantity: 2 }] };
+    payload.state.items[0] = { ...payload.state.items[0], name: "Unidad renombrada", descriptionAliases: ["Unidad original"],
+      approvedDescriptionAliases: [{ name: "Unidad original", approved: true, approvedAt: "2026-11-04T12:00:00.000Z" }] };
     applyEquipmentWarehouseInventoryPayload(payload);
     return { normalized: normalizeEquipmentTransferLegSelections(selections),
       oldIdentity: equipmentInventoryIdentityForDescription("Unidad original"),
       newIdentity: equipmentInventoryIdentityForDescription("Unidad renombrada") };
   })()`));
-  assert.equal(result.oldIdentity, "unidad original");
-  assert.equal(result.newIdentity, "unidad original");
-  assert.deepEqual(result.normalized, { "evento-a::evento-b": [{ identity: "unidad original", quantity: 2 }] });
+  assert.equal(result.oldIdentity, "inventario-bodega-activo");
+  assert.equal(result.newIdentity, "inventario-bodega-activo");
+  assert.deepEqual(result.normalized, { "evento-a::evento-b": [{ identity: "inventario-bodega-activo", quantity: 2 }] });
 });
 
 test("a newly committed restore replaces an older state and an older response cannot revert it", () => {
@@ -204,19 +266,20 @@ test("a newly committed restore replaces an older state and an older response ca
   assert.equal(result.available, 2);
 });
 
-test("category disambiguates a current name colliding with another item's source key and alias", () => {
+test("an explicit physical selection disambiguates a confirmed alias colliding with another current name", () => {
   const { sandbox } = context();
   const result = plain(run(sandbox, `(() => {
     applyEquipmentWarehouseInventoryPayload({ state: { items: [
       { id: "a", name: "Unidad B", sourceKey: "unidad a", category: "Categoria A", quantity: 5 },
-      { id: "b", name: "Unidad C", sourceKey: "unidad b", descriptionAliases: ["Unidad B"], category: "Categoria B", quantity: 4 }
+      { id: "b", name: "Unidad C", sourceKey: "unidad b", descriptionAliases: ["Unidad B"], category: "Categoria B", quantity: 4,
+        approvedDescriptionAliases: [{ name: "Unidad B", approved: true, approvedAt: "2026-11-04T12:00:00.000Z" }] }
     ], movements: [] } });
-    equipmentState.events = [{ id: "evento", active: true, sections: [{ title: "Categoria B", items: [[3, "Unidad B"]] }] }];
+    equipmentState.events = [{ id: "evento", active: true, sections: [{ title: "Categoria B", items: [{ quantity: 3, description: "Unidad B", warehouseInventoryId: "b" }] }] }];
     const rows = equipmentRowsSummary().filter((row) => row.type === "item");
     const display = equipmentLiveSectionsForDisplay(equipmentState.events[0].sections);
     const dispatch = equipmentWarehouseDispatchItems(equipmentState.events[0]);
     return { rows: rows.map((row) => ({ name: row.description, required: row.quantity, available: equipmentInventoryAvailableValueFor(row) })),
-      display, dispatch, stableSelection: normalizeEquipmentTransferLegSelections({ "a::b": [{ identity: "unidad b", quantity: 2 }] }) };
+      display, dispatch, stableSelection: normalizeEquipmentTransferLegSelections({ "a::b": [{ identity: "inventario-bodega-b", quantity: 2 }] }) };
   })()`));
   assert.deepEqual(result.rows, [{ name: "Unidad B", required: 0, available: 5 }, { name: "Unidad C", required: 3, available: 4 }]);
   assert.equal(result.display[0].title, "Categoria B");
@@ -224,7 +287,7 @@ test("category disambiguates a current name colliding with another item's source
   assert.deepEqual(result.dispatch[0].warehouseItemIds, ["b"]);
   assert.equal(result.dispatch[0].description, "Unidad C");
   assert.equal(result.dispatch[0].category, "Categoria B");
-  assert.deepEqual(result.stableSelection, { "a::b": [{ identity: "unidad b", quantity: 2 }] });
+  assert.deepEqual(result.stableSelection, { "a::b": [{ identity: "inventario-bodega-b", quantity: 2 }] });
 });
 
 test("within one category an exact current name wins over another record's historical alias", () => {
@@ -251,8 +314,8 @@ test("equal source keys in different categories retain distinct stock and transf
     ], movements: [] } });
     const makeEvent = (id, date, requiredA, requiredB) => ({ id, active: true, setupAt: date + "T08:00",
       date, equipmentInAt: date + "T20:00", sections: [
-        { title: "Categoria A", items: [[requiredA, "Unidad compartida"]] },
-        { title: "Categoria B", items: [[requiredB, "Unidad compartida"]] }
+        { title: "Categoria A", items: [{ quantity: requiredA, description: "Unidad compartida", warehouseInventoryId: "a" }] },
+        { title: "Categoria B", items: [{ quantity: requiredB, description: "Unidad compartida", warehouseInventoryId: "b" }] }
       ] });
     equipmentState.events = [makeEvent("evento-1", "2026-10-10", 3, 1), makeEvent("evento-2", "2026-10-10", 2, 4)];
     const rows = equipmentRowsSummary().filter((row) => row.type === "item");

@@ -43,6 +43,7 @@
   let restoringWarehouse = false;
   let historyPage = 1;
   let manualMovementPendingSave = false;
+  let pendingClassificationReviewId = "";
   const HISTORY_PAGE_SIZE = 50;
   const signaturePads = {};
   const elements = {};
@@ -195,9 +196,13 @@
   }
 
   function itemTypeFor(item) {
-    return normalizeText(item?.itemType).toLowerCase() === "consumible" || hasConsumableMarker(item?.name)
-      ? "consumible"
-      : "equipo";
+    if (window.EquipmentIdentity) return window.EquipmentIdentity.itemType(item);
+    const explicit = normalizeText(item?.itemType).toLowerCase();
+    return ["equipo", "consumible"].includes(explicit) ? explicit : hasConsumableMarker(item?.name) ? "consumible" : "equipo";
+  }
+
+  function classificationFor(item) {
+    return window.EquipmentIdentity?.classification(item) || { itemType: itemTypeFor(item), pending: false, warnings: [], confirmed: false };
   }
 
   function isConsumableItem(item) {
@@ -214,6 +219,10 @@
       sourceKey: inventorySourceKey(item, index),
       ...(Array.isArray(item?.descriptionAliases) ? { descriptionAliases:
         [...new Set(item.descriptionAliases.map(normalizeText).filter(Boolean))] } : {}),
+      ...(Array.isArray(item?.approvedDescriptionAliases) ? { approvedDescriptionAliases: JSON.parse(JSON.stringify(item.approvedDescriptionAliases)) } : {}),
+      ...(item?.classificationConfirmed && typeof item.classificationConfirmed === "object"
+        ? { classificationConfirmed: { itemType: normalizeText(item.classificationConfirmed.itemType), name: normalizeText(item.classificationConfirmed.name),
+          confirmedAt: normalizeText(item.classificationConfirmed.confirmedAt) } } : {}),
       sourceRow: normalizeNumber(item?.sourceRow),
       quantity: normalizeNumber(item?.quantity),
       notes: normalizeText(item?.notes),
@@ -1056,6 +1065,7 @@
             : "";
         lastCategory = categoryLabel(item.category);
         const consumable = isConsumableItem(item);
+        const classification = classificationFor(item);
         const latestOut = latestMovementFor(item.id, consumable ? ["consumo"] : ["salida"]);
         const latestWorkshop = latestMovementFor(item.id, ["taller"]);
         const latestRental = latestMovementFor(item.id, ["renta"]);
@@ -1064,6 +1074,14 @@
           <tr data-warehouse-item="${escapeHtml(item.id)}">
             <td>
               <textarea class="warehouse-inline-input warehouse-name-input" data-field="name" rows="2" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</textarea>
+              <label style="display:block;margin-top:6px;font-size:12px">Tipo para Requerimiento
+                <select class="warehouse-inline-input" data-field="itemType" aria-label="Tipo de ${escapeHtml(item.name)}">
+                  <option value="equipo"${!consumable ? " selected" : ""}>Equipo reutilizable · renta</option>
+                  <option value="consumible"${consumable ? " selected" : ""}>Consumible · compra</option>
+                </select>
+              </label>
+              ${classification.pending ? `<small style="display:block;color:#92400e;margin-top:5px">${escapeHtml(classification.warnings.map((warning) => warning.message).join(" "))}</small>` : ""}
+              <button class="warehouse-row-button" type="button" data-action="confirm-classification" data-item-id="${escapeHtml(item.id)}">${classification.confirmed ? "Tipo confirmado · revisar" : "Confirmar tipo actual"}</button>
             </td>
             <td>
               <input class="warehouse-inline-input warehouse-qty-input" data-field="totalReal" type="number" min="0" step="1" value="${escapeHtml(item.quantity)}" aria-label="Cantidad registrada de ${escapeHtml(item.name)}" />
@@ -1510,6 +1528,8 @@
           id: item.id,
           sourceKey: item.sourceKey || warehouseCanonicalKey(item.name),
           descriptionAliases: item.descriptionAliases || [],
+          approvedDescriptionAliases: item.approvedDescriptionAliases || [],
+          ...(item.classificationConfirmed ? { classificationConfirmed: item.classificationConfirmed } : {}),
           name: item.name,
           category: item.category,
           itemType: item.itemType,
@@ -1727,8 +1747,14 @@
     const labels = { name: "Nombre", description: "Descripción", category: "Categoría", quantity: "Cantidad", notes: "Observaciones",
       archived: "Archivado", type: "Movimiento", responsible: "Responsable", reference: "Evento / referencia", dateTime: "Fecha y hora",
       repair: "Falla", sparePart: "Repuesto", itemType: "Tipo de equipo", procurementAction: "Acción solicitada" };
-    return Object.keys(labels).filter((key) => entry.before?.[key] !== entry.after?.[key] && (entry.before?.[key] !== undefined || entry.after?.[key] !== undefined))
+    const details = Object.keys(labels).filter((key) => entry.before?.[key] !== entry.after?.[key] && (entry.before?.[key] !== undefined || entry.after?.[key] !== undefined))
       .map((key) => `<dt>${labels[key]}</dt><dd>${escapeHtml(entry.before?.[key] ?? "—")} → ${escapeHtml(entry.after?.[key] ?? "—")}</dd>`).join("");
+    const confirmation = entry.after?.classificationConfirmed;
+    const confirmationDetail = JSON.stringify(entry.before?.classificationConfirmed || null) !== JSON.stringify(confirmation || null)
+      ? `<dt>Confirmación de tipo</dt><dd>${confirmation ? escapeHtml(`${confirmation.itemType === "consumible" ? "Consumible" : "Equipo reutilizable"} · ${formatWarehouseDateTime(confirmation.confirmedAt)}`) : "Pendiente de nueva confirmación"}</dd>` : "";
+    const aliasDetail = JSON.stringify(entry.before?.approvedDescriptionAliases || []) !== JSON.stringify(entry.after?.approvedDescriptionAliases || [])
+      ? `<dt>Equivalencias aprobadas</dt><dd>${escapeHtml((entry.after?.approvedDescriptionAliases || []).filter((alias) => alias.approved).map((alias) => alias.name).join("; ") || "Sin equivalencias aprobadas")}</dd>` : "";
+    return details + confirmationDetail + aliasDetail;
   }
 
   function renderWarehouseHistory() {
@@ -1822,7 +1848,10 @@
     if (!item) return;
 
     const field = target.dataset.field;
-    if (field === "physicalQuantity") {
+    if (field === "itemType") {
+      const nextType = target.value === "consumible" ? "consumible" : "equipo";
+      if (!confirmItemClassification(item, nextType)) { target.value = itemTypeFor(item); return; }
+    } else if (field === "physicalQuantity") {
       const stats = statsForItem(item);
       const previousPhysical = stats.physical;
       const physicalQuantity = normalizeNumber(target.value);
@@ -1878,11 +1907,17 @@
       }
     } else if (field === "name") {
       const previousName = item.name;
-      item.name = normalizeText(target.value) || item.name;
-      if (item.name !== previousName) {
+      const nextName = normalizeText(target.value) || previousName;
+      if (nextName !== previousName) {
+        if (!window.confirm(`¿Confirma que “${previousName}” y “${nextName}” son el mismo equipo físico? El nombre anterior quedará como equivalencia aprobada. Si es otro modelo, cancele y registre un equipo distinto.`)) {
+          target.value = previousName; return;
+        }
+        item.name = nextName;
         item.descriptionAliases = [...new Set([...(item.descriptionAliases || []), previousName])]
           .filter((name) => name && name !== item.name);
-        item.itemType = itemTypeFor(item);
+        item.approvedDescriptionAliases = [...(item.approvedDescriptionAliases || []).filter((entry) => entry.name !== previousName),
+          { name: previousName, approved: true, approvedAt: new Date().toISOString() }];
+        delete item.classificationConfirmed;
       }
     }
 
@@ -1890,6 +1925,46 @@
     scheduleSave();
     renderAll();
     setStatus("Cambio registrado. Guardando en servidor...", "neutral");
+  }
+
+  function confirmItemClassification(item, nextType = itemTypeFor(item)) {
+    if (!item || !["equipo", "consumible"].includes(nextType)) return false;
+    const label = nextType === "consumible" ? "consumible: se consume y los faltantes se compran" : "equipo reutilizable: los faltantes se rentan";
+    if (!window.confirm(`¿Confirma que ${item.name} es ${label}? Este cambio es permanente y se aplicará en Requerimiento de Equipo. No cambia las existencias ni los movimientos registrados.`)) return false;
+    item.itemType = nextType;
+    item.classificationConfirmed = { itemType: nextType, name: item.name, confirmedAt: new Date().toISOString() };
+    return true;
+  }
+
+  function confirmCurrentItemClassification(itemId) {
+    const item = itemById(itemId);
+    if (!confirmItemClassification(item)) return;
+    item.updatedAt = new Date().toISOString();
+    scheduleSave(); renderAll();
+    setStatus("Tipo confirmado. Guardando en servidor...", "neutral");
+  }
+
+  function focusClassificationReview(itemId) {
+    pendingClassificationReviewId = normalizeText(itemId);
+    if (!warehouseReady || !elements.inventoryTable) return false;
+    const item = itemById(pendingClassificationReviewId);
+    if (!item || item.archived) {
+      setStatus("El equipo ya no está disponible. Actualice el resumen de Requerimiento.", "warning");
+      pendingClassificationReviewId = "";
+      return false;
+    }
+    elements.search.value = item.name;
+    elements.categoryFilter.value = "all";
+    elements.statusFilter.value = "all";
+    switchWindow("inventory");
+    renderInventoryTable();
+    const row = [...elements.inventoryTable.querySelectorAll("[data-warehouse-item]")]
+      .find((entry) => entry.dataset.warehouseItem === String(item.id));
+    const focus = () => { row?.scrollIntoView?.({ block: "center", behavior: "smooth" }); row?.querySelector('[data-field="itemType"]')?.focus(); };
+    if (typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(focus); else focus();
+    setStatus("Revise el tipo y confírmelo. Las existencias y los movimientos no cambian al revisar.", "neutral");
+    pendingClassificationReviewId = "";
+    return true;
   }
 
   function addNewItem() {
@@ -3379,6 +3454,7 @@
       if (button.dataset.action === "workshop") openDialog("workshop", button.dataset.itemId);
       if (button.dataset.action === "rental") openDialog("rental", button.dataset.itemId);
       if (button.dataset.action === "delete") openDialog("delete", button.dataset.itemId);
+      if (button.dataset.action === "confirm-classification") confirmCurrentItemClassification(button.dataset.itemId);
     });
     elements.eventsBoard.addEventListener("click", (event) => {
       const printButton = event.target.closest("[data-print-event]");
@@ -3532,6 +3608,7 @@
     switchWindow(activeWindow);
     warehouseReady = loaded;
     if (loaded && purchaseRequests.length) preparePurchaseDraft(purchaseRequests[0].id);
+    if (loaded && pendingClassificationReviewId) focusClassificationReview(pendingClassificationReviewId);
   }
 
   document.addEventListener("live:warehouse-purchase-request", (event) => {
@@ -3539,6 +3616,10 @@
   });
   window.prepareWarehousePurchase = receivePurchaseRequest;
   window.flushWarehouseInventoryChanges = flushWarehouseInventoryChanges;
+
+  document.addEventListener("live:review-inventory-classification", (event) => {
+    focusClassificationReview(event.detail?.itemId);
+  });
 
   document.addEventListener("live:warehouse-server-updated", (event) => {
     if (elements.root && applyRemoteWarehouse(event.detail)) {

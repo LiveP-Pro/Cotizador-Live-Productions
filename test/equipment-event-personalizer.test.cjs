@@ -448,7 +448,7 @@ test("Usar una vez es predeterminado y nunca adjunta una plantilla de servicio",
   assert.equal(harness.get("equipmentPersonalizerUsageOnce").checked, true);
   assert.equal(harness.get("equipmentPersonalizerServiceFields").hidden, true);
   assert.equal(harness.get("equipmentPersonalizerServiceName").required, false);
-  assert.equal(harness.get("equipmentPersonalizerCommitButton").textContent, "Cargar evento");
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").textContent, "Confirmar y reservar");
 });
 
 test("guardar servicio exige nombre explícito y categoría vigente sin equiparar categorías", () => {
@@ -492,7 +492,7 @@ test("elegir guardar servicio muestra campos, categoría Personalizados y confir
   assert.equal(harness.get("equipmentPersonalizerServiceFields").hidden, false);
   assert.equal(harness.get("equipmentPersonalizerServiceName").required, true);
   assert.equal(harness.get("equipmentPersonalizerServiceGroup").value, "personalizados");
-  assert.equal(harness.get("equipmentPersonalizerCommitButton").textContent, "Guardar servicio y cargar evento");
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").textContent, "Guardar servicio y reservar");
   assert.equal(harness.get("equipmentPersonalizerServiceName").value, "Privado");
   await harness.input("equipmentPersonalizerServiceName", "Servicio creado de prueba");
   await harness.action("review");

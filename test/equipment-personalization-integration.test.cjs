@@ -50,6 +50,7 @@ function harness() {
     console, URL, Blob, Map, Set, Date, Math, JSON, Number, String, Object, Array, RegExp, Promise, Option,
     setTimeout() { return 1; }, clearTimeout() {}, setInterval() { return 1; }, clearInterval() {},
     window: {
+      EquipmentIdentity: require("../equipment-identity.js"),
       requerimientoEquipoCatalog: {
         version: "synthetic-personalization-integration",
         services: { "fixture-template": { name: "Servicio de integración", mainSections: [{ id: "fixture-category", title: "Categoría sintética", items: [[0, "Equipo cero sintético"], [2, "Equipo sintético A"]] }] } },
@@ -279,7 +280,8 @@ test("recomendaciones remotas nunca se presentan como actuales si el cuadro tien
 
 test("guardar ventana compartida persiste una vez con horarios completos, cero y decisión de compra", async () => {
   const h = harness(); h.fields();
-  h.run(`setEquipmentServiceSelection(['fixture-template']);
+  h.run(`applyEquipmentWarehouseInventoryPayload({state:{items:[{id:'synthetic-stock',name:'Equipo sintético A',category:'Categoría sintética',quantity:5,itemType:'equipo'}],movements:[]}});
+    setEquipmentServiceSelection(['fixture-template']);
     equipmentState.manualExtras = [{id:'extra-shared',description:'Consumible compartido sintético',quantity:0,itemType:'consumible',inventoryCategory:'Consumibles',procurementChoice:'purchase',libraryExtraId:'library-shared'}];
     equipmentSharedWorkspace.enabled=true; equipmentSharedWorkspace.dirty=true;
     equipmentSharedWorkspace.client=window.EquipmentWorkspace.create({date:'2026-11-12',onState:applyEquipmentSharedState});`);
@@ -310,7 +312,7 @@ test("guardar ventana compartida persiste una vez con horarios completos, cero y
 
 test("conflicto remoto al guardar conserva ventana y borrador para resolver sin duplicar", async () => {
   const h = harness(); h.fields();
-  h.run("setEquipmentServiceSelection(['fixture-template']); saveCurrentEquipmentWindow(); window.savedId=equipmentState.selectedEventId; selectedEquipmentEvent().updatedAt='2026-10-20T13:00:00.000Z'; equipmentSharedWorkspace.enabled=true; equipmentSharedWorkspace.dirty=true; equipmentSharedWorkspace.client=window.EquipmentWorkspace.create({date:'2026-11-12',onState:applyEquipmentSharedState});");
+  h.run("applyEquipmentWarehouseInventoryPayload({state:{items:[{id:'synthetic-stock',name:'Equipo sintético A',category:'Categoría sintética',quantity:5,itemType:'equipo'}],movements:[]}}); setEquipmentServiceSelection(['fixture-template']); saveCurrentEquipmentWindow(); window.savedId=equipmentState.selectedEventId; selectedEquipmentEvent().updatedAt='2026-10-20T13:00:00.000Z'; equipmentSharedWorkspace.enabled=true; equipmentSharedWorkspace.dirty=true; equipmentSharedWorkspace.client=window.EquipmentWorkspace.create({date:'2026-11-12',onState:applyEquipmentSharedState});");
   const id = h.run("window.savedId");
   h.get("equipmentNotes").value = "Cambios locales no confirmados";
   h.responses.push({ ok: false, status: 409, json: async () => ({ error: "Otro usuario modificó el evento. Actualice antes de continuar." }) });
@@ -345,7 +347,7 @@ test("inicializar agenda compartida conserva borrador activo y conecta ambos mod
   assert.equal(h.run("equipmentSharedWorkspace.state.events[0].id"), "init-remote");
 });
 
-test("cambiar ventana o crear otra no abandona cambios compartidos sin guardar", () => {
+test("cambiar ventana o crear otra conserva el borrador pendiente sin exigir una reserva", () => {
   for (const action of ["switch", "new"]) {
     const h = harness(); h.fields();
     h.run("setEquipmentServiceSelection(['fixture-template']); saveCurrentEquipmentWindow(); window.firstId=equipmentState.selectedEventId; startNewEquipmentWindowDraft()");
@@ -354,7 +356,10 @@ test("cambiar ventana o crear otra no abandona cambios compartidos sin guardar",
     h.get("equipmentNotes").value = "No abandonar este borrador";
     if (action === "switch") h.run("loadEquipmentEvent(window.secondId)");
     else h.run("startNewEquipmentWindowDraft()");
-    assert.equal(h.run("equipmentState.selectedEventId"), h.run("window.firstId"));
+    assert.equal(h.run("equipmentState.selectedEventId"), action === "switch" ? h.run("window.secondId") : "");
+    assert.equal(h.run("equipmentState.events.find(event=>event.id===window.firstId).notes"), "No abandonar este borrador");
+    assert.equal(h.run("equipmentPlannerDirtyIds.has(window.firstId)"), true);
+    h.run("loadEquipmentEvent(window.firstId)");
     assert.equal(h.get("equipmentNotes").value, "No abandonar este borrador");
     assert.equal(h.run("equipmentSharedWorkspace.dirty"), true);
     assert.equal(h.requests.length, 0);
@@ -382,14 +387,18 @@ test("actualizar cantidad programáticamente marca cambios antes del siguiente r
   assert.equal(h.run("equipmentSharedWorkspace.dirty"), true);
 });
 
-test("PDF de otra ventana no guarda la actual si hay cambios sin confirmar", async () => {
+test("PDF provisional de otra ventana no guarda ni cambia el borrador activo", async () => {
   const h = harness(); h.fields();
   h.run("setEquipmentServiceSelection(['fixture-template']); saveCurrentEquipmentWindow(); window.firstId=equipmentState.selectedEventId; startNewEquipmentWindowDraft()");
   h.fields({ EventName: "Segundo evento sintético" });
-  h.run("setEquipmentServiceSelection(['fixture-template']); saveCurrentEquipmentWindow(); window.secondId=equipmentState.selectedEventId; loadEquipmentEvent(window.firstId); equipmentSharedWorkspace.enabled=true; equipmentSharedWorkspace.dirty=true; window.pdfSaves=0; saveEquipmentPdf=async()=>{window.pdfSaves++};");
+  h.run("setEquipmentServiceSelection(['fixture-template']); saveCurrentEquipmentWindow(); window.secondId=equipmentState.selectedEventId; loadEquipmentEvent(window.firstId); equipmentSharedWorkspace.enabled=true; equipmentSharedWorkspace.dirty=true; window.pdfSaves=0; saveEquipmentPdf=async()=>{window.pdfSaves++}; window.nativeDownloads=[]; equipmentPlannerInstance={download:async(mode,button,events)=>window.nativeDownloads.push({mode,events})}; window.liveEquipmentPlanner={events:()=>equipmentState.events};");
   h.get("equipmentNotes").value = "No guardar otro evento";
   await h.run("saveEquipmentEventPdf(window.secondId)");
   assert.equal(h.run("window.pdfSaves"), 0);
+  assert.equal(h.run("window.nativeDownloads.length"), 1);
+  assert.equal(h.run("window.nativeDownloads[0].mode"), "summary");
+  assert.equal(h.run("window.nativeDownloads[0].events.length"), 1);
+  assert.equal(h.run("window.nativeDownloads[0].events[0].id"), h.run("window.secondId"));
   assert.equal(h.requests.length, 0);
   assert.equal(h.run("equipmentState.selectedEventId"), h.run("window.firstId"));
   assert.equal(h.get("equipmentNotes").value, "No guardar otro evento");
@@ -410,7 +419,7 @@ test("importar JSON con cambios pendientes se detiene antes de reemplazar ventan
   h.get("equipmentNotes").value = "Borrador protegido antes de importar";
   const before = h.run("JSON.stringify(equipmentState.events)");
   h.context.payload = { type: "live-productions-equipment-requirement", events: [syntheticRemoteEvent("import-another")] };
-  assert.throws(() => h.run("importEquipmentEditablePayload(payload)"), /Guarde los cambios.*antes de importar/);
+  assert.throws(() => h.run("importEquipmentEditablePayload(payload)"), /cambios pendientes.*Importar varios eventos/i);
   assert.equal(h.run("JSON.stringify(equipmentState.events)"), before);
   assert.equal(h.get("equipmentNotes").value, "Borrador protegido antes de importar");
   assert.equal(h.requests.length, 0);
@@ -495,7 +504,12 @@ test("coincidencias físicas ambiguas no se convierten en equivalencias", () => 
   const h = harness();
   h.run("equipmentSharedWorkspace.enabled = true; applyEquipmentWarehouseInventoryPayload({state:{items:[{id:'one',name:'Equipo sintético A',category:'Audio',quantity:3},{id:'two',name:'Equipo sintético A',category:'Audio',quantity:2}],movements:[]}})");
   h.context.fixture = { sections: [{ title: "Audio", items: [{ id: "x", description: "Equipo sintético A", quantity: 1 }] }] };
-  assert.throws(() => h.run("equipmentBindSharedInventory(fixture)"), /varios registros físicos/);
+  assert.throws(() => h.run("equipmentBindSharedInventory(fixture)"), /Identifique|varios registros físicos|coincide/);
+  const before = JSON.stringify(h.context.fixture);
+  const preview = plain(h.run("equipmentBindSharedInventory(fixture,{allowPending:true})"));
+  assert.equal(preview.sections[0].items[0].warehouseInventoryId, undefined);
+  assert.equal(preview.sections[0].items[0].quantity, 1);
+  assert.equal(JSON.stringify(h.context.fixture), before);
 });
 
 test("modo compartido no convierte compra ni ingreso con comprobante inventado en existencias", () => {
