@@ -1,9 +1,9 @@
 (function (root, factory) {
   const api = factory(typeof module === 'object' && module.exports ? require('./equipment-identity.js') : root.EquipmentIdentity,
-    typeof module === 'object' && module.exports ? require('./equipment-document-audit.js') : root.EquipmentDocumentAudit);
+    typeof module === 'object' && module.exports ? () => require('./equipment-document-audit.js') : () => root.EquipmentDocumentAudit);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.EquipmentPlanner = api;
-})(typeof globalThis === 'object' ? globalThis : this, function (Identity, DocumentAudit) {
+})(typeof globalThis === 'object' ? globalThis : this, function (Identity, getDocumentAudit) {
   'use strict';
   const copy = value => JSON.parse(JSON.stringify(value));
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -21,12 +21,14 @@
     return matches.length === 1 ? matches[0] : null;
   }
   function analyze(events, records) {
+    const documentAudit = getDocumentAudit();
+    const documentAuditUnavailable = typeof documentAudit?.audit !== 'function';
     const stock = records.map(record => ({...record.item, id: record.id, available: record.available}));
     const groups = new Map(); let lineCount = 0, zeroCount = 0;
     const invalidRows = [];
     const eventPending = [], documentPending = [];
     events.forEach(event => {
-      documentPending.push(...(DocumentAudit?.audit(event) || []));
+      if (!documentAuditUnavailable) documentPending.push(...documentAudit.audit(event));
       const knownMessages = new Set();
       [...(event.warnings || []), ...(event.issues || []), ...(event.sourceImport?.warnings || [])].forEach(message => {
         const reason = typeof message === 'string' ? message : message?.message || message?.reason || message?.description || message?.code || '';
@@ -69,7 +71,7 @@
       else if (row.quantity === 0) row.action='SIN USO';
       return {...row,available,missing:row.invalidQuantity?null:missing};
     });
-    return {events,rows,lineCount,zeroCount,eventPending,documentPending,invalidRows,invalidLines:invalidRows,identityPending:rows.filter(r=>r.action==='IDENTIFICAR'||r.action==='INGRESO PENDIENTE'),classificationPending:rows.filter(r=>r.quantity>0&&r.classification.pending),rent:rows.filter(r=>r.action==='RENTA'&&r.missing>0),purchase:rows.filter(r=>r.action==='COMPRA'&&r.missing>0)};
+    return {events,rows,lineCount,zeroCount,eventPending,documentPending,documentAuditUnavailable,invalidRows,invalidLines:invalidRows,identityPending:rows.filter(r=>r.action==='IDENTIFICAR'||r.action==='INGRESO PENDIENTE'),classificationPending:rows.filter(r=>r.quantity>0&&r.classification.pending),rent:rows.filter(r=>r.action==='RENTA'&&r.missing>0),purchase:rows.filter(r=>r.action==='COMPRA'&&r.missing>0)};
   }
   function create(bridge) {
     let model = null, busy = false;
@@ -98,10 +100,11 @@
     function render() {
       const host=$('#equipmentPlannerOverview'); if(!host)return;
       model=snapshot();
-      const totalPending=model.eventPending.length+model.documentPending.length+model.identityPending.length+model.classificationPending.length+model.invalidRows.length;
+      const totalPending=model.eventPending.length+model.documentPending.length+model.identityPending.length+model.classificationPending.length+model.invalidRows.length+(model.documentAuditUnavailable?1:0);
       host.innerHTML=`<div class="equipment-planner-counts"><span><strong>${model.events.length}</strong> eventos</span><span><strong>${model.lineCount}</strong> líneas · ${model.zeroCount} con cantidad 0</span><span><strong>${totalPending}</strong> pendientes para confirmar</span></div><p>Puede revisar y descargar el provisional ahora. Confirmar un evento reserva equipo; la descarga no registra salidas ni compras.</p>`;
       const pending=$('#equipmentPlannerPending'); if(!pending)return;
       const rows=[];
+      if(model.documentAuditUnavailable)rows.push('<article><div><strong>Revisión del documento pendiente</strong><small>No se pudo cargar el verificador de documentos. Conserve sus cuadros y vuelva a abrir el módulo. El Excel y los PDF descargables sí realizan esta revisión en el servidor.</small></div></article>');
       model.documentPending.forEach(warning=>rows.push(`<article><div><strong>${esc(warning.description)} · ${esc(warning.event)}</strong><small>${esc(warning.reason)}</small>${warning.sourceRefs?.length?`<small>Celdas: ${esc(Array.isArray(warning.sourceRefs)?warning.sourceRefs.join(', '):warning.sourceRefs)}</small>`:''}</div><button type="button" data-planner-event="${esc(warning.eventId)}">Revisar documento</button></article>`));
       model.eventPending.forEach(({event,missing})=>rows.push(`<article><div><strong>${esc(event.place || event.name || 'Evento sin lugar')}</strong><small>${esc(dateLabel(event.date))} · ${missing.length ? 'Complete montaje, inicio, finalización y regreso a bodega.' : 'Complete lugar y fecha.'}</small></div><button type="button" data-planner-event="${esc(event.id)}">Completar datos</button></article>`));
       model.invalidRows.forEach(({event,line})=>rows.push(`<article><div><strong>${esc(line.description || 'Línea sin descripción')}</strong><small>Cantidad o descripción pendiente en ${esc(event.place || event.name || 'el evento')}. No se omitió la línea.</small></div><button type="button" data-planner-event="${esc(event.id)}">Corregir línea</button></article>`));
