@@ -37,6 +37,50 @@ function context(options = {}) {
 function run(sandbox, source) { return vm.runInContext(source, sandbox); }
 function plain(value) { return JSON.parse(JSON.stringify(value)); }
 
+test("indexed lookups preserve strict resolver priority, ambiguous identities and current inventory refreshes", () => {
+  const { sandbox } = context();
+  const result = plain(run(sandbox, `(() => {
+    const inventory = [{ id: "alpha", name: "Modelo actual A", category: "Prueba", quantity: 3,
+      descriptionAliases: ["Alias sin aprobar"], approvedDescriptionAliases: [{ name: "Nombre anterior", approved: true, approvedAt: "2026-11-05T12:00:00.000Z" }] },
+      { id: "beta", name: "Nombre anterior", category: "Prueba", quantity: 4 },
+      { id: "duplicate-a", name: "Modelo duplicado", category: "A", quantity: 5 },
+      { id: "duplicate-b", name: "Modelo duplicado", category: "B", quantity: 6 },
+      { id: "archived", name: "Modelo retirado", category: "Prueba", quantity: 7, archived: true }];
+    applyEquipmentWarehouseInventoryPayload({state:{items:inventory,movements:[]}});
+    const cases = [{description:"NOMBRE ANTERIOR"}, {description:"Nombre anterior",warehouseInventoryId:"alpha"},
+      {description:"Alias sin aprobar"}, {description:"Modelo duplicado"}, {description:"Modelo retirado",warehouseInventoryId:"archived"},
+      {description:"Otro modelo",warehouseInventoryId:"alpha"},
+      {description:"Otro modelo",warehouseInventoryId:"alpha",inventoryIdentityConfirmed:{itemId:"alpha",description:"Otro modelo",confirmedAt:"2026-11-05T12:00:00.000Z"}}];
+    const parity = cases.map(line => ({ indexed:equipmentWarehouseRecordsForItem(line).map(record=>record.id),
+      expected:window.EquipmentIdentity.resolve(line,inventory).item?.id || null }));
+    const direct = equipmentWarehouseRecordsForDescription("Nombre anterior").map(record=>record.id);
+    inventory[0].name="Modelo reemplazado";inventory[0].approvedDescriptionAliases=[];
+    applyEquipmentWarehouseInventoryPayload({state:{items:inventory,movements:[]}});
+    return {parity,direct,old:equipmentWarehouseRecordsForDescription("Modelo actual A").length,
+      current:equipmentWarehouseRecordsForDescription("Modelo reemplazado").map(record=>record.id)};
+  })()`));
+  for (const row of result.parity) assert.deepEqual(row.indexed, row.expected ? [row.expected] : []);
+  assert.deepEqual(result.direct, ["beta"]); assert.equal(result.old, 0); assert.deepEqual(result.current, ["alpha"]);
+});
+
+test("repeated current inventory lookups reuse the approved index without calling the full catalog resolver", () => {
+  const { sandbox } = context();
+  const result = plain(run(sandbox, `(() => {
+    const original = window.EquipmentIdentity; let fullResolverCalls = 0;
+    window.EquipmentIdentity = { ...original, resolve(...args) { fullResolverCalls++; return original.resolve(...args); } };
+    const items = Array.from({length:274}, (_,index) => ({id:"synthetic-"+index,name:"Unidad sintética "+index,category:"Prueba",quantity:index}));
+    applyEquipmentWarehouseInventoryPayload({state:{items,movements:[]}});
+    let matched = 0;
+    for(let index=0;index<10000;index++) {
+      const selected=index%274;
+      matched+=equipmentWarehouseRecordsForDescription("Unidad sintética "+selected).length;
+      matched+=equipmentWarehouseRecordsForItem({description:"Unidad sintética "+selected,warehouseInventoryId:"synthetic-"+selected}).length;
+    }
+    return {matched,fullResolverCalls};
+  })()`));
+  assert.equal(result.matched, 20000); assert.equal(result.fullResolverCalls, 0);
+});
+
 test("legacy aliases and a contradictory auto-assigned ID cannot consume another physical model", () => {
   const { sandbox } = context();
   const result = plain(run(sandbox, `(() => {

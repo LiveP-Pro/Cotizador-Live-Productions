@@ -148,11 +148,14 @@ function equipmentWarehouseRecordLookupKeys(item, staticItem = null) {
 }
 
 function equipmentWarehouseRecordsForDescription(description, category = "") {
-  const records = equipmentWarehouseInventoryState.records;
-  const result = window.EquipmentIdentity?.resolve({ description }, records.map(record => record.item));
-  if (result) return result.item ? records.filter(record => record.id === String(result.item.id)) : [];
-  const matches = records.filter(record => equipmentInventoryCanonicalKey(record.item?.name) === equipmentInventoryCanonicalKey(description));
-  return matches.length === 1 ? matches : [];
+  const key = equipmentInventoryCanonicalKey(description);
+  if (!key) return [];
+  // This index is rebuilt atomically with every accepted inventory payload.
+  // Its keys contain only current names and explicitly approved aliases.
+  const matches = equipmentWarehouseInventoryState.recordsByLookupKey.get(key) || [];
+  const exact = matches.filter(record => equipmentInventoryCanonicalKey(record.item?.name) === key);
+  const resolved = exact.length ? exact : matches;
+  return resolved.length === 1 ? resolved : [];
 }
 
 function equipmentWarehouseRecordIdentity(record) {
@@ -160,11 +163,15 @@ function equipmentWarehouseRecordIdentity(record) {
 }
 
 function equipmentWarehouseRecordsForItem(item, section = {}) {
-  const records = equipmentWarehouseInventoryState.records;
-  const result = window.EquipmentIdentity?.resolve(item, records.map(record => record.item));
-  if (result) return result.item ? records.filter(record => record.id === String(result.item.id)) : [];
-  const matches = records.filter(record => equipmentInventoryCanonicalKey(record.item?.name) === equipmentInventoryCanonicalKey(item?.description));
-  return matches.length === 1 ? matches : [];
+  const description = item?.description ?? item?.name;
+  const explicitId = String(item?.warehouseInventoryId ?? "").trim();
+  if (!explicitId) return equipmentWarehouseRecordsForDescription(description);
+  const record = equipmentWarehouseInventoryState.recordsById.get(explicitId);
+  if (!record) return []; // A stale ID never falls through to a same-name item.
+  const key = equipmentInventoryCanonicalKey(description);
+  const namedRecords = key ? equipmentWarehouseInventoryState.recordsByLookupKey.get(key) || [] : [];
+  if (namedRecords.includes(record) || window.EquipmentIdentity?.identityConfirmed(item, record.item)) return [record];
+  return []; // An automatically assigned, contradictory model needs review.
 }
 
 function equipmentItemInventoryMetadata(item) {
@@ -1758,7 +1765,7 @@ function sectionsForEquipmentEvent(event) {
   return selectedEquipmentSections();
 }
 
-function loadEquipmentEvent(eventId) {
+function loadEquipmentEvent(eventId, activeWindow = "review") {
   const event = equipmentState.events.find((item) => item.id === eventId);
   if (!event) return false;
   if (equipmentSharedDraftBlocksNavigation()) return false;
@@ -1770,7 +1777,7 @@ function loadEquipmentEvent(eventId) {
   equipmentSharedWorkspace.dirty = equipmentPlannerDirtyIds.has(event.id) || !event.updatedAt;
   restoreEquipmentEventSnapshot(event);
   populateEquipmentEventFields(event);
-  equipmentState.activeWindow = "review";
+  equipmentState.activeWindow = ["review", "summary", "transfer"].includes(activeWindow) ? activeWindow : "review";
   renderEquipmentModule();
   return true;
 }
@@ -7497,8 +7504,7 @@ function initEquipmentPlannerBridge() {
     if (equipmentState.selectedEventId) { if(equipmentSharedWorkspace.dirty)equipmentPlannerDirtyIds.add(equipmentState.selectedEventId); syncActiveEquipmentEvent(); }
     events.forEach(event => { equipmentState.events.push(event); equipmentPlannerDirtyIds.add(event.id); });
     invalidateEquipmentRentalPreview(); equipmentState.summaryTransferEnabled=false;equipmentState.summaryTransferAutomatic=false;
-    loadEquipmentEvent(events[0].id);equipmentSharedWorkspace.dirty=true;
-    equipmentState.activeWindow="summary";renderEquipmentModule();
+    loadEquipmentEvent(events[0].id,"summary");equipmentSharedWorkspace.dirty=true;
     const status=equipmentQuery("#equipmentSaveStatus");if(status)status.textContent=`${events.length} eventos cargados como borradores. Puede descargar el provisional o completar los datos para confirmar reservas.`;
     return {count:events.length};
   }

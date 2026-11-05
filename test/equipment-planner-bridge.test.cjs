@@ -82,6 +82,15 @@ test("lotes se agregan sin POST de guardado, preservan los seis cuadros y el led
   }
 });
 
+test("a six-event batch renders the requested summary once instead of rendering review and summary in sequence", () => {
+  const h = harness();
+  h.run("window.syntheticRenderCount=0;window.originalSyntheticRender=renderEquipmentModule;renderEquipmentModule=function(...args){window.syntheticRenderCount++;return window.originalSyntheticRender(...args);};");
+  h.importEvents(syntheticEvents());
+  assert.equal(h.run("window.syntheticRenderCount"), 1);
+  assert.equal(h.run("equipmentState.activeWindow"), "summary");
+  assert.equal(h.events().length, 6); assert.equal(h.requests.length, 0); assert.equal(h.saves.length, 0);
+});
+
 test("un lote invalido es atomico: no acepta cantidad faltante o texto convirtiendola a cero", () => {
   for (const invalidQuantity of [null, undefined, "", "texto", -1]) {
     const h = harness(), source = syntheticEvents(2); source[1].sections[0].items[0].quantity = invalidQuantity;
