@@ -9,7 +9,7 @@ const MAX_CELLS = 100000;
 const MAX_PDF_PAGES = 100;
 const MAX_PAGE_TEXT_ITEMS = 10000;
 const HEADER_ALIASES = {
-  name: new Set(["descripcion", "descripcion del equipo", "descripcion de equipo", "equipo", "nombre", "nombre del equipo", "articulo", "producto", "material", "item", "description", "name", "equipment"]),
+  name: new Set(["descripcion", "descripcion del equipo", "descripcion de equipo", "equipo", "nombre", "nombre del equipo", "articulo", "producto", "material", "item", "description", "name", "equipment", "inventario disponible"]),
   quantity: new Set(["cantidad", "cant", "qty", "quantity", "existencia", "existencias", "stock", "unidades", "cantidad disponible", "disponible"]),
   category: new Set(["categoria", "category", "grupo", "rubro", "clasificacion"]),
   notes: new Set(["observaciones", "observacion", "notas", "nota", "notes", "comments", "comentarios", "comentario"])
