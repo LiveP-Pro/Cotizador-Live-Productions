@@ -35,7 +35,7 @@ function fixture(options = {}) {
   const source = fs.readFileSync(path.join(__dirname, "..", "inventory.js"), "utf8");
   const instrumented = source.replace('  if (document.readyState === "loading") {', `
     window.__worksheetReviewTest = {
-      importBackup, changeImportWorksheet, closeImportReview, applyImportReview, renderImportReview,
+      importBackup, changeImportWorksheet, closeImportReview, applyImportReview, renderImportReview, chooseImportMode,
       setup(nextState, nextElements) { state = nextState; Object.assign(elements, nextElements); },
       currentReview() { return importReview; }, currentState() { return state; }
     };
@@ -107,6 +107,8 @@ test("an uninterpretable sheet disables saving and preserves sheet selection for
   await api.changeImportWorksheet({ target: { id: "warehouseImportWorksheetSelect", value: "INICIAL" } });
   assert.equal(api.currentReview().plan.rows[0].item.quantity, 0);
   assert.equal(api.currentReview().worksheet, "INICIAL");
+  assert.equal(elements.importApplyButton.disabled, true);
+  api.chooseImportMode("merge");
   assert.equal(elements.importApplyButton.disabled, false);
   assert.deepEqual(calls.map((call) => call.request.method), ["POST", "POST", "POST"]);
   assert.equal(JSON.stringify(state), baseline);

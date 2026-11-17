@@ -54,7 +54,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261117-inventory-header-01";
+const warehouseAssetVersion = "20261117-import-review-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -209,19 +209,32 @@ async function saveWarehouseInventory(payload, response, request) {
     errorResponse(response, 428, "Consulte el inventario actual antes de guardar. Falta la versión que está revisando.");
     return;
   }
-  if (payload.expectedSavedAt !== readWarehouseInventory().savedAt) {
+  const current = readWarehouseInventory();
+  if (payload.expectedSavedAt !== current.savedAt) {
     errorResponse(response, 409, "El inventario cambió en otra pestaña o equipo. Conserve sus cambios y vuelva a comparar con el inventario actual antes de guardar.");
+    return;
+  }
+  const importMode = payload?.importMode;
+  if (importMode !== undefined && (!["merge", "replace", "restore"].includes(importMode) || payload?.confirmedImport !== true)) {
+    errorResponse(response, 400, "Confirme expresamente la importación y elija cómo actualizar el inventario.");
     return;
   }
   let normalized;
   try {
     normalized = normalizeWarehouseInventoryPayload({
-      state: payload?.state,
+      state: ["merge", "replace"].includes(importMode)
+        ? { ...payload?.state, movements: JSON.parse(JSON.stringify(current.state.movements || [])) }
+        : payload?.state,
       savedAt: new Date().toISOString()
     });
   } catch (error) {
     errorResponse(response, 400, error.message);
     return;
+  }
+
+  if (importMode && normalized.state.importedSource) {
+    normalized.state.importedSource.authorization = { mode: importMode, confirmed: true,
+      actor: warehouseAuditActor(request), confirmedAt: normalized.savedAt };
   }
 
   const setAsInitial = payload?.setAsInitial === true;
@@ -3853,14 +3866,14 @@ function serveStatic(request, response, pathname) {
           data
             .toString("utf8")
             .replace(
-              /(equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import)\.(?:js|css)|equipment\.js|inventory\.js)\?v=[^"'&<>\s]+/g,
+              /(equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import)\.(?:js|css)|equipment\.js|inventory\.js|warehouse-import-(?:review|corrections)\.js)\?v=[^"'&<>\s]+/g,
               `$1?v=${warehouseAssetVersion}`
             ),
           "utf8"
         )
       : data;
     const headers = { "Content-Type": contentType };
-    if (requestedPath === "/index.html" || ["equipment-identity.js", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
+    if (requestedPath === "/index.html" || ["equipment-identity.js", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "warehouse-import-corrections.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
       (asset) => requestedPath === `/${asset}`
     )) {
       headers["Cache-Control"] = "no-store";

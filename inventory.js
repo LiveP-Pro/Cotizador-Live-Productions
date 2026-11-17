@@ -420,6 +420,8 @@
       rentalDraft: rentalDraft.map(normalizeRentalDraftLine),
       workshopDraft: workshopDraft.map(normalizeWorkshopDraftLine),
       auditEntries: Array.isArray(base.auditEntries) ? JSON.parse(JSON.stringify(base.auditEntries)) : [],
+      ...(base.importedSource && typeof base.importedSource === "object"
+        ? { importedSource: JSON.parse(JSON.stringify(base.importedSource)) } : {}),
       equipmentStockReceipts: Array.isArray(base.equipmentStockReceipts) ? JSON.parse(JSON.stringify(base.equipmentStockReceipts)) : []
     };
   }
@@ -3126,6 +3128,7 @@
       if (file.size > 15 * 1024 * 1024) throw new Error("El archivo supera el límite de 15 MB.");
       setStatus(`Leyendo ${file.name} para comparar descripciones...`, "neutral");
       let imported;
+      let corrections = null;
       let warnings = [];
       const restore = /\.json$/i.test(file.name);
       if (restore) {
@@ -3148,16 +3151,18 @@
         warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
         worksheets = Array.isArray(payload.worksheets)
           ? [...new Set(payload.worksheets.filter((name) => typeof name === "string" && name.length))] : [];
-        if (payload.verification?.complete === false || (Array.isArray(payload.blockers) && payload.blockers.length)) {
+        if (window.WarehouseImportCorrections) corrections = window.WarehouseImportCorrections.prepare(payload);
+        else if (payload.verification?.complete === false || (Array.isArray(payload.blockers) && payload.blockers.length)) {
           throw new Error(`El archivo contiene datos pendientes de interpretar. ${
             (Array.isArray(payload.blockers) ? payload.blockers : []).slice(0, 3).join(" ")
           } Revise el archivo o elija una hoja completa antes de importar.`);
         }
       }
       if (!window.WarehouseImportReview) throw new Error("Actualice la página para cargar el comparador de descripciones.");
-      const plan = window.WarehouseImportReview.prepare(state, imported, { mode: restore ? "restore" : "merge" });
-      importReview = { plan, file, fileName: file.name, worksheet: String(imported.worksheet || worksheet), worksheets, warnings,
-        baseline: JSON.stringify({ ...state, updatedAt: "" }), busy: false };
+      importReview = { plan: null, imported, corrections, mode: restore ? "restore" : "", restore,
+        file, fileName: file.name, worksheet: String(imported.worksheet || worksheet), worksheets, warnings,
+        baseline: JSON.stringify({ ...state, updatedAt: "" }), expectedSavedAt: serverSavedAt, busy: false };
+      rebuildImportPlan(importReview);
       elements.importError.textContent = "";
       renderImportReview();
       elements.importBody.scrollTop = 0;
@@ -3176,6 +3181,71 @@
       readingImport = false;
       elements.importInput.value = "";
     }
+  }
+
+  function rebuildImportPlan(review = importReview) {
+    if (!review?.imported) return;
+    let imported = review.imported;
+    if (review.corrections && window.WarehouseImportCorrections.pending(review.corrections) === 0) {
+      imported = window.WarehouseImportCorrections.finalize(review.corrections);
+    }
+    review.plan = imported.items?.length
+      ? window.WarehouseImportReview.prepare(state, imported, { mode: review.mode || "merge" }) : null;
+  }
+
+  function chooseImportMode(mode) {
+    if (!importReview?.imported || importReview.busy || importReview.restore || !["merge", "replace"].includes(mode)) return;
+    importReview.mode = mode;
+    rebuildImportPlan();
+    elements.importError.textContent = "";
+    renderImportReview();
+  }
+
+  function editImportCorrection(event) {
+    if (!importReview?.corrections || importReview.busy) return;
+    const input = event.target;
+    if (!input.dataset?.importCorrectionId || !["name", "quantity", "category"].includes(input.dataset.importCorrectionField)) return;
+    const entry = importReview.corrections.entries.find((row) => row.id === input.dataset.importCorrectionId);
+    if (!entry) return;
+    window.WarehouseImportCorrections.update(importReview.corrections, entry.id,
+      { [input.dataset.importCorrectionField]: input.value });
+    elements.importApplyButton.disabled = true;
+    elements.importError.textContent = "Confirme la corrección de la fila antes de importar.";
+  }
+
+  function importSourceCorrections(review) {
+    if (!review.corrections) return "";
+    const { entries, blockers } = review.corrections;
+    if (!entries.length && !blockers.length) return "";
+    return `<section class="warehouse-import-corrections">
+      <h3>Completa los datos pendientes aquí</h3>
+      <p>No necesitas volver a editar el Excel. Confirma cada cantidad; cero es un valor válido.</p>
+      ${entries.map((entry) => `<article class="warehouse-import-row ${entry.decision ? "is-resolved" : ""}">
+        <header><strong>${escapeHtml(entry.sourceLocation || `Fila ${entry.sourceRow}`)}${entry.qtyRef ? ` · ${escapeHtml(entry.qtyRef)}` : ""}</strong>
+          <span>${entry.decision ? entry.decision.action === "skip" ? "Se omitirá por tu elección" : "Dato confirmado" : "Dato pendiente"}</span></header>
+        <div class="warehouse-form-grid">
+          <label>Equipo<input data-import-correction-id="${escapeHtml(entry.id)}" data-import-correction-field="name" value="${escapeHtml(entry.name || "")}" ${review.busy ? "disabled" : ""} /></label>
+          <label>Cantidad<input type="number" min="0" step="1" inputmode="numeric" data-import-correction-id="${escapeHtml(entry.id)}" data-import-correction-field="quantity" value="${escapeHtml(entry.quantity ?? "")}" placeholder="Escribe la cantidad" ${review.busy ? "disabled" : ""} /></label>
+          <label>Categoría<input data-import-correction-id="${escapeHtml(entry.id)}" data-import-correction-field="category" value="${escapeHtml(entry.category || "")}" ${review.busy ? "disabled" : ""} /></label>
+        </div>
+        <div class="warehouse-import-actions">
+          <button type="button" class="warehouse-row-button" data-import-correction-action="include" data-import-correction-id="${escapeHtml(entry.id)}" ${review.busy ? "disabled" : ""}>Confirmar datos de esta fila</button>
+          <button type="button" class="warehouse-row-button" data-import-correction-action="skip" data-import-correction-id="${escapeHtml(entry.id)}" ${review.busy ? "disabled" : ""}>Omitir esta fila</button>
+        </div></article>`).join("")}
+      ${blockers.length ? `<p class="warehouse-import-explanation">Estas observaciones requieren corregir el archivo para poder leerlo:</p><ul>${blockers.map((issue) => `<li>${escapeHtml(typeof issue === "string" ? issue : issue.message || String(issue))}</li>`).join("")}</ul>` : ""}
+    </section>`;
+  }
+
+  function importModeSelector(review) {
+    if (review.restore || !review.imported) return "";
+    return `<section class="warehouse-import-mode"><h3>¿Quieres reemplazar el inventario actual por este archivo?</h3>
+      <div class="warehouse-import-actions">
+        <button type="button" class="warehouse-row-button" data-import-mode="replace" aria-pressed="${review.mode === "replace"}" ${review.busy ? "disabled" : ""}>Sí, reemplazar por este archivo</button>
+        <button type="button" class="warehouse-row-button" data-import-mode="merge" aria-pressed="${review.mode === "merge"}" ${review.busy ? "disabled" : ""}>No, actualizar y agregar</button>
+      </div>
+      <p>${review.mode === "replace" ? "Solo quedarán activos los equipos de este archivo. Los anteriores que no aparezcan se archivarán y sus bitácoras se conservarán."
+        : review.mode === "merge" ? "Se actualizarán las cantidades y se agregarán equipos nuevos; los equipos que no aparecen en el archivo se conservarán."
+          : "Elige una opción. Todavía no se ha cambiado el inventario."}</p></section>`;
   }
 
   async function changeImportWorksheet(event) {
@@ -3210,23 +3280,25 @@
   function renderImportReview() {
     if (!importReview) return;
     const { plan, fileName, warnings, busy } = importReview;
+    const correctionPending = importReview.corrections ? window.WarehouseImportCorrections.pending(importReview.corrections) : 0;
+    const sourceControls = `${importWorksheetSelector(importReview)}${importModeSelector(importReview)}${importSourceCorrections(importReview)}`;
     const worksheetSummary = importReview.worksheets?.length ? ` · ${importReview.worksheet ? `Hoja: ${importReview.worksheet}` : "Todas las hojas"}` : "";
     if (!plan) {
-      elements.importSummary.textContent = `${fileName}${worksheetSummary} · No se pudo revisar esta hoja`;
+      elements.importSummary.textContent = `${fileName}${worksheetSummary} · ${correctionPending ? `${correctionPending} datos pendientes` : "No se pudo revisar esta hoja"}`;
       elements.importApplyButton.disabled = true;
       elements.importApplyButton.textContent = "Importar y guardar";
       elements.importCancelButton.disabled = busy;
       elements.importCloseButton.disabled = busy;
-      elements.importBody.innerHTML = `${importWorksheetSelector(importReview)}<p class="warehouse-import-explanation">Esta selección no está lista para importar. Elija otra hoja para volver a revisar el archivo o cancele la importación. El inventario no cambió.</p>`;
+      elements.importBody.innerHTML = `${sourceControls}<p class="warehouse-import-explanation">${importReview.corrections?.entries.length ? "Confirma los datos pendientes para preparar esta importación." : "Esta selección no está lista para importar. Elija otra hoja para volver a revisar el archivo o cancele la importación."} El inventario no cambió.</p>`;
       return;
     }
     const pending = plan.rows.filter((row) => !row.decision).length;
     const variants = plan.rows.filter((row) => ["variant", "ambiguous", "duplicate"].includes(row.status));
     const newRows = plan.rows.filter((row) => row.status === "new");
     const exact = plan.rows.filter((row) => row.status === "exact").length;
-    elements.importSummary.textContent = `${fileName}${worksheetSummary} · Equipos: ${plan.rows.length} · Coincidencias: ${exact} · Nuevos: ${newRows.length} · Por resolver: ${pending}`;
-    elements.importApplyButton.disabled = busy || pending > 0;
-    elements.importApplyButton.textContent = busy ? "Guardando..." : "Importar y guardar";
+    elements.importSummary.textContent = `${fileName}${worksheetSummary} · Equipos: ${plan.rows.length} · Coincidencias: ${exact} · Nuevos: ${newRows.length} · Por resolver: ${pending + correctionPending}`;
+    elements.importApplyButton.disabled = busy || pending > 0 || correctionPending > 0 || !importReview.mode;
+    elements.importApplyButton.textContent = busy ? "Guardando..." : importReview.mode === "replace" ? "Reemplazar inventario" : importReview.mode === "restore" ? "Restaurar respaldo" : "Importar y guardar";
     elements.importCancelButton.disabled = busy;
     elements.importCloseButton.disabled = busy;
     const actionLabels = { "imported-name": "Usar descripción del archivo", "keep-name": "Conservar descripción actual", add: "Agregar por separado", skip: "Omitir fila" };
@@ -3235,7 +3307,7 @@
       const candidates = row.candidates.map((candidate) => {
         const changes = [...candidate.difference.removed.map((word) => `<span class="warehouse-diff-removed">− ${escapeHtml(word)}</span>`),
           ...candidate.difference.added.map((word) => `<span class="warehouse-diff-added">+ ${escapeHtml(word)}</span>`)].join(" ");
-        const unavailable = plan.mode === "merge" && plan.rows.some((other) => other !== row && other.decision?.targetId === candidate.id);
+        const unavailable = plan.mode !== "restore" && plan.rows.some((other) => other !== row && other.decision?.targetId === candidate.id);
         return `<div class="warehouse-import-candidate">
           <div><small>Descripción actual · ${escapeHtml(candidate.category)}</small><strong>${escapeHtml(candidate.name)}</strong>
             <span>Cantidad registrada: ${escapeHtml(candidate.quantity)} → ${escapeHtml(row.item.quantity)}</span></div>
@@ -3252,29 +3324,44 @@
           <strong>${escapeHtml(row.item.name)}</strong><span>Cantidad del archivo: ${escapeHtml(row.item.quantity)}</span></div>
         ${candidates}<div class="warehouse-import-actions">
           <button type="button" class="warehouse-row-button" data-import-row="${row.index}" data-import-action="add" aria-pressed="${row.decision?.action === "add"}" ${busy ? "disabled" : ""}>${separateLabel}</button>
-          ${plan.mode === "merge" ? `<button type="button" class="warehouse-row-button" data-import-row="${row.index}" data-import-action="skip" aria-pressed="${row.decision?.action === "skip"}" ${busy ? "disabled" : ""}>Omitir fila</button>` : ""}
+          ${plan.mode !== "restore" ? `<button type="button" class="warehouse-row-button" data-import-row="${row.index}" data-import-action="skip" aria-pressed="${row.decision?.action === "skip"}" ${busy ? "disabled" : ""}>Omitir fila</button>` : ""}
         </div>
       </article>`;
     }).join("");
     const simpleVariants = variants.filter((row) => !row.decision && row.candidates.length === 1 && row.status === "variant").length > 1;
     elements.importBody.innerHTML = `
-      ${importWorksheetSelector(importReview)}
+      ${sourceControls}
       <p class="warehouse-import-explanation">${plan.mode === "restore"
         ? "Este respaldo JSON reemplazará el inventario y las bitácoras actuales. Puede conservar el nombre actual de los equipos que tengan variantes."
-        : "Las cantidades del archivo reemplazan las registradas; no se suman. Se conservan las bitácoras y los equipos que no aparecen en el archivo."}
-        ${variants.length ? "El último clic que resuelva las diferencias importa y guarda automáticamente." : "Revise el resumen y pulse Importar y guardar."}</p>
-      ${warnings.length ? `<details class="warehouse-import-warnings" open><summary>${warnings.length} observaciones del archivo · revisar antes de importar</summary><ul>${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul></details>` : ""}
+        : plan.mode === "replace" ? "Las cantidades y categorías activas se tomarán del nuevo archivo. Se conservan las bitácoras; los equipos ausentes se archivarán."
+          : "Las cantidades del archivo reemplazan las registradas; no se suman. Se conservan las bitácoras y los equipos que no aparecen en el archivo."}
+        Primero revisa y luego pulsa el botón de guardar. Se pedirá tu autorización antes de aplicar cambios.</p>
+      ${warnings.length ? `<details class="warehouse-import-warnings"><summary>${warnings.length} observaciones del archivo original</summary><ul>${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul></details>` : ""}
       ${simpleVariants ? `<div class="warehouse-import-bulk"><span>Resolver variantes con una sola coincidencia:</span>
         <button type="button" class="warehouse-row-button" data-import-bulk="keep-name" ${busy ? "disabled" : ""}>Conservar todas las actuales</button>
         <button type="button" class="warehouse-row-button" data-import-bulk="imported-name" ${busy ? "disabled" : ""}>Usar todas las del archivo</button></div>` : ""}
-      ${cards}
+      ${importReview.mode ? cards : ""}
       ${newRows.length ? `<details class="warehouse-import-new" ${variants.length ? "" : "open"}><summary>${newRows.length} equipos nuevos para agregar</summary><ul>${newRows.map((row) => `<li><strong>${escapeHtml(row.item.name)}</strong><span>${escapeHtml(row.item.category || "SIN CATEGORIA")} · Cantidad: ${escapeHtml(row.item.quantity)}</span></li>`).join("")}</ul></details>` : ""}`;
   }
 
   async function resolveImportChoice(event) {
-    if (!importReview?.plan || importReview.busy) return;
-    const button = event.target.closest("[data-import-action], [data-import-bulk]");
+    if (!importReview || importReview.busy) return;
+    const button = event.target.closest("[data-import-action], [data-import-bulk], [data-import-mode], [data-import-correction-action]");
     if (!button || button.disabled) return;
+    if (button.dataset.importMode) { chooseImportMode(button.dataset.importMode); return; }
+    if (button.dataset.importCorrectionAction) {
+      try {
+        const entry = importReview.corrections?.entries.find((row) => row.id === button.dataset.importCorrectionId);
+        if (!entry) throw new Error("No se encontró la fila pendiente.");
+        window.WarehouseImportCorrections.resolve(importReview.corrections, entry.id,
+          { action: button.dataset.importCorrectionAction, name: entry.name, quantity: entry.quantity, category: entry.category });
+        rebuildImportPlan();
+        elements.importError.textContent = "";
+        renderImportReview();
+      } catch (error) { elements.importError.textContent = error.message; }
+      return;
+    }
+    if (!importReview.plan) return;
     const { plan } = importReview;
     elements.importError.textContent = "";
     try {
@@ -3282,14 +3369,13 @@
         for (const row of plan.rows) {
           if (row.decision || row.status !== "variant" || row.candidates.length !== 1) continue;
           // Leave collisions for an explicit decision instead of overwriting another row.
-          if (plan.mode === "merge" && plan.rows.some((other) => other !== row && other.decision?.targetId === row.candidates[0].id)) continue;
+          if (plan.mode !== "restore" && plan.rows.some((other) => other !== row && other.decision?.targetId === row.candidates[0].id)) continue;
           window.WarehouseImportReview.decide(plan, row.index, button.dataset.importBulk, row.candidates[0].id);
         }
       } else window.WarehouseImportReview.decide(plan, Number(button.dataset.importRow), button.dataset.importAction, button.dataset.importTarget || null);
       const lastIndex = button.dataset.importRow;
       renderImportReview();
-      if (!plan.rows.some((row) => !row.decision)) await applyImportReview();
-      else {
+      if (plan.rows.some((row) => !row.decision)) {
         const next = plan.rows.find((row) => !row.decision);
         const nextButton = elements.importBody.querySelector(`[data-import-row="${next?.index ?? lastIndex}"]`);
         nextButton?.focus({ preventScroll: true });
@@ -3303,8 +3389,20 @@
     const review = importReview;
     try {
       if (isHttpPage() && !serverSavedAt) throw new Error("Primero cargue el inventario actual del servidor antes de importar.");
+      if (!review.mode) throw new Error("Elige si deseas reemplazar el inventario o actualizar y agregar.");
+      if (review.corrections && window.WarehouseImportCorrections.pending(review.corrections)) throw new Error("Confirma los datos pendientes del archivo antes de importar.");
+      if (review.plan.rows.some((row) => !row.decision)) throw new Error("Elige qué hacer con las descripciones pendientes antes de importar.");
       if (JSON.stringify({ ...state, updatedAt: "" }) !== review.baseline) throw new Error("El inventario cambió mientras revisaba. Cancele y vuelva a importar para comparar los datos actuales.");
-      const result = window.WarehouseImportReview.finalize(review.plan, { createId: () => uid("import") });
+      const replacement = review.mode === "replace";
+      const summary = replacement ? window.WarehouseImportReview.summarizeReplacement(review.plan) : null;
+      const omitted = (review.corrections?.entries || []).filter((entry) => entry.decision?.action === "skip").length
+        + review.plan.rows.filter((row) => row.decision?.action === "skip").length;
+      const message = replacement
+        ? `¿Autorizas reemplazar el inventario actual por «${review.fileName}»?\n\nQuedarán ${summary.importedRows} equipos activos del archivo y ${summary.totalQuantity} unidades registradas. Se actualizarán ${summary.updated}, se agregarán ${summary.added} y se archivarán ${summary.archived} equipos anteriores. Sus bitácoras se conservarán.\nLas cantidades del archivo serán las registradas. Las salidas y equipos en taller seguirán descontándose del disponible.`
+        : review.mode === "restore" ? `¿Autorizas restaurar «${review.fileName}»? Este respaldo reemplazará el inventario y sus bitácoras.`
+          : `¿Autorizas actualizar y agregar los equipos de «${review.fileName}»? Se conservarán los equipos ausentes y las bitácoras.`;
+      if (!window.confirm(message + (omitted ? `\n\nOmitiste expresamente ${omitted} fila(s).` : "") + "\n\nEl inventario solo cambiará si confirmas.")) return;
+      const result = window.WarehouseImportReview.finalize(review.plan, { createId: () => uid("import"), confirmedReplacement: replacement });
       const next = normalizeState(result);
       review.busy = true;
       window.clearTimeout(saveTimer);
@@ -3314,8 +3412,8 @@
         await enqueueWarehouseWrite(async () => {
           const response = await fetch(API_PATH, {
             method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ state: next, setAsInitial: true,
-              expectedSavedAt: serverSavedAt })
+            body: JSON.stringify({ state: next, setAsInitial: true, importMode: review.mode, confirmedImport: true,
+              expectedSavedAt: review.expectedSavedAt || serverSavedAt })
           });
           if (!response.ok) {
             const failure = await response.json().catch(() => ({}));
@@ -3338,7 +3436,7 @@
       importReview = null;
       elements.importDialog.close();
       setStatus(isHttpPage()
-        ? `Importación guardada: ${updated} equipos actualizados, ${added} agregados${skipped ? `, ${skipped} omitidos` : ""}.`
+        ? `${replacement ? "Inventario reemplazado" : "Importación guardada"}: ${updated} equipos actualizados, ${added} agregados${skipped ? `, ${skipped} omitidos` : ""}.`
         : "Importación guardada solo en este navegador.", isHttpPage() ? "success" : "warning");
     } catch (error) {
       review.busy = false;
@@ -3392,6 +3490,7 @@
     elements.importInput.addEventListener("change", (event) => importBackup(event.target.files?.[0]));
     elements.importBody.addEventListener("click", resolveImportChoice);
     elements.importBody.addEventListener("change", changeImportWorksheet);
+    elements.importBody.addEventListener("input", editImportCorrection);
     elements.importApplyButton.addEventListener("click", applyImportReview);
     elements.importCloseButton.addEventListener("click", closeImportReview);
     elements.importCancelButton.addEventListener("click", closeImportReview);
