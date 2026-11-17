@@ -99,6 +99,76 @@ function directive(cells, kind) {
   return "";
 }
 
+function splitTitledExplicitTables(rows) {
+  for (const headerRow of rows) {
+    if (headerRow.cells.some((cell) => quantity(cell.value) !== null)) continue;
+    const primary = headerRow.cells.filter((cell) => ["description", "quantity"].includes(field(cell.value)));
+    if (primary.length < 4 || primary.length % 2) continue;
+    const pairs = [];
+    for (let index = 0; index < primary.length; index += 2) {
+      const pair = primary.slice(index, index + 2);
+      if (new Set(pair.map((cell) => field(cell.value))).size !== 2) { pairs.length = 0; break; }
+      pairs.push(pair);
+    }
+    if (pairs.length < 2) continue;
+    const starts = pairs.map((pair) => Math.min(...pair.map((cell) => cell.column)));
+    starts[0] = Math.min(...rows.flatMap((row) => row.cells.map((cell) => cell.column)));
+    const titles = rows.filter((row) => row.order < headerRow.order).findLast((row) => {
+      const names = pairs.map((pair, index) => row.cells.filter((cell) => cell.column >= starts[index]
+        && cell.column <= Math.max(...pair.map((entry) => entry.column))));
+      return names.every((cells) => cells.length === 1 && typeof cells[0].value === "string"
+        && clean(cells[0].value) && quantity(cells[0].value) === null && !field(cells[0].value)
+        && !/^(?:nota|notas|observacion|observaciones|comentario)\s*:/i.test(key(cells[0].value)))
+        && new Set(names.map((cells) => key(cells[0].value))).size === pairs.length;
+    });
+    if (!titles) continue;
+    return starts.flatMap((column, index) => rows.flatMap((row) => {
+      const cells = row.cells.filter((cell) => cell.column >= column && cell.column < (starts[index + 1] ?? Infinity));
+      if (!cells.length) return [];
+      return [{ ...row, cells, location: `${row.location} · cuadro ${index + 1}`,
+        sourceGroupId: `${row.sourceGroupId}:block:${index + 1}`,
+        ...(row.order === titles.order ? { inferredServiceTitle: directive(cells, "service") || clean(cells[0].value) } : {}) }];
+    }));
+  }
+  return null;
+}
+
+function splitVerticalExcelTables(sourceRows) {
+  const grouped = new Map();
+  for (const row of sourceRows) {
+    if (!grouped.has(row.sourceGroupId)) grouped.set(row.sourceGroupId, []);
+    grouped.get(row.sourceGroupId).push(row);
+  }
+  return [...grouped.values()].flatMap((rows) => {
+    let segment = 1, dataSeen = false, hasTitle = false;
+    const firstData = rows.findIndex((row) => row.cells.some((cell) => quantity(cell.value) !== null));
+    const firstDeclared = rows.findIndex((row) => row.inferredServiceTitle
+      || !row.cells.some((cell) => quantity(cell.value) !== null) && directive(row.cells, "service"));
+    const preambleEnd = firstDeclared > 0 && (firstData < 0 || firstDeclared < firstData) ? firstDeclared : 0;
+    return rows.map((row, index) => {
+      const cells = row.cells;
+      const numeric = cells.some((cell) => quantity(cell.value) !== null);
+      const declared = !numeric && directive(cells, "service");
+      const single = cells.length === 1 ? cells[0] : null;
+      const next = rows[index + 1];
+      const nextHeader = next && detectHeader(next.cells);
+      const previous = rows[index - 1];
+      const blankBefore = previous && cells[0].row > Math.max(...previous.cells.map((cell) => cell.row)) + 1;
+      const plainTitle = !declared && !numeric && single && typeof single.value === "string"
+        && clean(single.value) && !field(single.value) && !directive(row.cells, "category")
+        && !/^(?:nota|notas|observacion|observaciones|comentario)\s*:/i.test(key(single.value))
+        && ((index === 0 && !dataSeen && !preambleEnd)
+          || nextHeader && !nextHeader.duplicates.length && ((!dataSeen && !hasTitle) || dataSeen && blankBefore));
+      if ((declared || plainTitle || row.inferredServiceTitle) && dataSeen) { segment += 1; dataSeen = false; }
+      if (declared || plainTitle || row.inferredServiceTitle) hasTitle = true;
+      if (numeric) dataSeen = true;
+      return { ...row, sourceGroupId: `${row.sourceGroupId}:table:${segment}`,
+        ...(index < preambleEnd ? { inferredPreamble: true } : {}),
+        ...(plainTitle ? { inferredServiceTitle: clean(single.value) } : {}) };
+    });
+  });
+}
+
 function inferExcelLayouts(sourceRows) {
   const sheets = new Map();
   for (const row of sourceRows) {
@@ -108,7 +178,9 @@ function inferExcelLayouts(sourceRows) {
   return [...sheets.values()].flatMap((rows) => {
     // Explicit columns always take precedence. Repeated or competing headers
     // remain unresolved rather than reinterpreting a quantity as another field.
-    if (rows.some((row) => detectHeader(row.cells))) return rows;
+    const declaredHeaders = rows.some((row) => detectHeader(row.cells));
+    const explicitParallel = declaredHeaders ? splitTitledExplicitTables(rows) : null;
+    if (explicitParallel) return splitVerticalExcelTables(explicitParallel);
     const pairs = new Map();
     for (const row of rows) {
       const byColumn = new Map(row.cells.map((cell) => [cell.column, cell]));
@@ -124,8 +196,10 @@ function inferExcelLayouts(sourceRows) {
       || rows[0].cells.some((cell) => cell.column === column && typeof cell.value === "string"
         && clean(cell.value) && quantity(cell.value) === null && !field(cell.value) && !isNote(cell.value)))
       .map(([column]) => column).sort((a, b) => a - b);
-    if (starts.length !== pairs.size) return rows;
-    if (!starts.length || starts[0] !== Math.min(...rows.flatMap((row) => row.cells.map((cell) => cell.column)))) return rows;
+    if (declaredHeaders && (starts.length < 2 || starts.some((column) => !rows.some((row) =>
+      row.cells.some((cell) => cell.column === column && field(cell.value) === "quantity"))))) return splitVerticalExcelTables(rows);
+    if (starts.length !== pairs.size) return splitVerticalExcelTables(rows);
+    if (!starts.length || starts[0] !== Math.min(...rows.flatMap((row) => row.cells.map((cell) => cell.column)))) return splitVerticalExcelTables(rows);
     const titles = starts.map((column) => rows.find((row) => row.order < pairs.get(column)[0].order
       && row.cells.some((cell) => cell.column === column && typeof cell.value === "string"
         && clean(cell.value) && quantity(cell.value) === null && !field(cell.value) && !isNote(cell.value))));
@@ -133,8 +207,8 @@ function inferExcelLayouts(sourceRows) {
     // Without that evidence they may be extra numeric/text columns of one table.
     if (starts.length > 1 && (starts.some((column, index) => index && column <= starts[index - 1] + 1)
       || titles.some((row) => !row || row.order !== rows[0].order)
-      || new Set(titles.map((row, index) => key(row?.cells.find((cell) => cell.column === starts[index])?.value))).size !== starts.length)) return rows;
-    return starts.flatMap((column, index) => {
+      || new Set(titles.map((row, index) => key(row?.cells.find((cell) => cell.column === starts[index])?.value))).size !== starts.length)) return splitVerticalExcelTables(rows);
+    return splitVerticalExcelTables(starts.flatMap((column, index) => {
       const end = starts[index + 1] ?? Infinity;
       const firstDataOrder = pairs.get(column)[0].order;
       return rows.flatMap((row) => {
@@ -149,7 +223,7 @@ function inferExcelLayouts(sourceRows) {
           sourceGroupId: `${row.sourceGroupId}:block:${index + 1}` } : {}),
           inferredHeading, inferredTable: { inferred: true, columns: { quantity: column, description: column + 1 }, labels: {} } }];
       });
-    });
+    }));
   });
 }
 
@@ -163,13 +237,15 @@ function buildServices(sourceRows, warnings, blockers, { preserveExcelDescriptio
   let pending = [];
   let location = "";
   let sourceGroupId = "";
+  let sourceSheet = "";
   let inferredName = "";
 
   const ensureService = (name) => {
     const normalized = `${sourceGroupId}\u0000${key(name)}`;
     let current = servicesByName.get(normalized);
     if (!current) {
-      current = { name: clean(name) || "Servicio importado", sourceName: clean(name) || "Servicio importado", mainSections: [], sourceRefs: [] };
+      current = { name: clean(name) || "Servicio importado", sourceName: clean(name) || "Servicio importado",
+        ...(sourceSheet ? { sourceSheet } : {}), mainSections: [], sourceRefs: [] };
       servicesByName.set(normalized, current);
       services.push(current);
     }
@@ -213,13 +289,14 @@ function buildServices(sourceRows, warnings, blockers, { preserveExcelDescriptio
       if (pending.length) { ensureService(inferredName || location); flushPending(); }
       location = sourceRow.location;
       sourceGroupId = sourceRow.sourceGroupId || location;
+      sourceSheet = sourceRow.cells.find((cell) => cell.sheet)?.sheet || "";
       service = null; section = null; table = null; category = "Equipo"; inferredName = "";
     }
     if (sourceRow.inferredTable && (!table || table.inferred)) table = sourceRow.inferredTable;
     const cells = sourceRow.columns || sourceRow.cells;
     const values = new Map(cells.map((cell) => [cell.column, cell.value]));
     const rawCount = table ? values.get(table.columns.quantity) : undefined;
-    const hasCount = rawCount !== undefined && clean(rawCount) !== "" && !sourceRow.inferredHeading;
+    const hasCount = rawCount !== undefined && clean(rawCount) !== "" && !sourceRow.inferredHeading && !sourceRow.inferredServiceTitle;
     const header = !hasCount || field(rawCount) ? detectHeader(cells) : null;
     if (header) {
       table = header;
@@ -231,7 +308,17 @@ function buildServices(sourceRows, warnings, blockers, { preserveExcelDescriptio
       }
       continue;
     }
-    const serviceName = hasCount ? "" : directive(cells, "service");
+    if (sourceRow.inferredPreamble) { pending.push(sourceRow); continue; }
+    if (table?.inferred && field(rawCount) === "quantity" && clean(values.get(table.columns.description))) {
+      category = clean(values.get(table.columns.description));
+      if (!service) ensureService(inferredName || location);
+      flushPending();
+      ensureSection(category);
+      append(sourceRow, "header", cells.map((cell) => String(cell.value ?? "")).join(" | "), null, { headingKind: "category" });
+      continue;
+    }
+    const directiveAllowed = !cells.some((cell) => quantity(cell.value) !== null);
+    const serviceName = directiveAllowed ? directive(cells, "service") || sourceRow.inferredServiceTitle : "";
     if (serviceName) {
       ensureService(serviceName);
       flushPending();
@@ -240,7 +327,7 @@ function buildServices(sourceRows, warnings, blockers, { preserveExcelDescriptio
     }
     const declaredService = table && clean(values.get(table.columns.service));
     if (declaredService) { ensureService(declaredService); flushPending(); }
-    const categoryDirective = hasCount ? "" : directive(cells, "category");
+    const categoryDirective = directiveAllowed ? directive(cells, "category") : "";
     const declaredCategory = categoryDirective || (table && clean(values.get(table.columns.category)));
     if (declaredCategory) {
       category = declaredCategory;
@@ -298,13 +385,24 @@ function buildServices(sourceRows, warnings, blockers, { preserveExcelDescriptio
   return services;
 }
 
-async function readExcel(buffer, { preserveCellNotes = false } = {}) {
+async function readExcel(buffer, { preserveCellNotes = false, selectedSheets, excludeInventorySheets = false } = {}) {
   const workbook = await loadWorkbook(buffer);
+  const worksheets = workbook.worksheets.map((sheet) => sheet.name);
+  if (selectedSheets !== undefined && (!Array.isArray(selectedSheets) || !selectedSheets.length
+    || selectedSheets.length > 100 || selectedSheets.some((name) => typeof name !== "string" || !worksheets.includes(name))
+    || new Set(selectedSheets).size !== selectedSheets.length)) {
+    throw invalid("Seleccione al menos una hoja existente del archivo, sin nombres repetidos.");
+  }
+  const selected = worksheets.filter((name) => selectedSheets !== undefined
+    ? selectedSheets.includes(name) : !excludeInventorySheets || key(name) !== "inventario");
+  const excludedSheets = worksheets.filter((name) => !selected.includes(name));
+  if (!selected.length) throw invalid("Este archivo solo contiene inventario. Importe el inventario en Contabilidad de Equipo o elija un archivo con cuadros de servicios.");
   const sourceCells = [];
   const sourceRows = [];
   const blockers = [];
   let rowCount = 0, scannedCells = 0;
   for (const sheet of workbook.worksheets) {
+    if (!selected.includes(sheet.name)) continue;
     sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
       if (++rowCount > LIMITS.rows) throw invalid("El Excel supera el límite de 10,000 filas.");
       const cells = [];
@@ -329,7 +427,8 @@ async function readExcel(buffer, { preserveCellNotes = false } = {}) {
   }
   const inferredRows = inferExcelLayouts(sourceRows);
   if (inferredRows.length > LIMITS.rows) throw invalid("El Excel supera el límite de 10,000 filas de cuadros.");
-  return { sourceCells, sourceRows: inferredRows, documentLines: [], blockers };
+  return { sourceCells, sourceRows: inferredRows, documentLines: [], blockers,
+    worksheets, selectedSheets: selected, excludedSheets };
 }
 
 function pdfLines(items, pageNumber) {
@@ -521,6 +620,7 @@ function verifyServiceImport(preview) {
   const represented = new Map();
   const mismatchedRefs = [];
   const duplicateRefs = [];
+  const sheetTableCounts = new Map();
   const blockers = [...(Array.isArray(preview?.blockers) ? preview.blockers : [])];
   if (expected.size !== source.length) blockers.push("La fuente contiene referencias de celda repetidas.");
   for (const service of preview?.services || []) {
@@ -573,6 +673,15 @@ function verifyServiceImport(preview) {
       if (JSON.stringify(generatedNotes) !== JSON.stringify(section.notes || [])) blockers.push(`Servicio «${service.name}», sección «${section.title}»: faltan encabezados, notas o datos adicionales de la fuente.`);
     }
     if (JSON.stringify(serviceRefs) !== JSON.stringify(service.sourceRefs || [])) blockers.push(`Servicio «${service.name}»: cambiaron las referencias u orden de las celdas originales.`);
+    if (preview?.source?.format === "xlsx") {
+      const sheets = new Set(serviceRefs.map((ref) => expected.get(ref)?.sheet));
+      const physicalSheet = [...sheets][0];
+      const tableIndex = (sheetTableCounts.get(physicalSheet) || 0) + 1;
+      sheetTableCounts.set(physicalSheet, tableIndex);
+      if (sheets.size !== 1 || !physicalSheet || service.sourceSheet !== physicalSheet || service.sourceTableIndex !== tableIndex) {
+        blockers.push(`Servicio «${service.name}»: cambió la hoja o el cuadro de origen.`);
+      }
+    }
   }
   const missingRefs = source.filter((cell) => !represented.has(cell.ref)).map((cell) => cell.ref);
   if (!source.length || !(preview?.services || []).length) blockers.push("La fuente no contiene celdas o servicios verificables.");
@@ -581,23 +690,33 @@ function verifyServiceImport(preview) {
     missingRefs, mismatchedRefs: [...new Set(mismatchedRefs)], duplicateRefs: [...new Set(duplicateRefs)], blockers: [...new Set(blockers)] };
 }
 
-async function readSourceFile(buffer, { fileName = "servicios", mimeType = "", preserveCellNotes = false } = {}) {
+async function readSourceFile(buffer, { fileName = "servicios", mimeType = "", preserveCellNotes = false,
+  selectedSheets, excludeInventorySheets = false } = {}) {
   if (!Buffer.isBuffer(buffer) && !(buffer instanceof Uint8Array)) throw invalid("No se recibió un archivo válido.");
   if (!buffer.length) throw invalid("El archivo está vacío.");
   if (buffer.length > LIMITS.fileBytes) throw invalid("El archivo supera el límite de 15 MB.");
   const format = /\.xlsx$/i.test(fileName) ? "xlsx" : /\.pdf$/i.test(fileName) ? "pdf"
     : mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ? "xlsx" : mimeType === "application/pdf" ? "pdf" : "";
   if (!format) throw invalid("Use Excel .xlsx o PDF digital. Los archivos .xls deben guardarse como .xlsx.");
-  const data = format === "xlsx" ? await readExcel(buffer, { preserveCellNotes }) : await readPdf(buffer);
+  const data = format === "xlsx" ? await readExcel(buffer, { preserveCellNotes, selectedSheets, excludeInventorySheets }) : await readPdf(buffer);
   if (!data.sourceCells.length) throw invalid("El archivo no contiene celdas o texto con información.");
   return { ...data, source: { fileName: String(fileName), format, mimeType: String(mimeType),
-    sha256: crypto.createHash("sha256").update(buffer).digest("hex"), byteLength: buffer.length } };
+    sha256: crypto.createHash("sha256").update(buffer).digest("hex"), byteLength: buffer.length,
+    ...(format === "xlsx" ? { worksheets: data.worksheets, selectedSheets: data.selectedSheets, excludedSheets: data.excludedSheets } : {}) } };
 }
 
 async function parseServiceFile(buffer, options = {}) {
-  const data = await readSourceFile(buffer, options);
+  const data = await readSourceFile(buffer, { ...options, excludeInventorySheets: options.excludeInventorySheets !== false });
   const warnings = [];
   const services = buildServices(data.sourceRows, warnings, data.blockers, { preserveExcelDescriptions: data.source.format === "xlsx" });
+  const tableIndices = new Map();
+  for (const service of services) {
+    if (!service.sourceSheet) continue;
+    const index = (tableIndices.get(service.sourceSheet) || 0) + 1;
+    tableIndices.set(service.sourceSheet, index);
+    service.sourceTableIndex = index;
+  }
+  if (data.excludedSheets?.length) warnings.push(`Hojas no incluidas en esta revisión: ${data.excludedSheets.join(", ")}. El inventario se importa por separado en Contabilidad de Equipo.`);
   const preview = { source: data.source, services, warnings, sourceCells: data.sourceCells, documentLines: data.documentLines, blockers: data.blockers };
   preview.verification = verifyServiceImport(preview);
   return preview;

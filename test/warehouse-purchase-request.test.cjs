@@ -23,6 +23,10 @@ function createPurchaseHarness() {
     addItemButton: {}, windowButtons: [], views: [], status: { dataset: {} }, eventsBoard: {}
   };
   const context = {
+    async fetch(_url, options) {
+      const sent = JSON.parse(options.body);
+      return { ok: true, async json() { return { state: sent.state, savedAt: "2026-10-17T12:01:00.000Z" }; } };
+    },
     window: {
       location: { hash: "#requerimiento-equipo", protocol: "https:" },
       crypto: { randomUUID() { return String(++nextId); } },
@@ -72,6 +76,7 @@ function createPurchaseHarness() {
     request(items) { listeners.get("live:warehouse-purchase-request")({ detail: { items, returnPage: "requerimiento-equipo" } }); },
     snapshot() { return context.window.__purchaseHarness.snapshot(); },
     add() { context.window.__purchaseHarness.addNewItem(); },
+    flush() { return context.window.flushWarehouseInventoryChanges(); },
     setMovements(movements) { context.window.__purchaseHarness.setMovements(movements); },
     renderEvents() { context.window.__purchaseHarness.renderEventsBoard(); },
     printEvent(key) { context.window.__purchaseHarness.printEventPdf(key); }
@@ -97,7 +102,7 @@ test("a purchase received before inventory readiness waits without inserting sto
   assert.match(harness.form.status.textContent, /cantidad real comprada, mayor a 0/);
 });
 
-test("manual inventory saves publish real quantities and retain all remaining purchases", () => {
+test("manual inventory saves publish confirmed quantities and retain all remaining purchases", async () => {
   const harness = createPurchaseHarness();
   harness.initialize();
   harness.request([
@@ -114,8 +119,10 @@ test("manual inventory saves publish real quantities and retain all remaining pu
   assert.equal(harness.form.newName.value, "Equipo sintético B");
   assert.equal(harness.form.newQuantity.value, "0");
   assert.equal(harness.snapshot().purchaseRequests.length, 2);
-  assert.equal(harness.published.at(-1).type, "live:warehouse-inventory-updated");
-  assert.equal(harness.published.at(-1).detail.items[0].available, 2);
+  assert.equal(harness.published.length, 0, "unsaved local edits must not become remote stock");
+  await harness.flush();
+  assert.equal(harness.published.at(-1).type, "live:warehouse-server-updated");
+  assert.equal(harness.published.at(-1).detail.state.items[0].quantity, 2);
   harness.form.newQuantity.value = "3";
   harness.add();
   assert.equal(harness.form.newName.value, "Equipo sintético C");

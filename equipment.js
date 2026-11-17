@@ -3517,7 +3517,8 @@ function applyEquipmentWarehouseInventoryPayload(payload) {
       if (id) seenIds.add(id);
       return true;
     })
-    .map((item) => {
+    .map((rawItem) => {
+      const item = JSON.parse(JSON.stringify(rawItem));
       const stats = equipmentWarehouseMovementStats(item.id, movements);
       const physical = equipmentWarehouseNumber(item.quantity);
       const staticCandidate = equipmentInventoryStaticItemsByWarehouseId.get(String(item.id || "")) || null;
@@ -3575,7 +3576,9 @@ function applyEquipmentWarehouseInventoryPayload(payload) {
 }
 
 function equipmentInventorySummaryCategories() {
-  if (!equipmentWarehouseInventoryState.loaded) return equipmentInventorySourceCategories;
+  if (!equipmentWarehouseInventoryState.loaded) {
+    return equipmentUsesServerWarehouseInventory() ? [] : equipmentInventorySourceCategories;
+  }
   const categories = [];
   const categoriesByKey = new Map();
   equipmentWarehouseInventoryState.records.forEach((record) => {
@@ -4768,7 +4771,15 @@ async function initEquipmentCatalogSync() {
 
 function equipmentWarehouseInventoryRecordFor(row) {
   if (row?.procurementChoice) return null;
-  if (row?.inventorySourceItem?.warehouseRecord) return row.inventorySourceItem.warehouseRecord;
+  if (row?.inventorySourceItem?.warehouseRecord) {
+    const previous = row.inventorySourceItem.warehouseRecord;
+    if (equipmentWarehouseInventoryState.loaded) {
+      const id = String(previous.id || previous.item?.id || "");
+      return id ? equipmentWarehouseInventoryState.recordsById.get(id) || null
+        : equipmentWarehouseInventoryState.records.includes(previous) ? previous : null;
+    }
+    return equipmentUsesServerWarehouseInventory() ? null : previous;
+  }
   const description = row?.description || row?.inventorySourceItem?.description || "";
   const item = {description, warehouseInventoryId: row?.warehouseInventoryId || row?.inventorySourceItem?.warehouseInventoryId,
     inventoryIdentityConfirmed: row?.inventoryIdentityConfirmed};
@@ -4824,8 +4835,13 @@ function inventoryValueFor(row) {
   const warehouseRecord = equipmentWarehouseInventoryRecordFor(row);
   if (warehouseRecord) return warehouseRecord.available;
   if (equipmentWarehouseInventoryState.loaded) return 0;
+  if (equipmentUsesServerWarehouseInventory()) return "";
   if (equipmentState.inventory.has(row.key)) return equipmentState.inventory.get(row.key);
   return defaultInventoryValueFor(row);
+}
+
+function equipmentUsesServerWarehouseInventory() {
+  return /^https?:$/.test(window.location?.protocol || "");
 }
 
 function equipmentSharedTransferUnavailableReason() {
@@ -5140,6 +5156,9 @@ function tableForEquipmentInventory(rows, editable = true) {
     return `<p class="equipment-empty">No hay equipo requerido con cantidad mayor a 0.</p>`;
   }
   const events = activeEquipmentEvents();
+  const inventoryReadOnly = equipmentWarehouseInventoryState.loaded || equipmentUsesServerWarehouseInventory();
+  const inventorySyncTitle = equipmentWarehouseInventoryState.loaded
+    ? "Sincronizado con Contabilidad de equipo" : "Esperando el inventario actual de Contabilidad de equipo";
   const eventDateHeaders = events
     .map((event) => `<th class="equipment-event-column equipment-date-column"><span>Fecha del evento</span><strong>${escapeEquipmentHtml(equipmentEventDateLabel(event))}</strong></th>`)
     .join("");
@@ -5197,7 +5216,7 @@ function tableForEquipmentInventory(rows, editable = true) {
           <td>
             ${
               editable
-                ? `<input class="equipment-inventory-input${warehouseRecord ? " is-warehouse-synced" : ""}" type="text" inputmode="decimal" value="${escapeEquipmentHtml(pendingIdentity ? "" : inventory)}" placeholder="Por identificar" aria-label="Inventario físico de ${escapeEquipmentHtml(row.description)}" ${equipmentWarehouseInventoryState.loaded ? 'readonly aria-readonly="true" title="Sincronizado con Contabilidad de equipo"' : ""} />`
+                ? `<input class="equipment-inventory-input${warehouseRecord ? " is-warehouse-synced" : ""}" type="text" inputmode="decimal" value="${escapeEquipmentHtml(pendingIdentity ? "" : inventory)}" placeholder="Por identificar" aria-label="Inventario físico de ${escapeEquipmentHtml(row.description)}" ${inventoryReadOnly ? `readonly aria-readonly="true" title="${inventorySyncTitle}"` : ""} />`
                 : escapeEquipmentHtml(pendingIdentity ? "Por identificar" : inventory)
             }
           </td>
@@ -5322,8 +5341,13 @@ function consolidateEquipmentRentalRows(summaryRows, events) {
 }
 
 function equipmentRentalRows() {
+  const pendingInventory = equipmentUsesServerWarehouseInventory() && !equipmentWarehouseInventoryState.loaded;
+  if (pendingInventory && !equipmentSharedWorkspace.enabled) return [];
   const events = activeEquipmentEvents();
-  return consolidateEquipmentRentalRows(equipmentRowsSummary(), events)
+  const summaryRows = equipmentRowsSummary();
+  const verifiedRows = pendingInventory
+    ? summaryRows.filter(row => Number.isFinite(row.sharedPlanning?.capacity)) : summaryRows;
+  return consolidateEquipmentRentalRows(verifiedRows, events)
     .map((row) => {
       const rentalKey = row.matchKey || row.key;
       const override = equipmentState.rentalOverrides.get(rentalKey) || {};
@@ -5678,6 +5702,9 @@ function reportEquipmentTimelineValidation(validation) {
 }
 
 function equipmentRentReportValidationMessage(mode = "rent") {
+  if (equipmentUsesServerWarehouseInventory() && !equipmentWarehouseInventoryState.loaded && !equipmentSharedWorkspace.enabled) {
+    return "Espere a que cargue el inventario actual de Contabilidad de Equipo antes de generar el reporte. Si la conexión falló, vuelva a actualizar el inventario.";
+  }
   if (equipmentSharedWorkspace.enabled) {
     const shared = equipmentSharedWorkspace, state = shared.state;
     if (shared.dirty || shared.saving) return "Guarde los cambios de la ventana antes de generar el reporte.";

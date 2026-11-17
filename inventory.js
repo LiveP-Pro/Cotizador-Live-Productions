@@ -1515,15 +1515,15 @@
   }
 
   function publishWarehouseAvailability() {
-    if (isHttpPage() && !serverSavedAt) return;
+    if (isHttpPage() && (!serverSavedAt || warehouseDirty || activeServerSaves > 0)) return;
     const lifecycle = inventoryLifecycle();
     const publishedAt = new Date().toISOString();
     const payload = {
       version: 1,
       updatedAt: state.updatedAt,
       publishedAt,
-      savedAt: warehouseDirty ? publishedAt : serverSavedAt || state.updatedAt || publishedAt,
-      state,
+      savedAt: serverSavedAt || state.updatedAt || publishedAt,
+      state: JSON.parse(JSON.stringify(state)),
       items: activeItems().map((item) => {
         const stats = statsForItem(item);
         return {
@@ -1552,8 +1552,12 @@
 
   function announceSavedWarehouse(payload) {
     if (!payload?.state) return;
-    try { warehouseChannel?.postMessage(payload); } catch {}
-    // Send the current local view; a newer edit may have happened during this save.
+    const confirmed = JSON.parse(JSON.stringify(payload));
+    try { warehouseChannel?.postMessage(confirmed); } catch {}
+    // Publish the acknowledged snapshot even if newer edits are still pending.
+    // Its server revision must never be replaced by a local rendering timestamp.
+    window.LIVE_WAREHOUSE_AVAILABILITY = confirmed;
+    document.dispatchEvent(new CustomEvent("live:warehouse-server-updated", { detail: confirmed }));
     publishWarehouseAvailability();
   }
 

@@ -15,12 +15,33 @@
   })[character]);
   const key = (value) => string(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().replace(/\s+/g, " ");
 
-  function draftFor(preview) {
-    return (preview?.services || []).map((service) => ({
-      name: string(service.name).trim(),
-      category: "",
-      newCategory: ""
-    }));
+  function sourceSheetFor(preview, service) {
+    if (service?.sourceSheet) return string(service.sourceSheet);
+    const refs = new Set(service?.sourceRefs || []);
+    return string((preview?.sourceCells || []).find((cell) => refs.has(cell.ref) && cell.sheet)?.sheet);
+  }
+
+  function sheetGroupsFor(preview) {
+    const groups = new Map();
+    (preview?.services || []).forEach((service, index) => {
+      const sheet = sourceSheetFor(preview, service);
+      if (!sheet) return;
+      if (!groups.has(sheet)) groups.set(sheet, { name: sheet, indices: [] });
+      groups.get(sheet).indices.push(index);
+    });
+    return [...groups.values()];
+  }
+
+  function draftFor(preview, groups = []) {
+    return (preview?.services || []).map((service) => {
+      const sheet = sourceSheetFor(preview, service);
+      const matches = sheet ? groups.filter((group) => key(group.label) === key(sheet)) : [];
+      return {
+        name: string(service.name).trim(),
+        category: matches.length === 1 ? string(matches[0].id) : sheet && !matches.length ? NEW_CATEGORY : "",
+        newCategory: sheet && !matches.length ? sheet : ""
+      };
+    });
   }
 
   function verificationError(preview) {
@@ -63,6 +84,7 @@
     if (!Array.isArray(selections) || selections.length !== preview.services.length) {
       return "Revise el nombre y la categoría de cada servicio.";
     }
+    const categoryIds = new Map((groups || []).map((group) => [string(group.id), string(group.label)]));
     for (let index = 0; index < selections.length; index += 1) {
       const selection = selections[index];
       const prefix = `Servicio ${index + 1}: `;
@@ -72,6 +94,12 @@
         if ((groups || []).some((group) => key(group.label) === key(selection.newCategory))) {
           return `${prefix}esa categoría ya existe. Elíjala en la lista.`;
         }
+        const categoryId = key(selection.newCategory).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 140);
+        if (!categoryId) return `${prefix}escriba un nombre de categoría que incluya letras o números.`;
+        if (categoryIds.has(categoryId) && key(categoryIds.get(categoryId)) !== key(selection.newCategory)) {
+          return `${prefix}ese nombre coincide con el identificador de otra categoría. Cambie el nombre para mantenerlas separadas.`;
+        }
+        categoryIds.set(categoryId, selection.newCategory);
       } else if (!(groups || []).some((group) => string(group.id) === selection.category)) {
         return `${prefix}elija una categoría existente o cree una nueva.`;
       }
@@ -139,9 +167,26 @@
     return `<option value="">Elija una opción</option>${(groups || []).map((group) => `<option value="${escape(group.id)}"${selected === string(group.id) ? " selected" : ""}>Agregar en ${escape(group.label)}</option>`).join("")}<option value="${NEW_CATEGORY}"${selected === NEW_CATEGORY ? " selected" : ""}>Crear nueva categoría</option>`;
   }
 
-  function renderCard(service, selection, index, groups) {
+  function renderSheetGroups(preview, selections, groups) {
+    const sheets = sheetGroupsFor(preview);
+    if (!sheets.length) return "";
+    return `<section class="equipment-service-import-bulk"><h3>Hojas y cuadros detectados</h3>
+      <p>Se revisaron todas las hojas de servicio. Puedes asignar una categoría a todos los cuadros de cada hoja.</p>
+      ${sheets.map((sheet, index) => {
+        const first = selections[sheet.indices[0]] || {};
+        const uniform = sheet.indices.every((i) => selections[i]?.category === first.category && selections[i]?.newCategory === first.newCategory);
+        const selected = uniform ? first.category : "";
+        return `<section class="equipment-service-import-sheet"><h4>Hoja: ${escape(sheet.name)} · ${sheet.indices.length} ${sheet.indices.length === 1 ? "cuadro" : "cuadros"}</h4>
+          <div class="equipment-service-import-fields"><label for="equipmentImportSheetCategory${index}">Dónde guardar estos cuadros<select id="equipmentImportSheetCategory${index}" data-import-sheet-category="${index}">${categoryOptions(groups, selected)}</select></label>
+          <label id="equipmentImportSheetNewCategoryLabel${index}" for="equipmentImportSheetNewCategory${index}"${selected !== NEW_CATEGORY ? " hidden" : ""}>Nombre de la categoría nueva<input id="equipmentImportSheetNewCategory${index}" maxlength="160" value="${escape(uniform ? first.newCategory : "")}" /></label></div>
+          <button type="button" data-import-apply-sheet="${index}">Aplicar a los ${sheet.indices.length} cuadros de esta hoja</button></section>`;
+      }).join("")}</section>`;
+  }
+
+  function renderCard(service, selection, index, groups, preview) {
     const notes = renderNotes(service.notes);
-    return `<article class="equipment-service-import-card" data-import-service="${index}"><h3>Servicio ${index + 1}</h3><div class="equipment-service-import-fields"><label for="equipmentImportServiceName${index}">Nombre del tipo de servicio<input id="equipmentImportServiceName${index}" type="text" data-import-field="name" data-import-index="${index}" value="${escape(selection.name)}" autocomplete="off" maxlength="240" /></label><label for="equipmentImportServiceCategory${index}">Dónde guardar este servicio<select id="equipmentImportServiceCategory${index}" data-import-field="category" data-import-index="${index}">${categoryOptions(groups, selection.category)}</select></label><label for="equipmentImportServiceNewCategory${index}" class="equipment-service-import-new-category" data-import-new-category="${index}"${selection.category !== NEW_CATEGORY ? " hidden" : ""}>Nombre de la nueva categoría<input id="equipmentImportServiceNewCategory${index}" type="text" data-import-field="newCategory" data-import-index="${index}" value="${escape(selection.newCategory)}" autocomplete="off" maxlength="160" placeholder="Ej. Servicio especial" /></label></div>${(service.mainSections || []).map(renderSection).join("")}${notes}${Array.isArray(service.sourceCells) && service.sourceCells.length ? `<details class="equipment-service-import-source"><summary>Contenido original de este servicio</summary>${renderCells(service.sourceCells)}</details>` : ""}</article>`;
+    const sheet = sourceSheetFor(preview, service);
+    return `<article class="equipment-service-import-card" data-import-service="${index}"><h3>Servicio ${index + 1}: ${escape(service.name)}</h3>${sheet ? `<p class="equipment-service-import-location">Hoja: ${escape(sheet)}</p>` : ""}<div class="equipment-service-import-fields"><label for="equipmentImportServiceName${index}">Nombre del tipo de servicio<input id="equipmentImportServiceName${index}" type="text" data-import-field="name" data-import-index="${index}" value="${escape(selection.name)}" autocomplete="off" maxlength="240" /></label><label for="equipmentImportServiceCategory${index}">Dónde guardar este servicio<select id="equipmentImportServiceCategory${index}" data-import-field="category" data-import-index="${index}">${categoryOptions(groups, selection.category)}</select></label><label for="equipmentImportServiceNewCategory${index}" class="equipment-service-import-new-category" data-import-new-category="${index}"${selection.category !== NEW_CATEGORY ? " hidden" : ""}>Nombre de la nueva categoría<input id="equipmentImportServiceNewCategory${index}" type="text" data-import-field="newCategory" data-import-index="${index}" value="${escape(selection.newCategory)}" autocomplete="off" maxlength="160" placeholder="Ej. Servicio especial" /></label></div>${(service.mainSections || []).map(renderSection).join("")}${notes}${Array.isArray(service.sourceCells) && service.sourceCells.length ? `<details class="equipment-service-import-source"><summary>Contenido original de este servicio</summary>${renderCells(service.sourceCells)}</details>` : ""}</article>`;
   }
 
   function renderPreview(preview, selections, groups, options = {}) {
@@ -150,6 +195,7 @@
     const count = services.reduce((total, service) => total + (service.mainSections || []).reduce((sum, section) => sum + (section.items || []).length, 0), 0);
     const sourceCount = preview.verification?.sourceCellCount;
     const preservedCount = preview.verification?.representedCellCount;
+    const sheetCount = sheetGroupsFor(preview).length;
     const verification = Number.isInteger(sourceCount) && Number.isInteger(preservedCount) ? ` · ${preservedCount} de ${sourceCount} celdas conservadas` : "";
     const warnings = (preview.warnings || []).map((warning) => typeof warning === "object" && warning !== null ? warning.message ?? warning.text ?? JSON.stringify(warning) : warning);
     const blocker = verificationError(preview);
@@ -158,7 +204,7 @@
       : "";
     const bulk = services.length > 1 ? `<section class="equipment-service-import-bulk"><h3>Usar la misma categoría para todos</h3><div class="equipment-service-import-fields"><label for="equipmentImportBulkCategory">Categoría<select id="equipmentImportBulkCategory">${categoryOptions(groups, "")}</select></label><label for="equipmentImportBulkNewCategory" id="equipmentImportBulkNewCategoryLabel" hidden>Nombre de la nueva categoría<input id="equipmentImportBulkNewCategory" type="text" autocomplete="off" maxlength="160" /></label></div><button id="equipmentImportApplyBulkCategory" type="button">Aplicar a todos</button></section>` : "";
     const updateByName = `<section class="equipment-service-import-notice"><label for="equipmentImportReplaceExisting"><input id="equipmentImportReplaceExisting" type="checkbox"${options.replaceExistingByName === true ? " checked" : ""} /> Actualizar servicios existentes con el mismo nombre y categoría</label><p id="equipmentImportReplacementSummary" role="status">${escape(replacementMessage(preview, selections, options))}</p></section>`;
-    return `<p class="equipment-service-import-summary"><strong>${escape(source.fileName || "Archivo importado")}</strong><br>${services.length} ${services.length === 1 ? "servicio" : "servicios"} · ${count} ${count === 1 ? "fila de equipo" : "filas de equipo"}${escape(verification)}</p><p class="equipment-service-import-notice">Cada cuadro se guardará como un tipo de servicio. Elija una categoría existente o cree una nueva; los datos del archivo se conservarán completos.</p>${replacement}${blocker ? `<p class="equipment-service-import-notice is-error">${escape(blocker)}</p>` : ""}${warnings.length ? `<div class="equipment-service-import-notice is-warning"><strong>Revise estas observaciones</strong><ul>${warnings.map((warning) => `<li>${escape(warning)}</li>`).join("")}</ul></div>` : ""}${bulk}${updateByName}${services.map((service, index) => renderCard(service, selections[index], index, groups)).join("")}${renderSource(preview)}`;
+    return `<p class="equipment-service-import-summary"><strong>${escape(source.fileName || "Archivo importado")}</strong><br>${sheetCount ? `${sheetCount} ${sheetCount === 1 ? "hoja" : "hojas"} · ` : ""}${services.length} ${services.length === 1 ? "servicio" : "servicios"} · ${count} ${count === 1 ? "fila de equipo" : "filas de equipo"}${escape(verification)}</p><p class="equipment-service-import-notice">Cada cuadro se guardará como un tipo de servicio. Elija una categoría existente o cree una nueva; los datos del archivo se conservarán completos.</p>${replacement}${blocker ? `<p class="equipment-service-import-notice is-error">${escape(blocker)}</p>` : ""}${warnings.length ? `<div class="equipment-service-import-notice is-warning"><strong>Revise estas observaciones</strong><ul>${warnings.map((warning) => `<li>${escape(warning)}</li>`).join("")}</ul></div>` : ""}${bulk}${renderSheetGroups(preview, selections, groups)}${updateByName}${services.map((service, index) => renderCard(service, selections[index], index, groups, preview)).join("")}${renderSource(preview)}`;
   }
 
   function init(options = {}) {
@@ -247,7 +293,7 @@
         if (requestId !== state.requestId) return;
         if (!response.ok) throw new Error(preview.error || "No se pudo leer el archivo. Vuelva a intentarlo.");
         state.preview = preview;
-        state.selections = draftFor(preview);
+        state.selections = draftFor(preview, groups());
         elements.content.innerHTML = renderPreview(preview, state.selections, groups(), state);
         status(verificationError(preview) || "Elija dónde guardar cada servicio.", !!verificationError(preview));
         elements.content.querySelector('[data-import-field="category"]')?.focus();
@@ -295,6 +341,25 @@
       updateSave();
     }
 
+    function applySheetCategory(index) {
+      if (state.busy || !state.preview) return;
+      const sheet = sheetGroupsFor(state.preview)[index];
+      if (!sheet) return;
+      const category = document.getElementById(`equipmentImportSheetCategory${index}`).value;
+      const label = document.getElementById(`equipmentImportSheetNewCategory${index}`).value;
+      if (!category || category === NEW_CATEGORY && !label.trim()) {
+        status("Elija una categoría para esta hoja; si es nueva, escriba su nombre.", true);
+        return;
+      }
+      sheet.indices.forEach((serviceIndex) => {
+        state.selections[serviceIndex].category = category;
+        state.selections[serviceIndex].newCategory = category === NEW_CATEGORY ? label : "";
+      });
+      elements.content.innerHTML = renderPreview(state.preview, state.selections, groups(), state);
+      status(selectionError(state.preview, state.selections, groups(), state) || `Categoría aplicada a los ${sheet.indices.length} cuadros de ${sheet.name}.`);
+      updateSave();
+    }
+
     async function save() {
       if (state.busy || state.committed || !state.preview) return;
       let body;
@@ -304,6 +369,12 @@
         status(error.message, true);
         updateSave();
         return;
+      }
+      if (typeof window !== "undefined" && typeof window.confirm === "function") {
+        const previous = Number(state.preview.replaces?.count) || 0;
+        const update = state.replaceExistingByName ? replacementMessage(state.preview, state.selections, state) : "Se agregarán los cuadros nuevos en las categorías elegidas.";
+        const message = `¿Autorizas guardar los ${state.selections.length} cuadros de servicio de «${state.preview.source?.fileName || "este archivo"}»?\n\n${update}${previous ? `\nSe reemplazarán ${previous} servicios de la versión anterior de este mismo libro.` : ""}`;
+        if (!window.confirm(message)) return;
       }
       state.busy = true;
       updateSave();
@@ -368,13 +439,19 @@
         updateSave();
       } else if (event.target.id === "equipmentImportBulkCategory") {
         document.getElementById("equipmentImportBulkNewCategoryLabel").hidden = event.target.value !== NEW_CATEGORY;
+      } else if (event.target.dataset?.importSheetCategory !== undefined) {
+        const index = Number(event.target.dataset.importSheetCategory);
+        const label = document.getElementById(`equipmentImportSheetNewCategoryLabel${index}`);
+        if (label) label.hidden = event.target.value !== NEW_CATEGORY;
       } else updateField(event.target);
     });
     elements.content.addEventListener("click", (event) => {
       if (event.target.closest("#equipmentImportApplyBulkCategory")) applyBulkCategory();
+      const sheetButton = event.target.closest("[data-import-apply-sheet]");
+      if (sheetButton) applySheetCategory(Number(sheetButton.dataset.importApplySheet));
     });
     return { openFile: importFile, close, getState: () => clone({ preview: state.preview, selections: state.selections, replaceExistingByName: state.replaceExistingByName, busy: state.busy, committed: state.committed }) };
   }
 
-  return { init, draftFor, selectionError, createPayload, renderPreview, NEW_CATEGORY };
+  return { init, draftFor, selectionError, createPayload, renderPreview, sourceSheetFor, sheetGroupsFor, NEW_CATEGORY };
 });

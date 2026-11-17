@@ -54,7 +54,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261117-import-review-01";
+const warehouseAssetVersion = "20261117-service-sheets-sync-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -611,8 +611,11 @@ async function previewEquipmentServiceFile(request, response) {
   }
   activeWarehouseImports += 1;
   try {
-    let fileName;
-    try { fileName = decodeURIComponent(String(request.headers["x-file-name"] || "")); }
+    let fileName, selectedSheets;
+    try {
+      fileName = decodeURIComponent(String(request.headers["x-file-name"] || ""));
+      if (request.headers["x-service-sheets"]) selectedSheets = JSON.parse(decodeURIComponent(String(request.headers["x-service-sheets"])));
+    }
     catch { throw new Error("El nombre del archivo no es válido."); }
     if (!/\.(xlsx|pdf)$/i.test(fileName) || fileName.length > 250) throw new Error("Seleccione un archivo Excel .xlsx o PDF con texto.");
     if (Number(request.headers["content-length"] || 0) > maxWarehouseImportBytes) {
@@ -632,7 +635,7 @@ async function previewEquipmentServiceFile(request, response) {
     if (!size) throw new Error("El archivo está vacío.");
     const buffer = Buffer.concat(chunks);
     const preview = await parseServiceFile(buffer, {
-      fileName, mimeType: String(request.headers["content-type"] || "").split(";")[0]
+      fileName, mimeType: String(request.headers["content-type"] || "").split(";")[0], selectedSheets
     });
     const base = currentEquipmentBaseCatalog();
     const current = currentEquipmentImportCatalog(base.version);
@@ -856,6 +859,9 @@ async function saveImportedEquipmentServices(payload, request, response) {
         const label = String(decision.groupLabel || "").trim();
         groupId = equipmentImportSlug(label);
         if (!label || label.length > 200 || !groupId) throw new Error("Escriba un nombre válido para la nueva categoría.");
+        if (groups.has(groupId) && nameKey(groups.get(groupId).label) !== nameKey(label)) {
+          throw new Error("El nombre de la categoría coincide con otra categoría distinta. Cámbielo para mantener los cuadros separados.");
+        }
         if (!groups.has(groupId)) {
           const group = { id: groupId, label, serviceIds: [] };
           next.groups[groupId] = group;
@@ -905,6 +911,8 @@ async function saveImportedEquipmentServices(payload, request, response) {
       delete next.retiredServices[serviceId];
       const importSource = { authoritative: true, importId: entry.importId, bookKey,
         fileName: entry.preview.source.fileName, sourceName: sourceService.name,
+        ...(sourceService.sourceSheet ? { sourceSheet: sourceService.sourceSheet } : {}),
+        ...(Number.isInteger(sourceService.sourceTableIndex) ? { sourceTableIndex: sourceService.sourceTableIndex } : {}),
         sourceRefs: sourceService.sourceRefs || [], sourceFileUrl: "/api/cuadros-equipo/fuentes/" + entry.importId };
       const validatedSections = normalizeEquipmentCatalogSections(sourceService.mainSections.map((section) => ({
         ...section, importSource: { ...(section.importSource || {}), ...importSource }

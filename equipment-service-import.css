@@ -318,3 +318,19 @@
 .equipment-imported-source-row td {
   font-size: 0.8em;
 }
+
+.equipment-service-import-sheet {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #d1d5db;
+}
+
+.equipment-service-import-sheet h4 {
+  margin: 0 0 12px;
+}
+
+.equipment-service-import-location {
+  margin: 0 0 12px;
+  color: #475569;
+  font-size: 14px;
+}
