@@ -40,6 +40,7 @@ function containerFixture() {
       if (selector === "[data-users-status]") return status;
       if (selector === "[data-users-list]") return list;
       if (selector === "[data-users-form]") return form;
+      if (selector === "[data-users-developer-form]") return this.innerHTML.includes("data-users-developer-form") ? form : null;
       return form.querySelector(selector);
     },
     querySelectorAll() { return [...Object.values(fields), ...permissions]; }
@@ -225,5 +226,156 @@ test("the developer can update their own name and password while fixed profile f
   assert.equal(calls[1].url, "/api/users/live-developer-dgiant");
   assert.deepEqual(JSON.parse(calls[1].body), { displayName: "Nombre sintético actualizado", password: "Sintetica-clave-25" });
   assert.equal(fixture.fields.role.disabled, true);
+  controller.destroy();
+});
+
+function clickAction(fixture, action) {
+  fixture.listeners.get("click")({ target: { closest: () => ({ dataset: { usersAction: action } }) } });
+}
+
+test("developer activation is explicit, permission-gated, and available only while the protected account is absent", async () => {
+  const catalog = ui.normalizeCatalog({ permissions: definitions, roles });
+  assert.match(ui.render([], catalog, "", "", adminSession), /data-users-action="activate-developer"/);
+  assert.doesNotMatch(ui.render([], catalog, "", "", { authenticated: true, permissions: [] }), /data-users-action="activate-developer"/);
+  assert.doesNotMatch(ui.render([developer], catalog, "", "", adminSession, true), /data-users-(?:action="activate-developer"|developer-form)/);
+  assert.doesNotMatch(ui.render([], { ...catalog, permissions: [] }, "", "", adminSession), /data-users-action="activate-developer"/);
+  const fixture = containerFixture(); const calls = [];
+  const controller = ui.init({ container: fixture.container, session: adminSession, fetch: async (url, options) => {
+    calls.push({ url, ...options });
+    return response({ users: [], permissions: definitions, roles });
+  } });
+  assert.equal(await controller.activateDeveloper(), false);
+  assert.equal(calls.length, 0);
+  await controller.load();
+  clickAction(fixture, "activate-developer");
+  assert.equal(calls.length, 1);
+  assert.equal(controller.getState().activatingDeveloper, true);
+  assert.match(fixture.container.innerHTML, /name="username"[^>]+value="Dgiant" readonly/);
+  assert.match(fixture.container.innerHTML, /Nombre \(opcional\)/);
+  assert.match(fixture.container.innerHTML, /Confirmar activación de Dgiant/);
+  for (const passwordInput of fixture.container.innerHTML.matchAll(/<input[^>]+type="password"[^>]*>/g)) {
+    assert.doesNotMatch(passwordInput[0], /\bvalue=/);
+    assert.match(passwordInput[0], /minlength="8" maxlength="256"/);
+  }
+  assert.equal(await controller.save(), false);
+  assert.equal(calls.length, 1);
+  clickAction(fixture, "cancel-developer");
+  assert.equal(controller.getState().activatingDeveloper, false);
+  assert.doesNotMatch(fixture.container.innerHTML, /data-users-developer-form/);
+  assert.equal(await controller.activateDeveloper(), false);
+  controller.setSession({ authenticated: true, permissions: [] });
+  clickAction(fixture, "activate-developer");
+  assert.equal(await controller.activateDeveloper(), false);
+  assert.equal(calls.length, 1);
+  controller.destroy();
+});
+
+test("activation payload fixes the identity and validates the optional name plus confirmed password boundaries", () => {
+  const values = { username: "Ignored.synthetic", displayName: "", password: "Test-123", passwordConfirmation: "Test-123", permissions: ["users.manage"], isDeveloper: true };
+  assert.deepEqual(ui.createDeveloperPayload(values), { username: "Dgiant", displayName: "Dgiant", password: "Test-123" });
+  assert.deepEqual(ui.createDeveloperPayload({ ...values, displayName: "  Nombre sintético  " }), { username: "Dgiant", displayName: "Nombre sintético", password: "Test-123" });
+  for (const password of ["1234567", "x".repeat(257)]) {
+    assert.throws(() => ui.createDeveloperPayload({ ...values, password, passwordConfirmation: password }), /8 y 256/);
+  }
+  assert.equal(ui.createDeveloperPayload({ ...values, password: "x".repeat(256), passwordConfirmation: "x".repeat(256) }).password.length, 256);
+  assert.throws(() => ui.createDeveloperPayload({ ...values, password: "", passwordConfirmation: "" }), /Escriba la contraseña/);
+  assert.throws(() => ui.createDeveloperPayload({ ...values, passwordConfirmation: "Different-test" }), /no coinciden/);
+  assert.throws(() => ui.createDeveloperPayload({ ...values, displayName: "x".repeat(121) }), /120 caracteres/);
+  assert.throws(() => ui.createDeveloperPayload({ ...values, displayName: "Nombre\ncontrol" }), /caracteres de control/);
+});
+
+test("one explicit activation POST sends only the supported fields, clears passwords, and refreshes the protected user", async () => {
+  const fixture = containerFixture(); const calls = []; let resolveActivation; let savedCalls = 0; let activated = false;
+  const controller = ui.init({ container: fixture.container, session: adminSession, onSaved: () => { savedCalls += 1; }, fetch: async (url, options) => {
+    calls.push({ url, ...options });
+    if (options.method === "GET") return response({ users: activated ? [developer] : [], permissions: definitions, roles });
+    return new Promise((resolve) => { resolveActivation = resolve; });
+  } });
+  await controller.load();
+  clickAction(fixture, "activate-developer");
+  fixture.fields.username.value = "tampered.synthetic";
+  fixture.fields.displayName.value = "  ";
+  fixture.fields.password.value = fixture.fields.passwordConfirmation.value = "Activation-test-123";
+  const pending = controller.activateDeveloper();
+  assert.equal(await controller.activateDeveloper(), false);
+  assert.equal(controller.getState().busy, true);
+  assert.equal(fixture.fields.password.value, "");
+  assert.equal(fixture.fields.passwordConfirmation.value, "");
+  assert.equal(JSON.stringify(controller.getState()).includes("Activation-test-123"), false);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].url, "/api/users/developer");
+  assert.equal(calls[1].method, "POST");
+  assert.equal(calls[1].credentials, "same-origin");
+  assert.deepEqual(JSON.parse(calls[1].body), { username: "Dgiant", displayName: "Dgiant", password: "Activation-test-123" });
+  activated = true;
+  resolveActivation(response({ user: { ...developer, password: "NEVER_SHOW_ACTIVATION_PASSWORD" } }, 201));
+  assert.equal(await pending, true);
+  assert.equal(calls.length, 3);
+  assert.equal(calls[2].url, "/api/users");
+  assert.equal(calls[2].method, "GET");
+  assert.equal(savedCalls, 1);
+  assert.deepEqual(controller.getState().users, [ui.publicUser(developer)]);
+  assert.equal(controller.getState().selectedId, developer.id);
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().activatingDeveloper, false);
+  assert.match(fixture.status.textContent, /activada\. Cierre sesión e ingrese como Dgiant/);
+  assert.doesNotMatch(fixture.container.innerHTML, /data-users-action="activate-developer"|data-users-developer-form|Activation-test-123|NEVER_SHOW_ACTIVATION_PASSWORD/);
+  assert.equal(await controller.activateDeveloper(), false);
+  controller.destroy();
+});
+
+test("legacy activation requires the current password, keeps API errors visible, and can be retried", async () => {
+  const fixture = containerFixture(); let writes = 0; let unauthorizedCalls = 0; let activated = false;
+  const legacy = { ...user, username: "dGiAnT" };
+  const controller = ui.init({ container: fixture.container, session: adminSession, onUnauthorized: () => { unauthorizedCalls += 1; }, fetch: async (_url, options) => {
+    if (options.method === "GET") return response({ users: activated ? [developer] : [legacy], permissions: definitions, roles });
+    writes += 1;
+    if (writes === 1) return response({ error: "Confirme la contraseña actual del propietario para migrar su cuenta existente." }, 401);
+    activated = true;
+    return response({ user: developer }, 201);
+  } });
+  await controller.load();
+  clickAction(fixture, "activate-developer");
+  assert.match(fixture.container.innerHTML, /Ya existe el usuario Dgiant/);
+  assert.match(fixture.container.innerHTML, /contraseña actual para migrar/);
+  assert.match(fixture.container.innerHTML, /autocomplete="current-password"/);
+  fixture.fields.password.value = fixture.fields.passwordConfirmation.value = "Wrong-test-123";
+  assert.equal(await controller.activateDeveloper(), false);
+  assert.match(fixture.status.textContent, /Confirme la contraseña actual/);
+  assert.equal(unauthorizedCalls, 0);
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().activatingDeveloper, true);
+  assert.equal(fixture.fields.password.value, "");
+  fixture.fields.password.value = fixture.fields.passwordConfirmation.value = "Current-test-123";
+  assert.equal(await controller.activateDeveloper(), true);
+  assert.equal(writes, 2);
+  assert.deepEqual(controller.getState().users, [ui.publicUser(developer)]);
+  controller.destroy();
+});
+
+test("invalid activation never writes and revoked sessions discard pending activation responses", async () => {
+  const fixture = containerFixture(); let writes = 0; let resolveActivation;
+  const controller = ui.init({ container: fixture.container, session: adminSession, fetch: async (_url, options) => {
+    if (options.method === "GET") return response({ users: [], permissions: definitions, roles });
+    writes += 1;
+    return new Promise((resolve) => { resolveActivation = resolve; });
+  } });
+  await controller.load();
+  clickAction(fixture, "activate-developer");
+  fixture.fields.password.value = "Valid-test-123";
+  fixture.fields.passwordConfirmation.value = "Other-test-123";
+  assert.equal(await controller.activateDeveloper(), false);
+  assert.match(fixture.status.textContent, /no coinciden/);
+  assert.equal(writes, 0);
+  assert.equal(fixture.fields.password.value, "");
+  fixture.fields.password.value = fixture.fields.passwordConfirmation.value = "Valid-test-123";
+  const pending = controller.activateDeveloper();
+  controller.setSession({ authenticated: false });
+  resolveActivation(response({ user: developer }, 201));
+  assert.equal(await pending, false);
+  assert.equal(writes, 1);
+  assert.deepEqual(controller.getState().users, []);
+  assert.equal(controller.getState().busy, false);
+  assert.doesNotMatch(fixture.container.innerHTML, /Dgiant|Valid-test-123/);
   controller.destroy();
 });

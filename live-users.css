@@ -95,6 +95,19 @@
   gap: 16px;
 }
 
+.live-users button.live-users-developer-action {
+  background: #f8f5ee;
+  border-color: #e8dcc2;
+  color: #684b15;
+}
+
+.live-users-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
 .live-users label {
   display: grid;
   gap: 6px;

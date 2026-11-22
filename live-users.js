@@ -73,6 +73,16 @@
     };
   }
 
+  function createDeveloperPayload(values) {
+    const displayName = string(values?.displayName).trim() || "Dgiant";
+    const password = string(values?.password);
+    if (displayName.length > 120 || /[\u0000-\u001f\u007f]/.test(displayName)) throw new Error("El nombre debe tener hasta 120 caracteres y no incluir caracteres de control.");
+    if (!password) throw new Error("Escriba la contraseña de la cuenta de desarrollador.");
+    if (password.length < 8 || password.length > 256) throw new Error("La contraseña debe tener entre 8 y 256 caracteres.");
+    if (password !== string(values?.passwordConfirmation)) throw new Error("Las contraseñas no coinciden.");
+    return { username: "Dgiant", displayName, password };
+  }
+
   function renderPermissions(catalog, selected, locked = false) {
     const groups = new Map();
     const chosen = new Set(permissionIds(selected));
@@ -111,11 +121,25 @@
     return filtered.map((user) => `<button type="button" class="live-users-person${user.id === selectedId ? " is-selected" : ""}" data-users-select="${escape(user.id)}" aria-pressed="${user.id === selectedId}"><span><strong>${escape(user.displayName || user.username)}</strong><small>${escape(user.username)}</small>${user.isDeveloper === true ? '<span class="live-users-badge is-developer">Desarrollador</span>' : ""}</span><span class="live-users-badge${user.active ? "" : " is-inactive"}">${user.active ? "Activo" : "Inactivo"}</span></button>`).join("");
   }
 
-  function render(users, catalog, selectedId, query = "", session = {}) {
+  function renderDeveloperForm(users) {
+    const migrating = users.some((user) => string(user.username).toLowerCase() === "dgiant");
+    return `<form class="live-users-form live-users-developer-form" data-users-developer-form novalidate><fieldset class="live-users-form-fields"><legend>Activar cuenta de desarrollador</legend>
+      <p class="live-users-protected">Esta acción activa la cuenta protegida Dgiant con todos los accesos. Confirme la contraseña y pulse el botón de activación para continuar.</p>
+      <p class="live-users-hint">${migrating ? "Ya existe el usuario Dgiant. Escriba su contraseña actual para migrar esa cuenta al perfil de desarrollador. La migración conserva su contraseña y cierra sus sesiones anteriores." : "Establezca una contraseña de entre 8 y 256 caracteres para Dgiant. Entréguela directamente a su titular."}</p>
+      <div class="live-users-fields"><label>Usuario de desarrollador<input name="username" type="text" value="Dgiant" readonly autocomplete="off"></label>
+      <label>Nombre (opcional)<input name="displayName" type="text" autocomplete="off" maxlength="120" value="Dgiant"></label>
+      <label>${migrating ? "Contraseña actual de Dgiant" : "Contraseña de Dgiant"}<input name="password" type="password" autocomplete="${migrating ? "current-password" : "new-password"}" minlength="8" maxlength="256" required></label>
+      <label>Confirmar contraseña<input name="passwordConfirmation" type="password" autocomplete="new-password" minlength="8" maxlength="256" required></label></div>
+      <div class="live-users-form-actions"><button type="submit" class="live-users-primary">Confirmar activación de Dgiant</button><button type="button" data-users-action="cancel-developer">Cancelar</button></div>
+      </fieldset></form>`;
+  }
+
+  function render(users, catalog, selectedId, query = "", session = {}, activatingDeveloper = false) {
     const selected = users.find((user) => user.id === selectedId);
+    const canActivate = canManageUsers(session) && catalog.permissions.length > 0 && !users.some((user) => user.isDeveloper === true);
     return `<section class="live-users"><header class="live-users-header"><div><p class="live-users-eyebrow">Administración</p><h2>Usuarios y permisos</h2><p>Cree accesos individuales y defina qué puede hacer cada empleado.</p></div><button type="button" data-users-action="refresh">Actualizar lista</button></header>
       <p class="live-users-status" data-users-status role="status" aria-live="polite"></p>
-      <div class="live-users-layout"><aside class="live-users-sidebar" aria-label="Empleados"><button type="button" class="live-users-primary" data-users-action="new">+ Crear usuario</button><label>Buscar empleado<input data-users-search type="search" autocomplete="off" value="${escape(query)}" placeholder="Nombre o usuario"></label><div data-users-list>${renderUserList(users, selectedId, query)}</div></aside><div class="live-users-editor">${renderForm(selected, catalog, session)}</div></div></section>`;
+      <div class="live-users-layout"><aside class="live-users-sidebar" aria-label="Empleados"><button type="button" class="live-users-primary" data-users-action="new">+ Crear usuario</button>${canActivate ? '<button type="button" class="live-users-developer-action" data-users-action="activate-developer">Activar cuenta de desarrollador</button>' : ""}<label>Buscar empleado<input data-users-search type="search" autocomplete="off" value="${escape(query)}" placeholder="Nombre o usuario"></label><div data-users-list>${renderUserList(users, selectedId, query)}</div></aside><div class="live-users-editor">${canActivate && activatingDeveloper ? renderDeveloperForm(users) : renderForm(selected, catalog, session)}</div></div></section>`;
   }
 
   // The host supplies the session returned by /api/session and refreshes it in
@@ -127,7 +151,7 @@
     const fetcher = options.fetch || (typeof globalThis.fetch === "function" ? globalThis.fetch.bind(globalThis) : null);
     let session = clone(options.session || {});
     let users = [], catalog = { permissions: [], roles: [{ id: "personalizado", label: "Personalizado", permissions: [] }] };
-    let selectedId = "", query = "", busy = false, loading = false, destroyed = false, generation = 0;
+    let selectedId = "", query = "", busy = false, loading = false, destroyed = false, generation = 0, activatingDeveloper = false;
 
     function status(message, error = false) {
       const element = container.querySelector("[data-users-status]");
@@ -147,11 +171,11 @@
       if (destroyed) return;
       if (!canManageUsers(session)) {
         container.innerHTML = '<section class="live-users"><p class="live-users-status" data-users-status role="status">Su usuario no tiene permiso para administrar usuarios.</p></section>';
-      } else container.innerHTML = render(users, catalog, selectedId, query, session);
+      } else container.innerHTML = render(users, catalog, selectedId, query, session, activatingDeveloper);
       updateBusy();
     }
 
-    async function request(method, url, body) {
+    async function request(method, url, body, notifyUnauthorized = true) {
       if (!fetcher) throw new Error("No se pudo conectar con el servidor.");
       const response = await fetcher(url, {
         method, credentials: "same-origin", cache: "no-store",
@@ -159,7 +183,7 @@
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        if (response.status === 401 && typeof options.onUnauthorized === "function") options.onUnauthorized();
+        if (notifyUnauthorized && response.status === 401 && typeof options.onUnauthorized === "function") options.onUnauthorized();
         throw new Error(result.error || "No se pudo completar la operación. Vuelva a intentarlo.");
       }
       return result;
@@ -178,6 +202,7 @@
         if (!nextCatalog.permissions.length || !Array.isArray(result.users)) throw new Error("No se recibió la lista completa de usuarios y permisos. Actualice la lista.");
         users = result.users.map(publicUser);
         catalog = nextCatalog;
+        if (users.some((user) => user.isDeveloper)) activatingDeveloper = false;
         if (!users.some((user) => user.id === selectedId)) selectedId = "";
         loading = false;
         draw();
@@ -204,7 +229,7 @@
     }
 
     async function save() {
-      if (destroyed || busy || loading || !canManageUsers(session)) return false;
+      if (destroyed || busy || loading || activatingDeveloper || !canManageUsers(session)) return false;
       const selected = users.find((user) => user.id === selectedId);
       if (selected?.isDeveloper && !ownsDeveloperProfile(session, selected)) {
         status("Solo el titular de la cuenta de desarrollador puede cambiar su nombre o contraseña.", true);
@@ -242,12 +267,66 @@
       }
     }
 
+    async function activateDeveloper() {
+      if (destroyed || busy || loading || !activatingDeveloper || !canManageUsers(session)
+        || !catalog.permissions.length || users.some((user) => user.isDeveloper)) return false;
+      const form = container.querySelector("[data-users-developer-form]");
+      if (!form) return false;
+      const displayName = form.querySelector('[name="displayName"]')?.value || "";
+      const password = form.querySelector('[name="password"]');
+      const confirmation = form.querySelector('[name="passwordConfirmation"]');
+      let payload;
+      try { payload = createDeveloperPayload({ displayName, password: password?.value, passwordConfirmation: confirmation?.value }); }
+      catch (error) { status(error.message, true); return false; }
+      finally {
+        if (password) password.value = "";
+        if (confirmation) confirmation.value = "";
+      }
+      const current = ++generation;
+      busy = true;
+      updateBusy();
+      status("Activando cuenta de desarrollador…");
+      try {
+        // A legacy account's incorrect current password also returns 401. Keep
+        // this credential error in the form instead of hiding it with login.
+        const result = await request("POST", "/api/users/developer", payload, false);
+        if (destroyed || current !== generation || !canManageUsers(session)) return false;
+        const user = publicUser(result.user || result);
+        if (!user.id || user.username !== "Dgiant" || !user.isDeveloper) throw new Error("El servidor no confirmó la activación. Actualice la lista antes de volver a intentarlo.");
+        users = users.filter((item) => item.id !== user.id && item.username.toLowerCase() !== "dgiant").concat(user);
+        selectedId = user.id;
+        activatingDeveloper = false;
+        busy = false;
+        draw();
+        const refreshed = await load();
+        if (destroyed || !canManageUsers(session)) return true;
+        if (typeof options.onSaved === "function") {
+          try { await options.onSaved({ ...result, user }); }
+          catch { /* Activation is confirmed; the next login refreshes session. */ }
+        }
+        if (destroyed || !canManageUsers(session)) return true;
+        status(`Cuenta de desarrollador activada. Cierre sesión e ingrese como Dgiant.${refreshed ? "" : " No se pudo actualizar la lista; actualícela antes de continuar."}`, !refreshed);
+        return true;
+      } catch (error) {
+        if (!destroyed && current === generation) status(error.message, true);
+        return false;
+      } finally {
+        payload = null;
+        if (current === generation) { busy = false; updateBusy(); }
+      }
+    }
+
     function click(event) {
       const button = event.target.closest?.("[data-users-action],[data-users-select]");
       if (!button || destroyed || busy || loading || !canManageUsers(session)) return;
       if (button.dataset.usersAction === "refresh") { void load(); return; }
-      if (button.dataset.usersAction === "new") { selectedId = ""; draw(); container.querySelector('[name="displayName"]')?.focus(); return; }
+      if (button.dataset.usersAction === "activate-developer" && catalog.permissions.length && !users.some((user) => user.isDeveloper)) {
+        activatingDeveloper = true; selectedId = ""; draw(); container.querySelector('[name="password"]')?.focus(); return;
+      }
+      if (button.dataset.usersAction === "cancel-developer") { activatingDeveloper = false; draw(); return; }
+      if (button.dataset.usersAction === "new") { activatingDeveloper = false; selectedId = ""; draw(); container.querySelector('[name="displayName"]')?.focus(); return; }
       if (button.dataset.usersSelect && users.some((user) => user.id === button.dataset.usersSelect)) {
+        activatingDeveloper = false;
         selectedId = button.dataset.usersSelect;
         draw();
         container.querySelector('[name="displayName"]')?.focus();
@@ -279,6 +358,11 @@
     }
 
     function submit(event) {
+      if (event.target.matches?.("[data-users-developer-form]")) {
+        event.preventDefault();
+        void activateDeveloper();
+        return;
+      }
       if (!event.target.matches?.("[data-users-form]")) return;
       event.preventDefault();
       void save();
@@ -289,15 +373,15 @@
     container.addEventListener("change", change);
     container.addEventListener("submit", submit);
     const api = {
-      load, save,
+      load, save, activateDeveloper,
       setSession(next) {
         session = clone(next || {});
         if (!canManageUsers(session)) {
-          generation += 1; busy = false; loading = false; users = []; selectedId = "";
+          generation += 1; busy = false; loading = false; users = []; selectedId = ""; activatingDeveloper = false;
         }
         draw();
       },
-      getState: () => clone({ users, selectedId, loading, busy, permissions: catalog.permissions, roles: catalog.roles }),
+      getState: () => clone({ users, selectedId, loading, busy, activatingDeveloper, permissions: catalog.permissions, roles: catalog.roles }),
       destroy() {
         destroyed = true; generation += 1;
         container.removeEventListener("click", click); container.removeEventListener("input", input);
@@ -310,5 +394,5 @@
     return api;
   }
 
-  return { init, canManageUsers, publicUser, ownsDeveloperProfile, normalizeCatalog, createPayload, renderPermissions, renderUserList, render };
+  return { init, canManageUsers, publicUser, ownsDeveloperProfile, normalizeCatalog, createPayload, createDeveloperPayload, renderPermissions, renderUserList, render };
 });
