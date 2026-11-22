@@ -15,7 +15,7 @@ const EquipmentIdentity = require("./equipment-identity.js");
 const { createEquipmentReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml } = require("./equipment-reporting.cjs");
 const { parseEventFile } = require("./equipment-event-import.cjs");
 const LiveAccess = require("./live-access.js");
-const { createLiveUserStore, PERMISSION_DEFINITIONS, ROLE_PRESETS } = require("./live-users.cjs");
+const { createLiveUserStore, PERMISSION_DEFINITIONS, ROLE_PRESETS, isDeveloperIdentity } = require("./live-users.cjs");
 const { projectWarehousePayload, mergeWarehousePrivateFields } = require("./live-warehouse-access.cjs");
 
 const rootDir = __dirname;
@@ -57,7 +57,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261122-event-times-users-01";
+const warehouseAssetVersion = "20261122-developer-account-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -182,12 +182,13 @@ function warehouseAuditActor(request) {
   const user = authenticatedPrincipal(request);
   return { id: user?.id || "", userId: user?.id || "", username: user?.username || "",
     name: user?.displayName || user?.username || "", displayName: user?.displayName || user?.username || "",
-    permissions: user?.permissions || [] };
+    permissions: user?.permissions || [], isDeveloper: isDeveloperIdentity(user), auditExempt: isDeveloperIdentity(user) };
 }
 
 async function writeWarehouseInventory(normalized, context = {}) {
   const current = readWarehouseInventory();
-  const audited = prepareWarehouseSave(current, normalized.state, context);
+  const audited = prepareWarehouseSave(current, normalized.state, { ...context,
+    developerAuditExempt: isDeveloperIdentity(context.actor) && context.actor.auditExempt === true });
   Object.assign(normalized, audited);
   if (fs.existsSync(warehouseInventoryPath)) {
     await fsp.copyFile(warehouseInventoryPath, warehouseInventoryBackupPath);
@@ -1293,7 +1294,8 @@ function authenticatedPrincipal(request) {
 function liveSessionResponse(user) {
   return user ? { authenticated: true, user: user.username, username: user.username,
     userId: user.id, id: user.id, displayName: user.displayName, permissions: user.permissions,
-    role: user.role, sessionVersion: user.sessionVersion } : { authenticated: false, user: "", permissions: [] };
+    role: user.role, sessionVersion: user.sessionVersion, isDeveloper: isDeveloperIdentity(user),
+    auditExempt: isDeveloperIdentity(user) } : { authenticated: false, user: "", permissions: [] };
 }
 
 function sessionCookie(request, token) {
@@ -3975,6 +3977,12 @@ async function handleRequest(request, response) {
         const payload = await readJsonBody(request);
         await enqueueSave(() => jsonResponse(response, 201, { user: liveUsers.create(payload, authenticatedPrincipal(request)) }));
       }
+      return;
+    }
+    if (request.method === "POST" && url.pathname === "/api/users/developer") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => jsonResponse(response, 201, { user: liveUsers.provisionDeveloperAccount(payload, authenticatedPrincipal(request)) }));
       return;
     }
     if (request.method === "GET" && url.pathname === "/api/users/audit") {

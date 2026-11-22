@@ -32,9 +32,15 @@ const ROLE_PRESETS = Object.freeze([
 const MAX_USERS = 1000;
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 256;
+const DEVELOPER_USER_ID = "live-developer-dgiant";
+const DEVELOPER_USERNAME = "Dgiant";
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const usernameKey = (value) => String(value || "").normalize("NFC").trim().toLocaleLowerCase("en-US");
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+
+function isDeveloperIdentity(user) {
+  return Boolean(user && user.id === DEVELOPER_USER_ID && usernameKey(user.username) === usernameKey(DEVELOPER_USERNAME));
+}
 
 function invalid(message, statusCode = 400) {
   const error = new Error(message);
@@ -82,15 +88,19 @@ function verifyPassword(password, stored) {
 
 function publicUser(user) {
   if (!user) return null;
+  const isDeveloper = isDeveloperIdentity(user);
   return {
     id: user.id, username: user.username, displayName: user.displayName,
-    role: user.role, active: user.active, permissions: [...user.permissions],
+    role: isDeveloper ? "administrador" : user.role, active: user.active,
+    permissions: isDeveloper ? [...ALL_PERMISSION_IDS] : [...user.permissions],
+    isDeveloper, auditExempt: isDeveloper,
     sessionVersion: user.sessionVersion, createdAt: user.createdAt, updatedAt: user.updatedAt
   };
 }
 
 function hasPermission(user, permission) {
-  return Boolean(user && user.active !== false && Array.isArray(user.permissions) && user.permissions.includes(permission));
+  return Boolean(user && user.active !== false && (isDeveloperIdentity(user) && ALL_PERMISSION_IDS.includes(permission)
+    || Array.isArray(user.permissions) && user.permissions.includes(permission)));
 }
 
 function normalizePermissions(value) {
@@ -167,12 +177,14 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
     const ids = new Set(), usernames = new Set();
     for (const user of stored.users) {
       if (!user || typeof user.id !== "string" || !user.id || ids.has(user.id)
+        || user.id === DEVELOPER_USER_ID && !isDeveloperIdentity(user)
         || typeof user.username !== "string" || !user.username || usernames.has(usernameKey(user.username))
         || typeof user.displayName !== "string" || !user.displayName || user.displayName.length > 120
         || !ROLE_PRESETS.some((preset) => preset.id === user.role)
         || typeof user.active !== "boolean" || !Number.isSafeInteger(user.sessionVersion) || user.sessionVersion < 1
         || !validPasswordHash(user.password) || !Array.isArray(user.permissions)
         || !user.permissions.every((permission) => ALL_PERMISSION_IDS.includes(permission))) throw new Error("invalid");
+      if (isDeveloperIdentity(user) && (user.role !== "administrador" || !user.active)) throw new Error("invalid");
       ids.add(user.id); usernames.add(usernameKey(user.username));
     }
     if (!ids.has(stored.legacyAdminId) || !stored.users.some((user) => hasPermission(user, "users.manage"))) throw new Error("invalid");
@@ -247,6 +259,7 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
     validatePayload(payload);
     if (state.users.length >= MAX_USERS) throw invalid("Se alcanzó el límite de usuarios registrados.", 409);
     const username = normalizeUsername(payload.username);
+    if (usernameKey(username) === usernameKey(DEVELOPER_USERNAME)) throw invalid("La cuenta del desarrollador requiere la provisión protegida del servidor.", 409);
     if (state.users.some((user) => usernameKey(user.username) === usernameKey(username))) throw invalid("Ese nombre de usuario ya está registrado.", 409);
     const role = normalizeRole(payload.role);
     const permissions = own(payload, "permissions") ? normalizePermissions(payload.permissions)
@@ -267,6 +280,9 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
     validatePayload(payload);
     const original = state.users.find((user) => user.id === id);
     if (!original) throw invalid("No se encontró el usuario.", 404);
+    if (isDeveloperIdentity(original) && administrator.id !== original.id) {
+      throw invalid("Solo el propietario puede modificar su cuenta de desarrollador.", 403);
+    }
     const user = clone(original);
     if (own(payload, "username")) user.username = normalizeUsername(payload.username);
     if (state.users.some((entry) => entry.id !== id && usernameKey(entry.username) === usernameKey(user.username))) throw invalid("Ese nombre de usuario ya está registrado.", 409);
@@ -274,6 +290,15 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
     if (own(payload, "role")) user.role = normalizeRole(payload.role);
     if (own(payload, "permissions")) user.permissions = normalizePermissions(payload.permissions);
     if (own(payload, "active")) user.active = payload.active;
+    if (isDeveloperIdentity(original)) {
+      if (user.username !== original.username || user.role !== "administrador" || !user.active
+        || own(payload, "permissions") && JSON.stringify(user.permissions) !== JSON.stringify(ALL_PERMISSION_IDS)) {
+        throw invalid("La identidad del desarrollador conserva su usuario, estado y acceso completo.", 409);
+      }
+      user.permissions = [...ALL_PERMISSION_IDS];
+    } else if (usernameKey(user.username) === usernameKey(DEVELOPER_USERNAME)) {
+      throw invalid("La cuenta del desarrollador requiere la provisión protegida del servidor.", 409);
+    }
     if (own(payload, "password") && payload.password !== "") user.password = hashPassword(payload.password);
     const changes = {};
     for (const key of ["username", "displayName", "role", "active", "permissions"]) {
@@ -301,11 +326,43 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
     persist(next);
     return publicUser(updated);
   };
+  const provisionDeveloperAccount = (payload, actor) => {
+    const administrator = requireAdministrator(actor);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)
+      || Object.keys(payload).some((key) => !["username", "displayName", "password"].includes(key))) {
+      throw invalid("La provisión del desarrollador solo admite nombre, usuario y contraseña.");
+    }
+    if (payload.username !== undefined && usernameKey(payload.username) !== usernameKey(DEVELOPER_USERNAME)) {
+      throw invalid("La identidad reservada del desarrollador no se puede asignar a otro usuario.");
+    }
+    if (state.users.some((user) => user.id === DEVELOPER_USER_ID)) throw invalid("La cuenta del desarrollador ya está provisionada.", 409);
+    const existing = state.users.find((user) => usernameKey(user.username) === usernameKey(DEVELOPER_USERNAME));
+    if (!existing && state.users.length >= MAX_USERS) throw invalid("Se alcanzó el límite de usuarios registrados.", 409);
+    validatePassword(payload.password);
+    if (existing && !verifyPassword(payload.password, existing.password)) {
+      throw invalid("Confirme la contraseña actual del propietario para migrar su cuenta existente.", 401);
+    }
+    const at = timestamp();
+    const developer = { id: DEVELOPER_USER_ID, username: DEVELOPER_USERNAME,
+      displayName: normalizeDisplayName(payload.displayName, existing?.displayName || DEVELOPER_USERNAME),
+      role: "administrador", active: true, permissions: [...ALL_PERMISSION_IDS],
+      password: existing ? clone(existing.password) : hashPassword(payload.password),
+      sessionVersion: existing ? existing.sessionVersion + 1 : 1, legacySessionEligible: false,
+      createdAt: existing?.createdAt || at, updatedAt: at };
+    const next = clone(state);
+    next.users = existing ? next.users.map((user) => user.id === existing.id ? developer : user) : [...next.users, developer];
+    if (existing && next.legacyAdminId === existing.id) next.legacyAdminId = developer.id;
+    appendAudit(next, "users.developer.provision", administrator, developer,
+      { protectedIdentity: true, migratedExistingAccount: Boolean(existing) }, at);
+    persist(next);
+    return publicUser(developer);
+  };
 
   return { filePath, list: () => state.users.map(publicUser), getUser: (id) => publicUser(findUser(id)),
-    authenticate, sessionFor, resolveSession, create, update, changeOwnPassword,
+    authenticate, sessionFor, resolveSession, create, update, changeOwnPassword, provisionDeveloperAccount,
     audit: () => clone(state.audit), hasPermission: (identifier, permission) => hasPermission(findUser(identifier), permission) };
 }
 
 module.exports = { createLiveUserStore, publicUser, hasPermission, hashPassword, verifyPassword,
-  PERMISSION_DEFINITIONS, ROLE_PRESETS, ALL_PERMISSION_IDS, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH };
+  PERMISSION_DEFINITIONS, ROLE_PRESETS, ALL_PERMISSION_IDS, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH,
+  DEVELOPER_USER_ID, DEVELOPER_USERNAME, isDeveloperIdentity };

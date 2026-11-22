@@ -44,6 +44,7 @@ const STATE_FIELDS = Object.freeze(["version", "datasetId", "createdAt", "update
 const INVENTORY_METADATA_FIELDS = Object.freeze(["source", "sourceSpreadsheetId", "sourceSheetId", "importedSource"]);
 
 function projectMovement(movement, user) {
+  if (movement?.activityExcluded === true) return { ...pick(movement, MOVEMENT_FIELDS), activityExcluded: true };
   return fullHistoryAccess(user) || ownsMovement(movement, user) ? clone(movement) : pick(movement, MOVEMENT_FIELDS);
 }
 
@@ -62,26 +63,43 @@ function projectItem(item, user) {
 
 function projectReceipt(receipt) {
   const result = pick(receipt, ["requestId", "fingerprint", "createdAt"]);
+  if (receipt?.activityExcluded === true) result.activityExcluded = true;
   if (Array.isArray(receipt?.items)) result.items = receipt.items.map((item) => pick(item,
     ["itemId", "description", "quantity", "category", "previousQuantity", "newQuantity"]));
   if (receipt?.event && typeof receipt.event === "object") result.event = pick(receipt.event, ["id", "name", "place", "date"]);
   return result;
 }
 
+function redactExcludedActivity(value) {
+  if (Array.isArray(value)) return value.map(redactExcludedActivity);
+  if (!value || typeof value !== "object") return clone(value);
+  if (value.activityExcluded === true) {
+    if (own(value, "type") && own(value, "quantity")) return { ...pick(value, MOVEMENT_FIELDS), activityExcluded: true };
+    if (own(value, "requestId") && Array.isArray(value.items)) return { ...projectReceipt(value), activityExcluded: true };
+    // A developer import still needs its authorization mode and confirmation,
+    // but its actor is excluded from activity reports just like movements.
+    if (own(value, "mode") && own(value, "confirmedAt")) return {
+      ...pick(value, ["mode", "confirmed", "confirmedAt"]), activityExcluded: true };
+  }
+  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, redactExcludedActivity(entry)]));
+}
+
 function projectState(state, user) {
-  if (fullHistoryAccess(user)) return clone(state);
-  const result = pick(state, STATE_FIELDS);
+  const full = fullHistoryAccess(user);
+  const result = full ? redactExcludedActivity(state) : pick(state, STATE_FIELDS);
   if (has(user, "warehouse.inventory")) Object.assign(result,
     pick(state, INVENTORY_METADATA_FIELDS));
   result.items = (Array.isArray(state?.items) ? state.items : []).map((item) => projectItem(item, user));
   result.movements = (Array.isArray(state?.movements) ? state.movements : []).map((movement) => projectMovement(movement, user));
-  result.auditEntries = [];
-  result.equipmentStockReceipts = (Array.isArray(state?.equipmentStockReceipts) ? state.equipmentStockReceipts : []).map(projectReceipt);
+  result.auditEntries = full ? redactExcludedActivity(Array.isArray(state?.auditEntries) ? state.auditEntries : []) : [];
+  result.equipmentStockReceipts = (Array.isArray(state?.equipmentStockReceipts) ? state.equipmentStockReceipts : [])
+    .map((receipt) => full ? redactExcludedActivity(receipt) : projectReceipt(receipt));
   // Drafts are shared operational lists, rather than historical evidence. Keep
   // just the identity/quantity needed to use them, not arbitrary embedded files.
-  for (const field of ["rentalDraft", "workshopDraft"]) if (Array.isArray(state?.[field])) {
+  for (const field of ["rentalDraft", "workshopDraft"]) if (!full && Array.isArray(state?.[field])) {
     result[field] = state[field].map((line) => pick(line, ["id", "itemId", "itemName", "quantity"]));
   }
+  if (result.importedSource) result.importedSource = redactExcludedActivity(result.importedSource);
   return result;
 }
 
@@ -91,11 +109,12 @@ function projectWarehousePayload(payload, user) {
   const result = clone(payload);
   result.state = projectState(payload.state, user);
   // Some save endpoints also include a receipt outside state.
-  if (!fullHistoryAccess(user) && result.receipt && typeof result.receipt === "object") {
+  if ((!fullHistoryAccess(user) || result.receipt?.activityExcluded === true) && result.receipt && typeof result.receipt === "object") {
     result.receipt = { ...pick(result.receipt, ["requestId", "duplicate"]),
       ...(Array.isArray(result.receipt.items) ? { items: result.receipt.items.map((item) => pick(item,
         ["itemId", "description", "quantity", "category", "previousQuantity", "newQuantity"])) } : {}) };
   }
+  if (fullHistoryAccess(user)) return redactExcludedActivity(result);
   return result;
 }
 
@@ -150,6 +169,21 @@ function mergeWarehousePrivateFields(currentState, candidateState, user) {
       const previous = movementsById.get(text(movement?.id));
       return previous && !ownsMovement(previous, user) ? restoreHidden(previous, movement, projectMovement(previous, user)) : movement;
     });
+  }
+  // Even a full-history administrator receives only operational fields for the
+  // reserved developer's excluded rows. Restore their hidden server evidence
+  // before the ledger compares edits, without restoring any deleted row.
+  const movementsById = new Map((current.movements || []).map((movement) => [text(movement?.id), movement]));
+  if (Array.isArray(candidate.movements)) candidate.movements = candidate.movements.map((movement) => {
+    const previous = movementsById.get(text(movement?.id));
+    return previous?.activityExcluded === true ? restoreHidden(previous, movement, projectMovement(previous, user)) : movement;
+  });
+  const previousAuthorization = current.importedSource?.authorization, nextAuthorization = candidate.importedSource?.authorization;
+  if (previousAuthorization?.activityExcluded === true && nextAuthorization
+    && JSON.stringify(pick(previousAuthorization, ["mode", "confirmed", "confirmedAt"]))
+      === JSON.stringify(pick(nextAuthorization, ["mode", "confirmed", "confirmedAt"]))) {
+    candidate.importedSource.authorization = restoreHidden(current.importedSource.authorization,
+      candidate.importedSource.authorization, redactExcludedActivity(current.importedSource.authorization));
   }
   // These are server-owned even for an administrator. The ledger will append
   // new evidence/receipts after it validates the actual requested changes.

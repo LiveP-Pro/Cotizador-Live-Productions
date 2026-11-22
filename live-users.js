@@ -20,8 +20,14 @@
     return {
       id: string(user?.id), username: string(user?.username), displayName: string(user?.displayName),
       role: string(user?.role || "personalizado"), active: user?.active !== false,
-      permissions: permissionIds(user?.permissions), createdAt: string(user?.createdAt), updatedAt: string(user?.updatedAt)
+      permissions: permissionIds(user?.permissions), createdAt: string(user?.createdAt), updatedAt: string(user?.updatedAt),
+      isDeveloper: user?.isDeveloper === true, auditExempt: user?.auditExempt === true
     };
+  }
+
+  function ownsDeveloperProfile(session, user) {
+    const id = string(session?.userId || session?.id || session?.user?.id);
+    return user?.isDeveloper === true && !!id && id === string(user.id);
   }
 
   function normalizeCatalog(payload) {
@@ -67,45 +73,49 @@
     };
   }
 
-  function renderPermissions(catalog, selected) {
+  function renderPermissions(catalog, selected, locked = false) {
     const groups = new Map();
     const chosen = new Set(permissionIds(selected));
     for (const permission of catalog.permissions) {
       if (!groups.has(permission.group)) groups.set(permission.group, []);
       groups.get(permission.group).push(permission);
     }
-    return [...groups].map(([group, permissions]) => `<fieldset class="live-users-permission-group"><legend>${escape(group)}</legend>${permissions.map((permission) => `<label class="live-users-check"><input type="checkbox" name="permissions" value="${escape(permission.id)}"${chosen.has(permission.id) ? " checked" : ""}><span><strong>${escape(permission.label)}</strong>${permission.description ? `<small>${escape(permission.description)}</small>` : ""}</span></label>`).join("")}</fieldset>`).join("");
+    return [...groups].map(([group, permissions]) => `<fieldset class="live-users-permission-group"><legend>${escape(group)}</legend>${permissions.map((permission) => `<label class="live-users-check"><input type="checkbox" name="permissions" value="${escape(permission.id)}"${chosen.has(permission.id) ? " checked" : ""}${locked ? ' disabled data-users-locked="true"' : ""}><span><strong>${escape(permission.label)}</strong>${permission.description ? `<small>${escape(permission.description)}</small>` : ""}</span></label>`).join("")}</fieldset>`).join("");
   }
 
-  function renderForm(user, catalog) {
+  function renderForm(user, catalog, session) {
     const editing = !!user;
     const draft = user || { username: "", displayName: "", role: "personalizado", active: true, permissions: [] };
     const selectedRole = catalog.roles.some((role) => role.id === draft.role) ? draft.role : "personalizado";
-    return `<form class="live-users-form" data-users-form novalidate><fieldset class="live-users-form-fields"><legend>${editing ? "Editar empleado" : "Crear usuario"}</legend>
+    const developer = draft.isDeveloper === true;
+    const protectedProfile = developer && !ownsDeveloperProfile(session, draft);
+    const lock = developer ? ' disabled data-users-locked="true"' : "";
+    const notice = developer ? `<p class="live-users-protected"><span class="live-users-badge is-developer">Desarrollador</span><span>Cuenta de desarrollador protegida. ${protectedProfile ? "Solo su titular puede actualizar su nombre y contraseña." : "Puede actualizar su nombre y contraseña. El perfil conserva todos los accesos."}</span></p>` : "";
+    return `<form class="live-users-form" data-users-form novalidate>${notice}<fieldset class="live-users-form-fields"${protectedProfile ? ' disabled data-users-locked="true"' : ""}><legend>${protectedProfile ? "Consultar perfil" : editing ? "Editar empleado" : "Crear usuario"}</legend>
       <div class="live-users-fields"><label>Nombre del empleado<input name="displayName" type="text" autocomplete="off" maxlength="120" required value="${escape(draft.displayName)}"></label>
       <label>Usuario para iniciar sesión<input name="username" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" minlength="3" maxlength="80" required value="${escape(draft.username)}"${editing ? " readonly" : ""}></label>
-      <label>Plantilla de permisos<select name="role">${catalog.roles.map((role) => `<option value="${escape(role.id)}"${role.id === selectedRole ? " selected" : ""}>${escape(role.label)}</option>`).join("")}</select></label>
-      <label class="live-users-check live-users-active"><input name="active" type="checkbox"${draft.active ? " checked" : ""}><span><strong>Usuario activo</strong><small>Solo los usuarios activos pueden iniciar sesión.</small></span></label></div>
-      <p class="live-users-hint">Seleccione una plantilla o ajuste cada permiso. Cada empleado debe usar su propio usuario para identificar sus movimientos y bitácoras.</p>
-      <div class="live-users-permissions">${renderPermissions(catalog, draft.permissions)}</div>
-      <section class="live-users-password"><h3>${editing ? "Cambiar contraseña" : "Contraseña inicial"}</h3><p class="live-users-hint">${editing ? "Deje ambos campos vacíos para conservar la contraseña actual. Cambiar la contraseña o los permisos cierra las sesiones anteriores de este usuario." : "Establezca una contraseña de al menos 8 caracteres y entréguela directamente al empleado."}</p>
+      <label>Plantilla de permisos<select name="role"${lock}>${catalog.roles.map((role) => `<option value="${escape(role.id)}"${role.id === selectedRole ? " selected" : ""}>${escape(role.label)}</option>`).join("")}</select></label>
+      <label class="live-users-check live-users-active"><input name="active" type="checkbox"${draft.active ? " checked" : ""}${lock}><span><strong>Usuario activo</strong><small>Solo los usuarios activos pueden iniciar sesión.</small></span></label></div>
+      <p class="live-users-hint">${developer ? "Los accesos de este perfil están protegidos." : "Seleccione una plantilla o ajuste cada permiso. Cada empleado debe usar su propio usuario para identificar sus movimientos y bitácoras."}</p>
+      <div class="live-users-permissions">${renderPermissions(catalog, draft.permissions, developer)}</div>
+      ${protectedProfile ? "" : `<section class="live-users-password"><h3>${editing ? "Cambiar contraseña" : "Contraseña inicial"}</h3><p class="live-users-hint">${editing ? "Deje ambos campos vacíos para conservar la contraseña actual. Cambiar la contraseña o los permisos cierra las sesiones anteriores de este usuario." : "Establezca una contraseña de al menos 8 caracteres y entréguela directamente al empleado."}</p>
       <div class="live-users-fields"><label>${editing ? "Nueva contraseña" : "Contraseña"}<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="256"${editing ? "" : " required"}></label>
       <label>Confirmar contraseña<input name="passwordConfirmation" type="password" autocomplete="new-password" minlength="8" maxlength="256"${editing ? "" : " required"}></label></div></section>
-      <button type="submit" class="live-users-primary">${editing ? "Guardar cambios" : "Crear usuario"}</button></fieldset></form>`;
+      <button type="submit" class="live-users-primary">${editing ? "Guardar cambios" : "Crear usuario"}</button>`}</fieldset></form>`;
   }
 
   function renderUserList(users, selectedId, query = "") {
     const text = string(query).trim().toLocaleLowerCase("es-GT");
     const filtered = users.filter((user) => `${user.displayName} ${user.username}`.toLocaleLowerCase("es-GT").includes(text));
     if (!filtered.length) return '<p class="live-users-empty">No se encontraron usuarios.</p>';
-    return filtered.map((user) => `<button type="button" class="live-users-person${user.id === selectedId ? " is-selected" : ""}" data-users-select="${escape(user.id)}" aria-pressed="${user.id === selectedId}"><span><strong>${escape(user.displayName || user.username)}</strong><small>${escape(user.username)}</small></span><span class="live-users-badge${user.active ? "" : " is-inactive"}">${user.active ? "Activo" : "Inactivo"}</span></button>`).join("");
+    return filtered.map((user) => `<button type="button" class="live-users-person${user.id === selectedId ? " is-selected" : ""}" data-users-select="${escape(user.id)}" aria-pressed="${user.id === selectedId}"><span><strong>${escape(user.displayName || user.username)}</strong><small>${escape(user.username)}</small>${user.isDeveloper === true ? '<span class="live-users-badge is-developer">Desarrollador</span>' : ""}</span><span class="live-users-badge${user.active ? "" : " is-inactive"}">${user.active ? "Activo" : "Inactivo"}</span></button>`).join("");
   }
 
-  function render(users, catalog, selectedId, query = "") {
+  function render(users, catalog, selectedId, query = "", session = {}) {
     const selected = users.find((user) => user.id === selectedId);
     return `<section class="live-users"><header class="live-users-header"><div><p class="live-users-eyebrow">Administración</p><h2>Usuarios y permisos</h2><p>Cree accesos individuales y defina qué puede hacer cada empleado.</p></div><button type="button" data-users-action="refresh">Actualizar lista</button></header>
       <p class="live-users-status" data-users-status role="status" aria-live="polite"></p>
-      <div class="live-users-layout"><aside class="live-users-sidebar" aria-label="Empleados"><button type="button" class="live-users-primary" data-users-action="new">+ Crear usuario</button><label>Buscar empleado<input data-users-search type="search" autocomplete="off" value="${escape(query)}" placeholder="Nombre o usuario"></label><div data-users-list>${renderUserList(users, selectedId, query)}</div></aside><div class="live-users-editor">${renderForm(selected, catalog)}</div></div></section>`;
+      <div class="live-users-layout"><aside class="live-users-sidebar" aria-label="Empleados"><button type="button" class="live-users-primary" data-users-action="new">+ Crear usuario</button><label>Buscar empleado<input data-users-search type="search" autocomplete="off" value="${escape(query)}" placeholder="Nombre o usuario"></label><div data-users-list>${renderUserList(users, selectedId, query)}</div></aside><div class="live-users-editor">${renderForm(selected, catalog, session)}</div></div></section>`;
   }
 
   // The host supplies the session returned by /api/session and refreshes it in
@@ -130,14 +140,14 @@
     function updateBusy() {
       const disabled = busy || loading;
       container.setAttribute("aria-busy", String(disabled));
-      container.querySelectorAll("button,input,select,fieldset.live-users-form-fields").forEach((element) => { element.disabled = disabled; });
+      container.querySelectorAll("button,input,select,fieldset.live-users-form-fields").forEach((element) => { element.disabled = disabled || element.dataset?.usersLocked === "true"; });
     }
 
     function draw() {
       if (destroyed) return;
       if (!canManageUsers(session)) {
         container.innerHTML = '<section class="live-users"><p class="live-users-status" data-users-status role="status">Su usuario no tiene permiso para administrar usuarios.</p></section>';
-      } else container.innerHTML = render(users, catalog, selectedId, query);
+      } else container.innerHTML = render(users, catalog, selectedId, query, session);
       updateBusy();
     }
 
@@ -195,9 +205,15 @@
 
     async function save() {
       if (destroyed || busy || loading || !canManageUsers(session)) return false;
+      const selected = users.find((user) => user.id === selectedId);
+      if (selected?.isDeveloper && !ownsDeveloperProfile(session, selected)) {
+        status("Solo el titular de la cuenta de desarrollador puede cambiar su nombre o contraseña.", true);
+        return false;
+      }
       let payload;
       try { payload = createPayload(formValues(), catalog, !!selectedId); }
       catch (error) { status(error.message, true); return false; }
+      if (selected?.isDeveloper) payload = { displayName: payload.displayName, ...(payload.password ? { password: payload.password } : {}) };
       const current = ++generation;
       const editingId = selectedId;
       busy = true;
@@ -248,6 +264,7 @@
 
     function change(event) {
       if (destroyed || busy || loading || !canManageUsers(session)) return;
+      if (users.some((user) => user.id === selectedId && user.isDeveloper)) return;
       const form = container.querySelector("[data-users-form]");
       if (!form) return;
       if (event.target.name === "role") {
@@ -293,5 +310,5 @@
     return api;
   }
 
-  return { init, canManageUsers, publicUser, normalizeCatalog, createPayload, renderPermissions, renderUserList, render };
+  return { init, canManageUsers, publicUser, ownsDeveloperProfile, normalizeCatalog, createPayload, renderPermissions, renderUserList, render };
 });

@@ -5,7 +5,8 @@ const os = require("node:os");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const {
-  createLiveUserStore, PERMISSION_DEFINITIONS, ROLE_PRESETS, ALL_PERMISSION_IDS, hasPermission
+  createLiveUserStore, PERMISSION_DEFINITIONS, ROLE_PRESETS, ALL_PERMISSION_IDS, hasPermission,
+  DEVELOPER_USER_ID, isDeveloperIdentity
 } = require("../live-users.cjs");
 
 const legacyPassword = "Legacy-test-123";
@@ -219,4 +220,90 @@ test("eight-character passwords are accepted and a read-only identity bridge can
   fs.unlinkSync(store.filePath);
   assert.throws(() => createLiveUserStore({ ...options, readOnly: true }), /no está disponible/);
   assert.equal(fs.existsSync(store.filePath), false);
+});
+
+test("the protected developer is unique, authenticates normally and alone receives server-derived exemption flags", (t) => {
+  const { store, options, admin } = fixture(t);
+  const ordinaryAdministrator = createEmployee(store, admin, { username: "all.permissions", role: "administrador", permissions: [...ALL_PERMISSION_IDS] });
+  assert.equal(admin.isDeveloper, false);
+  assert.equal(admin.auditExempt, false);
+  assert.equal(ordinaryAdministrator.isDeveloper, false);
+  assert.equal(ordinaryAdministrator.auditExempt, false);
+  assert.throws(() => createEmployee(store, admin, { username: " DGIANT " }), { statusCode: 409 });
+  assert.throws(() => store.update(ordinaryAdministrator.id, { username: "Dgiant" }, admin), { statusCode: 409 });
+  const developer = store.provisionDeveloperAccount({ username: "dgiant", displayName: "Propietario sintético", password: "Owner-test-123" }, admin);
+  assert.equal(developer.id, DEVELOPER_USER_ID);
+  assert.equal(developer.username, "Dgiant");
+  assert.equal(developer.isDeveloper, true);
+  assert.equal(developer.auditExempt, true);
+  assert.equal(developer.active, true);
+  assert.equal(developer.role, "administrador");
+  assert.deepEqual(developer.permissions, ALL_PERMISSION_IDS);
+  assert.equal(store.authenticate("DGIANT", "Owner-test-123").id, DEVELOPER_USER_ID);
+  assert.equal(store.authenticate("DGIANT", "wrong-password"), null);
+  assert.throws(() => store.provisionDeveloperAccount({ password: "Owner-test-123" }, admin), { statusCode: 409 });
+  const reopened = createLiveUserStore(options);
+  assert.equal(reopened.authenticate("dgiant", "Owner-test-123").auditExempt, true);
+  assert.equal(reopened.list().filter((user) => user.isDeveloper).length, 1);
+  assert.equal(reopened.list().filter((user) => user.auditExempt).length, 1);
+});
+
+test("developer credentials and identity cannot be reset, transferred or forged by another administrator", (t) => {
+  const { store, admin } = fixture(t);
+  const developer = store.provisionDeveloperAccount({ password: "Owner-test-123" }, admin);
+  const employee = createEmployee(store, admin);
+  const before = fs.readFileSync(store.filePath, "utf8");
+  for (const patch of [{ password: "Stolen-test-123" }, { displayName: "Otro propietario" }, { active: false }, { permissions: [] }]) {
+    assert.throws(() => store.update(developer.id, patch, admin), { statusCode: 403 });
+  }
+  for (const patch of [{ id: DEVELOPER_USER_ID }, { isDeveloper: true }, { auditExempt: true }]) {
+    assert.throws(() => store.update(employee.id, patch, admin), { statusCode: 400 });
+    assert.throws(() => store.create({ username: "forged.developer", password: "Forged-test-123", ...patch }, admin), { statusCode: 400 });
+  }
+  assert.throws(() => store.update(developer.id, { password: "Stolen-test-123" }, { ...employee, isDeveloper: true, auditExempt: true }), { statusCode: 403 });
+  assert.throws(() => store.provisionDeveloperAccount({ username: "another.owner", password: "Owner-test-123" }, admin), { statusCode: 400 });
+  assert.throws(() => store.changeOwnPassword(developer.id, { currentPassword: "Owner-test-123", newPassword: "Stolen-test-123" }, employee), { statusCode: 403 });
+  assert.equal(fs.readFileSync(store.filePath, "utf8"), before);
+  assert.equal(isDeveloperIdentity({ ...employee, isDeveloper: true, auditExempt: true }), false);
+  assert.equal(isDeveloperIdentity({ ...employee, id: DEVELOPER_USER_ID, username: "another.owner" }), false);
+  assert.equal(isDeveloperIdentity({ ...employee, username: "Dgiant" }), false);
+  assert.equal(store.getUser(employee.id).auditExempt, false);
+});
+
+test("the developer can update their own name and password while protected access remains immutable", (t) => {
+  const { store, admin } = fixture(t);
+  const developer = store.provisionDeveloperAccount({ password: "Owner-test-123" }, admin);
+  for (const patch of [{ username: "different.owner" }, { role: "personalizado" }, { active: false }, { permissions: ["users.manage"] }]) {
+    assert.throws(() => store.update(developer.id, patch, developer), { statusCode: 409 });
+  }
+  const prior = session(store, developer);
+  store.update(developer.id, { displayName: "Propietario actualizado", password: "Updated-owner-123" }, developer);
+  assert.equal(store.resolveSession(prior), null);
+  assert.equal(store.authenticate("Dgiant", "Owner-test-123"), null);
+  const updated = store.authenticate("Dgiant", "Updated-owner-123");
+  assert.equal(updated.auditExempt, true);
+  assert.equal(updated.displayName, "Propietario actualizado");
+  assert.deepEqual(updated.permissions, ALL_PERMISSION_IDS);
+  store.changeOwnPassword(developer.id, { currentPassword: "Updated-owner-123", newPassword: "Final-owner-123" }, updated);
+  assert.equal(store.authenticate("Dgiant", "Final-owner-123").isDeveloper, true);
+});
+
+test("explicit developer migration requires the existing password and preserves past audit entries", (t) => {
+  const { store, options, admin } = fixture(t);
+  const employee = createEmployee(store, admin);
+  const raw = JSON.parse(fs.readFileSync(store.filePath, "utf8"));
+  raw.users.find((user) => user.id === employee.id).username = "Dgiant";
+  fs.writeFileSync(store.filePath, JSON.stringify(raw), { mode: 0o600 });
+  const existing = createLiveUserStore(options);
+  assert.equal(existing.getUser("Dgiant").isDeveloper, false);
+  const before = existing.audit();
+  const oldSession = session(existing, existing.getUser("Dgiant"));
+  assert.throws(() => existing.provisionDeveloperAccount({ password: "Different-owner-123" }, admin), { statusCode: 401 });
+  const migrated = existing.provisionDeveloperAccount({ password: "Employee-test-123" }, admin);
+  assert.equal(migrated.id, DEVELOPER_USER_ID);
+  assert.equal(migrated.isDeveloper, true);
+  assert.equal(existing.resolveSession(oldSession), null);
+  assert.equal(existing.getUser(employee.id), null);
+  assert.deepEqual(existing.audit().slice(0, before.length), before);
+  assert.equal(existing.authenticate("Dgiant", "Employee-test-123").auditExempt, true);
 });

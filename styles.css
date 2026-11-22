@@ -6700,3 +6700,5 @@ body.pdf-export .additional-services-section {
   margin: 0;
 }
 #liveCurrentUser { font-size: 13px; overflow-wrap: anywhere; }
+.live-developer-notice { margin: 0; padding: 10px 20px; background: #e8f0fa; color: #23456c; font-size: 13px; }
+.live-developer-notice[hidden] { display: none !important; }

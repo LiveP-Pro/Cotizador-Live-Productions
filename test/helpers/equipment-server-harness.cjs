@@ -10,7 +10,7 @@ const serviceReader = require("../../equipment-service-import.cjs");
 const EquipmentIdentity = require("../../equipment-identity.js");
 const equipmentEvents = require("../../equipment-event-store.cjs");
 const LiveAccess = require("../../live-access.js");
-const { ALL_PERMISSION_IDS } = require("../../live-users.cjs");
+const { ALL_PERMISSION_IDS, isDeveloperIdentity } = require("../../live-users.cjs");
 const warehouseAccess = require("../../live-warehouse-access.cjs");
 
 const source = fs.readFileSync(path.join(__dirname, "..", "..", "server.js"), "utf8");
@@ -67,7 +67,7 @@ function createHarness(t) {
   const context = vm.createContext({
     fs, fsp: fs.promises, path, crypto, Buffer, URL, Date: Clock,
     process: { pid: process.pid }, console: { warn() {}, log() {} },
-    rootDir: dir, dataDir: dir, ...paths, ...ledger, ...serviceReader, ...equipmentEvents, ...warehouseAccess, EquipmentIdentity, LiveAccess,
+    rootDir: dir, dataDir: dir, ...paths, ...ledger, ...serviceReader, ...equipmentEvents, ...warehouseAccess, EquipmentIdentity, LiveAccess, isDeveloperIdentity,
     equipmentServiceImportPreviews: new Map(), activeWarehouseImports: 0,
     maxWarehouseImportBytes: 15 * 1024 * 1024, maxServicePreviewBytes: 64 * 1024 * 1024,
     saveQueue: Promise.resolve(),

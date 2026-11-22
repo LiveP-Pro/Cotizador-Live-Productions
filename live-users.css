@@ -135,6 +135,30 @@
   background: #f2f4f7;
 }
 
+.live-users-badge.is-developer {
+  display: inline-block;
+  color: #684b15;
+  background: #f4ead7;
+  margin-top: 5px;
+}
+
+.live-users-protected {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 12px;
+  margin: 0 0 18px;
+  background: #f8f5ee;
+  border: 1px solid #e8dcc2;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.live-users-protected .live-users-badge {
+  margin: 0;
+}
+
 .live-users-form-fields {
   border: 0;
   padding: 0;

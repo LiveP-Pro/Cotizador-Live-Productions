@@ -10,10 +10,10 @@
     <link rel="stylesheet" href="warehouse-inventory.css?v=20261008-stock-ingress-04" />
     <link rel="stylesheet" href="equipment-service-import.css?v=20261122-event-times-users-01" />
     <link rel="stylesheet" href="equipment-name-picker.css?v=20261007-extras-02" />
-    <link rel="stylesheet" href="live-users.css?v=20261122-event-times-users-01" />
+    <link rel="stylesheet" href="live-users.css?v=20261122-developer-account-01" />
     <script src="live-access.js?v=20261122-event-times-users-01" defer></script>
-    <script src="live-users.js?v=20261122-event-times-users-01" defer></script>
-    <script src="app.js?v=20261122-event-times-users-01" defer></script>
+    <script src="live-users.js?v=20261122-developer-account-01" defer></script>
+    <script src="app.js?v=20261122-developer-account-01" defer></script>
     <script src="equipment-catalog.js?v=20261014-dj-audio-01" defer></script>
     <script src="equipment-inventory.js?v=20261122-event-times-users-01" defer></script>
     <script src="equipment-service-import.js?v=20261122-event-times-users-01" defer></script>
@@ -33,7 +33,7 @@
     <script src="equipment.js?v=20261122-event-times-users-01" defer></script>
     <script src="warehouse-import-review.js?v=20261117-import-review-01" defer></script>
     <script src="warehouse-import-corrections.js?v=20261117-import-review-01" defer></script>
-    <script src="inventory.js?v=20261122-event-times-users-01" defer></script>
+    <script src="inventory.js?v=20261122-developer-account-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -56,6 +56,7 @@
     </section>
 
     <div id="siteApp" class="site-app is-hidden">
+      <p id="liveDeveloperNotice" class="live-developer-notice no-print" hidden>Cuenta de desarrollador. Su actividad no se incluye en los reportes de movimientos y bitácoras. Las operaciones reales sí actualizan las existencias.</p>
       <header class="site-header no-print">
         <button
           id="menuToggleButton"

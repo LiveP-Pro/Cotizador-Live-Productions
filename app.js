@@ -3027,7 +3027,10 @@ function updateLiveSession(session) {
   window.LIVE_SESSION = session?.authenticated ? JSON.parse(JSON.stringify(session)) : { authenticated: false, permissions: [] };
   window.LiveAccess?.applyUi(document, window.LIVE_SESSION);
   const badge = document.querySelector("#liveCurrentUser");
-  if (badge) badge.textContent = session?.authenticated ? (session.displayName || session.user) : "";
+  if (badge) badge.textContent = session?.authenticated
+    ? `${session.displayName || session.user}${session.isDeveloper ? " · Desarrollador" : ""}` : "";
+  const developerNotice = document.querySelector("#liveDeveloperNotice");
+  if (developerNotice) developerNotice.hidden = session?.isDeveloper !== true;
   const container = document.querySelector("#liveUsersContainer");
   if (container && window.LiveUsers && !window.liveUsersPanel) {
     window.liveUsersPanel = window.LiveUsers.init({ container, session: window.LIVE_SESSION,

@@ -156,3 +156,20 @@ test("a missing root registry fails closed without bootstrapping or writing iden
   assert.equal(fs.existsSync(path.join(h.directory, "usuarios-live.json")), false);
   assert.deepEqual(fs.readFileSync(path.join(h.directory, "cotizador-auth.json")), authBefore);
 });
+
+test("Luxury carries the protected developer identity only from the current root account", async (t) => {
+  const h = await fixture(t);
+  const developer = h.store.provisionDeveloperAccount({ password: "Owner-test-123" }, h.admin);
+  const ownerSession = await h.request("/api/session", { cookie: h.rootCookie(developer) });
+  assert.equal(ownerSession.status, 200);
+  assert.equal(ownerSession.body.user.isDeveloper, true);
+  assert.equal(ownerSession.body.user.auditExempt, true);
+  const ordinary = await h.request("/api/session", { cookie: h.rootCookie(h.full) });
+  assert.equal(ordinary.status, 200);
+  assert.equal(ordinary.body.user.isDeveloper, false);
+  assert.equal(ordinary.body.user.auditExempt, false);
+  const login = await h.request("/api/login", { method: "POST", body: { username: "Dgiant", password: "Owner-test-123", isDeveloper: false } });
+  assert.equal(login.status, 200);
+  assert.equal(login.body.user.isDeveloper, true);
+  assert.equal(login.body.user.liveUserId, developer.id);
+});

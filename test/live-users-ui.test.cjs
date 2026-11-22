@@ -169,3 +169,61 @@ test("templates select only their explicit permissions and manual edits switch t
   assert.equal(fixture.fields.role.value, "personalizado");
   controller.destroy();
 });
+
+const developer = {
+  id: "live-developer-dgiant", username: "Dgiant", displayName: "Desarrollador de prueba", role: "administrador",
+  active: true, permissions: definitions.map((permission) => permission.id), isDeveloper: true, auditExempt: true
+};
+
+test("the protected developer badge comes from server metadata and offers no transferable audit exemption", () => {
+  const catalog = ui.normalizeCatalog({ permissions: definitions, roles });
+  const html = ui.render([developer], catalog, developer.id, "", { ...adminSession, userId: "another-admin" });
+  assert.match(html, /is-developer">Desarrollador/);
+  assert.match(html, /Solo su titular puede actualizar su nombre y contraseña/);
+  assert.match(html, /class="live-users-form-fields" disabled data-users-locked="true"/);
+  assert.doesNotMatch(html, /type="submit"/);
+  assert.doesNotMatch(html, /type="password"/);
+  assert.doesNotMatch(html, /name="(?:isDeveloper|auditExempt)"/);
+  const ordinary = ui.render([{ ...user, username: "Dgiant" }], catalog, user.id, "", adminSession);
+  assert.doesNotMatch(ordinary, /is-developer/);
+  assert.equal(ui.publicUser(developer).isDeveloper, true);
+  assert.equal(ui.publicUser({ ...user, isDeveloper: "true" }).isDeveloper, false);
+});
+
+test("another administrator cannot submit changes to the protected developer even through a programmatic save", async () => {
+  const fixture = containerFixture(); let requests = 0;
+  const controller = ui.init({ container: fixture.container, session: { ...adminSession, userId: "another-admin" }, fetch: async () => {
+    requests += 1;
+    return response({ users: [developer], permissions: definitions, roles });
+  } });
+  await controller.load();
+  fixture.listeners.get("click")({ target: { closest: () => ({ dataset: { usersSelect: developer.id } }) } });
+  assert.equal(controller.getState().selectedId, developer.id);
+  assert.equal(await controller.save(), false);
+  assert.equal(requests, 1);
+  assert.match(fixture.status.textContent, /Solo el titular/);
+  controller.destroy();
+});
+
+test("the developer can update their own name and password while fixed profile fields never enter the PATCH", async () => {
+  const fixture = containerFixture(); const calls = [];
+  fixture.fields.displayName.value = "Nombre sintético actualizado";
+  fixture.fields.role.dataset = { usersLocked: "true" };
+  const controller = ui.init({ container: fixture.container, session: { ...adminSession, userId: developer.id }, fetch: async (url, options) => {
+    calls.push({ url, ...options });
+    if (options.method === "GET") return response({ users: [developer], permissions: definitions, roles });
+    return response({ user: { ...developer, displayName: "Nombre sintético actualizado" } });
+  } });
+  await controller.load();
+  fixture.listeners.get("click")({ target: { closest: () => ({ dataset: { usersSelect: developer.id } }) } });
+  assert.equal(fixture.fields.role.disabled, true);
+  assert.match(fixture.container.innerHTML, /Puede actualizar su nombre y contraseña/);
+  assert.match(fixture.container.innerHTML, /name="role" disabled data-users-locked="true"/);
+  assert.match(fixture.container.innerHTML, /type="submit"/);
+  assert.equal(await controller.save(), true);
+  assert.equal(calls[1].method, "PATCH");
+  assert.equal(calls[1].url, "/api/users/live-developer-dgiant");
+  assert.deepEqual(JSON.parse(calls[1].body), { displayName: "Nombre sintético actualizado", password: "Sintetica-clave-25" });
+  assert.equal(fixture.fields.role.disabled, true);
+  controller.destroy();
+});

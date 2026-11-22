@@ -168,7 +168,7 @@ function comparableEntity(entity, entityType, ignoreId = false) {
   const normalized = auditSnapshot(entity);
   // Identity and registration dates are sealed by the server, never edits made
   // through the inventory form or a reason to fabricate another transaction.
-  for (const field of ["createdBy", "updatedBy", "registeredAt", "actor"]) delete normalized[field];
+  for (const field of ["createdBy", "updatedBy", "registeredAt", "actor", "activityExcluded", "developerAuditExempt"]) delete normalized[field];
   if (ignoreId) delete normalized.id;
   normalized.quantity = Number(entity.quantity ?? 0);
   if (entityType === "item") {
@@ -227,6 +227,15 @@ function warehouseActor(actor = {}) {
 function warehousePermissionSet(context = {}) {
   return new Set(Array.isArray(context.permissions) ? context.permissions
     : Array.isArray(context.actor?.permissions) ? context.actor.permissions : []);
+}
+
+function developerAuditExempt(context = {}) {
+  // The flag is set by the authenticated server route, separately from actor
+  // data. The reserved identity is checked again so full-access administrators
+  // and copied client-side flags can never inherit this single-account rule.
+  const actor = warehouseActor(context.actor);
+  return context.developerAuditExempt === true && actor.userId === "live-developer-dgiant"
+    && actor.username.normalize("NFC").toLocaleLowerCase("en-US") === "dgiant";
 }
 
 function warehouseMovementChanges(previous, next, context = {}) {
@@ -358,13 +367,14 @@ function validateWarehousePermissions(previous, next, context = {}) {
 function sealWarehouseMovementActors(previous, next, context, timestamp) {
   const movements = warehouseMovementChanges(previous, next, context);
   const actor = warehouseActor(context.actor);
-  const fields = ["createdBy", "updatedBy", "registeredAt", "createdAt", "updatedAt", "actor"];
+  const exempt = developerAuditExempt(context);
+  const fields = ["createdBy", "updatedBy", "registeredAt", "createdAt", "updatedAt", "actor", "activityExcluded", "developerAuditExempt"];
   for (const { before, after, changed } of movements.matches) {
     fields.forEach((field) => {
       if (Object.hasOwn(before, field)) after[field] = clone(before[field]);
       else delete after[field];
     });
-    if (changed) { after.updatedBy = clone(actor); after.updatedAt = timestamp; }
+    if (changed && !exempt) { after.updatedBy = clone(actor); after.updatedAt = timestamp; }
   }
   for (const movement of movements.added) {
     // This source is set only by the server's private initial-state restore
@@ -375,6 +385,7 @@ function sealWarehouseMovementActors(previous, next, context, timestamp) {
     movement.createdBy = clone(actor);
     movement.createdAt = timestamp;
     movement.registeredAt = timestamp;
+    if (exempt) movement.activityExcluded = true;
   }
 }
 
@@ -435,15 +446,31 @@ function auditWarehouseChanges(previous, next, context = {}) {
 
 function prepareWarehouseSave(current, candidate, context = {}, now = Date.now()) {
   const state = clone(candidate);
+  delete state.developerAuditExempt;
+  delete state.activityExcluded;
   const savedAt = nextWarehouseTimestamp(current.savedAt, now);
   if (context.enforceMovementOwnership === true || context.enforcePermissions === true) validateWarehousePermissions(current.state, state, context);
   sealWarehouseMovementActors(current.state, state, context, savedAt);
   const changes = auditWarehouseChanges(current.state, state, context);
+  const exempt = developerAuditExempt(context);
+  const authorization = state.importedSource?.authorization;
+  const previousAuthorization = current.state.importedSource?.authorization;
+  if (authorization && typeof authorization === "object") {
+    const originalWithoutFlag = { ...previousAuthorization }, nextWithoutFlag = { ...authorization };
+    delete originalWithoutFlag.activityExcluded; delete nextWithoutFlag.activityExcluded;
+    if (previousAuthorization?.activityExcluded === true && stableJson(originalWithoutFlag) === stableJson(nextWithoutFlag)) {
+      authorization.activityExcluded = true;
+    } else {
+      delete authorization.activityExcluded;
+      if (exempt && stableJson(previousAuthorization || null) !== stableJson(authorization)
+        && warehouseActor(authorization.actor).userId === warehouseActor(context.actor).userId) authorization.activityExcluded = true;
+    }
+  }
   // These two records are server-owned. Client omissions, replacements, or
   // additions never alter existing audit evidence or idempotency receipts.
   state.auditEntries = clone(Array.isArray(current.state.auditEntries) ? current.state.auditEntries : []);
   state.equipmentStockReceipts = clone(Array.isArray(current.state.equipmentStockReceipts) ? current.state.equipmentStockReceipts : []);
-  for (const change of changes) state.auditEntries.push({ ...change, before: auditSnapshot(change.before), after: auditSnapshot(change.after),
+  for (const change of exempt ? [] : changes) state.auditEntries.push({ ...change, before: auditSnapshot(change.before), after: auditSnapshot(change.after),
     id: `audit-${crypto.randomUUID()}`, timestamp: savedAt, actor: warehouseActor(context.actor),
     source: text(context.source || "contabilidad-equipo"), requestId: text(context.requestId),
     event: change.event || clone(context.event || {}) });
@@ -451,7 +478,10 @@ function prepareWarehouseSave(current, candidate, context = {}, now = Date.now()
     if (state.equipmentStockReceipts.some((receipt) => receipt.requestId === context.stockReceipt.requestId)) {
       throw invalid("El ingreso ya fue registrado. Vuelva a consultar su recibo antes de reintentar.", 409);
     }
-    state.equipmentStockReceipts.push(clone(context.stockReceipt));
+    const receipt = clone(context.stockReceipt);
+    delete receipt.activityExcluded;
+    if (exempt) receipt.activityExcluded = true;
+    state.equipmentStockReceipts.push(receipt);
   }
   state.updatedAt = savedAt;
   return { state, savedAt };
@@ -459,4 +489,4 @@ function prepareWarehouseSave(current, candidate, context = {}, now = Date.now()
 
 module.exports = { normalizeStockIngress, stockIngressFingerprint, applyStockIngress,
   nextWarehouseTimestamp, prepareWarehouseSave, auditWarehouseChanges, warehouseActor,
-  diffWarehousePermissions, validateWarehousePermissions };
+  diffWarehousePermissions, validateWarehousePermissions, developerAuditExempt };

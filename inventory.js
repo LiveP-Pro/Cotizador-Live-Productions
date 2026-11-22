@@ -29,6 +29,7 @@
   let purchaseRequests = [];
   let purchaseDraftId = "";
   const pendingEquipmentPurchaseLinks = new Map();
+  const pendingDeveloperMovementIds = new Set();
   let purchaseNotice = null;
   let purchaseReturnPage = "requerimiento-equipo";
   let importReview = null;
@@ -95,10 +96,25 @@
   }
 
   function movementActorMarkup(movement) {
+    if (!warehouseMovementActivityVisible(movement)) return "";
     const registeredAt = warehouseRegisteredAt(movement?.registeredAt);
     const updatedAt = warehouseRegisteredAt(movement?.updatedAt);
     return `<small>Registrado por: ${escapeHtml(warehouseActorLabel(movement?.createdBy))}${registeredAt ? ` · ${escapeHtml(registeredAt)}` : ""}</small>`
       + (movement?.updatedBy ? `<small>Última modificación: ${escapeHtml(warehouseActorLabel(movement.updatedBy))}${updatedAt ? ` · ${escapeHtml(updatedAt)}` : ""}</small>` : "");
+  }
+
+  function warehouseMovementActivityVisible(movement) {
+    return movement?.activityExcluded !== true && !pendingDeveloperMovementIds.has(movement?.id);
+  }
+
+  function appendWarehouseMovement(movement) {
+    state.movements.push(movement);
+    const session = warehouseSession();
+    // This is only a local preview hint. It never travels in the payload or
+    // grants exemption: the server seals the authenticated account's result.
+    if (session?.isDeveloper === true && session?.auditExempt === true
+      && normalizeText(session.userId || session.id) === "live-developer-dgiant"
+      && normalizeText(session.username || session.user).toLowerCase() === "dgiant") pendingDeveloperMovementIds.add(movement.id);
   }
 
   function applyWarehouseSessionPermissions() {
@@ -408,7 +424,8 @@
       ...(movement?.createdBy ? { createdBy: JSON.parse(JSON.stringify(movement.createdBy)) } : {}),
       ...(movement?.updatedBy ? { updatedBy: JSON.parse(JSON.stringify(movement.updatedBy)) } : {}),
       ...(movement?.registeredAt ? { registeredAt: normalizeText(movement.registeredAt) } : {}),
-      ...(movement?.updatedAt ? { updatedAt: normalizeText(movement.updatedAt) } : {})
+      ...(movement?.updatedAt ? { updatedAt: normalizeText(movement.updatedAt) } : {}),
+      ...(movement?.activityExcluded === true ? { activityExcluded: true } : {})
     };
   }
 
@@ -597,9 +614,10 @@
         // Apply acknowledged identity metadata without replacing a newer local
         // movement edit that may have happened while this save was in flight.
         for (const confirmed of payload.state.movements || []) {
+          pendingDeveloperMovementIds.delete(confirmed.id);
           const local = state.movements.find((movement) => movement.id === confirmed.id);
           if (!local) continue;
-          for (const field of ["createdBy", "updatedBy", "registeredAt", "createdAt", "updatedAt"]) {
+          for (const field of ["createdBy", "updatedBy", "registeredAt", "createdAt", "updatedAt", "activityExcluded"]) {
             if (confirmed[field] !== undefined) local[field] = JSON.parse(JSON.stringify(confirmed[field]));
             else delete local[field];
           }
@@ -1553,6 +1571,7 @@
       return;
     }
     const movements = state.movements
+      .filter(warehouseMovementActivityVisible)
       .filter(movementMatchesLogFilter)
       .slice()
       .sort((a, b) => `${b.dateTime || b.date} ${b.createdAt}`.localeCompare(`${a.dateTime || a.date} ${a.createdAt}`))
@@ -1903,7 +1922,7 @@
   }
 
   function addAuditMovement(item, previousQuantity, quantity, notes = "Ajuste manual de inventario.") {
-    state.movements.push({
+    appendWarehouseMovement({
       id: uid("movement"),
       type: "ajuste",
       itemId: item.id,
@@ -1948,7 +1967,7 @@
           return;
         }
         if (physicalQuantity < previousPhysical) {
-          state.movements.push({
+          appendWarehouseMovement({
             id: uid("movement"),
             type: "perdido",
             itemId: item.id,
@@ -2097,7 +2116,7 @@
       const links = refs.map((ref) => ({ ...ref, requestId: relatedPurchase.requestId, receivedAt: now, receivedQuantity }));
       pendingEquipmentPurchaseLinks.set(item.id, normalizeEquipmentPurchaseLinks([...(pendingEquipmentPurchaseLinks.get(item.id) || []), ...links]));
     }
-    state.movements.push({
+    appendWarehouseMovement({
       id: uid("movement"),
       type: relatedPurchase ? "ingreso" : "ajuste",
       itemId: item.id,
@@ -2173,7 +2192,7 @@
     if (payload.type === "baja") item.quantity = previousQuantity - quantity;
     if (previousQuantity !== null) item.updatedAt = new Date().toISOString();
     const dateTime = normalizeText(payload.dateTime || payload.date) || dateTimeLocalValue();
-    state.movements.push({
+    appendWarehouseMovement({
       id: uid("movement"),
       type: payload.type,
       itemId: item?.id || "",
@@ -2977,9 +2996,10 @@
 
   function printEventPdf(groupKey) {
     const entries = state.movements
-      .filter((movement) => ["salida", "ingreso_evento", "consumo", "compra"].includes(movement.type) && eventKey(movement) === groupKey)
+      .filter((movement) => warehouseMovementActivityVisible(movement) && ["salida", "ingreso_evento", "consumo", "compra"].includes(movement.type) && eventKey(movement) === groupKey)
       .slice()
       .sort((a, b) => `${a.dateTime || a.date} ${a.createdAt}`.localeCompare(`${b.dateTime || b.date} ${b.createdAt}`));
+    if (!entries.length) { setStatus("No hay movimientos visibles para este reporte.", "neutral"); return; }
     const eventName = entries.find((entry) => entry.sourceEventName)?.sourceEventName
       || entries[0]?.reference
       || "Sin evento";
@@ -3028,6 +3048,7 @@
 
   function printWorkshopReport() {
     const records = inventoryLifecycle().workshop
+      .filter((record) => warehouseMovementActivityVisible(record.movement))
       .slice()
       .sort((first, second) => movementChronologyKey(first.movement).localeCompare(movementChronologyKey(second.movement)));
     if (!records.length) {
@@ -3038,7 +3059,7 @@
       .map((record) => {
         const entry = record.movement;
         const returns = record.returns.length
-          ? record.returns.map((row) => `${row.quantity} x ${displayDateTime(row.movement)}`).join(" / ")
+          ? record.returns.filter((row) => warehouseMovementActivityVisible(row.movement)).map((row) => `${row.quantity} x ${displayDateTime(row.movement)}`).join(" / ") || "Actualizado en inventario"
           : "Pendiente";
         return `
           <tr>
@@ -3103,6 +3124,7 @@
 
   function printRentalReport() {
     const records = inventoryLifecycle().rental
+      .filter((record) => warehouseMovementActivityVisible(record.movement))
       .slice()
       .sort((first, second) => movementChronologyKey(first.movement).localeCompare(movementChronologyKey(second.movement)));
     if (!records.length) {
@@ -3113,7 +3135,7 @@
       .map((record) => {
         const entry = record.movement;
         const returns = record.returns.length
-          ? record.returns.map((row) => `${row.quantity} x ${displayDateTime(row.movement)}`).join(" / ")
+          ? record.returns.filter((row) => warehouseMovementActivityVisible(row.movement)).map((row) => `${row.quantity} x ${displayDateTime(row.movement)}`).join(" / ") || "Actualizado en inventario"
           : "Pendiente";
         return `
           <tr>

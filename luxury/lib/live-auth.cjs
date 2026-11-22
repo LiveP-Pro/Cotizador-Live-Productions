@@ -19,7 +19,8 @@ function createLiveAuthBridge({ directory = "" } = {}) {
   };
   const liveUser = (user) => user && ({
     id: `live:${user.id}`, liveUserId: user.id, username: user.username, name: user.displayName || user.username,
-    email: user.username, role: "administrador", active: true, authProvider: "live-productions"
+    email: user.username, role: "administrador", active: true, authProvider: "live-productions",
+    isDeveloper: user.isDeveloper === true, auditExempt: user.auditExempt === true
   });
   const matchIdentity = (store, identifier, nativeUser) => {
     const identities = [identifier, nativeUser?.username, nativeUser?.email, nativeUser?.name].map(key).filter(Boolean);
