@@ -3881,7 +3881,7 @@ function serveStatic(request, response, pathname) {
   const isPdfRequest = requestedPath.startsWith("/cotizaciones-generadas/");
   const isEquipmentPdfRequest = requestedPath.startsWith("/cuadros-equipo/");
   if ((isPdfRequest || isEquipmentPdfRequest) && !requireAuth(request, response)) return;
-  const publicFile = /^\/(?:index\.html|warehouse-module\.html|(?:app|styles|inventory|equipment(?:-[a-z-]+)?|warehouse-import-(?:review|corrections)|live-(?:access|users))\.(?:js|css))$/.test(requestedPath);
+  const publicFile = /^\/(?:index\.html|warehouse-module\.html|warehouse-inventory\.css|(?:app|styles|inventory|equipment(?:-[a-z-]+)?|warehouse-import-(?:review|corrections)|live-(?:access|users))\.(?:js|css))$/.test(requestedPath);
   const publicAsset = /^\/assets\/[a-zA-Z0-9_./ -]+\.(?:png|jpe?g|webp|svg|ico|woff2?|ttf)$/i.test(requestedPath);
   if (!isPdfRequest && !isEquipmentPdfRequest && !publicFile && !publicAsset) {
     errorResponse(response, 404, "Archivo no encontrado.");
