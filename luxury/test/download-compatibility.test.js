@@ -59,9 +59,10 @@ test("la descarga de cotizaciones conserva compatibilidad entre navegadores", ()
   assert.doesNotMatch(appSource, /printablePageHeight/);
   assert.match(indexSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
   assert.match(serviceWorkerSource, /vendor\/html2canvas\.min\.js\?v=1\.4\.1/);
-  assert.match(appSource, /APP_VERSION = "95"/);
-  assert.match(indexSource, /app\.js\?v=95/);
-  assert.match(serviceWorkerSource, /VERSION = "95"/);
+  const appVersion = appSource.match(/APP_VERSION = "([^"]+)"/)?.[1];
+  assert.ok(appVersion, "la aplicación debe declarar su versión");
+  assert.equal(indexSource.match(/app\.js\?v=([^"&]+)/)?.[1], appVersion);
+  assert.equal(serviceWorkerSource.match(/VERSION = "([^"]+)"/)?.[1], appVersion);
   assert.match(appSource, /data-clear-payment-file/);
   assert.match(appSource, /function syncPaymentFileControl/);
   assert.match(appSource, /input\.value = ""/);

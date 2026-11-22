@@ -174,7 +174,7 @@
       else if (text(draft.serviceName).trim().length > 240) errors.push({ field: "serviceName", message: "El nombre del nuevo servicio debe tener como máximo 240 caracteres." });
       if (!serviceGroups(groups).some((group) => group.id === text(draft.serviceGroupId))) errors.push({ field: "serviceGroupId", message: "Seleccione una categoría vigente para el nuevo tipo de servicio." });
     }
-    const times = [["setupAt", "montaje"], ["startAt", "inicio del evento"], ["endAt", "finalización del evento"], ["equipmentInAt", "regreso a bodega"]];
+    const times = [...(metadata.setupApplies === false ? [] : [["setupAt", "montaje"]]), ["startAt", "inicio del evento"], ["endAt", "finalización del evento"], ["equipmentInAt", "regreso a bodega"]];
     times.forEach(([field, label]) => { if (!Number.isFinite(dateMillis(metadata[field]))) errors.push({ field, message: `Indique una fecha y hora válida de ${label}.` }); });
     for (let index = 1; index < times.length; index += 1) {
       const [previous] = times[index - 1], [next, label] = times[index];
@@ -236,7 +236,7 @@
     const id = text(draft.id) || `personalized-${Date.now().toString(36)}-${(++sequence).toString(36)}`;
     const event = { id,
       place: text(metadata.place).trim(), name: text(metadata.type).trim() || text(metadata.place).trim() || "Evento personalizado", type: text(metadata.type).trim() || (settings.draft ? "Personalizado" : ""),
-      setupAt: metadata.setupAt, startAt: metadata.startAt, endAt: metadata.endAt, date: text(metadata.startAt).slice(0, 10), equipmentInAt: metadata.equipmentInAt,
+      setupApplies: metadata.setupApplies !== false, setupAt: metadata.setupApplies === false ? "" : metadata.setupAt, startAt: metadata.startAt, endAt: metadata.endAt, date: text(metadata.startAt).slice(0, 10), equipmentInAt: metadata.equipmentInAt,
       notes: text(metadata.notes), serviceName: "Cuadro personalizado", sections,
       source: { format: "clipboard-tsv", sourceRowCount: draft.sourceRowCount || 0, sourceCellCount: draft.sourceCellCount || 0, rows: copy(draft.rows) } };
     if (settings.draft === true) {
@@ -254,7 +254,7 @@
   function buildDraftEvent(draft, inventory) { return buildEvent(draft, inventory, [], { draft: true }); }
 
   function emptyDraft() {
-    return { id: `personalized-${Date.now().toString(36)}-${(++sequence).toString(36)}`, metadata: { place: "", type: "", setupAt: "", startAt: "", endAt: "", equipmentInAt: "", notes: "" },
+    return { id: `personalized-${Date.now().toString(36)}-${(++sequence).toString(36)}`, metadata: { place: "", type: "", setupApplies: true, setupAt: "", startAt: "", endAt: "", equipmentInAt: "", notes: "" },
       usageMode: "once", serviceName: "", serviceNameTouched: false, serviceGroupId: "", rows: [], sourceRowCount: 0, sourceCellCount: 0 };
   }
 
@@ -303,7 +303,7 @@
       ["endAt", "Fecha y hora de finalización", "datetime-local"], ["equipmentInAt", "Regreso previsto a bodega", "datetime-local"]];
     return `<div class="equipment-personalizer-shell"><header class="equipment-personalizer-header"><div><p class="equipment-personalizer-eyebrow">Evento personalizado</p><h2 id="equipmentPersonalizerTitle">Personaliza tu Cuadro de Evento</h2></div><button type="button" class="equipment-personalizer-close" id="equipmentPersonalizerCloseButton" data-personalizer-action="close" aria-label="Cerrar sin guardar">×</button></header>
       <div id="equipmentPersonalizerEditor" class="equipment-personalizer-body"><ol class="equipment-personalizer-steps" aria-label="Pasos del evento"><li>1. Armar evento</li><li>2. Revisar equipo</li><li>3. Cargar borrador o confirmar</li></ol>
-      <section aria-labelledby="equipmentPersonalizerMetadataHeading"><h3 id="equipmentPersonalizerMetadataHeading">Datos del evento</h3><div class="equipment-personalizer-fields">${fields.map(([field, label, type]) => `<label>${label}<input id="equipmentPersonalizer-${field}" data-personalizer-metadata="${field}" type="${type}"${field === "place" ? ' placeholder="Lugar y dirección del evento"' : ""} required /></label>`).join("")}</div><label class="equipment-personalizer-notes">Observaciones del evento<textarea id="equipmentPersonalizer-notes" data-personalizer-metadata="notes" rows="2"></textarea></label><p class="equipment-personalizer-hint">Escriba la ubicación de forma precisa para identificar cada trayecto. El equipo queda ocupado desde el montaje hasta su regreso a bodega. Incluya desmontaje y transporte en ese horario.</p></section>
+      <section aria-labelledby="equipmentPersonalizerMetadataHeading"><h3 id="equipmentPersonalizerMetadataHeading">Datos del evento</h3><label class="equipment-personalizer-setup-choice"><input id="equipmentPersonalizer-setupApplies" data-personalizer-metadata="setupApplies" type="checkbox" checked>Este evento requiere montaje</label><div class="equipment-personalizer-fields">${fields.map(([field, label, type]) => `<label>${label}<input id="equipmentPersonalizer-${field}" data-personalizer-metadata="${field}" type="${type}"${field === "place" ? ' placeholder="Lugar y dirección del evento"' : ""} required /></label>`).join("")}</div><label class="equipment-personalizer-notes">Observaciones del evento<textarea id="equipmentPersonalizer-notes" data-personalizer-metadata="notes" rows="2"></textarea></label><p class="equipment-personalizer-hint">Escriba la ubicación de forma precisa para identificar cada trayecto. El equipo queda ocupado desde el montaje hasta su regreso a bodega. Si no aplica montaje, se reserva desde el inicio del evento. Incluya desmontaje y transporte en el regreso previsto.</p></section>
       <fieldset class="equipment-personalizer-usage"><legend>¿Cómo quieres usar este cuadro?</legend><div class="equipment-personalizer-usage-options"><label><input id="equipmentPersonalizerUsageOnce" type="radio" name="equipmentPersonalizerUsage" value="once" data-personalizer-usage-mode="once" checked><span><strong>Usar una vez</strong><small>Cargar únicamente este evento.</small></span></label><label><input id="equipmentPersonalizerUsageService" type="radio" name="equipmentPersonalizerUsage" value="service" data-personalizer-usage-mode="service"><span><strong>Guardar también como nuevo tipo de servicio</strong><small>Reutilizar este cuadro en futuros eventos.</small></span></label></div><div id="equipmentPersonalizerServiceFields" class="equipment-personalizer-service-fields" hidden><label>Nombre del nuevo servicio<input id="equipmentPersonalizerServiceName" type="text" maxlength="240" data-personalizer-template-field="name" placeholder="Ej. Producción personalizada para evento corporativo"></label><label>Categoría del nuevo servicio<select id="equipmentPersonalizerServiceGroup" data-personalizer-template-field="groupId"><option value="">Seleccione una categoría</option></select></label><p class="equipment-personalizer-permanent-hint">Al confirmar se guardará este cuadro de forma permanente en Tipo de Servicio. No se guardará ningún cambio al cerrar o cancelar.</p></div></fieldset>
       <section aria-labelledby="equipmentPersonalizerPasteHeading"><h3 id="equipmentPersonalizerPasteHeading">Pega tu cuadro de Excel</h3><p class="equipment-personalizer-hint">Copia las celdas y pégalas aquí. Usa encabezados Cantidad, Descripción, Categoría y Observaciones; también puedes pegar cantidad y descripción sin encabezados. Se conservarán las columnas adicionales, las notas y las cantidades en 0.</p><textarea id="equipmentPersonalizerClipboard" class="equipment-personalizer-clipboard" rows="5" spellcheck="false" aria-label="Pegar celdas de Excel" placeholder="Cantidad&#9;Descripción&#9;Categoría&#9;Observaciones"></textarea><div class="equipment-personalizer-inline-actions"><button type="button" data-personalizer-action="parse">Preparar cuadro pegado</button><button type="button" class="equipment-personalizer-secondary" data-personalizer-action="add">Agregar fila</button></div></section>
       <section aria-labelledby="equipmentPersonalizerRowsHeading"><h3 id="equipmentPersonalizerRowsHeading">Revisión del cuadro</h3><p id="equipmentPersonalizerCounts" role="status" aria-live="polite">Todavía no hay filas.</p><div id="equipmentPersonalizerRows"></div><div id="equipmentPersonalizerPagination" class="equipment-personalizer-pagination"></div></section>
@@ -431,6 +431,12 @@
       get("equipmentPersonalizerRows").innerHTML = rows.length ? `<div class="equipment-personalizer-table-scroll"><table><thead><tr><th>Fila / tipo</th><th>Cantidad</th><th>Descripción</th><th>Categoría</th><th>Observaciones</th><th>Inventario / acción</th><th><span class="equipment-personalizer-sr-only">Eliminar</span></th></tr></thead><tbody>${visible.map((row, index) => renderRow(row, start + index, currentInventory)).join("")}</tbody></table></div>` : '<p class="equipment-personalizer-empty">Pega tu cuadro o agrega una fila para comenzar.</p>';
       get("equipmentPersonalizerPagination").innerHTML = rows.length ? `<button type="button" class="equipment-personalizer-secondary" data-personalizer-action="previous"${page === 0 ? " disabled" : ""}>Anterior</button><span>Mostrando ${start + 1}–${Math.min(start + PAGE_SIZE, rows.length)} de ${rows.length} filas. Todas se cargarán.</span><button type="button" class="equipment-personalizer-secondary" data-personalizer-action="next"${page === maxPage ? " disabled" : ""}>Siguiente</button>` : "";
     }
+    function renderSetup() {
+      const applies = session.draft.metadata.setupApplies !== false;
+      get("equipmentPersonalizer-setupApplies").checked = applies;
+      get("equipmentPersonalizer-setupAt").disabled = !applies;
+      get("equipmentPersonalizer-setupAt").required = applies;
+    }
     function renderUsage() {
       const reusable = session.draft.usageMode === "service";
       const choices = groups();
@@ -452,13 +458,13 @@
       get("equipmentPersonalizerFooter").hidden = false;
       get("equipmentPersonalizerSaved").hidden = true;
       get("equipmentPersonalizerCloseButton").setAttribute("aria-label", "Cerrar sin guardar");
-      for (const field of Object.keys(session.draft.metadata)) { const input = get(`equipmentPersonalizer-${field}`); if (input) input.value = ""; }
+      for (const field of Object.keys(session.draft.metadata)) { const input = get(`equipmentPersonalizer-${field}`); if (input) { if (input.type === "checkbox") input.checked = session.draft.metadata[field] !== false; else input.value = ""; } }
       get("equipmentPersonalizerClipboard").value = "";
       clipboardDirty = false;
       get("equipmentPersonalizerReview").hidden = true;
       get("equipmentPersonalizerCommitButton").disabled = true;
       errors([]); status(""); page = 0; renderRows();
-      renderUsage();
+      renderUsage(); renderSetup();
       get("equipmentPersonalizerReviewButton").textContent = typeof options.onPreview === "function" ? "Revisar disponibilidad" : "Revisar cuadro";
     }
     function stopPreview() {
@@ -610,13 +616,13 @@
         if (field === "name") { session.draft.serviceName = target.value; session.draft.serviceNameTouched = true; }
         if (field === "groupId") session.draft.serviceGroupId = target.value;
         changed();
-      } else if (target?.dataset?.personalizerMetadata) { session.draft.metadata[target.dataset.personalizerMetadata] = target.value; changed(); }
+      } else if (target?.dataset?.personalizerMetadata) { session.draft.metadata[target.dataset.personalizerMetadata] = target.dataset.personalizerMetadata === "setupApplies" ? target.checked : target.value; if (target.dataset.personalizerMetadata === "setupApplies") renderSetup(); changed(); }
       else if (target?.dataset?.personalizerField) readRowField(target);
       else if (target?.id === "equipmentPersonalizerClipboard") { clipboardDirty = true; changed(); status("Pulse Preparar cuadro pegado para incorporar este contenido a la tabla."); }
     }
     function onChange(event) {
       if (previewBusy || session.busy) return;
-      if (event.target?.dataset?.personalizerUsageMode || event.target?.dataset?.personalizerTemplateField) { onInput(event); return; }
+      if (event.target?.dataset?.personalizerUsageMode || event.target?.dataset?.personalizerTemplateField || event.target?.dataset?.personalizerMetadata) { onInput(event); return; }
       const changedRow = readRowField(event.target); if (changedRow) renderRows();
     }
     function onCancel(event) { event.preventDefault(); close(); }

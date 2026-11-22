@@ -6,31 +6,34 @@
     <title>Cotizador Live Productions</title>
     <link rel="icon" type="image/jpeg" href="assets/logo-live-productions.jpeg" />
     <link rel="apple-touch-icon" href="assets/logo-live-productions.jpeg" />
-    <link rel="stylesheet" href="styles.css?v=20261020-logistica-01" />
+    <link rel="stylesheet" href="styles.css?v=20261122-event-times-users-01" />
     <link rel="stylesheet" href="warehouse-inventory.css?v=20261008-stock-ingress-04" />
-    <link rel="stylesheet" href="equipment-service-import.css?v=20261117-service-sheets-sync-01" />
+    <link rel="stylesheet" href="equipment-service-import.css?v=20261122-event-times-users-01" />
     <link rel="stylesheet" href="equipment-name-picker.css?v=20261007-extras-02" />
-    <script src="app.js?v=20260814-01" defer></script>
+    <link rel="stylesheet" href="live-users.css?v=20261122-event-times-users-01" />
+    <script src="live-access.js?v=20261122-event-times-users-01" defer></script>
+    <script src="live-users.js?v=20261122-event-times-users-01" defer></script>
+    <script src="app.js?v=20261122-event-times-users-01" defer></script>
     <script src="equipment-catalog.js?v=20261014-dj-audio-01" defer></script>
-    <script src="equipment-inventory.js?v=20261117-service-sheets-sync-01" defer></script>
-    <script src="equipment-service-import.js?v=20261117-service-sheets-sync-01" defer></script>
+    <script src="equipment-inventory.js?v=20261122-event-times-users-01" defer></script>
+    <script src="equipment-service-import.js?v=20261122-event-times-users-01" defer></script>
     <script src="equipment-name-picker.js?v=20261007-extras-02" defer></script>
-    <link rel="stylesheet" href="equipment-event-personalizer.css?v=20261020-logistica-01" />
+    <link rel="stylesheet" href="equipment-event-personalizer.css?v=20261122-event-times-users-01" />
     <link rel="stylesheet" href="equipment-extras-library.css?v=20261020-extras-compactos-01" />
-    <link rel="stylesheet" href="equipment-workspace.css?v=20261020-logistica-01" />
-    <script src="equipment-event-personalizer.js?v=20261105-flujo-02" defer></script>
-    <script src="equipment-extras-library.js?v=20261020-logistica-01" defer></script>
-    <script src="equipment-workspace.js?v=20261020-logistica-01" defer></script>
-    <link rel="stylesheet" href="equipment-planner.css?v=20261105-flujo-02" />
-    <link rel="stylesheet" href="equipment-batch-events.css?v=20261105-flujo-02" />
-    <script src="equipment-identity.js?v=20261105-flujo-02" defer></script>
-    <script src="equipment-document-audit.js?v=20261105-flujo-02"></script>
-    <script src="equipment-planner.js?v=20261105-flujo-02" defer></script>
-    <script src="equipment-batch-events.js?v=20261105-flujo-02" defer></script>
-    <script src="equipment.js?v=20261117-service-sheets-sync-01" defer></script>
+    <link rel="stylesheet" href="equipment-workspace.css?v=20261122-event-times-users-01" />
+    <script src="equipment-event-personalizer.js?v=20261122-event-times-users-01" defer></script>
+    <script src="equipment-extras-library.js?v=20261122-event-times-users-01" defer></script>
+    <script src="equipment-workspace.js?v=20261122-event-times-users-01" defer></script>
+    <link rel="stylesheet" href="equipment-planner.css?v=20261122-event-times-users-01" />
+    <link rel="stylesheet" href="equipment-batch-events.css?v=20261122-event-times-users-01" />
+    <script src="equipment-identity.js?v=20261122-event-times-users-01" defer></script>
+    <script src="equipment-document-audit.js?v=20261122-event-times-users-01"></script>
+    <script src="equipment-planner.js?v=20261122-event-times-users-01" defer></script>
+    <script src="equipment-batch-events.js?v=20261122-event-times-users-01" defer></script>
+    <script src="equipment.js?v=20261122-event-times-users-01" defer></script>
     <script src="warehouse-import-review.js?v=20261117-import-review-01" defer></script>
     <script src="warehouse-import-corrections.js?v=20261117-import-review-01" defer></script>
-    <script src="inventory.js?v=20261117-service-sheets-sync-01" defer></script>
+    <script src="inventory.js?v=20261122-event-times-users-01" defer></script>
   </head>
   <body>
     <section id="loginView" class="login-view no-print is-hidden" aria-labelledby="loginTitle">
@@ -46,6 +49,7 @@
           Contraseña
           <input id="loginPassword" type="password" autocomplete="current-password" required />
         </label>
+        <label class="login-remember"><input id="loginRememberUser" type="checkbox" />Recordar mi usuario en este equipo</label>
         <button type="submit">Entrar</button>
         <p id="loginStatus" class="login-status" role="status"></p>
       </form>
@@ -68,6 +72,7 @@
         <a class="site-brand" href="#inicio" data-page-link="inicio" aria-label="Inicio Live Productions">
           <img src="assets/logo-live-productions.jpeg" alt="Live Productions" />
         </a>
+        <span id="liveCurrentUser" aria-label="Usuario actual"></span>
         <button id="logoutButton" class="logout-button" type="button">Salir</button>
       </header>
 
@@ -87,10 +92,11 @@
           <button type="button" data-page-link="requerimientos">Requerimientos</button>
           <button type="button" data-page-link="requerimiento-equipo">Requerimiento de equipo</button>
           <button type="button" data-page-link="contabilidad-equipo">Contabilidad de equipo</button>
+          <button type="button" data-page-link="usuarios" hidden>Usuarios y permisos</button>
         </nav>
 
         <div class="division-heading"><span>Divisiones</span></div>
-        <section class="division-card" aria-label="Luxury Travel">
+        <section class="division-card" aria-label="Luxury Travel" data-live-permission="luxury.access">
           <button
             id="luxuryDivisionToggle"
             class="division-toggle"
@@ -178,10 +184,10 @@
                 </label>
               </div>
               <div class="requirements-actions">
-                <button id="saveRequirementCollaboratorButton" class="primary-button" type="button">
+                <button id="saveRequirementCollaboratorButton" class="primary-button" type="button" data-live-permission="requirements.write">
                   Guardar colaborador
                 </button>
-                <button id="newRequirementCollaboratorButton" class="secondary-button" type="button">
+                <button id="newRequirementCollaboratorButton" class="secondary-button" type="button" data-live-permission="requirements.write">
                   Nuevo colaborador
                 </button>
               </div>
@@ -255,9 +261,9 @@
           <div class="equipment-workflow-card">
             <ol aria-label="Pasos para preparar su evento"><li>Cargar eventos</li><li>Resolver pendientes</li><li>Descargar o confirmar reservas</li></ol>
             <div class="equipment-workflow-actions">
-              <button id="equipmentPersonalizeEventButton" type="button">Personaliza tu Cuadro de Evento</button>
-              <button id="equipmentExtrasLibraryButton" type="button">Extras</button>
-              <button id="equipmentBatchImportButton" type="button">Importar varios eventos</button>
+              <button id="equipmentPersonalizeEventButton" type="button" data-live-permission="equipment.write">Personaliza tu Cuadro de Evento</button>
+              <button id="equipmentExtrasLibraryButton" type="button" data-live-permission="equipment.write">Extras</button>
+              <button id="equipmentBatchImportButton" type="button" data-live-permission="equipment.write">Importar varios eventos</button>
             </div>
             <p>Agregue los eventos personalizados que necesite, uno tras otro. El resumen reúne sus equipos y consulta las existencias de Contabilidad de Equipo.</p>
           </div>
@@ -265,16 +271,16 @@
             <h2 id="equipmentPlannerTitle">Plan de la semana</h2>
             <div id="equipmentPlannerOverview" aria-live="polite"></div>
             <div class="equipment-planner-downloads" aria-label="Descargas provisionales sin reservas">
-              <button type="button" data-planner-download="master">Descargar Excel máster</button>
-              <button type="button" data-planner-download="summary">PDF del resumen</button>
-              <button type="button" data-planner-download="rent">Renta provisional</button>
-              <button type="button" data-planner-download="purchase">Compra provisional</button>
+              <button type="button" data-planner-download="master" data-live-permission="equipment.reports">Descargar Excel máster</button>
+              <button type="button" data-planner-download="summary" data-live-permission="equipment.reports">PDF del resumen</button>
+              <button type="button" data-planner-download="rent" data-live-permission="equipment.reports">Renta provisional</button>
+              <button type="button" data-planner-download="purchase" data-live-permission="equipment.reports">Compra provisional</button>
             </div>
             <p id="equipmentPlannerStatus" role="status" aria-live="polite"></p>
             <details id="equipmentPlannerPending"></details>
             <div class="equipment-planner-search"><label>Buscar en el resumen<input id="equipmentPlannerSearch" type="search" placeholder="Equipo o categoría" /></label><label><input id="equipmentPlannerOnlyPending" type="checkbox" /> Ver sólo faltantes y pendientes</label></div>
             <div id="equipmentPlannerSummary"></div>
-            <button id="equipmentPlannerConfirmEvent" type="button">Confirmar y reservar el evento seleccionado</button>
+            <button id="equipmentPlannerConfirmEvent" type="button" data-live-permission="equipment.write">Confirmar y reservar el evento seleccionado</button>
           </section>
           <div class="equipment-agenda-toolbar">
             <label>Desde<input id="equipmentAgendaFrom" type="date" /></label>
@@ -294,7 +300,11 @@
               <input id="equipmentEventType" type="text" autocomplete="off" placeholder="Boda, corporativo, concierto…" />
             </label>
             <label>
-              Fecha y hora del Montaje
+              ¿Este evento requiere montaje?
+              <select id="equipmentEventSetupApplies"><option value="yes">Sí, requiere montaje</option><option value="no">No aplica</option></select>
+            </label>
+            <label id="equipmentEventSetupField">
+              Fecha y hora del montaje
               <input id="equipmentEventSetupAt" type="datetime-local" />
             </label>
             <label>
@@ -318,7 +328,7 @@
               <div id="equipmentServicePicker" class="equipment-service-picker"></div>
             </label>
             <div class="equipment-field-wide equipment-service-management">
-              <button id="equipmentCreateServiceTemplateButton" type="button">Generar Nuevo Cuadro de Servicio</button>
+              <button id="equipmentCreateServiceTemplateButton" type="button" data-live-permission="equipment.catalog">Generar Nuevo Cuadro de Servicio</button>
               <button id="equipmentImportServiceFileButton" type="button">Importar archivo Excel / PDF</button>
               <input id="equipmentServiceImportFileInput" class="is-hidden" type="file" accept=".xlsx,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf" />
               <span id="equipmentServiceImportStatus" role="status"></span>
@@ -331,9 +341,9 @@
             </div>
             <div id="equipmentDjAudioSelections" class="equipment-field-wide equipment-dj-audio-selections is-hidden" aria-live="polite"></div>
             <div class="equipment-field-wide equipment-event-actions">
-              <button id="equipmentAddEventButton" type="button">Agregar ventana</button>
-              <button id="equipmentSaveWindowButton" class="equipment-save-window-button" type="button" disabled>Guardar cambios</button>
-              <button id="equipmentNewWindowButton" type="button" title="Crear otra ventana en blanco">Nueva ventana</button>
+              <button id="equipmentAddEventButton" type="button" data-live-permission="equipment.write">Agregar ventana</button>
+              <button id="equipmentSaveWindowButton" class="equipment-save-window-button" type="button" disabled data-live-permission="equipment.write">Guardar cambios</button>
+              <button id="equipmentNewWindowButton" type="button" title="Crear otra ventana en blanco" data-live-permission="equipment.write">Nueva ventana</button>
               <small>Guardar confirma las reservas en la agenda compartida. Use Nueva ventana para preparar otro evento.</small>
             </div>
             <label class="equipment-field-wide">
@@ -343,8 +353,8 @@
           </div>
 
           <div class="equipment-actions">
-            <button id="equipmentSavePdfButton" type="button">Enviar a bodega y generar salida</button>
-            <button id="equipmentOpenEditableButton" type="button">Importar archivo JSON</button>
+            <button id="equipmentSavePdfButton" type="button" data-live-permission="equipment.reports equipment.write" data-live-any-permission="warehouse.movements warehouse.inventory">Enviar a bodega y generar salida</button>
+            <button id="equipmentOpenEditableButton" type="button" data-live-permission="equipment.write">Importar archivo JSON</button>
             <input id="equipmentEditableFileInput" class="is-hidden" type="file" accept=".json,application/json" />
             <span id="equipmentSaveStatus" role="status"></span>
           </div>
@@ -352,7 +362,7 @@
           <div class="equipment-window-toolbar" aria-label="Ventanas de requerimiento de equipo">
             <button id="equipmentReviewWindowButton" type="button" class="is-active">Revisión de equipo</button>
             <button id="equipmentSummaryWindowButton" type="button">Resumen de Equipo</button>
-            <button id="equipmentTransferWindowButton" type="button">Trasegar equipo</button>
+            <button id="equipmentTransferWindowButton" type="button" data-live-permission="equipment.reports">Trasegar equipo</button>
             <button id="equipmentClearAllButton" type="button">Limpiar vista</button>
           </div>
 
@@ -376,24 +386,24 @@
                   Equipo
                   <input id="equipmentManualMainDescription" type="text" autocomplete="off" placeholder="Escriba y seleccione un equipo" />
                 </label>
-                <button id="equipmentAddMainItemButton" type="button">Agregar equipo</button>
+                <button id="equipmentAddMainItemButton" type="button" data-live-permission="equipment.write">Agregar equipo</button>
               </div>
               <div class="equipment-manual-extra-form equipment-manual-subtitle-form">
                 <label>
                   Subtítulo
                   <input id="equipmentManualSubtitle" type="text" autocomplete="off" placeholder="Extras o un subtítulo personalizado" />
                 </label>
-                <button id="equipmentAddSubtitleButton" type="button">Agregar subtítulo</button>
+                <button id="equipmentAddSubtitleButton" type="button" data-live-permission="equipment.write">Agregar subtítulo</button>
               </div>
               <details id="equipmentBulkExtras" class="equipment-bulk-extras">
                 <summary>Agregar varios extras</summary>
                 <div class="equipment-bulk-extras-controls">
                   <label>Filas de extras (1 a 100)<input id="equipmentBulkExtraCount" type="number" min="1" max="100" step="1" value="1" /></label>
-                  <button id="equipmentPrepareBulkExtrasButton" type="button">Preparar filas</button>
+                  <button id="equipmentPrepareBulkExtrasButton" type="button" data-live-permission="equipment.write">Preparar filas</button>
                 </div>
                 <p>Escriba cada equipo y su cantidad. Puede eliminar las filas que no necesite.</p>
                 <div id="equipmentBulkExtrasRows" class="equipment-bulk-extras-rows"></div>
-                <button id="equipmentAddBulkExtrasButton" type="button" class="is-hidden">Agregar equipos</button>
+                <button id="equipmentAddBulkExtrasButton" type="button" class="is-hidden" data-live-permission="equipment.write">Agregar equipos</button>
               </details>
             </div>
             <section id="equipmentMainPanel" class="equipment-panel">
@@ -401,7 +411,7 @@
                 <span>Equipo principal</span>
                 <div class="equipment-section-heading-actions">
                   <small id="equipmentServiceName">Seleccione un servicio</small>
-                  <button id="equipmentEditServiceTemplateButton" type="button">Editar cuadro permanente</button>
+                  <button id="equipmentEditServiceTemplateButton" type="button" data-live-permission="equipment.catalog">Editar cuadro permanente</button>
                 </div>
               </div>
             <div id="equipmentMainTable" class="equipment-table-wrap"></div>
@@ -426,7 +436,7 @@
                   Equipo extra
                   <input id="equipmentExtraDescription" type="text" list="equipmentInventoryNameOptions" autocomplete="off" placeholder="Escriba y seleccione un equipo" />
                 </label>
-                <button id="equipmentAddExtraButton" type="button">Agregar extra</button>
+                <button id="equipmentAddExtraButton" type="button" data-live-permission="equipment.write">Agregar extra</button>
               </div>
               <datalist id="equipmentInventoryNameOptions"></datalist>
               <div id="equipmentManualExtrasList" class="equipment-extra-list"></div>
@@ -439,9 +449,9 @@
                   <small>si falta equipo, se marca renta o compra automáticamente</small>
                 </div>
                 <div class="equipment-summary-actions">
-                  <button id="equipmentSummaryTransferButton" class="equipment-summary-transfer-button" type="button" aria-pressed="false">Trasegar Equipo</button>
-                  <button id="equipmentGenerateRentReportButton" class="equipment-summary-report-button" type="button">Generar Resumen de Renta</button>
-                  <button id="equipmentSummaryPurchaseReportButton" class="equipment-summary-report-button" type="button">Generar Informe de Compra</button>
+                  <button id="equipmentSummaryTransferButton" class="equipment-summary-transfer-button" type="button" aria-pressed="false" data-live-permission="equipment.reports">Trasegar Equipo</button>
+                  <button id="equipmentGenerateRentReportButton" class="equipment-summary-report-button" type="button" data-live-permission="equipment.reports">Generar Resumen de Renta</button>
+                  <button id="equipmentSummaryPurchaseReportButton" class="equipment-summary-report-button" type="button" data-live-permission="equipment.reports">Generar Informe de Compra</button>
                   <button id="equipmentRegisterPurchaseButton" class="equipment-summary-report-button" type="button">Registrar compra en Contabilidad</button>
                 </div>
               </div>
@@ -464,7 +474,7 @@
                   <span>Trasegar equipo</span>
                   <small>continúe una ruta o configure trasiegos múltiples</small>
                 </div>
-                <button id="equipmentSaveTransferPdfButton" class="equipment-summary-report-button" type="button">Generar PDF de trasiego</button>
+                <button id="equipmentSaveTransferPdfButton" class="equipment-summary-report-button" type="button" data-live-permission="equipment.reports">Generar PDF de trasiego</button>
               </div>
               <div id="equipmentTransferPlan" class="equipment-transfer-plan"></div>
             </section>
@@ -513,7 +523,7 @@
             <div id="equipmentRentPdfPreview" class="equipment-pdf-preview is-hidden">
               <div class="equipment-pdf-preview-toolbar">
                 <strong>Previsualización del Resumen de Renta</strong>
-                <button id="equipmentDownloadRentPdfButton" class="equipment-summary-report-button" type="button">Guardar PDF + JSON de renta</button>
+                <button id="equipmentDownloadRentPdfButton" class="equipment-summary-report-button" type="button" data-live-permission="equipment.reports">Guardar PDF + JSON de renta</button>
               </div>
             <section id="equipmentRentPdfDocument" class="equipment-pdf-document equipment-rent-pdf-document">
               <header class="equipment-pdf-header">
@@ -554,7 +564,7 @@
             <div id="equipmentPurchasePdfPreview" class="equipment-pdf-preview is-hidden">
               <div class="equipment-pdf-preview-toolbar">
                 <strong>Previsualización del Informe de Compra</strong>
-                <button id="equipmentDownloadPurchasePdfButton" class="equipment-summary-report-button" type="button">Guardar PDF de compra</button>
+                <button id="equipmentDownloadPurchasePdfButton" class="equipment-summary-report-button" type="button" data-live-permission="equipment.reports">Guardar PDF de compra</button>
               </div>
             <section id="equipmentPurchasePdfDocument" class="equipment-pdf-document equipment-rent-pdf-document">
               <header class="equipment-pdf-header">
@@ -714,7 +724,7 @@
                 <div>
                   <button id="equipmentCatalogAddCategoryButton" type="button">Agregar categoría</button>
                   <button id="equipmentCatalogCancelButton" type="button">Cancelar</button>
-                  <button id="equipmentCatalogSaveButton" class="equipment-catalog-save-button" type="button">Guardar permanentemente</button>
+                  <button id="equipmentCatalogSaveButton" class="equipment-catalog-save-button" type="button" data-live-permission="equipment.catalog">Guardar permanentemente</button>
                 </div>
               </footer>
             </div>
@@ -732,6 +742,13 @@
       <section id="contabilidadEquipoPage" class="site-page no-print" data-page="contabilidad-equipo">
         <div id="warehouseModuleHost" class="warehouse-module-host" aria-live="polite">
           <p class="warehouse-module-loading">Cargando Inventario Bodega...</p>
+        </div>
+      </section>
+
+      <section id="liveUsersPage" class="site-page no-print" data-page="usuarios">
+        <div class="site-page-card"><p class="eyebrow">Administración</p><h1>Usuarios y permisos</h1>
+          <p>Cree una cuenta por empleado y defina sus accesos. Los movimientos quedan asociados a la cuenta que los registra.</p>
+          <div id="liveUsersContainer"></div>
         </div>
       </section>
 

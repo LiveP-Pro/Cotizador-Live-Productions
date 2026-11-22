@@ -14,6 +14,18 @@ function text(value) { return String(value ?? ""); }
 function html(value) { return text(value).replace(/[&<>\"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character])); }
 function finite(value) { const number = Number(value); return Number.isFinite(number) ? number : 0; }
 function list(value) { return Array.isArray(value) ? value : []; }
+function eventScheduleLabel(event, field, pending = "Pendiente") {
+  if (field === "setupAt" && event.setupApplies === false) return event.setupAt
+    ? `No aplica; dato de montaje por revisar: ${text(event.setupAt)}` : "No aplica";
+  if (event[field]) return text(event[field]);
+  const prefix = { setupAt: "setup", startAt: "start", endAt: "end", equipmentInAt: "equipmentIn" }[field];
+  const date = text(event[`${prefix}Date`] || (field === "startAt" ? event.date : ""));
+  const time = text(event[`${prefix}Time`]);
+  if (date && time) return `${date} · ${time} (por confirmar)`;
+  if (date) return `${date} · hora pendiente`;
+  if (time) return `Fecha pendiente · ${time}`;
+  return pending;
+}
 function originalCellValue(cell) {
   if (Object.hasOwn(cell, "value")) return cell.value;
   if (Object.hasOwn(cell, "literal")) return cell.literal;
@@ -131,9 +143,12 @@ function createEquipmentReportModel(payload, inventory, options = {}) {
         sourceRefs: typeof message?.sourceRefs === "string" ? message.sourceRefs : list(message?.sourceRefs).join("; ") });
     }
     pending.push(...EquipmentDocumentAudit.audit(event));
-    for (const [field, label] of Object.entries(metadataNames)) if (!event[field] || !Number.isFinite(localTime(event[field]))) pending.push({ kind: "HORARIO", eventId: event.id, event: event.place || event.name || event.id,
+    const applicableTimes = Object.entries(metadataNames).filter(([field]) => field !== "setupAt" || event.setupApplies !== false);
+    for (const [field, label] of applicableTimes) if (!event[field] || !Number.isFinite(localTime(event[field]))) pending.push({ kind: "HORARIO", eventId: event.id, event: event.place || event.name || event.id,
       description: label, quantity: null, reason: event[field] ? "Corrija esta fecha u hora. Su valor literal se conserva; no se usa para reducir renta." : "Pendiente: no se presupone ningún trasiego o retorno.", sourceRefs: "" });
-    const suppliedTimes = Object.keys(metadataNames).map(field => localTime(event[field])).filter(Number.isFinite);
+    if (event.setupApplies === false && event.setupAt) pending.push({ kind: "HORARIO", eventId: event.id, event: event.place || event.name || event.id,
+      description: metadataNames.setupAt, quantity: null, reason: "El evento indica que no aplica montaje y conserva un dato de montaje. Confirme cuál corresponde antes de reservar; ambos valores se muestran en el reporte.", sourceRefs: "" });
+    const suppliedTimes = applicableTimes.map(([field]) => localTime(event[field])).filter(Number.isFinite);
     if (suppliedTimes.some((time, index) => index > 0 && time < suppliedTimes[index - 1])) pending.push({ kind: "HORARIO", eventId: event.id, event: event.place || event.name || event.id,
       description: "Orden de fechas y horas", quantity: null, reason: "Revise el orden: montaje, inicio, finalización y regreso a bodega. El reporte conserva los valores originales y no supone reutilización.", sourceRefs: "" });
     if (!text(event.place).trim()) pending.push({ kind: "UBICACIÓN", eventId: event.id, event: event.name || event.id, description: "Ubicación del evento", quantity: null, reason: "Indique el lugar para evaluar logística.", sourceRefs: "" });
@@ -224,7 +239,7 @@ async function createEquipmentMasterWorkbook(model) {
     ["Datos originales", "Las hojas Celdas fuente, Filas originales y Datos completos conservan la información recibida. Datos completos contiene JSON dividido en partes, sin truncar celdas largas."]
   ];
   addTableSheet(workbook, "Control", ["Concepto", "Detalle"], info, { widths: [42, 110] });
-  addTableSheet(workbook, "Eventos", ["ID", "Ubicación", "Nombre", "Tipo", "Fecha", "Montaje", "Inicio", "Finalización", "Regreso a bodega", "Observaciones"], model.events.map(event => [event.id, event.place || "", event.name || "", event.type || "", event.date || "", event.setupAt || "PENDIENTE", event.startAt || "PENDIENTE", event.endAt || "PENDIENTE", event.equipmentInAt || "PENDIENTE", event.notes || ""]));
+  addTableSheet(workbook, "Eventos", ["ID", "Ubicación", "Nombre", "Tipo", "Fecha", "Montaje", "Inicio", "Finalización", "Regreso a bodega", "Observaciones"], model.events.map(event => [event.id, event.place || "", event.name || "", event.type || "", event.date || "", eventScheduleLabel(event, "setupAt", "PENDIENTE"), eventScheduleLabel(event, "startAt", "PENDIENTE"), eventScheduleLabel(event, "endAt", "PENDIENTE"), eventScheduleLabel(event, "equipmentInAt", "PENDIENTE"), event.notes || ""]));
   const headers = ["Categoría", "Descripción del equipo", "ID físico", ...model.events.map(event => `${event.date || "Sin fecha"}\n${event.place || event.name || event.id}`), "Total solicitado", "Inventario disponible", "Faltante provisional", "Acción", "Observaciones", "Descripciones originales", "Celdas de origen"];
   const totalColumn = 4 + model.events.length, availableColumn = totalColumn + 1;
   addTableSheet(workbook, "Resumen de equipo", headers, model.rows.map((row, index) => {
@@ -265,10 +280,10 @@ function renderEquipmentReportHtml(model, mode = "summary") {
   }).join("");
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${html(title)} provisional</title><style>
   @page{size:letter landscape;margin:12mm;@bottom-center{content:"PROVISIONAL - Sin reservas ni movimientos de inventario";font:8px Arial,sans-serif;color:#586777}}*{box-sizing:border-box}body{font:10px Arial,sans-serif;color:#182638;margin:0}.equipment-pdf-document{width:100%;min-height:140px}.banner{border:2px solid #bd8600;background:#fff6dc;padding:9px;font-size:11px;margin:10px 0}h1{font-size:25px;margin:4px 0}h2{font-size:15px;margin:18px 0 6px}p{line-height:1.45}.brand{letter-spacing:2px;font-weight:700;color:#53677d}.meta{color:#53677d}table{width:100%;border-collapse:collapse;table-layout:auto;margin:8px 0}thead{display:table-header-group}th{background:#152b46;color:#fff;text-align:left;padding:7px}td{padding:6px;border-bottom:1px solid #d7e0e8;vertical-align:top;overflow-wrap:anywhere}tr:nth-child(even) td{background:#f3f6fa}tr{break-inside:avoid}.category td{background:#dae3ef!important;font-weight:bold}.number{text-align:right;white-space:nowrap}.pending-table td:first-child,.pending-table th:first-child{white-space:nowrap}.pending td{background:#fff8e8}</style></head><body><main class="equipment-pdf-document"><div class="brand">LIVE PRODUCTIONS · REQUERIMIENTO DE EQUIPO</div><h1>${html(title)} · PROVISIONAL</h1><div class="meta">Generado: ${html(displayTimestamp(model.createdAt))} · Inventario consultado: ${html(displayTimestamp(model.inventorySavedAt))} · ${model.counts.events} eventos · ${model.counts.equipmentRows} renglones de equipo (${model.counts.zeroQuantityRows} en cero) · Fuente: Contabilidad de Equipo</div><div class="banner">${html(model.disclaimer)}</div>
-  <h2>Eventos incluidos</h2>${reportTable(["Fecha", "Ubicación", "Tipo", "Montaje", "Inicio", "Finalización", "Regreso a bodega"], model.events.map(event => [event.date || "Pendiente", event.place || event.name || event.id, event.type || "", event.setupAt || "Pendiente", event.startAt || "Pendiente", event.endAt || "Pendiente", event.equipmentInAt || "Pendiente"]))}
+  <h2>Eventos incluidos</h2>${reportTable(["Fecha", "Ubicación", "Tipo", "Montaje", "Inicio", "Finalización", "Regreso a bodega"], model.events.map(event => [event.date || "Pendiente", event.place || event.name || event.id, event.type || "", eventScheduleLabel(event, "setupAt"), eventScheduleLabel(event, "startAt"), eventScheduleLabel(event, "endAt"), eventScheduleLabel(event, "equipmentInAt")]))}
   <h2>${html(title)}: ${selected.length} referencias</h2><table><thead><tr><th>Descripción</th><th>Total solicitado</th><th>Inventario disponible</th><th>Faltante provisional</th><th>Acción</th><th>Celdas de origen</th></tr></thead><tbody>${categoryRows || '<tr><td colspan="6">No hay faltantes confirmados en esta sección.</td></tr>'}</tbody></table>
   <h2>Pendientes por resolver (${model.pending.length})</h2><p>Estos casos se excluyen de las órdenes de compra o renta hasta identificarlos o confirmar su clasificación. Las cantidades con horarios pendientes son conservadoras y podrían disminuir al confirmar una logística viable.</p>${reportTable(["Tipo", "Evento", "Descripción", "Cantidad", "Motivo / acción", "Celdas"], model.pending.map(row => [row.kind, row.event, row.description, row.quantity ?? "", row.reason, row.sourceRefs]))}
   </main></body></html>`;
 }
 
-module.exports = { createEquipmentReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml, sourceCellsForEvent, warehouseRows, DISCLAIMER };
+module.exports = { createEquipmentReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml, sourceCellsForEvent, warehouseRows, eventScheduleLabel, DISCLAIMER };

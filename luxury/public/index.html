@@ -14,7 +14,7 @@
     <link rel="icon" href="assets/mark.svg" type="image/svg+xml" />
     <link rel="icon" href="assets/pwa-icon-192.png" sizes="192x192" type="image/png" />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180" />
-    <link rel="stylesheet" href="styles.css?v=95" />
+    <link rel="stylesheet" href="styles.css?v=96" />
     <title>Luxury Travel | Resumen y Cotizador</title>
   </head>
   <body>
@@ -51,12 +51,14 @@
           <h2>Iniciar sesión</h2>
           <p class="muted">Ingrese sus credenciales para continuar.</p>
           <label>
-            Correo electrónico
+            Usuario o correo electrónico
             <input
               name="email"
-              type="email"
+              type="text"
               autocomplete="username"
-              value="admin@luxurytravel.gt"
+              autocapitalize="none"
+              spellcheck="false"
+              maxlength="254"
               required
             />
           </label>
@@ -73,6 +75,10 @@
               <button type="button" class="text-button" data-toggle-password>Ver</button>
             </div>
           </label>
+          <label class="login-remember-user" for="login-remember-user">
+            <input id="login-remember-user" type="checkbox" />
+            <span>Recordar mi usuario en este equipo</span>
+          </label>
           <p id="login-error" class="form-error" role="alert"></p>
           <button class="button button-primary button-block" type="submit">
             Entrar al sistema
@@ -84,7 +90,7 @@
             Volver al inicio de Live Productions
           </a>
           <p class="login-help">
-            Acceso inicial: <strong>admin@luxurytravel.gt</strong>
+            Use el usuario y la contraseña que le asignó administración.
           </p>
         </form>
       </section>
@@ -145,6 +151,6 @@
     <div id="toast-root" class="toast-root" aria-live="polite"></div>
 
     <script src="vendor/html2canvas.min.js?v=1.4.1"></script>
-    <script type="module" src="app.js?v=95"></script>
+    <script type="module" src="app.js?v=96"></script>
   </body>
 </html>

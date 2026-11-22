@@ -346,11 +346,18 @@ function equipmentDateTimeInputValue(value) {
 }
 
 function equipmentEventSetupAt(event) {
+  if (event?.setupApplies === false) return "";
   return equipmentDateTimeInputValue(event?.setupAt || event?.mountingAt || event?.phone);
 }
 
+function equipmentEventReservationStartAt(event) {
+  return event?.setupApplies === false
+    ? equipmentDateTimeInputValue(event?.equipmentOutAt || event?.startAt)
+    : equipmentEventSetupAt(event) || equipmentDateTimeInputValue(event?.equipmentOutAt);
+}
+
 function equipmentEventChronologicalKey(event) {
-  const setupAt = equipmentEventSetupAt(event);
+  const setupAt = equipmentEventReservationStartAt(event);
   const dateKey = event?.date
     || equipmentDateKeyFromDateTime(setupAt)
     || equipmentDateKeyFromDateTime(event?.equipmentInAt)
@@ -371,17 +378,18 @@ function sortEquipmentEventsByDate(events = []) {
 
 function equipmentEventSortDateTime(event) {
   const dateKey = equipmentEventOperationalDateKey(event);
-  return equipmentEventSetupAt(event) || event?.equipmentInAt || (dateKey ? `${dateKey}T00:00` : "9999-12-31T23:59");
+  return equipmentEventReservationStartAt(event) || event?.equipmentInAt || (dateKey ? `${dateKey}T00:00` : "9999-12-31T23:59");
 }
 
 function equipmentEventTransferDateTime(event) {
-  const setupAt = equipmentEventSetupAt(event);
+  const setupAt = equipmentEventReservationStartAt(event);
   if (setupAt) return formatEquipmentDateTime(setupAt);
   const dateKey = equipmentEventOperationalDateKey(event);
   return dateKey ? `${formatEquipmentDate(dateKey)} · Hora por definir` : "Fecha y hora por definir";
 }
 
 function equipmentEventSetupDateTimeLabel(event) {
+  if (event?.setupApplies === false) return "No aplica";
   return formatEquipmentDateTime(equipmentEventSetupAt(event));
 }
 
@@ -412,7 +420,7 @@ function equipmentDateTimeMillis(value) {
 }
 
 function equipmentEventUsageWindow(event) {
-  const setupAt = equipmentEventSetupAt(event);
+  const setupAt = equipmentEventReservationStartAt(event);
   const eventDate = String(event?.date || "").trim();
   const returnAt = equipmentDateTimeInputValue(event?.equipmentInAt);
   const startValue = setupAt || (eventDate ? `${eventDate}T00:00` : "");
@@ -447,14 +455,18 @@ function equipmentEventTimelineValidation(event, options = {}) {
   const requireEventHours = Boolean(options?.requireEventHours);
   const allowedMissing = new Set(options?.allowMissingEventHours || []);
   const setupAt = equipmentEventSetupAt(event);
+  const setupApplies = event?.setupApplies !== false;
+  const operationalStart = equipmentEventReservationStartAt(event);
   const eventDate = String(event?.date || "").trim();
   const equipmentInAt = equipmentDateTimeInputValue(event?.equipmentInAt);
   const missingFields = [];
   const missingKeys = [];
-  if (!setupAt) missingFields.push("fecha y hora de montaje");
+  if (setupApplies && !setupAt) missingFields.push("fecha y hora de montaje");
+  if (!setupApplies && !operationalStart) missingFields.push("fecha y hora de inicio del evento o salida del equipo");
   if (!eventDate) missingFields.push("fecha del evento");
   if (!equipmentInAt) missingFields.push("fecha y hora de ingreso del equipo");
-  if (!setupAt) missingKeys.push("setupAt");
+  if (setupApplies && !setupAt) missingKeys.push("setupAt");
+  if (!setupApplies && !operationalStart) missingKeys.push("startAt");
   if (!eventDate) missingKeys.push("date");
   if (!equipmentInAt) missingKeys.push("equipmentInAt");
   if (requireEventHours && !String(event?.startAt || "").trim() && !allowedMissing.has("startAt")) {
@@ -463,20 +475,25 @@ function equipmentEventTimelineValidation(event, options = {}) {
   if (requireEventHours && !String(event?.endAt || "").trim() && !allowedMissing.has("endAt")) {
     missingFields.push("fecha y hora de finalización del evento"); missingKeys.push("endAt");
   }
-  const rawSetupAt = event?.setupAt || event?.mountingAt || event?.phone || "";
+  if (!setupApplies && (event?.setupAt || event?.mountingAt)) {
+    return { valid: false, code: "setup-not-applicable-conflict", title: "Revise el montaje",
+      summary: "El evento indica que no requiere montaje y también tiene una fecha de montaje.",
+      detail: "Quite la fecha de montaje o indique que sí aplica.", invalidFields: ["setupAt", "setupApplies"] };
+  }
+  const rawSetupAt = operationalStart || (setupApplies ? event?.setupAt || event?.mountingAt || event?.phone : event?.equipmentOutAt || event?.startAt) || "";
   const rawReturnAt = event?.equipmentInAt || "";
   const setupMs = equipmentDateTimeMillis(rawSetupAt);
   const returnMs = equipmentDateTimeMillis(rawReturnAt);
   const eventStartMs = equipmentDateTimeMillis(event?.startAt);
   const eventEndMs = equipmentDateTimeMillis(event?.endAt);
   if ((rawSetupAt && !Number.isFinite(setupMs)) || (rawReturnAt && !Number.isFinite(returnMs))
-      || (setupAt && equipmentInAt && returnMs < setupMs)) {
+      || (operationalStart && equipmentInAt && returnMs < setupMs)) {
     return {
       valid: false,
       code: "return-before-setup",
       title: "Rango de fechas incorrecto",
-      summary: "EL INGRESO DEL EQUIPO NO PUEDE SER ANTERIOR AL MONTAJE.",
-      detail: `Montaje: ${formatEquipmentDateTime(setupAt)}. Ingreso: ${formatEquipmentDateTime(equipmentInAt)}.`,
+      summary: setupApplies ? "EL INGRESO DEL EQUIPO NO PUEDE SER ANTERIOR AL MONTAJE." : "EL INGRESO DEL EQUIPO NO PUEDE SER ANTERIOR A SU SALIDA O AL INICIO DEL EVENTO.",
+      detail: `Inicio de uso: ${formatEquipmentDateTime(operationalStart)}. Ingreso: ${formatEquipmentDateTime(equipmentInAt)}.`,
       invalidFields: ["setupAt", "equipmentInAt"]
     };
   }
@@ -488,7 +505,7 @@ function equipmentEventTimelineValidation(event, options = {}) {
       detail: "La finalización del evento y el regreso del equipo son momentos diferentes.",
       invalidFields: ["setupAt", "startAt", "endAt", "equipmentInAt"] };
   }
-  const setupDate = equipmentDateKeyFromDateTime(setupAt);
+  const setupDate = equipmentDateKeyFromDateTime(operationalStart);
   const returnDate = equipmentDateKeyFromDateTime(equipmentInAt);
   if (eventDate && (!/^\d{4}-\d{2}-\d{2}$/.test(eventDate) || !Number.isFinite(equipmentDateTimeMillis(`${eventDate}T12:00`))
       || (setupDate && eventDate < setupDate) || (returnDate && eventDate > returnDate))) {
@@ -1561,7 +1578,8 @@ function equipmentDisplaySectionGroups(sections) {
 }
 
 function currentEquipmentEventDraft() {
-  const setupAt = equipmentQuery("#equipmentEventSetupAt")?.value || "";
+  const setupApplies = equipmentQuery("#equipmentEventSetupApplies")?.value !== "no";
+  const setupAt = setupApplies ? equipmentQuery("#equipmentEventSetupAt")?.value || "" : "";
   const startAt = equipmentQuery("#equipmentEventStartAt")?.value || "";
   return {
     id: "event-draft",
@@ -1571,8 +1589,9 @@ function currentEquipmentEventDraft() {
     startAt,
     endAt: equipmentQuery("#equipmentEventEndAt")?.value || "",
     setupAt,
+    setupApplies,
     date: startAt ? startAt.slice(0, 10) : equipmentQuery("#equipmentEventDate")?.value || "",
-    equipmentOutAt: setupAt,
+    equipmentOutAt: setupApplies ? setupAt : equipmentDateTimeInputValue(selectedEquipmentEvent()?.equipmentOutAt) || startAt,
     equipmentInAt: equipmentQuery("#equipmentEventInAt")?.value || "",
     responsible: equipmentQuery("#equipmentEventResponsible")?.value.trim() || "Por definir",
     notes: equipmentQuery("#equipmentNotes")?.value || ""
@@ -1725,6 +1744,7 @@ function populateEquipmentEventFields(event) {
   const placeInput = equipmentQuery("#equipmentEventPlace");
   const nameInput = equipmentQuery("#equipmentEventName");
   const setupAtInput = equipmentQuery("#equipmentEventSetupAt");
+  const setupAppliesInput = equipmentQuery("#equipmentEventSetupApplies");
   const dateInput = equipmentQuery("#equipmentEventDate");
   const inAtInput = equipmentQuery("#equipmentEventInAt");
   const responsibleInput = equipmentQuery("#equipmentEventResponsible");
@@ -1732,6 +1752,8 @@ function populateEquipmentEventFields(event) {
   if (placeInput) placeInput.value = event?.place || "";
   if (nameInput) nameInput.value = event?.name || "";
   if (setupAtInput) setupAtInput.value = event ? equipmentEventSetupAt(event) : "";
+  if (setupAppliesInput) setupAppliesInput.value = event?.setupApplies === false ? "no" : "yes";
+  if (setupAtInput) { setupAtInput.disabled = event?.setupApplies === false; setupAtInput.closest?.("label")?.toggleAttribute?.("hidden", event?.setupApplies === false); }
   if (dateInput) dateInput.value = event?.date || "";
   if (inAtInput) inAtInput.value = event?.equipmentInAt || "";
   if (responsibleInput) responsibleInput.value = event?.responsible || "";
@@ -2818,8 +2840,8 @@ function renderEquipmentEvents() {
             <span>${escapeEquipmentHtml(lineCount)} líneas de equipo</span>
           </button>
           <div class="equipment-event-card-actions">
-            <button class="equipment-event-pdf-button" type="button" data-save-event="${escapeEquipmentHtml(event.id)}" aria-label="Guardar PDF de ${escapeEquipmentHtml(cardTitle)}">PDF</button>
-            <button class="equipment-event-remove-button" type="button" data-remove-event="${escapeEquipmentHtml(event.id)}" aria-label="Eliminar ventana">X</button>
+            <button class="equipment-event-pdf-button" type="button" data-save-event="${escapeEquipmentHtml(event.id)}" aria-label="Guardar PDF de ${escapeEquipmentHtml(cardTitle)}" data-live-permission="equipment.write">PDF</button>
+            <button class="equipment-event-remove-button" type="button" data-remove-event="${escapeEquipmentHtml(event.id)}" aria-label="Eliminar ventana" data-live-permission="equipment.write">X</button>
           </div>
         </article>`;
     })
@@ -4753,6 +4775,7 @@ async function saveEquipmentCatalogEditor() {
 async function initEquipmentCatalogSync() {
   const requirementPage = equipmentQuery("#requerimientoEquipoPage");
   await waitForEquipmentAuthenticatedApp();
+  if (!equipmentHasModuleAccess()) return;
   await loadEquipmentCatalogOverrides();
   if (requirementPage && typeof MutationObserver === "function") {
     const observer = new MutationObserver(() => {
@@ -5497,9 +5520,15 @@ function waitForEquipmentAuthenticatedApp() {
   });
 }
 
+function equipmentHasModuleAccess() {
+  return !window.LiveAccess || !equipmentUsesServerWarehouseInventory()
+    || window.LiveAccess.canPage(window.LIVE_SESSION, "requerimiento-equipo");
+}
+
 async function refreshEquipmentWarehouseInventory() {
   if (equipmentWarehouseInventoryState.refreshPromise) return equipmentWarehouseInventoryState.refreshPromise;
   if (!/^https?:$/.test(window.location.protocol)) return false;
+  if (!equipmentHasModuleAccess()) return false;
   equipmentWarehouseInventoryState.refreshPromise = fetch("/api/inventario-bodega", {
     credentials: "same-origin",
     cache: "no-store"
@@ -5526,6 +5555,7 @@ async function refreshEquipmentWarehouseInventory() {
 
 async function initEquipmentWarehouseInventorySync() {
   await waitForEquipmentAuthenticatedApp();
+  if (!equipmentHasModuleAccess()) return;
   await refreshEquipmentWarehouseInventory();
   const requirementPage = equipmentQuery("#requerimientoEquipoPage");
   if (requirementPage && typeof MutationObserver === "function") {
@@ -6391,6 +6421,9 @@ function cloneEquipmentEventForEditable(event, index = 0) {
     ...(event?.snapshotLocked === true ? { snapshotLocked: true } : {}),
     ...(event?.updatedAt ? { updatedAt: event.updatedAt } : {}),
     setupAt: equipmentEventSetupAt(event),
+    ...(typeof event?.setupApplies === "boolean" ? { setupApplies: event.setupApplies } : {}),
+    ...Object.fromEntries(["setupDate", "setupTime", "startDate", "startTime", "endDate", "endTime", "equipmentInDate", "equipmentInTime"]
+      .filter(field => event?.[field] !== undefined).map(field => [field, String(event[field])])),
     phone: event?.phone || "",
     date: event?.date || "",
     equipmentOutAt: event?.equipmentOutAt || "",
@@ -6486,9 +6519,12 @@ function equipmentWarehouseDispatchPayload(event) {
     name: event.name || "Evento por definir",
     place: event.place || "Lugar por definir",
     setupAt: equipmentEventSetupAt(event),
+    ...(typeof event.setupApplies === "boolean" ? { setupApplies: event.setupApplies } : {}),
+    startAt: event.startAt || "",
+    endAt: event.endAt || "",
     planner: "",
     eventDate: event.date || "",
-    equipmentOutAt: equipmentEventSetupAt(event),
+    equipmentOutAt: equipmentEventReservationStartAt(event),
     equipmentInAt: event.equipmentInAt || "",
     responsible: event.responsible && event.responsible !== "Por definir" ? event.responsible : "",
     items: equipmentWarehouseDispatchItems(event)
@@ -7239,9 +7275,9 @@ function renderEquipmentSharedPlan() {
       const values = draft || saved || route;
       return `<article class="equipment-logistics-pair"><strong>${escapeEquipmentHtml(route.fromPlace || "Lugar por definir")} → ${escapeEquipmentHtml(route.toPlace || "Lugar por definir")}</strong><label>Transporte (min)<input data-logistics-travel="${index}" type="number" min="0" step="1" value="${escapeEquipmentHtml(values.travelMinutes ?? 60)}" /></label><label>Desmontaje y preparación (min)<input data-logistics-handling="${index}" type="number" min="0" step="1" value="${escapeEquipmentHtml(values.handlingMinutes ?? 120)}" /></label><label class="equipment-logistics-check"><input data-logistics-reviewed="${index}" type="checkbox"${(draft ? draft.reviewed : !!saved) ? " checked" : ""} />Revisé estos tiempos</label></article>`;
     }).join("")}</div><button type="button" data-logistics-recalculate>Recalcular plan con los tiempos revisados</button><p data-logistics-error role="alert"></p></details>` : "")
-    + (proposed.length ? `<details class="equipment-shared-transfer-options" open><summary>${proposed.length} trasiegos del plan para confirmar</summary>${proposed.map((route, index) => `<div class="equipment-shared-transfer-proposal"><strong>${escapeEquipmentHtml(route.description)} · ${Number(route.quantity)} unidades</strong><p>${escapeEquipmentHtml(route.fromPlace || route.fromEventName || route.fromName || route.fromEventId || "Origen")} → ${escapeEquipmentHtml(route.toPlace || route.toEventName || route.toName || route.toEventId || "Destino")}</p><p>Finalización de origen: ${escapeEquipmentHtml(equipmentLogisticsTime(route.departureAt))}. Montaje de destino: ${escapeEquipmentHtml(equipmentLogisticsTime(route.setupAt))}.</p><p>Transporte: ${Number(route.travelMinutes) || 0} min · Desmontaje y preparación: ${Number(route.handlingMinutes) || 0} min · Margen disponible: ${Number(route.availableMinutes) || 0} min${Number.isFinite(route.slackMinutes) ? ` · Holgura: ${route.slackMinutes} min` : ""}.</p>${route.requiresTimeConfirmation ? `<p class="equipment-logistics-warning">Tiempos estimados: revise el trayecto antes de confirmar. Puede cambiarlos en «Revisar tiempos entre lugares».</p><label class="equipment-logistics-check"><input data-shared-review-transfer="${index}" type="checkbox" />Revisé los tiempos de esta ruta</label>` : '<p>Tiempos revisados para este cálculo.</p>'}<button type="button" data-shared-confirm-transfer="${index}"${route.requiresTimeConfirmation ? " disabled" : ""}>Confirmar trasiego</button></div>`).join("")}</details>` : "")
+    + (proposed.length ? `<details class="equipment-shared-transfer-options" open><summary>${proposed.length} trasiegos del plan para confirmar</summary>${proposed.map((route, index) => `<div class="equipment-shared-transfer-proposal"><strong>${escapeEquipmentHtml(route.description)} · ${Number(route.quantity)} unidades</strong><p>${escapeEquipmentHtml(route.fromPlace || route.fromEventName || route.fromName || route.fromEventId || "Origen")} → ${escapeEquipmentHtml(route.toPlace || route.toEventName || route.toName || route.toEventId || "Destino")}</p><p>Finalización de origen: ${escapeEquipmentHtml(equipmentLogisticsTime(route.departureAt))}. Montaje de destino: ${escapeEquipmentHtml(equipmentLogisticsTime(route.setupAt))}.</p><p>Transporte: ${Number(route.travelMinutes) || 0} min · Desmontaje y preparación: ${Number(route.handlingMinutes) || 0} min · Margen disponible: ${Number(route.availableMinutes) || 0} min${Number.isFinite(route.slackMinutes) ? ` · Holgura: ${route.slackMinutes} min` : ""}.</p>${route.requiresTimeConfirmation ? `<p class="equipment-logistics-warning">Tiempos estimados: revise el trayecto antes de confirmar. Puede cambiarlos en «Revisar tiempos entre lugares».</p><label class="equipment-logistics-check"><input data-shared-review-transfer="${index}" type="checkbox" />Revisé los tiempos de esta ruta</label>` : '<p>Tiempos revisados para este cálculo.</p>'}<button type="button" data-shared-confirm-transfer="${index}"${route.requiresTimeConfirmation ? " disabled" : ""} data-live-permission="equipment.write">Confirmar trasiego</button></div>`).join("")}</details>` : "")
     + (rentalRoutes.length ? `<details class="equipment-logistics-rental-itinerary"><summary>Traslados necesarios del equipo a rentar (${rentalRoutes.length})</summary><p>La renta calculada supone reutilizar las mismas unidades alquiladas en estas rutas. Coordine con el proveedor la disponibilidad, el transporte y los tiempos. Esta propuesta no aumenta las existencias de bodega ni modifica los reportes confirmados.</p>${rentalRoutes.map(route => `<div class="equipment-shared-transfer-proposal"><strong>${escapeEquipmentHtml(route.description)} · ${Number(route.quantity)} unidades rentadas</strong><p>${escapeEquipmentHtml(route.fromPlace)} → ${escapeEquipmentHtml(route.toPlace)}</p><p>Finaliza en origen: ${escapeEquipmentHtml(equipmentLogisticsTime(route.departureAt))} · Montaje en destino: ${escapeEquipmentHtml(equipmentLogisticsTime(route.setupAt))} · Transporte ${Number(route.travelMinutes) || 0} min · Preparación ${Number(route.handlingMinutes) || 0} min.</p><p>Requiere coordinación con el proveedor${route.requiresTimeConfirmation ? " y revisión de los tiempos estimados" : ""}.</p></div>`).join("")}</details>` : "")
-    + (confirmed.length ? `<details><summary>${confirmed.length} trasiegos confirmados</summary>${confirmed.map((route, index) => `<div class="equipment-shared-transfer-proposal"><span>${escapeEquipmentHtml(state.events.find(event => event.id === route.fromEventId)?.place || route.fromEventId)} → ${escapeEquipmentHtml(state.events.find(event => event.id === route.toEventId)?.place || route.toEventId)}</span><button type="button" data-shared-cancel-transfer="${index}">Cancelar trasiego</button></div>`).join("")}</details>` : "")
+    + (confirmed.length ? `<details><summary>${confirmed.length} trasiegos confirmados</summary>${confirmed.map((route, index) => `<div class="equipment-shared-transfer-proposal"><span>${escapeEquipmentHtml(state.events.find(event => event.id === route.fromEventId)?.place || route.fromEventId)} → ${escapeEquipmentHtml(state.events.find(event => event.id === route.toEventId)?.place || route.toEventId)}</span><button type="button" data-shared-cancel-transfer="${index}" data-live-permission="equipment.write">Cancelar trasiego</button></div>`).join("")}</details>` : "")
     + ((state.plan.invalidTransfers || []).length ? `<div class="equipment-logistics-warning" role="alert"><strong>Hay trasiegos que requieren revisión; no cuentan como disponibilidad.</strong><ul>${state.plan.invalidTransfers.map(route => `<li>${escapeEquipmentHtml(route.message || route.id)}</li>`).join("")}</ul></div>` : "")
     + '</section>';
   const times = host.querySelector(".equipment-logistics-times");
@@ -7530,6 +7566,7 @@ async function initEquipmentSharedWorkspace() {
     sendEquipmentPurchaseRequest(items);
   });
   await waitForEquipmentAuthenticatedApp();
+  if (!equipmentHasModuleAccess()) return;
   await equipmentSharedWorkspace.client.refresh().catch(error => equipmentSharedStatus(error.message, true));
   equipmentSharedWorkspace.refreshTimer = window.setInterval(() => {
     const page = equipmentQuery("#requerimientoEquipoPage");
@@ -7583,6 +7620,14 @@ function initEquipmentPlannerBridge() {
     inventory:()=>equipmentWarehouseInventoryState.records,
     range:()=>({from:equipmentQuery("#equipmentAgendaFrom")?.value || "",to:equipmentQuery("#equipmentAgendaTo")?.value || ""}),
     importEvents,
+    afterImport: async (mode) => {
+      switchEquipmentWindow("summary");
+      if (mode === "rent" || mode === "purchase") {
+        await equipmentPlannerInstance.download(mode);
+      } else if (mode === "transfer") {
+        requestEquipmentTransferDecision("summary");
+      }
+    },
     openEvent:id=>{ if(loadEquipmentEvent(id))equipmentQuery("#equipmentEventPlace")?.scrollIntoView?.({behavior:"smooth",block:"center"}); },
     confirmEvent:()=>saveCurrentEquipmentWindowWithExtraChoices(),
     reviewClassification:itemId=>{ if(equipmentState.selectedEventId){if(equipmentSharedWorkspace.dirty)equipmentPlannerDirtyIds.add(equipmentState.selectedEventId);syncActiveEquipmentEvent();}window.location.hash="contabilidad-equipo";document.dispatchEvent(new CustomEvent("live:review-inventory-classification",{detail:{itemId}})); },
@@ -7625,7 +7670,7 @@ function initEquipmentPlannerBridge() {
   };
   window.liveEquipmentPlanner=bridge;
   equipmentPlannerInstance=window.EquipmentPlanner.create(bridge).init();
-  window.EquipmentBatchEvents?.init({bridge});
+  window.EquipmentBatchEvents?.init({bridge, onError: error => equipmentSharedStatus(error.message, true)});
 }
 
 
@@ -7634,6 +7679,18 @@ function initEquipmentModule() {
   if (!serviceSelect) return;
   populateNativeEquipmentServiceSelect();
   serviceSelect.addEventListener("change", () => selectEquipmentService());
+  equipmentQuery("#equipmentEventSetupApplies")?.addEventListener("change", () => {
+    const input = equipmentQuery("#equipmentEventSetupAt");
+    const applies = equipmentQuery("#equipmentEventSetupApplies").value !== "no";
+    if (input) {
+      input.disabled = !applies;
+      input.closest?.("label")?.toggleAttribute?.("hidden", !applies);
+      if (!applies) input.value = "";
+    }
+    equipmentSharedWorkspace.dirty = true;
+    syncEquipmentEventDateBounds();
+    renderEquipmentModule();
+  });
   document.querySelectorAll("[data-dj-audio-type]").forEach((button) => {
     button.addEventListener("click", () => {
       equipmentState.djAudioType = button.dataset.djAudioType || "qsc";

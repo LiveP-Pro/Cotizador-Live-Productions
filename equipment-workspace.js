@@ -42,7 +42,8 @@
   }
   function intersects(event, range) {
     if (!range?.from || !range?.to) return true;
-    const start = String(event.setupAt || event.startAt || event.date || '').slice(0, 10);
+    const reservationStart = event.setupApplies === false ? event.equipmentOutAt || event.startAt : event.setupAt || event.equipmentOutAt || event.startAt;
+    const start = String(reservationStart || event.date || '').slice(0, 10);
     const end = String(event.equipmentInAt || event.endAt || event.date || start).slice(0, 10);
     return !start || (start <= range.to && end >= range.from);
   }

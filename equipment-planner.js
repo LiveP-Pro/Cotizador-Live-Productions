@@ -54,7 +54,7 @@
         knownMessages.add(reason);
         documentPending.push({eventId:event.id,event:event.place || event.name || event.id,description:typeof message === 'object' ? message.description || 'Aviso del archivo' : 'Aviso del archivo',reason,sourceRefs:message?.sourceRefs || []});
       });
-      const missing = timeFields.filter(field => !event[field]);
+      const missing = timeFields.filter(field => !(field === 'setupAt' && event.setupApplies === false) && !event[field]);
       if (!event.place || !event.date || missing.length) eventPending.push({event, missing});
       (event.sections || event.documentSections || []).forEach((section, sectionIndex) => (section.items || []).forEach((raw, itemIndex) => {
         const line = Array.isArray(raw) ? {quantity:raw[0],description:raw[1]} : raw;
@@ -124,7 +124,7 @@
       const rows=[];
       if(model.documentAuditUnavailable)rows.push('<article><div><strong>Revisión del documento pendiente</strong><small>No se pudo cargar el verificador de documentos. Conserve sus cuadros y vuelva a abrir el módulo. El Excel y los PDF descargables sí realizan esta revisión en el servidor.</small></div></article>');
       model.documentPending.forEach(warning=>rows.push(`<article><div><strong>${esc(warning.description)} · ${esc(warning.event)}</strong><small>${esc(warning.reason)}</small>${warning.sourceRefs?.length?`<small>Celdas: ${esc(Array.isArray(warning.sourceRefs)?warning.sourceRefs.join(', '):warning.sourceRefs)}</small>`:''}</div><button type="button" data-planner-event="${esc(warning.eventId)}">Revisar documento</button></article>`));
-      model.eventPending.forEach(({event,missing})=>rows.push(`<article><div><strong>${esc(event.place || event.name || 'Evento sin lugar')}</strong><small>${esc(dateLabel(event.date))} · ${missing.length ? 'Complete montaje, inicio, finalización y regreso a bodega.' : 'Complete lugar y fecha.'}</small></div><button type="button" data-planner-event="${esc(event.id)}">Completar datos</button></article>`));
+      model.eventPending.forEach(({event,missing})=>rows.push(`<article><div><strong>${esc(event.place || event.name || 'Evento sin lugar')}</strong><small>${esc(dateLabel(event.date))} · ${missing.length ? 'Complete inicio, finalización, regreso a bodega y montaje cuando aplique.' : 'Complete lugar y fecha.'}</small></div><button type="button" data-planner-event="${esc(event.id)}">Completar datos</button></article>`));
       model.invalidRows.forEach(({event,line})=>rows.push(`<article><div><strong>${esc(line.description || 'Línea sin descripción')}</strong><small>Cantidad o descripción pendiente en ${esc(event.place || event.name || 'el evento')}. No se omitió la línea.</small></div><button type="button" data-planner-event="${esc(event.id)}">Corregir línea</button></article>`));
       model.identityPending.forEach(row=>{
         const index=model.rows.indexOf(row);

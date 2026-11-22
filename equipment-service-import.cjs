@@ -416,7 +416,8 @@ async function readExcel(buffer, { preserveCellNotes = false, selectedSheets, ex
         if (rawValue && typeof rawValue === "object" && ("formula" in rawValue || "sharedFormula" in rawValue) && cell.result !== undefined) rawValue.result = clone(cell.result);
         const entry = { ref: `xlsx:${sheet.id}:${cell.address}`, sheet: sheet.name, row: rowNumber, column,
           address: cell.address, value, rawValue, isHeading: cell.isMerged || cell.font?.bold === true,
-          sourceOrder: sourceRows.length, ...(preserveCellNotes && cell.note ? { note: clone(cell.note) } : {}) };
+          sourceOrder: sourceRows.length, ...(preserveCellNotes && cell.note ? { note: clone(cell.note) } : {}),
+          ...(preserveCellNotes && cell.numFmt ? { numberFormat: cell.numFmt } : {}) };
         if ((cell.value?.formula || cell.value?.sharedFormula) && cell.result === undefined) blockers.push(`Hoja «${sheet.name}», celda ${cell.address}: la fórmula no tiene resultado guardado; calcule y guarde el Excel antes de importar.`);
         sourceCells.push(entry);
         cells.push(entry);

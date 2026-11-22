@@ -4,6 +4,9 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 const { applyStockIngress, prepareWarehouseSave, nextWarehouseTimestamp } = require("../warehouse-ledger.cjs");
+const { ALL_PERMISSION_IDS } = require("../live-users.cjs");
+const LiveAccess = require("../live-access.js");
+const warehouseAccess = require("../live-warehouse-access.cjs");
 
 const actor = { id: "synthetic-user", username: "Usuario de prueba", name: "Usuario de prueba" };
 const timestamp = "2026-10-08T10:00:00.000Z";
@@ -245,7 +248,8 @@ test("server ingress re-ingestion returns a durable duplicate receipt without wr
   let writes = 0;
   let response;
   const context = {
-    applyStockIngress, nextWarehouseTimestamp,
+    applyStockIngress, nextWarehouseTimestamp, ...warehouseAccess,
+    authenticatedPrincipal() { return { ...actor, permissions: [...ALL_PERMISSION_IDS] }; },
     readWarehouseInventory() { return structuredClone(saved); },
     warehouseAuditActor() { return actor; },
     async writeWarehouseInventory(value, options) { writes += 1; Object.assign(value, prepareWarehouseSave(saved, value.state, options)); saved = structuredClone(value); },
@@ -275,9 +279,12 @@ test("server ordinary saves preserve authoritative history and reject a stale in
   let current = commitIngress(inventory(), payload()).saved;
   let writes = 0;
   let response;
+  const principal = { ...actor, displayName: actor.name, active: true, permissions: [...ALL_PERMISSION_IDS] };
   const context = {
+    LiveAccess, ...warehouseAccess,
+    authenticatedPrincipal() { return principal; },
     readWarehouseInventory() { return structuredClone(current); },
-    warehouseAuditActor() { return actor; },
+    warehouseAuditActor() { return principal; },
     normalizeWarehouseInventoryPayload(value) { return value; },
     async persistWarehouseInventory(value, setAsInitial, options) {
       writes += 1;

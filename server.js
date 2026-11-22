@@ -14,6 +14,9 @@ const { createEquipmentEventStore, calculateEquipmentAvailability, normalizeEven
 const EquipmentIdentity = require("./equipment-identity.js");
 const { createEquipmentReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml } = require("./equipment-reporting.cjs");
 const { parseEventFile } = require("./equipment-event-import.cjs");
+const LiveAccess = require("./live-access.js");
+const { createLiveUserStore, PERMISSION_DEFINITIONS, ROLE_PRESETS } = require("./live-users.cjs");
+const { projectWarehousePayload, mergeWarehousePrivateFields } = require("./live-warehouse-access.cjs");
 
 const rootDir = __dirname;
 const port = Number.parseInt(process.env.PORT || "8787", 10);
@@ -54,7 +57,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261117-service-sheets-sync-01";
+const warehouseAssetVersion = "20261122-event-times-users-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -176,8 +179,10 @@ async function writeWarehouseInventoryFile(filePath, normalized) {
 
 function warehouseAuditActor(request) {
   if (!request) return { id: "server", username: "Servidor", name: "Servidor" };
-  const username = authenticatedUser(request);
-  return { id: equipmentImportOwner(request), username, name: username };
+  const user = authenticatedPrincipal(request);
+  return { id: user?.id || "", userId: user?.id || "", username: user?.username || "",
+    name: user?.displayName || user?.username || "", displayName: user?.displayName || user?.username || "",
+    permissions: user?.permissions || [] };
 }
 
 async function writeWarehouseInventory(normalized, context = {}) {
@@ -205,6 +210,11 @@ async function persistWarehouseInventory(normalized, setAsInitial = false, conte
 }
 
 async function saveWarehouseInventory(payload, response, request) {
+  if ((payload?.importMode !== undefined || payload?.setAsInitial === true)
+      && !LiveAccess.can(authenticatedPrincipal(request), "warehouse.inventory")) {
+    errorResponse(response, 403, "Su usuario no tiene permiso para importar o reemplazar el inventario.");
+    return;
+  }
   if (typeof payload?.expectedSavedAt !== "string" || !payload.expectedSavedAt.trim()) {
     errorResponse(response, 428, "Consulte el inventario actual antes de guardar. Falta la versión que está revisando.");
     return;
@@ -224,7 +234,7 @@ async function saveWarehouseInventory(payload, response, request) {
     normalized = normalizeWarehouseInventoryPayload({
       state: ["merge", "replace"].includes(importMode)
         ? { ...payload?.state, movements: JSON.parse(JSON.stringify(current.state.movements || [])) }
-        : payload?.state,
+        : mergeWarehousePrivateFields(current.state, payload?.state, authenticatedPrincipal(request)),
       savedAt: new Date().toISOString()
     });
   } catch (error) {
@@ -239,16 +249,17 @@ async function saveWarehouseInventory(payload, response, request) {
 
   const setAsInitial = payload?.setAsInitial === true;
   await persistWarehouseInventory(normalized, setAsInitial, {
-    actor: warehouseAuditActor(request), source: setAsInitial ? "importacion-inventario" : "contabilidad-equipo"
+    actor: warehouseAuditActor(request), source: setAsInitial ? "importacion-inventario" : "contabilidad-equipo",
+    enforceMovementOwnership: Boolean(request)
   });
-  jsonResponse(response, 200, { ...normalized, initialSaved: setAsInitial });
+  jsonResponse(response, 200, projectWarehousePayload({ ...normalized, initialSaved: setAsInitial }, authenticatedPrincipal(request)));
 }
 
 async function restoreWarehouseInventory(response, request) {
   const initial = readWarehouseInventoryInitial();
   const restored = { state: initial.state, savedAt: new Date().toISOString() };
   await writeWarehouseInventory(restored, { actor: warehouseAuditActor(request), source: "restauracion-inventario" });
-  jsonResponse(response, 200, restored);
+  jsonResponse(response, 200, projectWarehousePayload(restored, authenticatedPrincipal(request)));
 }
 
 async function ingressEquipmentStock(payload, request, response) {
@@ -258,7 +269,7 @@ async function ingressEquipmentStock(payload, request, response) {
     const timestamp = nextWarehouseTimestamp(current.savedAt);
     const result = applyStockIngress(current, payload, { actor, timestamp });
     if (result.duplicate) {
-      jsonResponse(response, 200, { ...current, receipt: result.receipt });
+      jsonResponse(response, 200, projectWarehousePayload({ ...current, receipt: result.receipt }, authenticatedPrincipal(request)));
       return;
     }
     const saved = { state: result.state, savedAt: timestamp };
@@ -266,7 +277,7 @@ async function ingressEquipmentStock(payload, request, response) {
       actor, source: "requerimiento-equipo", requestId: result.storedReceipt.requestId,
       event: result.storedReceipt.event, stockReceipt: result.storedReceipt, ingressChanges: result.changes
     });
-    jsonResponse(response, 200, { ...saved, receipt: result.receipt });
+    jsonResponse(response, 200, projectWarehousePayload({ ...saved, receipt: result.receipt }, authenticatedPrincipal(request)));
   } catch (error) {
     errorResponse(response, error.statusCode || 400, error.message || "No se pudo registrar el ingreso del equipo.");
   }
@@ -1046,6 +1057,7 @@ function loadAuthConfig() {
 }
 
 const authConfig = loadAuthConfig();
+const liveUsers = createLiveUserStore({ directory: dataDir, legacyAdmin: authConfig });
 
 const db = new DatabaseSync(dbPath);
 db.exec(`
@@ -1199,7 +1211,7 @@ function createDailyDatabaseBackup() {
 createDailyDatabaseBackup();
 
 function jsonResponse(response, statusCode, data) {
-  response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
+  response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
   response.end(JSON.stringify(data));
 }
 
@@ -1261,7 +1273,7 @@ function verifySessionToken(token) {
   try {
     const payload = JSON.parse(base64UrlDecode(body));
     if (!payload.exp || payload.exp < Date.now()) return null;
-    if (payload.user !== authConfig.username) return null;
+    if (!liveUsers.resolveSession(payload)) return null;
     return payload;
   } catch {
     return null;
@@ -1269,9 +1281,19 @@ function verifySessionToken(token) {
 }
 
 function authenticatedUser(request) {
+  return authenticatedPrincipal(request)?.username || "";
+}
+
+function authenticatedPrincipal(request) {
   const cookies = parseCookies(request);
   const session = verifySessionToken(cookies.cotizador_session);
-  return session?.user || "";
+  return session ? liveUsers.resolveSession(session) : null;
+}
+
+function liveSessionResponse(user) {
+  return user ? { authenticated: true, user: user.username, username: user.username,
+    userId: user.id, id: user.id, displayName: user.displayName, permissions: user.permissions,
+    role: user.role, sessionVersion: user.sessionVersion } : { authenticated: false, user: "", permissions: [] };
 }
 
 function sessionCookie(request, token) {
@@ -1296,16 +1318,20 @@ function expiredSessionCookie() {
 }
 
 function verifyCredentials(username, password) {
-  if (String(username || "") !== authConfig.username) return false;
-  const passwordConfig = authConfig.password;
-  const candidate = hashPassword(password, passwordConfig.salt, passwordConfig.iterations);
-  return timingSafeTextEqual(candidate, passwordConfig.hash);
+  return Boolean(liveUsers.authenticate(username, password));
 }
 
 function requireAuth(request, response) {
-  if (authenticatedUser(request)) return true;
-  errorResponse(response, 401, "Inicie sesión para continuar.");
-  return false;
+  const user = authenticatedPrincipal(request);
+  if (!user) {
+    errorResponse(response, 401, "Inicie sesión para continuar.");
+    return false;
+  }
+  if (!LiveAccess.canRoute(user, request.method, new URL(request.url, "http://local.invalid").pathname)) {
+    errorResponse(response, 403, "Su usuario no tiene permiso para realizar esta acción.");
+    return false;
+  }
+  return true;
 }
 
 function cleanFileName(value) {
@@ -3771,6 +3797,10 @@ async function saveEquipmentBoard(payload, request, response) {
   }
 
   const pendingDispatch = payload?.pdfOnly !== true && payload?.editableData?.mode === "full" ? payload.editableData.warehouseDispatch : null;
+  if (pendingDispatch?.id && !LiveAccess.canAny(authenticatedPrincipal(request), ["warehouse.movements", "warehouse.inventory"])) {
+    errorResponse(response, 403, "Su usuario no tiene permiso para registrar salidas de bodega. Puede generar los reportes permitidos sin registrar movimientos.");
+    return;
+  }
   if (pendingDispatch?.id) validateWarehouseDispatchIdentities(pendingDispatch, readWarehouseInventory().state);
 
   const requestedName = cleanFileName(payload?.fileName || "Cuadro-Equipo-Live-Productions.pdf");
@@ -3848,6 +3878,13 @@ function serveStatic(request, response, pathname) {
   }
   const isPdfRequest = requestedPath.startsWith("/cotizaciones-generadas/");
   const isEquipmentPdfRequest = requestedPath.startsWith("/cuadros-equipo/");
+  if ((isPdfRequest || isEquipmentPdfRequest) && !requireAuth(request, response)) return;
+  const publicFile = /^\/(?:index\.html|warehouse-module\.html|(?:app|styles|inventory|equipment(?:-[a-z-]+)?|warehouse-import-(?:review|corrections)|live-(?:access|users))\.(?:js|css))$/.test(requestedPath);
+  const publicAsset = /^\/assets\/[a-zA-Z0-9_./ -]+\.(?:png|jpe?g|webp|svg|ico|woff2?|ttf)$/i.test(requestedPath);
+  if (!isPdfRequest && !isEquipmentPdfRequest && !publicFile && !publicAsset) {
+    errorResponse(response, 404, "Archivo no encontrado.");
+    return;
+  }
   const baseDir = isPdfRequest ? pdfDir : isEquipmentPdfRequest ? equipmentPdfDir : rootDir;
   const relativePath = isPdfRequest
     ? requestedPath.replace(/^\/cotizaciones-generadas\//, "")
@@ -3856,7 +3893,7 @@ function serveStatic(request, response, pathname) {
       : `.${requestedPath}`;
   const filePath = path.resolve(baseDir, relativePath);
 
-  if (!filePath.startsWith(baseDir)) {
+  if (filePath !== path.resolve(baseDir) && !filePath.startsWith(path.resolve(baseDir) + path.sep)) {
     errorResponse(response, 403, "Ruta no permitida.");
     return;
   }
@@ -3874,14 +3911,14 @@ function serveStatic(request, response, pathname) {
           data
             .toString("utf8")
             .replace(
-              /(equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import)\.(?:js|css)|equipment\.js|inventory\.js|warehouse-import-(?:review|corrections)\.js)\?v=[^"'&<>\s]+/g,
+              /(app\.js|live-(?:access|users)\.(?:js|css)|equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import)\.(?:js|css)|equipment\.js|inventory\.js|warehouse-import-(?:review|corrections)\.js)\?v=[^"'&<>\s]+/g,
               `$1?v=${warehouseAssetVersion}`
             ),
           "utf8"
         )
       : data;
     const headers = { "Content-Type": contentType };
-    if (requestedPath === "/index.html" || ["equipment-identity.js", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "warehouse-import-corrections.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
+    if (requestedPath === "/index.html" || ["app.js", "live-access.js", "live-users.js", "live-users.css", "equipment-identity.js", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "warehouse-import-corrections.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
       (asset) => requestedPath === `/${asset}`
     )) {
       headers["Cache-Control"] = "no-store";
@@ -3895,42 +3932,76 @@ async function handleRequest(request, response) {
   const url = new URL(request.url, `http://${request.headers.host || "127.0.0.1"}`);
 
   try {
-    if (request.method === "GET" && url.pathname === "/api/sesion") {
-      const user = authenticatedUser(request);
-      jsonResponse(response, 200, { authenticated: Boolean(user), user });
+    if (request.method === "GET" && ["/api/sesion", "/api/session"].includes(url.pathname)) {
+      jsonResponse(response, 200, liveSessionResponse(authenticatedPrincipal(request)));
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/api/login") {
       const payload = await readJsonBody(request);
-      if (!verifyCredentials(payload.username, payload.password)) {
+      const user = liveUsers.authenticate(payload.username, payload.password);
+      if (!user) {
         errorResponse(response, 401, "Usuario o contraseña incorrectos.");
         return;
       }
       const token = signSession({
-        user: authConfig.username,
+        ...liveUsers.sessionFor(user),
         exp: Date.now() + 7 * 24 * 60 * 60 * 1000
       });
       response.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
         "Set-Cookie": sessionCookie(request, token)
       });
-      response.end(JSON.stringify({ authenticated: true, user: authConfig.username }));
+      response.end(JSON.stringify(liveSessionResponse(user)));
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/api/logout") {
       response.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
-        "Set-Cookie": expiredSessionCookie()
+        "Cache-Control": "no-store",
+        "Set-Cookie": [expiredSessionCookie(), "lt_luxury_session=; Path=/luxury/; HttpOnly; SameSite=Lax; Max-Age=0"]
       });
       response.end(JSON.stringify({ authenticated: false }));
       return;
     }
 
+    if (url.pathname === "/api/users" && ["GET", "POST"].includes(request.method)) {
+      if (!requireAuth(request, response)) return;
+      if (request.method === "GET") {
+        jsonResponse(response, 200, { users: liveUsers.list(), permissions: PERMISSION_DEFINITIONS, roles: ROLE_PRESETS });
+      } else {
+        const payload = await readJsonBody(request);
+        await enqueueSave(() => jsonResponse(response, 201, { user: liveUsers.create(payload, authenticatedPrincipal(request)) }));
+      }
+      return;
+    }
+    if (request.method === "GET" && url.pathname === "/api/users/audit") {
+      if (!requireAuth(request, response)) return;
+      jsonResponse(response, 200, { entries: liveUsers.audit() });
+      return;
+    }
+    const liveUserMatch = url.pathname.match(/^\/api\/users\/([A-Za-z0-9_-]+)$/);
+    if (request.method === "PATCH" && liveUserMatch) {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      await enqueueSave(() => jsonResponse(response, 200, { user: liveUsers.update(liveUserMatch[1], payload, authenticatedPrincipal(request)) }));
+      return;
+    }
+    if (request.method === "POST" && url.pathname === "/api/account/password") {
+      if (!requireAuth(request, response)) return;
+      const payload = await readJsonBody(request);
+      const user = authenticatedPrincipal(request);
+      await enqueueSave(() => liveUsers.changeOwnPassword(user.id, payload, user));
+      response.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Set-Cookie": expiredSessionCookie(), "Cache-Control": "no-store" });
+      response.end(JSON.stringify({ changed: true, reauthenticate: true }));
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/api/inventario-bodega") {
       if (!requireAuth(request, response)) return;
-      jsonResponse(response, 200, readWarehouseInventory());
+      jsonResponse(response, 200, projectWarehousePayload(readWarehouseInventory(), authenticatedPrincipal(request)));
       return;
     }
 

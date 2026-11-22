@@ -6684,3 +6684,19 @@ body.pdf-export .additional-services-section {
 .equipment-logistics-warnings{padding:16px 16px 16px 32px;border:1px solid #edce93;background:#fff8e9;border-radius:10px;font-size:14px;line-height:1.6}
 .equipment-shared-transfer-proposal .equipment-logistics-warning{flex:1 0 100%;box-sizing:border-box}
 [data-logistics-error]{color:#aa2424}
+[data-live-permission][hidden], [data-live-any-permission][hidden], [data-page-link][hidden], #equipmentEventSetupField[hidden] {
+  display: none !important;
+}
+
+.login-remember {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.login-remember input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+#liveCurrentUser { font-size: 13px; overflow-wrap: anywhere; }

@@ -14,6 +14,7 @@ import {
 import { calculateQuote } from "./lib/pricing.js";
 import { calculateRoute } from "./lib/routes.js";
 import { buildQuotePdf } from "./lib/pdf.js";
+import LiveAuth from "./lib/live-auth.cjs";
 
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const PUBLIC_DIR = join(ROOT, "public");
@@ -906,7 +907,8 @@ export async function createApp(options = {}) {
   const dataFile = options.dataFile || process.env.DATA_FILE || join(ROOT, "data/luxury-travel.json");
   const mirrorFile = options.mirrorFile || process.env.DATA_MIRROR_FILE || "";
   const backupDirectory = options.backupDirectory || process.env.DATA_BACKUP_DIR || "";
-  const db = await new JsonDatabase(dataFile, { mirrorFile, backupDirectory }).init();
+  const liveAuth = LiveAuth.createLiveAuthBridge({ directory: options.liveAuthDataDir || process.env.LIVE_AUTH_DATA_DIR || "" });
+  const db = await new JsonDatabase(dataFile, { mirrorFile, backupDirectory, externalActor: liveAuth.resolveActor }).init();
   const production = String(process.env.NODE_ENV || "").toLowerCase() === "production";
   const administratorEmail = cleanString(
     process.env.LUXURY_ADMIN_EMAIL || "admin@luxurytravel.gt",
@@ -945,14 +947,23 @@ export async function createApp(options = {}) {
     : "lt_session";
 
   function getSession(req) {
-    const token = parseCookies(req.headers.cookie)[sessionCookieName];
+    const cookies = parseCookies(req.headers.cookie);
+    const rootSession = liveAuth.resolveRootCookie(cookies.cotizador_session);
+    if (rootSession.user) return { token: null, user: rootSession.user, rootFederated: true };
+    if (rootSession.forbidden || rootSession.unavailable) return null;
+    const token = cookies[sessionCookieName];
     const session = token ? sessions.get(token) : null;
     if (!session || session.expiresAt < Date.now()) {
       if (token) sessions.delete(token);
       return null;
     }
+    if (session.liveSession) {
+      const user = liveAuth.resolveFederatedSession({ ...session.liveSession, exp: session.expiresAt });
+      if (!user) sessions.delete(token);
+      return user ? { token, user, federated: true } : null;
+    }
     const user = db.find("users", session.userId);
-    return user?.active ? { token, user } : null;
+    return user?.active && liveAuth.allowNativeSession(user) ? { token, user } : null;
   }
 
   async function apiHandler(req, res, url) {
@@ -975,19 +986,27 @@ export async function createApp(options = {}) {
       }
 
       const body = await readJson(req);
-      const email = cleanString(body.email, 160).toLowerCase();
-      const user = db.list("users").find((item) => item.email === email);
-      if (!user?.active || !verifyPassword(String(body.password || ""), user.passwordHash)) {
+      const email = cleanString(body.username || body.email, 160).toLowerCase();
+      const nativeUser = db.list("users").find((item) => item.email === email);
+      const federated = liveAuth.authenticate(email, String(body.password || ""), nativeUser);
+      const user = federated.matched ? federated.user : nativeUser;
+      if (federated.unavailable) {
+        json(res, 503, { error: "La validación de las cuentas de Live Productions no está disponible. Vuelva a intentarlo." });
+        return;
+      }
+      if (!user?.active || !federated.matched && !verifyPassword(String(body.password || ""), user.passwordHash)) {
         attempts.count += 1;
         failedLogins.set(key, attempts);
-        json(res, 401, { error: "Correo o contraseña incorrectos." });
+        json(res, federated.forbidden ? 403 : 401, { error: federated.forbidden
+          ? "Su usuario no tiene acceso a Luxury Travel." : "Usuario, correo o contraseña incorrectos." });
         return;
       }
 
       failedLogins.delete(key);
       const token = randomBytes(32).toString("hex");
       const maxAge = Math.round(sessionHours * 60 * 60);
-      sessions.set(token, { userId: user.id, expiresAt: Date.now() + maxAge * 1000 });
+      sessions.set(token, { userId: user.id, expiresAt: Date.now() + maxAge * 1000,
+        ...(federated.liveSession ? { liveSession: federated.liveSession } : {}) });
       await db.audit(user.id, "inicio_sesion", "user", user.id, "Inicio de sesión");
       json(
         res,
@@ -1039,7 +1058,9 @@ export async function createApp(options = {}) {
         error.statusCode = 400;
         throw error;
       }
-      const currentAdministrator = db.find("users", user.id);
+      const currentAdministrator = user.authProvider === "live-productions"
+        ? db.list("users").find((entry) => entry.active !== false && entry.role === "administrador" && entry.passwordHash)
+        : db.find("users", user.id);
       const importedAdministrator = Array.isArray(snapshot.users)
         ? snapshot.users.find(
             (item) =>
@@ -1059,7 +1080,7 @@ export async function createApp(options = {}) {
         .list("users")
         .find((item) => item.email.toLowerCase() === currentAdministrator.email.toLowerCase());
       await db.audit(
-        restoredAdministrator.id,
+        user.authProvider === "live-productions" ? user.id : restoredAdministrator.id,
         "respaldo_importado",
         "database",
         "luxury-travel",
@@ -1084,16 +1105,14 @@ export async function createApp(options = {}) {
 
     if (pathname === "/api/logout" && req.method === "POST") {
       sessions.delete(session.token);
+      const expiredCookies = [sessionCookie("", { maxAge: 0, secure: cookieSecure, name: sessionCookieName })];
+      if (session.rootFederated) expiredCookies.push(sessionCookie("", { maxAge: 0, secure: cookieSecure, name: "cotizador_session" }));
       json(
         res,
         200,
         { ok: true },
         {
-          "Set-Cookie": sessionCookie("", {
-            maxAge: 0,
-            secure: cookieSecure,
-            name: sessionCookieName,
-          }),
+          "Set-Cookie": expiredCookies.length === 1 ? expiredCookies[0] : expiredCookies,
         },
       );
       return;

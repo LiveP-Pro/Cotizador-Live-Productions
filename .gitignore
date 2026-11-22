@@ -9,6 +9,8 @@ cotizaciones.sqlite-wal
 cotizaciones-generadas/
 respaldo-cotizaciones/
 cotizador-auth.json
+usuarios-live.json
+usuarios-live.json.tmp-*
 cotizador-servidor.log
 inventario-bodega*.json
 catalogo-requerimiento-equipo*.json

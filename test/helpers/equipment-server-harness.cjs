@@ -9,6 +9,9 @@ const ledger = require("../../warehouse-ledger.cjs");
 const serviceReader = require("../../equipment-service-import.cjs");
 const EquipmentIdentity = require("../../equipment-identity.js");
 const equipmentEvents = require("../../equipment-event-store.cjs");
+const LiveAccess = require("../../live-access.js");
+const { ALL_PERMISSION_IDS } = require("../../live-users.cjs");
+const warehouseAccess = require("../../live-warehouse-access.cjs");
 
 const source = fs.readFileSync(path.join(__dirname, "..", "..", "server.js"), "utf8");
 const names = [
@@ -59,14 +62,17 @@ function createHarness(t) {
     constructor(...args) { super(...(args.length ? args : [now])); }
     static now() { return now; }
   }
+  const principal = Object.freeze({ id: "synthetic-tester", username: "Synthetic tester", displayName: "Synthetic tester",
+    active: true, permissions: [...ALL_PERMISSION_IDS] });
   const context = vm.createContext({
     fs, fsp: fs.promises, path, crypto, Buffer, URL, Date: Clock,
     process: { pid: process.pid }, console: { warn() {}, log() {} },
-    rootDir: dir, dataDir: dir, ...paths, ...ledger, ...serviceReader, ...equipmentEvents, EquipmentIdentity,
+    rootDir: dir, dataDir: dir, ...paths, ...ledger, ...serviceReader, ...equipmentEvents, ...warehouseAccess, EquipmentIdentity, LiveAccess,
     equipmentServiceImportPreviews: new Map(), activeWarehouseImports: 0,
     maxWarehouseImportBytes: 15 * 1024 * 1024, maxServicePreviewBytes: 64 * 1024 * 1024,
     saveQueue: Promise.resolve(),
     authenticatedUser: (request) => request.user || null,
+    authenticatedPrincipal: (request) => request.principal || null,
     parseCookies: (request) => ({ cotizador_session: request.owner || "synthetic-owner" }),
     readJsonBody: async (request) => request.payload
   });
@@ -80,6 +86,7 @@ function createHarness(t) {
     const body = options.body;
     const request = { method, url, payload, headers: { host: "synthetic.local", ...(options.headers || {}) },
       user: options.auth === false ? null : "Synthetic tester", owner: options.owner || "synthetic-owner",
+      principal: options.auth === false ? null : principal,
       async *[Symbol.asyncIterator]() { if (body) yield body; } };
     await context.handleRequest(request, response);
     await finished(response);

@@ -113,7 +113,7 @@ function applyStockIngress(current, payload, { actor = {}, timestamp = new Date(
     receivedItems.push({ itemId: item.id, description: input.description, quantity: input.quantity,
       category: input.category, previousQuantity, newQuantity });
   }
-  const storedReceipt = { requestId: request.requestId, fingerprint, createdAt: timestamp, actor: clone(actor),
+  const storedReceipt = { requestId: request.requestId, fingerprint, createdAt: timestamp, actor: warehouseActor(actor),
     event: request.event, items: receivedItems };
   return { duplicate: false, state, changes, storedReceipt,
     receipt: { requestId: request.requestId, duplicate: false, items: clone(receivedItems) } };
@@ -166,6 +166,9 @@ function withoutEmptyDefaults(value) {
 
 function comparableEntity(entity, entityType, ignoreId = false) {
   const normalized = auditSnapshot(entity);
+  // Identity and registration dates are sealed by the server, never edits made
+  // through the inventory form or a reason to fabricate another transaction.
+  for (const field of ["createdBy", "updatedBy", "registeredAt", "actor"]) delete normalized[field];
   if (ignoreId) delete normalized.id;
   normalized.quantity = Number(entity.quantity ?? 0);
   if (entityType === "item") {
@@ -212,6 +215,167 @@ function uniqueSourceMovements(movements) {
     grouped.get(identity).push(movement);
   }
   return new Map([...grouped].filter(([, entries]) => entries.length === 1).map(([identity, entries]) => [identity, entries[0]]));
+}
+
+function warehouseActor(actor = {}) {
+  const id = text(actor.userId || actor.id);
+  const username = text(actor.username);
+  const displayName = text(actor.displayName || actor.name || username);
+  return { id, userId: id, username, displayName, name: displayName };
+}
+
+function warehousePermissionSet(context = {}) {
+  return new Set(Array.isArray(context.permissions) ? context.permissions
+    : Array.isArray(context.actor?.permissions) ? context.actor.permissions : []);
+}
+
+function warehouseMovementChanges(previous, next, context = {}) {
+  const before = entityMap(previous.movements, "Bitácora anterior");
+  const after = entityMap(next.movements, "Bitácora");
+  const beforeSources = context.source === "requerimiento-equipo" ? uniqueSourceMovements(before) : new Map();
+  const afterSources = context.source === "requerimiento-equipo" ? uniqueSourceMovements(after) : new Map();
+  const matchedIds = new Set();
+  const added = [], edited = [], removed = [], matches = [];
+  for (const [id, movement] of after) {
+    let original = before.get(id);
+    if (!original) {
+      const identity = sourceMovementIdentity(movement);
+      const source = beforeSources.get(identity);
+      if (source && afterSources.has(identity) && !after.has(text(source.id))) original = source;
+    }
+    if (!original) { added.push(movement); continue; }
+    matchedIds.add(text(original.id));
+    const changed = stableJson(comparableEntity(original, "movement", original.id !== id))
+      !== stableJson(comparableEntity(movement, "movement", original.id !== id));
+    const match = { before: original, after: movement, changed };
+    matches.push(match);
+    if (changed) edited.push(match);
+  }
+  for (const [id, movement] of before) if (!matchedIds.has(id)) removed.push(movement);
+  return { added, edited, removed, matches };
+}
+
+function stockMovementDelta(movement) {
+  if (!["ingreso", "baja"].includes(movement?.type)) return 0;
+  const quantity = movement.quantity;
+  if (!Number.isSafeInteger(quantity) || quantity <= 0 || !text(movement.itemId)) {
+    throw invalid("El ingreso o la baja debe indicar un equipo y una cantidad entera mayor a cero.");
+  }
+  return movement.type === "ingreso" ? quantity : -quantity;
+}
+
+function diffWarehousePermissions(previous, next, context = {}) {
+  const movements = warehouseMovementChanges(previous, next, context);
+  const beforeItems = entityMap(previous.items, "Inventario anterior");
+  const afterItems = entityMap(next.items, "Inventario");
+  const stockDeltas = new Map();
+  const addDelta = (movement, direction) => {
+    const delta = stockMovementDelta(movement) * direction;
+    if (delta) stockDeltas.set(text(movement.itemId), (stockDeltas.get(text(movement.itemId)) || 0) + delta);
+  };
+  movements.added.forEach((movement) => addDelta(movement, 1));
+  movements.edited.forEach((change) => { addDelta(change.before, -1); addDelta(change.after, 1); });
+  movements.removed.forEach((movement) => addDelta(movement, -1));
+  const inventoryChanges = [], movementStockChanges = [];
+  for (const id of new Set([...beforeItems.keys(), ...afterItems.keys()])) {
+    const before = beforeItems.get(id), after = afterItems.get(id);
+    if (before && after && stableJson(comparableEntity(before, "item")) === stableJson(comparableEntity(after, "item"))) continue;
+    const beforeShape = before ? comparableEntity(before, "item") : null;
+    const afterShape = after ? comparableEntity(after, "item") : null;
+    if (beforeShape) delete beforeShape.quantity;
+    if (afterShape) delete afterShape.quantity;
+    if (before && after && stableJson(beforeShape) === stableJson(afterShape)
+      && Number.isSafeInteger(after.quantity) && after.quantity >= 0
+      && after.quantity - before.quantity === stockDeltas.get(id)) movementStockChanges.push(id);
+    else inventoryChanges.push(id);
+  }
+  // Subtitles, imported sources and other persistent inventory metadata cannot
+  // be changed by slipping them into the monolithic movement-save endpoint.
+  const inventoryMetadata = [...new Set([...Object.keys(previous), ...Object.keys(next)])].filter((field) =>
+    !["items", "movements", "auditEntries", "equipmentStockReceipts", "updatedAt", "savedAt", "version", "rentalDraft", "workshopDraft"].includes(field)
+    && stableJson(previous[field] ?? null) !== stableJson(next[field] ?? null));
+  const draftChanged = ["rentalDraft", "workshopDraft"].some((field) => stableJson(previous[field] || []) !== stableJson(next[field] || []));
+  return { movements, inventoryChanges, movementStockChanges, inventoryMetadata, draftChanged,
+    requiredPermissions: [...(inventoryChanges.length || inventoryMetadata.length ? ["warehouse.inventory"] : []),
+      ...(movements.added.length || movements.edited.length || movements.removed.length || draftChanged ? ["warehouse.movements"] : [])] };
+}
+
+function validateWarehousePermissions(previous, next, context = {}) {
+  const diff = diffWarehousePermissions(previous, next, context);
+  const permissions = warehousePermissionSet(context);
+  const has = (permission) => permissions.has("*") || permissions.has(permission);
+  if ((diff.inventoryChanges.length || diff.inventoryMetadata.length) && !has("warehouse.inventory")) {
+    throw invalid("Su usuario no tiene permiso para modificar o reemplazar el inventario.", 403);
+  }
+  const movements = diff.movements;
+  const types = new Set(["ingreso", "salida", "ingreso_evento", "consumo", "compra", "taller", "devolucion_taller", "renta", "devolucion_renta", "ajuste", "perdido", "recuperado", "baja"]);
+  for (const movement of [...movements.added, ...movements.edited.map((change) => change.after)]) {
+    if (!types.has(movement.type) || !Number.isSafeInteger(movement.quantity) || movement.quantity <= 0) {
+      throw invalid("El movimiento debe indicar un tipo válido y una cantidad entera mayor a cero.");
+    }
+    if (["ingreso", "baja", "ajuste"].includes(movement.type) && !has("warehouse.inventory")
+      && (movement.type === "ajuste" || !text(movement.notes))) {
+      throw invalid("Los ingresos y bajas requieren un motivo; los ajustes de conteo requieren permiso de inventario.", 403);
+    }
+  }
+  const operationalMovement = movements.added.some((movement) => movement.type !== "ajuste" || !has("warehouse.inventory"))
+    || movements.edited.length || movements.removed.length || diff.draftChanged;
+  if (operationalMovement
+    && !has("warehouse.movements") && !has("warehouse.movements.manage")) {
+    throw invalid("Su usuario no tiene permiso para registrar movimientos.", 403);
+  }
+  if (!has("warehouse.movements.manage")) {
+    const id = warehouseActor(context.actor).userId;
+    for (const original of [...movements.edited.map((change) => change.before), ...movements.removed]) {
+      const owner = text(original.createdBy?.userId || original.createdBy?.id);
+      if (!id || !owner || owner !== id) throw invalid("Solo puede modificar sus propios movimientos. Un administrador debe corregir los registros de otro empleado o sin usuario registrado.", 403);
+    }
+  }
+  // Stock deltas attributed to movements must be complete and exact. Adding an
+  // ingress without increasing stock, or applying a second hidden delta, fails.
+  if (!has("warehouse.inventory")) {
+    const changed = new Set(diff.movementStockChanges);
+    const beforeItems = entityMap(previous.items, "Inventario anterior");
+    const afterItems = entityMap(next.items, "Inventario");
+    const touched = new Set([...movements.added, ...movements.removed,
+      ...movements.edited.flatMap((change) => [change.before, change.after])]
+      .filter((movement) => ["ingreso", "baja"].includes(movement.type)).map((movement) => text(movement.itemId)));
+    for (const id of touched) {
+      const before = beforeItems.get(id), after = afterItems.get(id);
+      if (!before || !after || after.quantity !== before.quantity && !changed.has(id)) {
+        throw invalid("El cambio de existencias debe coincidir exactamente con el ingreso o la baja registrada.", 403);
+      }
+      const delta = movements.added.filter((movement) => movement.itemId === id).reduce((sum, movement) => sum + stockMovementDelta(movement), 0)
+        - movements.removed.filter((movement) => movement.itemId === id).reduce((sum, movement) => sum + stockMovementDelta(movement), 0)
+        + movements.edited.reduce((sum, change) => sum + (change.after.itemId === id ? stockMovementDelta(change.after) : 0)
+          - (change.before.itemId === id ? stockMovementDelta(change.before) : 0), 0);
+      if (after.quantity - before.quantity !== delta) throw invalid("El cambio de existencias no coincide con la cantidad del movimiento.", 403);
+    }
+  }
+  return diff;
+}
+
+function sealWarehouseMovementActors(previous, next, context, timestamp) {
+  const movements = warehouseMovementChanges(previous, next, context);
+  const actor = warehouseActor(context.actor);
+  const fields = ["createdBy", "updatedBy", "registeredAt", "createdAt", "updatedAt", "actor"];
+  for (const { before, after, changed } of movements.matches) {
+    fields.forEach((field) => {
+      if (Object.hasOwn(before, field)) after[field] = clone(before[field]);
+      else delete after[field];
+    });
+    if (changed) { after.updatedBy = clone(actor); after.updatedAt = timestamp; }
+  }
+  for (const movement of movements.added) {
+    // This source is set only by the server's private initial-state restore
+    // route. Its older records are historical evidence, not new employee
+    // movements. The restore action itself is attributed in auditEntries.
+    if (context.source === "restauracion-inventario") continue;
+    fields.forEach((field) => { delete movement[field]; });
+    movement.createdBy = clone(actor);
+    movement.createdAt = timestamp;
+    movement.registeredAt = timestamp;
+  }
 }
 
 function auditWarehouseChanges(previous, next, context = {}) {
@@ -272,13 +436,15 @@ function auditWarehouseChanges(previous, next, context = {}) {
 function prepareWarehouseSave(current, candidate, context = {}, now = Date.now()) {
   const state = clone(candidate);
   const savedAt = nextWarehouseTimestamp(current.savedAt, now);
+  if (context.enforceMovementOwnership === true || context.enforcePermissions === true) validateWarehousePermissions(current.state, state, context);
+  sealWarehouseMovementActors(current.state, state, context, savedAt);
   const changes = auditWarehouseChanges(current.state, state, context);
   // These two records are server-owned. Client omissions, replacements, or
   // additions never alter existing audit evidence or idempotency receipts.
   state.auditEntries = clone(Array.isArray(current.state.auditEntries) ? current.state.auditEntries : []);
   state.equipmentStockReceipts = clone(Array.isArray(current.state.equipmentStockReceipts) ? current.state.equipmentStockReceipts : []);
   for (const change of changes) state.auditEntries.push({ ...change, before: auditSnapshot(change.before), after: auditSnapshot(change.after),
-    id: `audit-${crypto.randomUUID()}`, timestamp: savedAt, actor: clone(context.actor || {}),
+    id: `audit-${crypto.randomUUID()}`, timestamp: savedAt, actor: warehouseActor(context.actor),
     source: text(context.source || "contabilidad-equipo"), requestId: text(context.requestId),
     event: change.event || clone(context.event || {}) });
   if (context.stockReceipt) {
@@ -292,4 +458,5 @@ function prepareWarehouseSave(current, candidate, context = {}, now = Date.now()
 }
 
 module.exports = { normalizeStockIngress, stockIngressFingerprint, applyStockIngress,
-  nextWarehouseTimestamp, prepareWarehouseSave, auditWarehouseChanges };
+  nextWarehouseTimestamp, prepareWarehouseSave, auditWarehouseChanges, warehouseActor,
+  diffWarehousePermissions, validateWarehousePermissions };

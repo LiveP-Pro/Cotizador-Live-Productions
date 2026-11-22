@@ -375,6 +375,7 @@ export class JsonDatabase {
     this.data = null;
     this.writeQueue = Promise.resolve();
     this.recoverySource = "";
+    this.externalActor = typeof options.externalActor === "function" ? options.externalActor : null;
   }
 
   async init() {
@@ -755,7 +756,7 @@ export class JsonDatabase {
   }
 
   async audit(actorId, action, entityType, entityId, detail = "") {
-    const user = this.find("users", actorId);
+    const user = this.find("users", actorId) || this.externalActor?.(actorId);
     this.data.history.unshift({
       id: randomUUID(),
       action,

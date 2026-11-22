@@ -117,7 +117,11 @@ test("an authorized JSON restore may restore its own ledgers while ordinary edit
       expectedSavedAt: before.savedAt, ...(mode ? { importMode: mode, confirmedImport: true } : {}) });
     assert.equal(response.statusCode, 200);
     const saved = response.json();
-    assert.deepEqual(saved.state.movements, candidate.movements);
+    assert.deepEqual(saved.state.movements.map(({ createdBy, createdAt, registeredAt, ...businessData }) => businessData), candidate.movements);
+    assert.equal(saved.state.movements[0].createdBy.userId, "synthetic-tester");
+    assert.equal(saved.state.movements[0].createdBy.username, "Synthetic tester");
+    assert.equal(saved.state.movements[0].registeredAt, saved.savedAt);
+    assert.equal(saved.state.movements[0].createdAt, saved.savedAt);
     assert.deepEqual(saved.state.equipmentStockReceipts, before.state.equipmentStockReceipts);
     assert.equal(saved.state.auditEntries[0].id, "synthetic-original-audit");
     if (mode) assert.equal(saved.state.importedSource.authorization.mode, "restore");

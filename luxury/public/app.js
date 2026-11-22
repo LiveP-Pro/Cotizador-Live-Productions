@@ -222,7 +222,8 @@ const serviceRateColumns = [
   ["internal", "Traslados precio por día completo"],
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
-const APP_VERSION = "95";
+const REMEMBERED_USERNAME_KEY = "luxury-travel-remembered-username-v1";
+const APP_VERSION = "96";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -712,10 +713,46 @@ function showApp() {
   navigate(canOpenModule(requestedModule) ? requestedModule : defaultModuleId());
 }
 
+function rememberedLoginUsername() {
+  try {
+    const value = localStorage.getItem(REMEMBERED_USERNAME_KEY);
+    return typeof value === "string" && value.trim() && value.length <= 254 && !/[\u0000-\u001f\u007f]/.test(value) ? value.trim() : "";
+  } catch { return ""; }
+}
+
+function forgetRememberedLoginUsername() {
+  try { localStorage.removeItem(REMEMBERED_USERNAME_KEY); } catch {}
+}
+
+function restoreRememberedLoginUsername() {
+  const form = $("#login-form");
+  const username = $("input[name='email']", form);
+  const checkbox = $("#login-remember-user");
+  const password = $("#login-password");
+  const remembered = rememberedLoginUsername();
+  if (username) username.value = remembered;
+  if (checkbox) checkbox.checked = !!remembered;
+  if (password) { password.value = ""; password.type = "password"; }
+  const toggle = $("[data-toggle-password]");
+  if (toggle) toggle.textContent = "Ver";
+}
+
+function storeRememberedLoginUsername(form) {
+  const checked = $("#login-remember-user")?.checked === true;
+  const username = String($("input[name='email']", form)?.value || "").trim();
+  if (!checked || !username || username.length > 254 || /[\u0000-\u001f\u007f]/.test(username)) {
+    forgetRememberedLoginUsername();
+    return;
+  }
+  try { localStorage.setItem(REMEMBERED_USERNAME_KEY, username); } catch {}
+}
+
 function showLuxuryLogin() {
   $(".login-brand").hidden = false;
   $(".login-panel").hidden = false;
-  $("#login-form input[name='email']")?.focus();
+  restoreRememberedLoginUsername();
+  const focus = rememberedLoginUsername() ? $("#login-password") : $("#login-form input[name='email']");
+  focus?.focus();
 }
 
 function renderNav() {
@@ -4619,6 +4656,8 @@ async function login(event) {
       method: "POST",
       body: JSON.stringify(Object.fromEntries(new FormData(form))),
     });
+    storeRememberedLoginUsername(form);
+    $("#login-password").value = "";
     state.user = payload.user;
     state.permissions = payload.permissions;
     await loadData();
@@ -4802,6 +4841,10 @@ async function init() {
     month: "long",
   }).format(new Date());
   $("#login-form").addEventListener("submit", login);
+  restoreRememberedLoginUsername();
+  $("#login-remember-user")?.addEventListener("change", (event) => {
+    if (!event.currentTarget.checked) forgetRememberedLoginUsername();
+  });
   $("[data-toggle-password]").addEventListener("click", (event) => {
     const input = $("#login-password");
     input.type = input.type === "password" ? "text" : "password";

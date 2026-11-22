@@ -22,19 +22,14 @@ export function verifyPassword(password, storedValue) {
 }
 
 export function parseCookies(header = "") {
-  return Object.fromEntries(
-    header
-      .split(";")
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => {
-        const index = part.indexOf("=");
-        return [
-          decodeURIComponent(part.slice(0, index)),
-          decodeURIComponent(part.slice(index + 1)),
-        ];
-      }),
-  );
+  const cookies = {};
+  for (const part of String(header || "").split(";")) {
+    const index = part.indexOf("=");
+    if (index < 1) continue;
+    try { cookies[decodeURIComponent(part.slice(0, index).trim())] = decodeURIComponent(part.slice(index + 1)); }
+    catch { /* An unrelated malformed cookie cannot invalidate a valid session. */ }
+  }
+  return cookies;
 }
 
 export function sessionCookie(token, options = {}) {

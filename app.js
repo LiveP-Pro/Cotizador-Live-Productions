@@ -2999,9 +2999,13 @@ async function apiRequest(path, options = {}) {
 }
 
 function setActivePage(page) {
-  const validPage = elements.sitePages.some((section) => section.dataset.page === page)
+  const exists = elements.sitePages.some((section) => section.dataset.page === page);
+  const allowed = !isLocalServerAvailable() || window.LiveAccess?.canPage(window.LIVE_SESSION, page);
+  const fallback = ["requerimiento-equipo", "contabilidad-equipo", "cotizador", "requerimientos", "usuarios", "inicio"]
+    .find((candidate) => !isLocalServerAvailable() || window.LiveAccess?.canPage(window.LIVE_SESSION, candidate)) || "inicio";
+  const validPage = exists && allowed
     ? page
-    : "cotizador";
+    : fallback;
   elements.sitePages.forEach((section) => {
     section.classList.toggle("is-active", section.dataset.page === validPage);
   });
@@ -3012,6 +3016,36 @@ function setActivePage(page) {
     window.history.replaceState(null, "", `#${validPage}`);
   }
   setMenuOpen(false);
+  if (validPage === "usuarios") window.liveUsersPanel?.load();
+}
+
+function liveCan(permission) {
+  return !isLocalServerAvailable() || Boolean(window.LiveAccess?.can(window.LIVE_SESSION, permission));
+}
+
+function updateLiveSession(session) {
+  window.LIVE_SESSION = session?.authenticated ? JSON.parse(JSON.stringify(session)) : { authenticated: false, permissions: [] };
+  window.LiveAccess?.applyUi(document, window.LIVE_SESSION);
+  const badge = document.querySelector("#liveCurrentUser");
+  if (badge) badge.textContent = session?.authenticated ? (session.displayName || session.user) : "";
+  const container = document.querySelector("#liveUsersContainer");
+  if (container && window.LiveUsers && !window.liveUsersPanel) {
+    window.liveUsersPanel = window.LiveUsers.init({ container, session: window.LIVE_SESSION,
+      onUnauthorized: () => showLogin("Inicie sesión para continuar."),
+      onSaved: async () => {
+        const response = await fetch("/api/sesion");
+        const current = await readApiJson(response);
+        updateLiveSession(current);
+        if (!current.authenticated) showLogin("Sus permisos o contraseña cambiaron. Inicie sesión de nuevo.");
+      }
+    });
+  }
+  window.liveUsersPanel?.setSession(window.LIVE_SESSION);
+  document.dispatchEvent(new CustomEvent("live:session-updated", { detail: window.LIVE_SESSION }));
+  if (!window.liveAccessObserver && typeof MutationObserver === "function") {
+    window.liveAccessObserver = new MutationObserver(() => window.LiveAccess?.applyUi(document, window.LIVE_SESSION));
+    window.liveAccessObserver.observe(elements.siteApp, { childList: true, subtree: true });
+  }
 }
 
 function setMenuOpen(isOpen) {
@@ -3039,11 +3073,16 @@ function toggleLuxuryDivision() {
 }
 
 function showLogin(message = "") {
+  if (window.LIVE_SESSION?.authenticated) updateLiveSession(null);
+  if (requirementsRefreshTimer) { window.clearInterval(requirementsRefreshTimer); requirementsRefreshTimer = null; }
   elements.siteApp.classList.add("is-hidden");
   elements.loginView.classList.remove("is-hidden");
   elements.loginStatus.textContent = message;
   elements.loginPassword.value = "";
-  window.setTimeout(() => elements.loginUser.focus(), 50);
+  window.setTimeout(() => {
+    if (document.querySelector("#loginRememberUser")?.checked && elements.loginUser.value) elements.loginPassword.focus();
+    else elements.loginUser.focus();
+  }, 50);
 }
 
 function showApp() {
@@ -3051,8 +3090,10 @@ function showApp() {
   elements.siteApp.classList.remove("is-hidden");
   const requestedPage = window.location.hash.replace("#", "");
   setActivePage(requestedPage || "cotizador");
-  loadSharedRequirementsBoard();
-  startRequirementsRefreshTimer();
+  if (liveCan("requirements.read") || liveCan("requirements.write")) {
+    loadSharedRequirementsBoard();
+    startRequirementsRefreshTimer();
+  }
 }
 
 async function submitLogin(event) {
@@ -3068,7 +3109,13 @@ async function submitLogin(event) {
         password: elements.loginPassword.value
       })
     });
-    await readApiJson(response);
+    const session = await readApiJson(response);
+    try {
+      if (document.querySelector("#loginRememberUser")?.checked) localStorage.setItem("live.rememberedUsername", session.user);
+      else localStorage.removeItem("live.rememberedUsername");
+    } catch {}
+    updateLiveSession(session);
+    elements.loginPassword.value = "";
     elements.loginStatus.textContent = "";
     showApp();
     startQuoteApp();
@@ -3079,7 +3126,9 @@ async function submitLogin(event) {
 
 async function logout() {
   await fetch("/api/logout", { method: "POST" }).catch(() => {});
+  updateLiveSession(null);
   showLogin("Sesión cerrada.");
+  window.location.reload();
 }
 
 function selectedExtrasForQuote() {
@@ -5633,6 +5682,7 @@ function bindSiteEvents() {
 }
 
 function startQuoteApp() {
+  if (!liveCan("quotes.read") && !liveCan("quotes.write")) return;
   if (quoteAppStarted) return;
   quoteAppStarted = true;
 
@@ -5660,6 +5710,16 @@ function startQuoteApp() {
 }
 
 async function initializeAccess() {
+  try {
+    const remembered = localStorage.getItem("live.rememberedUsername") || "";
+    if (remembered) {
+      elements.loginUser.value = remembered;
+      document.querySelector("#loginRememberUser").checked = true;
+    }
+  } catch {}
+  document.querySelector("#loginRememberUser")?.addEventListener("change", (event) => {
+    if (!event.target.checked) { try { localStorage.removeItem("live.rememberedUsername"); } catch {} }
+  });
   bindSiteEvents();
 
   if (!isLocalServerAvailable()) {
@@ -5671,6 +5731,7 @@ async function initializeAccess() {
   try {
     const response = await fetch("/api/sesion");
     const session = await readApiJson(response);
+    updateLiveSession(session);
     if (session.authenticated) {
       showApp();
       startQuoteApp();

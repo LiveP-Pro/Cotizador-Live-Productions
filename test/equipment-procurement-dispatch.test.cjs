@@ -4,13 +4,18 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
+const { ALL_PERMISSION_IDS } = require("../live-users.cjs");
+const LiveAccess = require("../live-access.js");
 
 function createDispatchHarness(items, movements = []) {
   let inventory = {
     state: { items: structuredClone(items), movements: structuredClone(movements) },
     savedAt: "2026-10-07T00:00:00.000Z"
   };
-  const context = { crypto, Date, Map, Set, console, EquipmentIdentity: require("../equipment-identity.js"),
+  const principal = { id: "synthetic-dispatch-user", username: "synthetic.dispatch", displayName: "Usuario de despacho sintético",
+    active: true, permissions: [...ALL_PERMISSION_IDS] };
+  const context = { crypto, Date, Map, Set, console, LiveAccess, EquipmentIdentity: require("../equipment-identity.js"),
+    authenticatedPrincipal(request) { return request.principal; },
     readWarehouseInventory() { return structuredClone(inventory); },
     async writeWarehouseInventory(saved) { inventory = structuredClone(saved); }
   };
@@ -33,7 +38,7 @@ function createDispatchHarness(items, movements = []) {
           eventDate: "2026-10-08", equipmentOutAt: "2026-10-08T10:00",
           equipmentInAt: "2026-10-08T22:00", responsible: "Responsable sintético", items: lines
         }
-      }, { fileName, jsonFileName: `${fileName}.json`, pdfUrl: `/test/${fileName}`, jsonUrl: `/test/${fileName}.json` });
+      }, { fileName, jsonFileName: `${fileName}.json`, pdfUrl: `/test/${fileName}`, jsonUrl: `/test/${fileName}.json` }, { principal });
       return JSON.parse(JSON.stringify(result));
     },
     state() { return structuredClone(inventory.state); },

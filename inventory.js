@@ -62,6 +62,60 @@
     return formatWarehouseDateTime(value);
   }
 
+  function warehouseActorLabel(actor) {
+    const name = normalizeText(actor?.displayName || actor?.name || actor?.username);
+    const username = normalizeText(actor?.username);
+    return name && username && name !== username ? `${name} (${username})` : name || "Usuario no registrado";
+  }
+
+  function warehouseRegisteredAt(value) {
+    const date = new Date(value || "");
+    return Number.isFinite(date.getTime()) ? date.toLocaleString("es-GT", { timeZone: "America/Guatemala" }) : "";
+  }
+
+  function warehouseSession() {
+    return window.LIVE_SESSION || null;
+  }
+
+  function warehouseHasPermission(permission) {
+    const session = warehouseSession();
+    const permissions = session?.permissions || session?.user?.permissions;
+    // The local desktop build and older harnesses do not have a server session.
+    // On the hosted page the server remains authoritative for every write.
+    if (!Array.isArray(permissions)) return true;
+    return permissions.includes("*") || permissions.includes(permission);
+  }
+
+  function warehouseCanManageMovement(movement) {
+    if (warehouseHasPermission("warehouse.movements.manage")) return true;
+    if (!warehouseHasPermission("warehouse.movements")) return false;
+    const session = warehouseSession();
+    const id = normalizeText(session?.userId || session?.id || session?.user?.id);
+    return Boolean(id && id === normalizeText(movement?.createdBy?.userId || movement?.createdBy?.id));
+  }
+
+  function movementActorMarkup(movement) {
+    const registeredAt = warehouseRegisteredAt(movement?.registeredAt);
+    const updatedAt = warehouseRegisteredAt(movement?.updatedAt);
+    return `<small>Registrado por: ${escapeHtml(warehouseActorLabel(movement?.createdBy))}${registeredAt ? ` · ${escapeHtml(registeredAt)}` : ""}</small>`
+      + (movement?.updatedBy ? `<small>Última modificación: ${escapeHtml(warehouseActorLabel(movement.updatedBy))}${updatedAt ? ` · ${escapeHtml(updatedAt)}` : ""}</small>` : "");
+  }
+
+  function applyWarehouseSessionPermissions() {
+    if (!elements.root?.querySelectorAll) return;
+    const inventory = warehouseHasPermission("warehouse.inventory");
+    const movements = warehouseHasPermission("warehouse.movements") || warehouseHasPermission("warehouse.movements.manage");
+    const logs = warehouseHasPermission("warehouse.logs");
+    elements.root.querySelectorAll('[data-warehouse-window="logs"]').forEach((button) => { button.hidden = !logs; });
+    elements.root.querySelectorAll('[aria-labelledby="warehouseHistoryTitle"]').forEach((panel) => { panel.hidden = !logs; });
+    elements.root.querySelectorAll('#warehouseNewName, #warehouseNewSubtitle, #warehouseNewCategory, #warehouseNewQuantity, #warehouseNewNotes, #warehouseAddItemButton, #warehouseAddSubtitleButton, #warehouseImportInput, #warehouseResetSeedButton, [data-warehouse-item] [data-field], [data-action="confirm-classification"], [data-action="delete"]')
+      .forEach((control) => { control.disabled = !inventory; });
+    elements.root.querySelectorAll('#warehouseMovementForm input, #warehouseMovementForm select, #warehouseMovementForm textarea, #warehouseMovementForm button, [data-action="events"], [data-action="workshop"], [data-action="rental"], [data-return-event], [data-workshop-return], [data-rental-return]')
+      .forEach((control) => { control.disabled = !movements; });
+    if (elements.exportButton) elements.exportButton.disabled = !logs;
+    if (activeWindow === "logs" && !logs) switchWindow("inventory");
+  }
+
   function formatWarehouseDateTime(value) {
     const clean = normalizeText(value).replace(" ", "T");
     if (!clean) return "Sin fecha";
@@ -350,7 +404,11 @@
       procurementChoice: normalizeProcurementChoice(movement?.procurementChoice),
       procurementAction: procurementAction(movement),
       dateTime: normalizeText(movement?.dateTime) || `${movement?.date || todayInputValue()}T00:00`,
-      createdAt: movement?.createdAt || new Date().toISOString()
+      createdAt: movement?.createdAt || new Date().toISOString(),
+      ...(movement?.createdBy ? { createdBy: JSON.parse(JSON.stringify(movement.createdBy)) } : {}),
+      ...(movement?.updatedBy ? { updatedBy: JSON.parse(JSON.stringify(movement.updatedBy)) } : {}),
+      ...(movement?.registeredAt ? { registeredAt: normalizeText(movement.registeredAt) } : {}),
+      ...(movement?.updatedAt ? { updatedAt: normalizeText(movement.updatedAt) } : {})
     };
   }
 
@@ -536,6 +594,16 @@
       if (payload.state) {
         state.auditEntries = Array.isArray(payload.state.auditEntries) ? payload.state.auditEntries : state.auditEntries || [];
         state.equipmentStockReceipts = Array.isArray(payload.state.equipmentStockReceipts) ? payload.state.equipmentStockReceipts : state.equipmentStockReceipts || [];
+        // Apply acknowledged identity metadata without replacing a newer local
+        // movement edit that may have happened while this save was in flight.
+        for (const confirmed of payload.state.movements || []) {
+          const local = state.movements.find((movement) => movement.id === confirmed.id);
+          if (!local) continue;
+          for (const field of ["createdBy", "updatedBy", "registeredAt", "createdAt", "updatedAt"]) {
+            if (confirmed[field] !== undefined) local[field] = JSON.parse(JSON.stringify(confirmed[field]));
+            else delete local[field];
+          }
+        }
         for (const [itemId, pending] of pendingPurchaseSnapshot) {
           const confirmed = payload.state.items?.find((item) => item.id === itemId);
           const local = state.items.find((item) => item.id === itemId);
@@ -1196,6 +1264,7 @@
                 <strong>${escapeHtml(movementDisplayLabel(entry))}</strong>
                 <p>${escapeHtml(entry.quantity)} x ${escapeHtml(movementItemName(entry))}</p>
                 ${entry.responsible ? `<small>Responsable: ${escapeHtml(entry.responsible)}</small>` : ""}
+                ${movementActorMarkup(entry)}
                 ${movementUnmappedNote(entry) ? `<small class="warehouse-unmapped-note">${escapeHtml(movementUnmappedNote(entry))}</small>` : ""}
                 ${entry.attachment ? `<a href="${escapeHtml(attachmentHref(entry.attachment))}" download="${escapeHtml(entry.attachment.name)}">Ver archivo: ${escapeHtml(entry.attachment.name)}</a>` : ""}
               </div>
@@ -1270,7 +1339,7 @@
             <td>${escapeHtml(displayDateTime(movement))}</td>
             <td>${escapeHtml(movement.repair || "Sin detalle")}</td>
             <td>${escapeHtml(movement.sparePart || "Sin detalle")}</td>
-            <td>${escapeHtml(movement.responsible || "Sin responsable")}</td>
+            <td>${escapeHtml(movement.responsible || "Sin responsable")}${movementActorMarkup(movement)}</td>
             <td>${escapeHtml(returns)}</td>
             <td>
               ${isActive ? `<button class="warehouse-row-button" type="button" data-workshop-return="${escapeHtml(movement.itemId)}" data-related-movement="${escapeHtml(movement.id)}">Regresar</button>` : '<small>Completo</small>'}
@@ -1418,7 +1487,7 @@
             <td>${escapeHtml(movement.rentalDays || 1)}</td>
             <td>${escapeHtml(displayDateTime(movement))}</td>
             <td>${escapeHtml(returns)}</td>
-            <td>${escapeHtml(movement.responsible || "Sin responsable")}</td>
+            <td>${escapeHtml(movement.responsible || "Sin responsable")}${movementActorMarkup(movement)}</td>
             <td>
               ${isActive ? `<button class="warehouse-row-button" type="button" data-rental-return="${escapeHtml(movement.itemId)}" data-related-movement="${escapeHtml(movement.id)}">Devolver</button>` : '<small>Completo</small>'}
             </td>
@@ -1463,6 +1532,8 @@
       movementDisplayLabel(movement),
       movementItemName(movement),
       movement.responsible,
+      warehouseActorLabel(movement.createdBy),
+      movement.updatedBy ? warehouseActorLabel(movement.updatedBy) : "",
       movement.reference,
       movement.repair,
       movement.sparePart,
@@ -1477,6 +1548,10 @@
   }
 
   function renderLog() {
+    if (!warehouseHasPermission("warehouse.logs")) {
+      elements.logList.innerHTML = '<p class="warehouse-empty">Su usuario no tiene acceso a las bitácoras.</p>';
+      return;
+    }
     const movements = state.movements
       .filter(movementMatchesLogFilter)
       .slice()
@@ -1501,13 +1576,14 @@
               <small>${escapeHtml(displayDateTime(movement))} · ${escapeHtml(adjustment)}</small>
             </div>
             <p>${escapeHtml([movement.reference, movement.responsible].filter(Boolean).join(" · "))}</p>
+            ${movementActorMarkup(movement)}
             ${movement.description ? `<p><strong>Descripción:</strong> ${escapeHtml(movement.description)}</p>` : ""}
             ${movement.repair ? `<p><strong>Qué tiene malo:</strong> ${escapeHtml(movement.repair)}</p>` : ""}
             ${movement.sparePart ? `<p><strong>Repuesto:</strong> ${escapeHtml(movement.sparePart)}</p>` : ""}
             ${movement.notes ? `<p>${escapeHtml(movement.notes)}</p>` : ""}
             ${movement.attachment ? `<a href="${escapeHtml(attachmentHref(movement.attachment))}" download="${escapeHtml(movement.attachment.name)}">Ver archivo adjunto</a>` : ""}
             ${movement.sourcePdfUrl ? `<a href="${escapeHtml(movement.sourcePdfUrl)}" target="_blank" rel="noopener">Ver cuadro de Requerimiento de equipo</a>` : ""}
-            <button class="warehouse-row-button" type="button" data-delete-movement="${escapeHtml(movement.id)}">Eliminar</button>
+            ${warehouseCanManageMovement(movement) ? `<button class="warehouse-row-button" type="button" data-delete-movement="${escapeHtml(movement.id)}">Eliminar</button>` : ""}
           </article>
         `;
       })
@@ -1765,6 +1841,7 @@
 
   function renderWarehouseHistory() {
     if (!elements.historyList || !state) return;
+    if (!warehouseHasPermission("warehouse.logs")) { elements.historyList.innerHTML = ""; return; }
     const entries = Array.isArray(state.auditEntries) ? state.auditEntries : [];
     const selectedType = elements.historyType.value || "all";
     const actions = [...new Set(entries.map((entry) => normalizeText(entry.action)).filter(Boolean))];
@@ -1772,7 +1849,7 @@
     elements.historyType.value = actions.includes(selectedType) ? selectedType : "all";
     const search = warehouseCanonicalKey(elements.historySearch.value);
     const filtered = entries.filter((entry) => (elements.historyType.value === "all" || entry.action === elements.historyType.value)
-      && (!search || warehouseCanonicalKey([entry.description, entry.category, entry.action, auditActionLabel(entry.action), entry.actor?.name,
+      && (!search || warehouseCanonicalKey([entry.description, entry.category, entry.action, auditActionLabel(entry.action), entry.actor?.displayName, entry.actor?.name,
         entry.actor?.username, entry.after?.responsible, entry.after?.notes, entry.after?.reference, entry.event?.name, entry.source].join(" ")).includes(search)))
       .slice().sort((first, second) => normalizeText(second.timestamp).localeCompare(normalizeText(first.timestamp)));
     const pageCount = Math.max(1, Math.ceil(filtered.length / HISTORY_PAGE_SIZE));
@@ -1793,7 +1870,7 @@
       return `<article class="warehouse-log-entry warehouse-history-entry">
         <div><span class="warehouse-log-type">${escapeHtml(auditActionLabel(entry.action))}</span>
           <strong>${escapeHtml(entry.description || entry.after?.itemName || entry.after?.name || "Cambio de inventario")}</strong>
-          <small>${escapeHtml(date)} · Usuario: ${escapeHtml(entry.actor?.name || entry.actor?.username || "Sin usuario registrado")}</small>
+          <small>${escapeHtml(date)} · Usuario: ${escapeHtml(warehouseActorLabel(entry.actor))}</small>
           ${hasInventoryQuantity || hasMovementQuantity ? `<p>${hasInventoryQuantity ? `Inventario: ${escapeHtml(auditQuantityLabel(entry.previousQuantity))} → ${escapeHtml(auditQuantityLabel(entry.newQuantity))}` : ""}${hasMovementQuantity ? `${hasInventoryQuantity ? " · " : ""}Cantidad del movimiento: ${escapeHtml(auditQuantityLabel(entry.quantity))}` : ""}</p>` : ""}
           ${entry.after?.notes ? `<p>Motivo: ${escapeHtml(entry.after.notes)}</p>` : ""}
           ${entry.after?.responsible ? `<small>Responsable: ${escapeHtml(entry.after.responsible)}</small>` : ""}
@@ -1815,6 +1892,7 @@
     renderLog();
     renderManualMovementItems();
     renderWarehouseHistory();
+    applyWarehouseSessionPermissions();
     publishWarehouseAvailability();
   }
 
@@ -2151,6 +2229,7 @@
   }
 
   function switchWindow(name) {
+    if (name === "logs" && !warehouseHasPermission("warehouse.logs")) name = "inventory";
     activeWindow = name || "inventory";
     elements.windowButtons.forEach((button) => {
       button.classList.toggle("is-active", button.dataset.warehouseWindow === activeWindow);
@@ -3082,6 +3161,10 @@
   function deleteMovement(id) {
     const movement = state.movements.find((entry) => entry.id === id);
     if (!movement) return;
+    if (!warehouseCanManageMovement(movement)) {
+      setStatus("No tiene permiso para eliminar este movimiento. Solicite la corrección a un administrador.", "warning");
+      return;
+    }
     const ok = window.confirm("¿Eliminar esta bitácora? El inventario se recalculará automáticamente.");
     if (!ok) return;
 
@@ -3112,6 +3195,7 @@
   }
 
   function exportBackup() {
+    if (!warehouseHasPermission("warehouse.logs")) { setStatus("Su usuario no tiene permiso para descargar las bitácoras.", "warning"); return; }
     const payload = { exportedAt: new Date().toISOString(), state };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
     const link = document.createElement("a");
@@ -3728,6 +3812,10 @@
     if (elements.root && applyRemoteWarehouse(event.detail)) {
       setStatus("Cuadro recibido desde Requerimiento de equipo.", "success");
     }
+  });
+
+  document.addEventListener("live:session-updated", () => {
+    if (warehouseReady && state) renderAll();
   });
 
   if (document.readyState === "loading") {

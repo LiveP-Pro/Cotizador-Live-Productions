@@ -144,6 +144,7 @@ function startLuxury() {
       PORT: String(luxuryPort),
       NODE_ENV: "production",
       DATA_FILE: luxuryDataFile,
+      LIVE_AUTH_DATA_DIR: dataDir,
       DATA_MIRROR_FILE: luxuryMirrorFile,
       DATA_BACKUP_DIR: luxuryBackupDir,
       COOKIE_SECURE: String(process.env.COOKIE_SECURE || "true"),
@@ -518,9 +519,12 @@ function rewriteLuxuryResponseHeaders(headers) {
     const cookies = Array.isArray(rewritten["set-cookie"])
       ? rewritten["set-cookie"]
       : [rewritten["set-cookie"]];
-    rewritten["set-cookie"] = cookies.map((cookie) =>
-      String(cookie).replace(/Path=\/(;|$)/i, "Path=/luxury/$1"),
-    );
+    rewritten["set-cookie"] = cookies.map((cookie) => {
+      const value = String(cookie);
+      // Federated logout also expires the Live session at its original path.
+      if (/^cotizador_session=;/i.test(value) && /(?:^|;)\s*Max-Age=0(?:;|$)/i.test(value)) return value;
+      return value.replace(/Path=\/(;|$)/i, "Path=/luxury/$1");
+    });
   }
   if (typeof rewritten.location === "string" && rewritten.location.startsWith("/")) {
     rewritten.location = `${luxuryPrefix}${rewritten.location}`;

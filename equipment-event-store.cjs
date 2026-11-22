@@ -39,8 +39,11 @@ function localTime(value) {
       || Number(match[2]) < 1 || Number(match[3]) < 1 || Number(match[4]) > 23 || Number(match[5]) > 59) return NaN;
   return parsed;
 }
+function eventReservationStartAt(event) {
+  return event.setupApplies === false ? event.equipmentOutAt || event.startAt || "" : event.setupAt || event.equipmentOutAt || "";
+}
 function eventTiming(event) {
-  const setup = localTime(event.setupAt || event.equipmentOutAt);
+  const setup = localTime(eventReservationStartAt(event));
   const start = localTime(event.startAt);
   const end = localTime(event.endAt);
   const returned = localTime(event.equipmentInAt);
@@ -70,6 +73,8 @@ function normalizeEvent(id, raw) {
   if (raw.id && raw.id !== id) throw invalid("El identificador del evento no coincide.");
   if (!Array.isArray(raw.sections)) throw invalid("El evento debe incluir sus secciones de equipo.");
   const event = clone({ ...raw, id, status: raw.status === "cancelled" ? "cancelled" : "confirmed" });
+  if (event.setupApplies !== undefined && typeof event.setupApplies !== "boolean") throw invalid("Indique si el montaje aplica con un valor válido.");
+  if (event.setupApplies === false && text(event.setupAt)) throw invalid("El evento indica que no aplica montaje y contiene una fecha de montaje. Revise ese dato antes de confirmar.");
   if (event.warehouseDispatchId && !validId(event.warehouseDispatchId)) throw invalid("El identificador de salida no es válido.");
   for (const name of ["setupAt", "startAt", "endAt", "equipmentInAt"]) {
     if (text(event[name]) && !Number.isFinite(localTime(event[name]))) throw invalid(`La fecha ${name} no es válida.`);
@@ -152,13 +157,13 @@ function logisticsRouteTiming(from, to, options) {
   const travelMinutes = manual ? manual.travelMinutes : samePlace ? 0 : options.travelMinutes ?? 60;
   const handlingMinutes = manual ? manual.handlingMinutes : options.handlingMinutes ?? 120;
   const departure = localTime(from.endAt);
-  const setup = localTime(to.setupAt || to.equipmentOutAt);
+  const setup = localTime(eventReservationStartAt(to));
   const availableMinutes = Number.isFinite(departure) && Number.isFinite(setup) ? (setup - departure) / 60000 : null;
   const requiredMinutes = travelMinutes + handlingMinutes;
   return { fromPlace, toPlace, samePlace, travelMinutes, handlingMinutes, requiredMinutes,
     availableMinutes, slackMinutes: availableMinutes === null ? null : availableMinutes - requiredMinutes,
     departureAt: from.endAt || "", arrivalAt: Number.isFinite(departure) ? new Date(departure + requiredMinutes * 60000).toISOString() : "",
-    setupAt: to.setupAt || to.equipmentOutAt || "", travelSource: manual ? "user" : samePlace ? "same-place" : "estimate",
+    setupAt: eventReservationStartAt(to), travelSource: manual ? "user" : samePlace ? "same-place" : "estimate",
     handlingSource: manual ? "user" : "estimate", requiresTimeConfirmation: !manual,
     missingPlace: !fromPlace || !toPlace,
     feasible: Boolean(fromPlace && toPlace && Number.isFinite(departure) && Number.isFinite(setup) && availableMinutes >= requiredMinutes) };
@@ -385,7 +390,7 @@ function validateTransfer(transfer, events, inventory, others = []) {
     others.filter((entry) => entry.id !== transfer.id && entry.status !== "cancelled" && entry.fromEventId === id).forEach((entry) => pending.push(entry.toEventId));
   }
   const endAt = localTime(from.endAt);
-  const setupAt = localTime(to.setupAt || to.equipmentOutAt);
+  const setupAt = localTime(eventReservationStartAt(to));
   if (!eventTiming(from).complete || !eventTiming(to).complete || !Number.isFinite(endAt) || !Number.isFinite(setupAt) || endAt + (transfer.travelMinutes + transfer.handlingMinutes) * 60000 > setupAt) {
     throw invalid("El trasiego no tiene tiempo suficiente para desmontaje, transporte y preparación antes del siguiente montaje.");
   }
@@ -699,11 +704,11 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
       }
       const outgoing = !consumable && id ? confirmedTransfers.filter((transfer) => transfer.fromEventId === event.id).flatMap((transfer) => transfer.items
         .filter((line) => line.warehouseInventoryId === id).map((line) => ({ quantity: line.quantity,
-          end: localTime(activeEvents.find((entry) => entry.id === transfer.toEventId)?.setupAt || activeEvents.find((entry) => entry.id === transfer.toEventId)?.equipmentOutAt) }))) : [];
+          end: localTime(eventReservationStartAt(activeEvents.find((entry) => entry.id === transfer.toEventId) || {})) }))) : [];
       const chunks = [{ quantity: Math.max(0, reserved - outgoing.reduce((sum, line) => sum + line.quantity, 0)), end: occupiedEnd }, ...outgoing];
       const intersects = Number.isFinite(occupiedStart) && occupiedStart <= to && chunks.some((chunk) => chunk.end >= from);
       const reservation = { eventId: event.id, name: event.name || "Evento", place: event.place || "", type: event.type || "", quantity: amount,
-        remainingQuantity: reserved, setupAt: event.setupAt || "", startAt: event.startAt || "", endAt: event.endAt || "", equipmentInAt: event.equipmentInAt || "",
+        remainingQuantity: reserved, setupAt: eventReservationStartAt(event), setupApplies: event.setupApplies, startAt: event.startAt || "", endAt: event.endAt || "", equipmentInAt: event.equipmentInAt || "",
         notes: event.notes || "", pendingLogistics: !timing.complete, alreadyDispatched: outstanding, alreadyConsumed: sent.consumed,
         preparationMinutes: consumable ? 0 : preparationMinutes,
         logisticsMinutes: Math.max(60, Number(event.logisticsMinutes || event.transferMinutes) || 60),
@@ -729,7 +734,7 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
       if (!reservation) {
         const amount = eventItemQuantity(hold.event, row.warehouseInventoryId, inventory);
         reservation = { eventId: hold.event.id, name: hold.event.name || "Evento", place: hold.event.place || "", quantity: amount,
-          setupAt: hold.event.setupAt || "", startAt: hold.event.startAt || "", endAt: hold.event.endAt || "", equipmentInAt: hold.event.equipmentInAt || "",
+          setupAt: eventReservationStartAt(hold.event), setupApplies: hold.event.setupApplies, startAt: hold.event.startAt || "", endAt: hold.event.endAt || "", equipmentInAt: hold.event.equipmentInAt || "",
           alreadyDispatched: hold.quantity, pendingLogistics: false };
         row.events.push(reservation); row.reservations.push(reservation); row.quantity += amount; row.eventQuantities[hold.event.id] = amount;
       }
@@ -748,7 +753,7 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
         if (!transfer.items.some((line) => line.warehouseInventoryId === row.warehouseInventoryId)) return false;
         if ((physicalHolds.get(row.warehouseInventoryId) || []).some((hold) => hold.routeIds.includes(transfer.id) && hold.start <= to)) return true;
         const source = activeEvents.find((entry) => entry.id === transfer.fromEventId); const destination = activeEvents.find((entry) => entry.id === transfer.toEventId);
-        return localTime(source.setupAt || source.equipmentOutAt) <= to && localTime(destination.equipmentInAt) + Math.max(120, Number(destination.preparationMinutes) || 120) * 60000 >= from;
+        return localTime(eventReservationStartAt(source)) <= to && localTime(destination.equipmentInAt) + Math.max(120, Number(destination.preparationMinutes) || 120) * 60000 >= from;
       });
       points.sort((left, right) => left.at - right.at);
       let current = 0;
@@ -782,4 +787,4 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
       proposedRoutesRequireConfirmation: true }, inventorySavedAt: inventory?.savedAt || "", from: options.from || "", to: options.to || "" };
 }
 
-module.exports = { createEquipmentEventStore, calculateEquipmentAvailability, normalizeEquipmentLogisticsOptions, normalizeEvent, effectiveEquipmentProcurementChoice, resolveEquipmentPurchasedLine, localTime };
+module.exports = { createEquipmentEventStore, calculateEquipmentAvailability, normalizeEquipmentLogisticsOptions, normalizeEvent, effectiveEquipmentProcurementChoice, resolveEquipmentPurchasedLine, localTime, eventReservationStartAt };

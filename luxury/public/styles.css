@@ -297,6 +297,24 @@ button {
   font-weight: 700;
 }
 
+.login-card .login-remember-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 18px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.login-card .login-remember-user input {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  margin: 0;
+  flex: 0 0 18px;
+}
+
 .login-help {
   margin-top: 22px;
   color: var(--muted);
