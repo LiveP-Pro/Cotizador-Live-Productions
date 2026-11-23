@@ -201,7 +201,8 @@ test("vistas de un clic comparan escenarios y mantienen detalles cerrados con te
   assert.match(rent, /PROVISIONAL/);
   const transfer = reporting.renderEquipmentPlanningReportHtml(model, "transfer");
   assert.match(transfer, /Lugar scenario-origin/); assert.match(transfer, /Lugar scenario-destination/);
-  assert.match(transfer, /2026-11-25T20:00/); assert.match(transfer, /2026-11-26T08:00/);
+  assert.match(transfer, /25 de noviembre/); assert.match(transfer, /26 de noviembre/);
+  assert.match(transfer, /8:00/);
   assert.match(transfer, /&lt;img/); assert.ok(!transfer.includes("<img src=x"));
 });
 
@@ -219,16 +220,17 @@ test("cantidades calculadas aparecen primero y los pendientes permanecen accesib
   assert.ok(mainRent.includes(name));
   assert.ok(!mainRent.includes("Referencia pendiente sintética"));
   assert.match(rent, /pueden cambiar las cantidades finales/);
-  assert.match(rent, /<details class="optional-appendix report-pending"><summary>Consultar 1 referencias de renta pendientes/);
-  assert.ok(rent.indexOf('class="rental-results"') < rent.indexOf('class="optional-appendix report-pending"'));
+  assert.match(rent, /<section class="report-pending"><h2>Datos por revisar/);
+  assert.ok(rent.indexOf('class="rental-results"') < rent.indexOf('class="report-pending"'));
   assert.ok(rent.includes("Referencia pendiente sintética"));
   const purchase = reporting.renderEquipmentPlanningReportHtml(model, "purchase");
   const mainPurchase = /<section class="purchase-results">([\s\S]*?)<\/section>/.exec(purchase)[1];
   assert.ok(mainPurchase.includes("Consumible calculable sintético"));
-  assert.ok(!mainPurchase.includes("Consumible pendiente sintético"));
-  assert.match(purchase, /Consultar 1 consumibles pendientes/);
+  assert.ok(mainPurchase.includes("Consumible pendiente sintético"));
+  assert.match(mainPurchase, /Pendiente/);
+  assert.match(purchase, /Datos por revisar/);
   assert.ok(purchase.includes("Consumible pendiente sintético"));
   const transfer = reporting.renderEquipmentPlanningReportHtml(model, "transfer");
-  assert.match(transfer, /<details class="optional-appendix report-pending"><summary>Consultar 2 referencias pendientes de evaluar/);
+  assert.match(transfer, /<section class="report-pending"><h2>Datos por revisar \(2\)/);
   assert.equal(JSON.stringify(model), before);
 });

@@ -134,6 +134,18 @@ rutas. Se conservan las celdas originales, notas y cantidades en cero. Los event
 siguen como borradores hasta confirmar las reservas; abrir o imprimir un reporte
 no registra movimientos de inventario.
 
+El resumen distingue la cantidad pedida por todos los eventos de las unidades
+físicas necesarias. Si dos micrófonos pasan de un evento a otro, siguen siendo
+dos micrófonos: no se convierten en cuatro salidas ni en una renta adicional.
+Los consumibles se muestran por evento y en total, incluso cuando ya hay
+existencia suficiente y la compra queda en cero.
+
+Al registrar una salida real, las unidades recibidas por un trasiego confirmado
+y respaldado por la salida del origen no se descuentan de bodega otra vez. Su
+custodia se conserva hasta la devolución física desde el evento que las tiene.
+Solo las unidades adicionales producen una nueva salida; las rutas propuestas
+del reporte siguen requiriendo confirmación para registrar ese movimiento.
+
 ## Dominio
 
 Dominio deseado:

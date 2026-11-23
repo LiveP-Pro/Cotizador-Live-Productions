@@ -12,6 +12,7 @@ const { parseServiceFile, verifyServiceImport } = require("./equipment-service-i
 const { applyStockIngress, prepareWarehouseSave, nextWarehouseTimestamp } = require("./warehouse-ledger.cjs");
 const { createEquipmentEventStore, calculateEquipmentAvailability, normalizeEvent, effectiveEquipmentProcurementChoice, resolveEquipmentPurchasedLine } = require("./equipment-event-store.cjs");
 const EquipmentIdentity = require("./equipment-identity.js");
+const EquipmentHandoffs = require("./equipment-handoffs.js");
 const { createEquipmentReportModel, createEquipmentTransferReportModel, createEquipmentPlanningReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml, renderEquipmentPlanningReportHtml } = require("./equipment-reporting.cjs");
 const { parseEventFile } = require("./equipment-event-import.cjs");
 const LiveAccess = require("./live-access.js");
@@ -57,7 +58,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261123-oneclick-reports-01";
+const warehouseAssetVersion = "20261123-simple-transfer-summary-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -234,7 +235,8 @@ async function saveWarehouseInventory(payload, response, request) {
   try {
     normalized = normalizeWarehouseInventoryPayload({
       state: ["merge", "replace"].includes(importMode)
-        ? { ...payload?.state, movements: JSON.parse(JSON.stringify(current.state.movements || [])) }
+        ? { ...payload?.state, movements: JSON.parse(JSON.stringify(current.state.movements || [])),
+          equipmentHandoffs: JSON.parse(JSON.stringify(current.state.equipmentHandoffs || [])) }
         : mergeWarehousePrivateFields(current.state, payload?.state, authenticatedPrincipal(request)),
       savedAt: new Date().toISOString()
     });
@@ -3604,6 +3606,107 @@ function validateWarehouseDispatchIdentities(dispatch, state) {
   }
 }
 
+function warehouseDispatchHandoffShape(lines, state, movements = false) {
+  const active = (state.items || []).filter(item => item && !item.archived), groups = new Map();
+  for (const line of lines || []) {
+    const quantity = warehouseDispatchQuantity(line.quantity);
+    if (!quantity) continue;
+    const choice = warehouseDispatchProcurementChoice(line.procurementChoice);
+    const description = movements ? line.sourceRequestedName || line.itemName : line.description;
+    const identity = choice ? null : EquipmentIdentity.resolve({ description,
+      warehouseInventoryId: movements ? line.itemId || undefined : line.warehouseInventoryId }, active);
+    const key = choice ? `external:${choice}:${warehouseDispatchLookupKey(description)}`
+      : identity?.item ? `stock:${identity.item.id}` : `unmapped:${warehouseDispatchLookupKey(description)}`;
+    groups.set(key, (groups.get(key) || 0) + quantity);
+  }
+  return groups;
+}
+
+function warehouseDispatchHandoffPlan(dispatch, warehouseInventory) {
+  const state = warehouseInventory.state, documentId = String(dispatch.id || "").trim();
+  const oldHandoffs = Array.isArray(state.equipmentHandoffs) ? state.equipmentHandoffs : [];
+  const existingOutgoing = (state.movements || []).filter(movement => movement.sourceDocumentId === documentId
+    && ["salida", "consumo", "compra"].includes(movement.type));
+  const receipts = oldHandoffs.filter(handoff => handoff.toDocumentId === documentId);
+  const sourceIds = new Set(existingOutgoing.map(movement => movement.id));
+  const hasSentHandoff = oldHandoffs.some(handoff => (handoff.links || []).some(link => sourceIds.has(link.sourceMovementId)));
+  const helper = typeof EquipmentHandoffs === "undefined" ? null : EquipmentHandoffs;
+  if (oldHandoffs.length && !helper) throw Object.assign(new Error("No se pudo verificar el historial de trasiegos. No se modificó el inventario."), { statusCode: 503 });
+  if (oldHandoffs.length) helper.getCustodyRecords(state);
+  const stored = typeof equipmentEventStore !== "undefined" && typeof equipmentEventStore.readEvents === "function"
+    ? equipmentEventStore.readEvents() : { events: [], transfers: [] };
+  const events = Array.isArray(stored.events) ? stored.events : [];
+  const incomingCandidates = (Array.isArray(stored.transfers) ? stored.transfers : []).filter(transfer => transfer.toEventId === dispatch.eventId);
+  const otherEventDispatch = incomingCandidates.length && (state.movements || []).some(movement => movement.sourceEventId === dispatch.eventId
+    && movement.sourceDocumentId && movement.sourceDocumentId !== documentId && ["salida", "consumo", "compra"].includes(movement.type)
+    && warehouseDispatchQuantity(movement.quantity) > 0);
+  if (otherEventDispatch || oldHandoffs.some(handoff => handoff.toEventId === dispatch.eventId && handoff.toDocumentId !== documentId)) {
+    throw Object.assign(new Error("Este evento ya tiene una salida o recepción por trasiego en otro cuadro. Use el cuadro original para reimprimir o registrar su devolución."), { statusCode: 409 });
+  }
+  // A reprint must never rebalance units that already physically left bodega,
+  // erase a source movement used by another holder, or invent a return.
+  if (receipts.length || existingOutgoing.length && (hasSentHandoff || incomingCandidates.length)) {
+    const original = warehouseDispatchHandoffShape(existingOutgoing, state, true);
+    for (const receipt of receipts) original.set(`stock:${receipt.itemId}`, (original.get(`stock:${receipt.itemId}`) || 0) + receipt.quantity);
+    const requested = warehouseDispatchHandoffShape(dispatch.items, state);
+    const stable = map => JSON.stringify([...map].sort((a, b) => a[0].localeCompare(b[0])));
+    if (stable(original) !== stable(requested)) throw Object.assign(new Error("Este cuadro ya tiene una salida física o equipo recibido por trasiego. Conserve sus cantidades para reimprimir; registre la devolución real o ajuste la operación antes de cambiarlo."), { statusCode: 409 });
+    return { latched: true, existingOutgoing, receipts, added: [], credits: new Map() };
+  }
+  const empty = { latched: false, existingOutgoing, receipts: [], added: [], credits: new Map() };
+  const destination = events.find(event => event.id === dispatch.eventId && event.status !== "cancelled");
+  if (destination?.warehouseDispatchId && destination.warehouseDispatchId !== documentId
+      && (incomingCandidates.length || oldHandoffs.some(handoff => handoff.toEventId === dispatch.eventId))) {
+    throw Object.assign(new Error("El identificador de salida no corresponde al cuadro guardado de este evento. Actualice la agenda antes de registrar su trasiego."), { statusCode: 409 });
+  }
+  if (!helper || !destination || destination.warehouseDispatchId && destination.warehouseDispatchId !== documentId) return empty;
+  const confirmed = (Array.isArray(stored.transfers) ? stored.transfers : []).filter(transfer => transfer.status === "confirmed");
+  if (!confirmed.some(transfer => transfer.toEventId === dispatch.eventId)) return empty;
+  const availability = calculateEquipmentAvailability(events, warehouseInventory, { transfers: confirmed });
+  const valid = new Map((availability.transfers || []).map(transfer => [transfer.id, transfer]));
+  const unsafeItems = new Set((availability.rows || []).filter(row => row.planning?.physicalConflict || Number(row.planning?.mandatoryShortage) > 0)
+    .map(row => row.warehouseInventoryId));
+  const activeItems = (state.items || []).filter(item => item && !item.archived);
+  const requested = new Map();
+  for (const line of dispatch.items || []) {
+    if (warehouseDispatchProcurementChoice(line.procurementChoice)) continue;
+    const item = EquipmentIdentity.resolve(line, activeItems).item;
+    if (!item || EquipmentIdentity.itemType(item) === "consumible" || EquipmentIdentity.classification(item).pending) continue;
+    requested.set(String(item.id), (requested.get(String(item.id)) || 0) + warehouseDispatchQuantity(line.quantity));
+  }
+  const work = { ...state, equipmentHandoffs: [...oldHandoffs] }, added = [], credits = new Map();
+  for (const transfer of incomingCandidates.filter(transfer => valid.has(transfer.id)).sort((a, b) => String(a.createdAt || a.id).localeCompare(String(b.createdAt || b.id)))) {
+    const from = events.find(event => event.id === transfer.fromEventId && event.status !== "cancelled");
+    if (!from) continue;
+    for (const line of transfer.items || []) {
+      if (!Number.isSafeInteger(Number(line.quantity)) || Number(line.quantity) <= 0) continue;
+      const itemId = String(line.warehouseInventoryId || ""), remaining = (requested.get(itemId) || 0) - (credits.get(itemId) || 0);
+      if (remaining <= 0 || unsafeItems.has(itemId)) continue;
+      const links = helper.allocateIncoming({ state: work, fromEventId: from.id, fromDocumentId: from.warehouseDispatchId || undefined,
+        itemId, quantity: Math.min(remaining, warehouseDispatchQuantity(line.quantity)) });
+      const quantity = links.reduce((sum, link) => sum + link.quantity, 0);
+      if (!quantity) continue;
+      const id = `handoff-${crypto.createHash("sha256").update([documentId, transfer.id, itemId].join("\u0000")).digest("hex").slice(0, 40)}`;
+      const receipt = { id, transferId: transfer.id, fromEventId: from.id, toEventId: destination.id,
+        fromDocumentId: from.warehouseDispatchId || "", toDocumentId: documentId,
+        fromEventName: from.name || from.place || "Evento origen", fromEventPlace: from.place || "",
+        toEventName: destination.name || destination.place || dispatch.name || "Evento", toEventPlace: destination.place || dispatch.place || "",
+        toEventDate: destination.date || "", toExpectedReturnAt: destination.equipmentInAt || "",
+        itemId, itemName: activeItems.find(item => String(item.id) === itemId)?.name || "Equipo", quantity,
+        plannedQuantity: warehouseDispatchQuantity(line.quantity), createdAt: new Date().toISOString(), links };
+      work.equipmentHandoffs.push(receipt); added.push(receipt); credits.set(itemId, (credits.get(itemId) || 0) + quantity);
+    }
+  }
+  helper.getCustodyRecords(work);
+  return { latched: false, existingOutgoing, receipts: added, added, credits };
+}
+
+function warehouseDispatchHandoffReceipt(plan) {
+  return { handoffQuantity: plan.receipts.reduce((sum, receipt) => sum + receipt.quantity, 0),
+    handoffs: plan.receipts.map(receipt => ({ id: receipt.id, transferId: receipt.transferId, itemId: receipt.itemId, quantity: receipt.quantity,
+      fromEventId: receipt.fromEventId, toEventId: receipt.toEventId, links: receipt.links.map(link => ({ ...link })) })) };
+}
+
 async function receiveEquipmentBoardInWarehouse(editableData, fileData, request) {
   const dispatch = editableData?.mode === "full" ? editableData?.warehouseDispatch : null;
   const documentId = String(dispatch?.id || "").trim().slice(0, 240);
@@ -3625,6 +3728,22 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData, request)
     sourceFileName: fileData.fileName,
     sourceJsonFileName: fileData.jsonFileName
   };
+
+  const handoffPlan = warehouseDispatchHandoffPlan(dispatch, warehouseInventory);
+  const handoffReceipt = warehouseDispatchHandoffReceipt(handoffPlan);
+  if (handoffPlan.latched) {
+    state.movements = state.movements.map(movement => movement.sourceDocumentId === documentId ? { ...movement, ...sourceFileFields } : movement);
+    const saved = { state, savedAt: now };
+    await writeWarehouseInventory(saved, { actor: warehouseAuditActor(request), source: "requerimiento-equipo" });
+    return { warehouseInventory: saved, warehouseReceipt: { id: documentId, received: true, updated: false, locked: true,
+      movementCount: existingOutgoing.length,
+      mappedQuantity: existingOutgoing.filter(movement => ["salida", "consumo"].includes(movement.type) && !movement.sourceUnmatched && movement.itemId)
+        .reduce((sum, movement) => sum + warehouseDispatchQuantity(movement.quantity), 0),
+      unmappedQuantity: existingOutgoing.filter(movement => movement.sourceUnmatched).reduce((sum, movement) => sum + warehouseDispatchQuantity(movement.quantity), 0),
+      consumedQuantity: existingOutgoing.filter(movement => movement.type === "consumo").reduce((sum, movement) => sum + warehouseDispatchQuantity(movement.quantity), 0),
+      purchaseQuantity: existingOutgoing.filter(movement => movement.type === "compra").reduce((sum, movement) => sum + warehouseDispatchQuantity(movement.quantity), 0),
+      ...handoffReceipt } };
+  }
 
   if (hasRegisteredReturn) {
     state.movements = state.movements.map((movement) => (
@@ -3654,7 +3773,8 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData, request)
           .reduce((total, movement) => total + warehouseDispatchQuantity(movement.quantity), 0),
         purchaseQuantity: existingOutgoing
           .filter((movement) => movement.type === "compra")
-          .reduce((total, movement) => total + warehouseDispatchQuantity(movement.quantity), 0)
+          .reduce((total, movement) => total + warehouseDispatchQuantity(movement.quantity), 0),
+        ...handoffReceipt
       }
     };
   }
@@ -3747,6 +3867,10 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData, request)
     const candidates = identity.item ? [identity.item] : [];
     const consumable = identity.item ? warehouseDispatchItemIsConsumable(identity.item)
       : line?.itemType === "consumible" || line?.consumable === true || warehouseDispatchHasConsumableMarker(description);
+    if (!consumable && identity.item) {
+      const id = String(identity.item.id), credit = Math.min(remaining, handoffPlan.credits.get(id) || 0);
+      remaining -= credit; handoffPlan.credits.set(id, (handoffPlan.credits.get(id) || 0) - credit);
+    }
 
     candidates.forEach((item) => {
       if (remaining <= 0) return;
@@ -3800,7 +3924,8 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData, request)
 
   state.updatedAt = now;
   const saved = { state, savedAt: now };
-  await writeWarehouseInventory(saved, { actor: warehouseAuditActor(request), source: "requerimiento-equipo" });
+  state.equipmentHandoffs = [...(state.equipmentHandoffs || []), ...handoffPlan.added];
+  await writeWarehouseInventory(saved, { actor: warehouseAuditActor(request), source: "requerimiento-equipo", handoffReceipts: handoffPlan.added });
   return {
     warehouseInventory: saved,
     warehouseReceipt: {
@@ -3812,7 +3937,8 @@ async function receiveEquipmentBoardInWarehouse(editableData, fileData, request)
       mappedQuantity,
       unmappedQuantity,
       consumedQuantity,
-      purchaseQuantity
+      purchaseQuantity,
+      ...handoffReceipt
     }
   };
 }
@@ -3829,7 +3955,11 @@ async function saveEquipmentBoard(payload, request, response) {
     errorResponse(response, 403, "Su usuario no tiene permiso para registrar salidas de bodega. Puede generar los reportes permitidos sin registrar movimientos.");
     return;
   }
-  if (pendingDispatch?.id) validateWarehouseDispatchIdentities(pendingDispatch, readWarehouseInventory().state);
+  if (pendingDispatch?.id) {
+    const inventory = readWarehouseInventory();
+    validateWarehouseDispatchIdentities(pendingDispatch, inventory.state);
+    warehouseDispatchHandoffPlan(pendingDispatch, inventory);
+  }
 
   const requestedName = cleanFileName(payload?.fileName || "Cuadro-Equipo-Live-Productions.pdf");
   const { fileName, target } = uniqueEquipmentPdfTarget(requestedName);
@@ -3939,14 +4069,14 @@ function serveStatic(request, response, pathname) {
           data
             .toString("utf8")
             .replace(
-              /(app\.js|live-access\.(?:js|css)|equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import)\.(?:js|css)|equipment\.js|inventory\.js|warehouse-import-(?:review|corrections)\.js)\?v=[^"'&<>\s]+/g,
+              /(app\.js|live-access\.(?:js|css)|equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import|handoffs|report-viewer)\.(?:js|css)|equipment\.js|inventory\.js|warehouse-import-(?:review|corrections)\.js)\?v=[^"'&<>\s]+/g,
               `$1?v=${warehouseAssetVersion}`
             ),
           "utf8"
         )
       : data;
     const headers = { "Content-Type": contentType };
-    if (requestedPath === "/index.html" || ["app.js", "live-access.js", "equipment-identity.js", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "warehouse-import-corrections.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
+    if (requestedPath === "/index.html" || ["app.js", "live-access.js", "equipment-identity.js", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "equipment-handoffs.js", "equipment-report-viewer.js", "equipment-report-viewer.css", "warehouse-import-review.js", "warehouse-import-corrections.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
       (asset) => requestedPath === `/${asset}`
     )) {
       headers["Cache-Control"] = "no-store";

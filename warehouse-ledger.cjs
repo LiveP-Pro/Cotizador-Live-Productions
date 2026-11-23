@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 const equipmentIdentity = require("./equipment-identity.js");
+const equipmentHandoffs = require("./equipment-handoffs.js");
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const text = (value) => String(value ?? "").trim();
@@ -144,7 +145,7 @@ function auditSnapshot(value, field = "") {
   if (typeof value !== "object") return value;
   const output = {};
   for (const [key, entry] of Object.entries(value)) {
-    if (AUDIT_VOLATILE_FIELDS.has(key) || ["auditEntries", "equipmentStockReceipts"].includes(key)) continue;
+    if (AUDIT_VOLATILE_FIELDS.has(key) || ["auditEntries", "equipmentStockReceipts", "equipmentHandoffs"].includes(key)) continue;
     output[key] = auditSnapshot(entry, key);
   }
   return output;
@@ -301,7 +302,7 @@ function diffWarehousePermissions(previous, next, context = {}) {
   // Subtitles, imported sources and other persistent inventory metadata cannot
   // be changed by slipping them into the monolithic movement-save endpoint.
   const inventoryMetadata = [...new Set([...Object.keys(previous), ...Object.keys(next)])].filter((field) =>
-    !["items", "movements", "auditEntries", "equipmentStockReceipts", "updatedAt", "savedAt", "version", "rentalDraft", "workshopDraft"].includes(field)
+    !["items", "movements", "auditEntries", "equipmentStockReceipts", "equipmentHandoffs", "updatedAt", "savedAt", "version", "rentalDraft", "workshopDraft"].includes(field)
     && stableJson(previous[field] ?? null) !== stableJson(next[field] ?? null));
   const draftChanged = ["rentalDraft", "workshopDraft"].some((field) => stableJson(previous[field] || []) !== stableJson(next[field] || []));
   return { movements, inventoryChanges, movementStockChanges, inventoryMetadata, draftChanged,
@@ -449,9 +450,32 @@ function prepareWarehouseSave(current, candidate, context = {}, now = Date.now()
   delete state.developerAuditExempt;
   delete state.activityExcluded;
   const savedAt = nextWarehouseTimestamp(current.savedAt, now);
+  // A browser may display custody records but cannot rewrite their provenance.
+  // Only the authenticated dispatch path appends a confirmed physical handoff.
+  state.equipmentHandoffs = clone(Array.isArray(current.state.equipmentHandoffs) ? current.state.equipmentHandoffs : []);
+  if (state.equipmentHandoffs.length) equipmentHandoffs.validateReturns(current.state, state);
+  const addedHandoffs = [];
+  for (const raw of Array.isArray(context.handoffReceipts) ? context.handoffReceipts : []) {
+    if (context.source !== "requerimiento-equipo" || !raw || !text(raw.id)) throw invalid("El registro de trasiego solo puede crearse desde una salida confirmada.");
+    const comparable = value => { const entry = { ...value }; for (const key of ["createdAt", "createdBy", "activityExcluded"]) delete entry[key]; return stableJson(entry); };
+    const previous = state.equipmentHandoffs.find(entry => text(entry.id) === text(raw.id));
+    if (previous) {
+      if (comparable(previous) !== comparable(raw)) throw invalid("El trasiego ya fue registrado con otra cantidad o procedencia.", 409);
+      continue;
+    }
+    const handoff = clone(raw);
+    delete handoff.activityExcluded; delete handoff.createdBy;
+    handoff.createdAt = savedAt; handoff.createdBy = warehouseActor(context.actor);
+    if (developerAuditExempt(context)) handoff.activityExcluded = true;
+    state.equipmentHandoffs.push(handoff); addedHandoffs.push(handoff);
+  }
+  if (addedHandoffs.length) equipmentHandoffs.getCustodyRecords(state);
   if (context.enforceMovementOwnership === true || context.enforcePermissions === true) validateWarehousePermissions(current.state, state, context);
   sealWarehouseMovementActors(current.state, state, context, savedAt);
   const changes = auditWarehouseChanges(current.state, state, context);
+  for (const handoff of addedHandoffs) changes.push({ action: "trasiego_equipo", entityType: "handoff", entityId: handoff.id,
+    description: text(handoff.itemName), quantity: Number(handoff.quantity), before: null, after: clone(handoff),
+    event: { id: handoff.toEventId, name: handoff.toEventName || "", place: handoff.toEventPlace || "" } });
   const exempt = developerAuditExempt(context);
   const authorization = state.importedSource?.authorization;
   const previousAuthorization = current.state.importedSource?.authorization;

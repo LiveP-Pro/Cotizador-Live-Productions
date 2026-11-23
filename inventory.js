@@ -497,7 +497,8 @@
       auditEntries: Array.isArray(base.auditEntries) ? JSON.parse(JSON.stringify(base.auditEntries)) : [],
       ...(base.importedSource && typeof base.importedSource === "object"
         ? { importedSource: JSON.parse(JSON.stringify(base.importedSource)) } : {}),
-      equipmentStockReceipts: Array.isArray(base.equipmentStockReceipts) ? JSON.parse(JSON.stringify(base.equipmentStockReceipts)) : []
+      equipmentStockReceipts: Array.isArray(base.equipmentStockReceipts) ? JSON.parse(JSON.stringify(base.equipmentStockReceipts)) : [],
+      equipmentHandoffs: Array.isArray(base.equipmentHandoffs) ? JSON.parse(JSON.stringify(base.equipmentHandoffs)) : []
     };
   }
 
@@ -860,6 +861,16 @@
   }
 
   function movementLifecycleRecords(outgoingType, returnType) {
+    if (outgoingType === "salida" && returnType === "ingreso_evento" && state.equipmentHandoffs?.length) {
+      try {
+        if (typeof window.EquipmentHandoffs?.getCustodyRecords !== "function") throw new Error("Actualice la página para consultar el equipo recibido por trasiego.");
+        return window.EquipmentHandoffs.getCustodyRecords(state).map(record => ({ ...record,
+          movement: { ...record.movement, id: record.id, custodyHandoffId: record.handoffId || "" } }));
+      } catch (error) {
+        setStatus(error.message || "Revise la procedencia de los trasiegos antes de registrar una devolución.", "warning");
+        return [];
+      }
+    }
     const outgoingMovements = state.movements
       .filter((movement) => movement.type === outgoingType && !(outgoingType === "salida" && isPendingProcurement(movement)))
       .slice()
@@ -1237,11 +1248,30 @@
   }
 
   function eventKey(movement) {
+    let handoffId = movement.custodyHandoffId;
+    try { handoffId ||= window.EquipmentHandoffs?.parseReturnKey?.(movement.sourceLineKey); }
+    catch (error) { setStatus(error.message || "Revise la referencia de devolución del trasiego.", "warning"); }
+    const handoff = handoffId && state.equipmentHandoffs?.find(entry => entry.id === handoffId);
+    if (handoff?.toDocumentId) return `cuadro:${handoff.toDocumentId}`;
     return movement.sourceDocumentId ? `cuadro:${movement.sourceDocumentId}` : movement.reference || "Sin evento";
   }
 
+  function handoffBoardMovements() {
+    return (state.equipmentHandoffs || []).map(handoff => ({
+      id: `handoff-view:${handoff.id}`, type: "trasiego", quantity: normalizeNumber(handoff.quantity), itemId: handoff.itemId,
+      itemName: handoff.itemName || itemById(handoff.itemId)?.name || "Equipo recibido por trasiego",
+      sourceType: "requerimiento-equipo", sourceDocumentId: handoff.toDocumentId, sourceEventId: handoff.toEventId,
+      sourceEventName: handoff.toEventName || "Evento destino", sourceEventPlace: handoff.toEventPlace || "",
+      sourceEventDate: handoff.toEventDate || "", sourceExpectedReturnAt: handoff.toExpectedReturnAt || "",
+      reference: handoff.toEventName || "Evento destino", dateTime: handoff.createdAt || "", date: (handoff.createdAt || "").slice(0, 10),
+      createdAt: handoff.createdAt || "", notes: `Recibido por trasiego desde ${handoff.fromEventName || handoff.fromEventId || "el evento anterior"}. Sin una nueva salida de bodega.`,
+      ...(handoff.activityExcluded !== true && handoff.createdBy ? { createdBy: handoff.createdBy } : {}),
+      ...(handoff.activityExcluded === true ? { activityExcluded: true } : {})
+    }));
+  }
+
   function renderEventsBoard() {
-    const movements = activeMovements(["salida", "ingreso_evento", "consumo", "compra"]);
+    const movements = [...activeMovements(["salida", "ingreso_evento", "consumo", "compra"]), ...handoffBoardMovements()];
     if (!movements.length) {
       elements.eventsBoard.innerHTML = '<p class="warehouse-empty">Aún no hay salidas o ingresos por evento.</p>';
       return;
@@ -1263,12 +1293,13 @@
     elements.eventsBoard.innerHTML = [...groups.entries()]
       .sort((a, b) => (b[1][0].dateTime || b[1][0].date).localeCompare(a[1][0].dateTime || a[1][0].date))
       .map(([groupKey, entries]) => {
-        const sourceEntry = entries.find((entry) => entry.sourceType === "requerimiento-equipo") || null;
+        const sourceEntry = entries.find(entry => entry.type === "trasiego") || entries.find((entry) => entry.sourceType === "requerimiento-equipo") || null;
         const name = sourceEntry?.sourceEventName || sourceEntry?.reference || groupKey;
         const eventRecords = lifecycleByGroup.get(groupKey) || [];
         const outgoing = entries.filter((entry) => entry.type === "salida" && !isPendingProcurement(entry)).reduce((sum, entry) => sum + entry.quantity, 0);
         const incoming = entries.filter((entry) => entry.type === "ingreso_evento").reduce((sum, entry) => sum + entry.quantity, 0);
         const consumed = entries.filter((entry) => entry.type === "consumo").reduce((sum, entry) => sum + entry.quantity, 0);
+        const transferred = entries.filter(entry => entry.type === "trasiego").reduce((sum, entry) => sum + entry.quantity, 0);
         const purchase = entries.filter((entry) => entry.type === "compra").reduce((sum, entry) => sum + entry.quantity, 0);
         const pending = eventRecords.reduce((sum, record) => sum + record.remainingQuantity, 0);
         const sourcePdfUrl = sourceEntry?.sourcePdfUrl || attachmentHref(sourceEntry?.attachment);
@@ -1279,8 +1310,9 @@
             (entry) => `
               <div>
                 <span>${escapeHtml(displayDateTime(entry))}</span>
-                <strong>${escapeHtml(movementDisplayLabel(entry))}</strong>
+                <strong>${escapeHtml(entry.type === "trasiego" ? "Recibido por trasiego" : movementDisplayLabel(entry))}</strong>
                 <p>${escapeHtml(entry.quantity)} x ${escapeHtml(movementItemName(entry))}</p>
+                ${entry.type === "trasiego" ? `<small>${escapeHtml(entry.notes)}</small>` : ""}
                 ${entry.responsible ? `<small>Responsable: ${escapeHtml(entry.responsible)}</small>` : ""}
                 ${movementActorMarkup(entry)}
                 ${movementUnmappedNote(entry) ? `<small class="warehouse-unmapped-note">${escapeHtml(movementUnmappedNote(entry))}</small>` : ""}
@@ -1295,7 +1327,7 @@
               <div>
                 ${sourceEntry ? '<span class="warehouse-source-pill">Cuadro recibido</span>' : ""}
                 <strong>${escapeHtml(name)}</strong>
-                <span>Salió: ${escapeHtml(outgoing)} · Consumido: ${escapeHtml(consumed)} · Por comprar: ${escapeHtml(purchase)} · Entró: ${escapeHtml(incoming)} · Pendiente: ${escapeHtml(pending)}</span>
+                <span>Salió de bodega: ${escapeHtml(outgoing)}${transferred ? ` · Recibió por trasiego: ${escapeHtml(transferred)}` : ""} · Consumido: ${escapeHtml(consumed)} · Por comprar: ${escapeHtml(purchase)} · Entró: ${escapeHtml(incoming)} · Pendiente: ${escapeHtml(pending)}</span>
               </div>
               <div class="warehouse-board-actions">
                 ${sourcePdfUrl ? `<a class="warehouse-row-button" href="${escapeHtml(sourcePdfUrl)}" target="_blank" rel="noopener">Ver cuadro</a>` : ""}
@@ -1734,7 +1766,7 @@
     elements.movementRelatedLabel.hidden = !needsReturn && !["perdido", "baja"].includes(type);
     elements.movementRelated.innerHTML = [
       `<option value="">${needsReturn ? "Seleccione el movimiento pendiente" : "Disponible en bodega"}</option>`,
-      ...records.map((record) => `<option value="${escapeHtml(record.movement.id)}">${escapeHtml(movementLabels[record.movement.type])} · ${escapeHtml(displayDateTime(record.movement))} · ${escapeHtml(record.movement.reference || "Sin evento")} · ${escapeHtml(record.remainingQuantity)} pendientes</option>`)
+      ...records.map((record) => `<option value="${escapeHtml(record.movement.id)}">${escapeHtml(record.handoffId ? "Recibido por trasiego" : movementLabels[record.movement.type])} · ${escapeHtml(displayDateTime(record.movement))} · ${escapeHtml(record.movement.reference || "Sin evento")} · ${escapeHtml(record.remainingQuantity)} pendientes</option>`)
     ].join("");
     elements.movementRelated.value = records.some((record) => record.movement.id === current) ? current : "";
     const stats = item ? statsForItem(item) : null;
@@ -1770,6 +1802,16 @@
     return fields;
   }
 
+  function lifecycleReturnFields(record) {
+    const fields = movementSourceFields(record.rootMovement || record.movement);
+    if (record.handoffId) fields.sourceLineKey = window.EquipmentHandoffs.makeReturnKey(record.handoffId);
+    return fields;
+  }
+
+  function lifecycleRootMovementId(record) {
+    return record.rootMovementId || record.movement.id;
+  }
+
   function applyManualWarehouseMovement(payload) {
     const item = itemById(payload.itemId);
     const type = normalizeText(payload.type);
@@ -1789,13 +1831,13 @@
     if (!record && type !== "ingreso" && quantity > statsForItem(item).physical) throw new Error(`Solo hay ${statsForItem(item).physical} unidades disponibles en bodega.`);
     if (type === "baja" && quantity > normalizeNumber(item.quantity)) throw new Error("La baja supera la cantidad registrada del equipo.");
     const base = { itemId: item.id, quantity, dateTime, responsible, notes: reason, reference: record?.movement.reference || reason,
-      ...(record ? movementSourceFields(record.movement) : {}) };
+      ...(record ? lifecycleReturnFields(record) : {}) };
     if (record && ["perdido", "baja"].includes(type)) {
       const transferType = { salida: "ingreso_evento", taller: "devolucion_taller", renta: "devolucion_renta", perdido: "recuperado" }[record.movement.type];
-      if (!addMovement({ ...base, type: transferType, relatedMovementId: record.movement.id,
+      if (!addMovement({ ...base, type: transferType, relatedMovementId: lifecycleRootMovementId(record),
         notes: `${reason}. Traslado a ${movementLabels[type]} desde ${movementLabels[record.movement.type]}; sin recepción física en bodega.` })) throw new Error("No se pudo trasladar el movimiento pendiente.");
     }
-    if (!addMovement({ ...base, type, ...(requiresRecord ? { relatedMovementId: record.movement.id } : {}) })) throw new Error("No se pudo registrar el movimiento.");
+    if (!addMovement({ ...base, type, ...(requiresRecord ? { relatedMovementId: lifecycleRootMovementId(record) } : {}) })) throw new Error("No se pudo registrar el movimiento.");
     return true;
   }
 
@@ -1837,7 +1879,7 @@
   function auditActionLabel(action) {
     return movementLabels[action] || { alta: "Alta de equipo", cambio_cantidad: "Cambio de cantidad", edicion: "Edición de equipo",
       archivado: "Equipo archivado", reactivado: "Equipo reactivado", eliminacion: "Eliminación de equipo",
-      edicion_movimiento: "Edición de movimiento", eliminacion_bitacora: "Eliminación de bitácora" }[action] || normalizeText(action).replaceAll("_", " ");
+      edicion_movimiento: "Edición de movimiento", eliminacion_bitacora: "Eliminación de bitácora", trasiego_equipo: "Trasiego de equipo entre eventos" }[action] || normalizeText(action).replaceAll("_", " ");
   }
 
   function auditQuantityLabel(value) {
@@ -2511,6 +2553,7 @@
       const notes = elements.dialogBody.querySelector("#dialogNotes")?.value;
       records.forEach((record) => {
         const movement = record.movement;
+        const original = record.rootMovement || movement;
         addMovement({
           type: "ingreso_evento",
           itemId: movement.itemId,
@@ -2519,27 +2562,10 @@
           dateTime,
           responsible,
           reference: movement.reference,
-          notes,
-          batchId: movement.batchId,
-          relatedMovementId: movement.id,
-          sourceType: movement.sourceType,
-          sourceDocumentId: movement.sourceDocumentId,
-          sourceEventId: movement.sourceEventId,
-          sourceEventName: movement.sourceEventName,
-          sourceEventPlace: movement.sourceEventPlace,
-          sourcePlanner: movement.sourcePlanner,
-          sourceEventDate: movement.sourceEventDate,
-          sourceExpectedReturnAt: movement.sourceExpectedReturnAt,
-          sourcePdfUrl: movement.sourcePdfUrl,
-          sourceJsonUrl: movement.sourceJsonUrl,
-          sourceFileName: movement.sourceFileName,
-          sourceJsonFileName: movement.sourceJsonFileName,
-          sourceCategory: movement.sourceCategory,
-          sourceRequestedName: movement.sourceRequestedName,
-          sourceLineKey: movement.sourceLineKey,
-          sourceUnmatched: movement.sourceUnmatched,
-          procurementChoice: movement.procurementChoice,
-          procurementAction: movement.procurementAction
+          notes: [notes, record.handoffId ? `Devolución de equipo recibido por trasiego en ${movement.sourceEventName || movement.reference || "el evento"}.` : ""].filter(Boolean).join(" "),
+          batchId: original.batchId,
+          relatedMovementId: lifecycleRootMovementId(record),
+          ...lifecycleReturnFields(record)
         });
       });
       closeDialog();
@@ -2995,12 +3021,12 @@
   }
 
   function printEventPdf(groupKey) {
-    const entries = state.movements
-      .filter((movement) => warehouseMovementActivityVisible(movement) && ["salida", "ingreso_evento", "consumo", "compra"].includes(movement.type) && eventKey(movement) === groupKey)
+    const entries = [...state.movements, ...handoffBoardMovements()]
+      .filter((movement) => warehouseMovementActivityVisible(movement) && ["salida", "ingreso_evento", "consumo", "compra", "trasiego"].includes(movement.type) && eventKey(movement) === groupKey)
       .slice()
       .sort((a, b) => `${a.dateTime || a.date} ${a.createdAt}`.localeCompare(`${b.dateTime || b.date} ${b.createdAt}`));
     if (!entries.length) { setStatus("No hay movimientos visibles para este reporte.", "neutral"); return; }
-    const eventName = entries.find((entry) => entry.sourceEventName)?.sourceEventName
+    const eventName = entries.find(entry => entry.type === "trasiego")?.sourceEventName || entries.find((entry) => entry.sourceEventName)?.sourceEventName
       || entries[0]?.reference
       || "Sin evento";
     const rows = entries
@@ -3008,7 +3034,7 @@
         (entry) => `
           <tr>
             <td>${escapeHtml(displayDateTime(entry))}</td>
-            <td>${escapeHtml(movementDisplayLabel(entry))}${movementUnmappedNote(entry) ? `<br /><small>${escapeHtml(movementUnmappedNote(entry))}</small>` : ""}</td>
+            <td>${escapeHtml(entry.type === "trasiego" ? "Recibido por trasiego" : movementDisplayLabel(entry))}${movementUnmappedNote(entry) ? `<br /><small>${escapeHtml(movementUnmappedNote(entry))}</small>` : ""}</td>
             <td>${escapeHtml(entry.quantity)}</td>
             <td>${escapeHtml(movementItemName(entry))}</td>
             <td>${escapeHtml(entry.responsible)}</td>

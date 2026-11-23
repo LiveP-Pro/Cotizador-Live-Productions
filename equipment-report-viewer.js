@@ -25,11 +25,19 @@
     doc.body.appendChild(dialog);
     const get = name => doc.getElementById("equipmentReportViewer" + name);
     const frame = get("Frame"), status = get("Status"), printButton = get("Print"), retryButton = get("Retry");
-    let generation = 0, ready = false, retry = null, previousFocus = null, destroyed = false;
+    let generation = 0, ready = false, retry = null, previousFocus = null, destroyed = false, printTitleState = null;
     const isOpen = () => !destroyed && Boolean(dialog.open || dialog.hasAttribute?.("open"));
     const setStatus = (message, error = false) => { status.textContent = message; status.dataset.error = error ? "true" : "false"; };
+    function restorePrintTitle() {
+      const state = printTitleState;
+      if (!state) return;
+      state.target?.removeEventListener?.("afterprint", restorePrintTitle);
+      if (doc.title === state.active) doc.title = state.original;
+      printTitleState = null;
+    }
     function open({ title = "Reporte", onRetry = null } = {}) {
       if (destroyed) throw new Error("La vista del reporte ya fue cerrada. Vuelva a abrir Requerimiento de Equipo.");
+      restorePrintTitle();
       generation++; ready = false; retry = typeof onRetry === "function" ? onRetry : null;
       frame.onload = null; frame.onerror = null; frame.hidden = true; frame.srcdoc = "";
       printButton.disabled = true; retryButton.hidden = true; retryButton.disabled = false;
@@ -70,6 +78,7 @@
     }
     function close() {
       if (!isOpen()) return;
+      restorePrintTitle();
       generation++; ready = false; retry = null; printButton.disabled = true;
       frame.onload = null; frame.onerror = null; frame.hidden = true; frame.srcdoc = "";
       if (typeof dialog.close === "function") dialog.close(); else dialog.removeAttribute("open");
@@ -80,10 +89,19 @@
       if (!ready || !isOpen() || printButton.disabled) return false;
       try {
         if (typeof frame.contentWindow?.print !== "function") throw new Error("Impresión no disponible");
+        restorePrintTitle();
+        const title = `${get("Title").textContent} - Live Productions`;
+        if (typeof doc.title === "string") {
+          printTitleState = { original: doc.title, active: title, target: frame.contentWindow };
+          doc.title = title;
+          frame.contentWindow.addEventListener?.("afterprint", restorePrintTitle, { once: true });
+        }
+        if (frame.contentDocument) frame.contentDocument.title = title;
         frame.contentWindow.focus?.(); frame.contentWindow.print();
         setStatus("Elija su impresora o Guardar como PDF. Puede cerrar esta vista al terminar.");
         return true;
       } catch (_) {
+        restorePrintTitle();
         setStatus("No se pudo abrir la impresión. El reporte sigue disponible; vuelva a pulsar Imprimir / Guardar PDF.", true);
         return false;
       }

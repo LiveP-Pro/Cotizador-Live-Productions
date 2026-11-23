@@ -206,3 +206,19 @@ test("a browser print error keeps the loaded report available for another print 
   assert.match(h.get("Status").textContent, /imprim|guardar|bloquead/i);
   assert.match(h.get("Frame").srcdoc, /Trasiego sintético/);
 });
+
+test("printing uses the report title instead of an earlier quote and restores the page title", async () => {
+  const h = harness(); h.doc.title = "Coti anterior sintética";
+  const token = h.viewer.open({ title: "Trasiego entre eventos" });
+  h.viewer.setContent(report, token); h.get("Frame").emit("load"); await settle();
+  const frame = h.get("Frame"), listeners = new Map(), observed = [];
+  frame.contentWindow.addEventListener = (name, callback) => listeners.set(name, callback);
+  frame.contentWindow.removeEventListener = (name) => listeners.delete(name);
+  frame.contentWindow.print = () => observed.push([h.doc.title, frame.contentDocument.title]);
+  assert.equal(h.viewer.print(), true);
+  assert.deepEqual(observed, [["Trasiego entre eventos - Live Productions", "Trasiego entre eventos - Live Productions"]]);
+  listeners.get("afterprint")();
+  assert.equal(h.doc.title, "Coti anterior sintética");
+  h.viewer.print(); h.viewer.close();
+  assert.equal(h.doc.title, "Coti anterior sintética");
+});

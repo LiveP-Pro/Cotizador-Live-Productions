@@ -6,6 +6,7 @@
 const { calculateEquipmentAvailability, normalizeEvent, localTime, eventReservationStartAt, resolveEquipmentPurchasedLine, effectiveEquipmentProcurementChoice } = require("./equipment-event-store.cjs");
 const EquipmentIdentity = require("./equipment-identity.js");
 const EquipmentDocumentAudit = require("./equipment-document-audit.js");
+const EquipmentHandoffs = require("./equipment-handoffs.js");
 
 const DISCLAIMER = "PROVISIONAL · Sin reservas ni movimientos de inventario. No se supone ningún trasiego, retorno o reutilización entre eventos. Los pendientes no constituyen órdenes de compra o renta.";
 const TRANSFER_DISCLAIMER = "PROPUESTA PROVISIONAL DE TRASIEGO · Sin reservas ni movimientos de inventario. Las rutas no están confirmadas. Revise los horarios y los tiempos de transporte antes de organizar el traslado. Este reporte no reduce los resúmenes conservadores de renta o compra.";
@@ -302,6 +303,51 @@ function planningEventIssue(event) {
   return "";
 }
 
+function planningPerformedHandoffs(base, inventory) {
+  const state = inventory.state || inventory, receipts = state.equipmentHandoffs;
+  const transfers = [], performed = [], reasons = new Map();
+  if (receipts === undefined || Array.isArray(receipts) && !receipts.length) return { transfers, performed, reasons, globalReason: "" };
+  let custody;
+  try { custody = EquipmentHandoffs.getCustodyRecords(state); }
+  catch (_) { return { transfers, performed, reasons, globalReason: "Revise el historial de trasiegos y devoluciones. No se calcularon cantidades que podrían contar dos veces el mismo equipo." }; }
+  const events = new Map(base.events.map(event => [event.id, event]));
+  const stock = new Map(base.stocks.map(item => [item.id, item]));
+  const byItem = new Map();
+  for (const receipt of receipts) {
+    const itemId = text(receipt.itemId);
+    if (!byItem.has(itemId)) byItem.set(itemId, []);
+    byItem.get(itemId).push(receipt);
+  }
+  for (const [itemId, itemReceipts] of byItem) {
+    const touched = new Set(itemReceipts.flatMap(receipt => [text(receipt.fromEventId), text(receipt.toEventId)]));
+    const rowStock = stock.get(itemId);
+    let reason = "";
+    if (!rowStock || rowStock.itemType === "consumible") reason = "El historial de traslado no corresponde a un equipo reutilizable vigente. Revise su identificación y tipo.";
+    else if (itemReceipts.some(receipt => !events.has(text(receipt.fromEventId)) || !events.has(text(receipt.toEventId)))) reason = "Falta un evento del historial de trasiego en esta selección. Incluya todos los eventos vinculados antes de cerrar sus cantidades.";
+    else if (itemReceipts.some(receipt => {
+      const from = events.get(text(receipt.fromEventId)), to = events.get(text(receipt.toEventId));
+      return from.warehouseDispatchId && from.warehouseDispatchId !== text(receipt.fromDocumentId)
+        || to.warehouseDispatchId && to.warehouseDispatchId !== text(receipt.toDocumentId);
+    })) reason = "Un cuadro del reporte no coincide con la salida o recepción real del trasiego. Revise sus documentos de bodega.";
+    else if (base.details.some(line => line.quantity > 0 && line.resolvedInventoryId === itemId && !touched.has(line.eventId))) reason = "Este equipo combina trasiegos ya realizados y otros eventos. Revise sus devoluciones reales antes de asignarlo de nuevo; no se supone que las unidades ya regresaron.";
+    else {
+      const held = custody.filter(record => text(record.rootMovement.itemId) === itemId).reduce((sum, record) => sum + record.remainingQuantity, 0);
+      const physicalPool = Math.max(0, rowStock.registered - rowStock.consumed - rowStock.workshop - rowStock.rented - rowStock.lost);
+      if (held > physicalPool) reason = "Los movimientos físicos exceden las existencias vigentes. Revise el historial antes de calcular otra renta o salida.";
+    }
+    if (reason) { reasons.set(itemId, reason); continue; }
+    for (const receipt of itemReceipts) {
+      // Zero minutes here is evidence of an ALREADY performed handoff, never
+      // a new travel estimate. The allocation engine treats it as a fixed arc.
+      transfers.push({ id: receipt.id, status: "confirmed", fromEventId: receipt.fromEventId, toEventId: receipt.toEventId,
+        items: [{ warehouseInventoryId: itemId, quantity: Number(receipt.quantity) }], travelMinutes: 0, handlingMinutes: 0 });
+      performed.push({ id: receipt.id, itemId, description: rowStock.name, category: rowStock.category, quantity: Number(receipt.quantity),
+        from: events.get(text(receipt.fromEventId)), to: events.get(text(receipt.toEventId)), alreadyPerformed: true });
+    }
+  }
+  return { transfers, performed, reasons, globalReason: "" };
+}
+
 function createEquipmentPlanningReportModel(payload, inventory, options = {}) {
   const base = createEquipmentReportModel(payload, inventory, options);
   const eventIssues = new Map(base.events.map(event => [event.id, planningEventIssue(event)]));
@@ -313,8 +359,13 @@ function createEquipmentPlanningReportModel(payload, inventory, options = {}) {
     : event);
   // The posted event selection is the report scope. Agenda filters may differ
   // from an uploaded workbook; both scenarios must still compare these events.
-  const availability = calculateEquipmentAvailability(calculationEvents, inventory, { transfers: [], routeEstimates: payload.routeEstimates,
+  const physicalHistory = planningPerformedHandoffs(base, inventory);
+  const availability = calculateEquipmentAvailability(calculationEvents, inventory, { transfers: physicalHistory.transfers, routeEstimates: payload.routeEstimates,
     ...(options.now === undefined ? {} : { now: options.now }) });
+  const invalidActualIds = new Set(list(availability.invalidTransfers).map(transfer => transfer.id));
+  for (const transfer of physicalHistory.transfers.filter(transfer => invalidActualIds.has(transfer.id))) {
+    for (const item of transfer.items) physicalHistory.reasons.set(item.warehouseInventoryId, "El historial de trasiego no coincide con las cantidades u horarios actuales. Revise esos datos antes de calcular nuevas unidades.");
+  }
   const sourceRows = new Map(base.rows.map(row => [row.id, row]));
   const stockById = new Map(base.stocks.map(stock => [stock.id, stock]));
   const summary = event => ({ id: event.id, client: event.client || event.name || "", name: event.name || "", place: event.place || "", date: event.date || "", type: event.type || "",
@@ -328,6 +379,8 @@ function createEquipmentPlanningReportModel(payload, inventory, options = {}) {
     const placePending = relatedEvents.some(event => !text(event.place).trim());
     const isConsumable = row.itemType === "consumible";
     const equipmentPurchase = !isConsumable && (row.procurementChoice === "purchase" || row.preferredPurchase);
+    const custodyIssue = physicalHistory.globalReason || physicalHistory.reasons.get(row.warehouseInventoryId) || "";
+    const alreadyPerformed = !custodyIssue && physicalHistory.performed.some(receipt => receipt.itemId === row.warehouseInventoryId);
     const reasons = [];
     if (!empty && row.pendingIdentification) reasons.push("Identifique esta referencia en el inventario vigente; no se supone existencia cero.");
     if (!empty && row.pendingClassification) reasons.push("Confirme si la referencia es equipo reutilizable o consumible en Contabilidad.");
@@ -336,14 +389,18 @@ function createEquipmentPlanningReportModel(payload, inventory, options = {}) {
     if (placePending && !isConsumable) reasons.push("Falta la ubicación de un evento para evaluar su trasiego.");
     if (equipmentPurchase) reasons.push("Este equipo tiene una decisión de compra; no se convirtió en una renta ni en un consumible.");
     if (!empty && !isConsumable && row.planning?.optimal === false && !identityPending && !timingPending) reasons.push("El plan requiere revisar las restricciones o movimientos físicos antes de cerrar el escenario con trasiego.");
-    const pendingWithoutTransfer = !empty && !isConsumable && (identityPending || timingPending || equipmentPurchase);
+    if (!empty && custodyIssue) reasons.push(custodyIssue);
+    if (!empty && alreadyPerformed) reasons.push("El equipo ya fue trasladado físicamente. El escenario sin trasiego no aplica a estas unidades; el resumen cuenta sus unidades físicas una sola vez.");
+    const pendingWithoutTransfer = !empty && !isConsumable && (identityPending || timingPending || equipmentPurchase || Boolean(custodyIssue));
     const pendingWithTransfer = !empty && !isConsumable && (pendingWithoutTransfer || placePending || row.planning?.optimal === false);
-    const requiredWithoutTransfer = empty ? 0 : isConsumable ? demand : pendingWithoutTransfer ? null : Number(row.required);
-    const rentWithoutTransfer = empty ? 0 : isConsumable ? null : pendingWithoutTransfer ? null : Number(row.missing);
+    const requiredWithoutTransfer = empty ? 0 : isConsumable ? demand : pendingWithoutTransfer || alreadyPerformed ? null : Number(row.required);
+    const rentWithoutTransfer = empty ? 0 : isConsumable ? null : pendingWithoutTransfer || alreadyPerformed ? null : Number(row.missing);
     const requiredWithTransfer = empty ? 0 : isConsumable ? demand : pendingWithTransfer ? null : Number(row.planning.requiredFleet);
     const rentWithTransfer = empty ? 0 : isConsumable ? null : pendingWithTransfer ? null : Number(row.planning.rentalPotential);
-    const purchaseQuantity = !isConsumable ? null : empty ? 0 : identityPending || row.procurementChoice === "rent" ? null
-      : row.procurementChoice === "purchase" ? demand : stock ? Math.max(0, demand - stock.available) : null;
+    const remainingConsumption = !isConsumable ? null : identityPending ? null : Math.max(0, Number(row.planning?.requiredFleet ?? demand));
+    const alreadyConsumed = remainingConsumption === null ? null : Math.max(0, demand - remainingConsumption);
+    const purchaseQuantity = !isConsumable ? null : empty ? 0 : identityPending || custodyIssue || row.procurementChoice === "rent" ? null
+      : row.procurementChoice === "purchase" ? remainingConsumption : stock ? Math.max(0, remainingConsumption - stock.available) : null;
     if (isConsumable && row.procurementChoice === "rent") reasons.push("El artículo está clasificado como consumible y marcado para renta; revise esa decisión.");
     const mapRoute = (route, routeSource) => {
       const from = eventById.get(route.fromEventId), to = eventById.get(route.toEventId);
@@ -357,6 +414,8 @@ function createEquipmentPlanningReportModel(payload, inventory, options = {}) {
     return { id: row.id, warehouseInventoryId: row.warehouseInventoryId || "", description: row.description, category: row.category || "Sin categoría", itemType: row.itemType,
       demand, available: stock ? stock.available : null, ownedCapacity: identityPending ? null : Number(row.capacity),
       requiredWithoutTransfer, rentWithoutTransfer, requiredWithTransfer, rentWithTransfer, purchaseQuantity,
+      alreadyConsumed, remainingConsumption,
+      withoutTransferAlreadyPerformed: alreadyPerformed,
       pending: !empty && (isConsumable ? purchaseQuantity === null : pendingWithoutTransfer || pendingWithTransfer),
       pendingWithoutTransfer, pendingWithTransfer, pendingIdentification: !empty && row.pendingIdentification, pendingClassification: !empty && row.pendingClassification,
       equipmentPurchase, reason: [...new Set(reasons)].join(" "), eventQuantities: { ...row.eventQuantities },
@@ -373,8 +432,19 @@ function createEquipmentPlanningReportModel(payload, inventory, options = {}) {
     event: event.client || event.name || event.place || event.id, reason: eventIssues.get(event.id) || "Falta la ubicación del evento." }));
   const scenarioWarnings = [...new Set([...list(availability.logistics?.warnings), ...scenarioRows.flatMap(row => row.reason ? [row.reason] : [])])];
   if (scenarioRows.some(row => row.pendingIdentification || row.pendingClassification)) scenarioWarnings.push("Las referencias pendientes de identidad o clasificación pueden cambiar los reportes. Sus existencias y faltantes no se interpretan como cero.");
+  // An allocation is one physical chain of units. Adding the quantities of its
+  // route legs would count the same units again at every following event.
+  const physicalSummary = scenarioRows.filter(row => row.itemType !== "consumible" && !row.equipmentPurchase).map(row => ({
+    id: row.id, warehouseInventoryId: row.warehouseInventoryId, category: row.category, description: row.description,
+    totalRequested: row.demand, uniquePhysicalNeeded: row.requiredWithTransfer,
+    ownUnitsPlanned: row.requiredWithTransfer === null ? null : row.allocations.filter(allocation => allocation.source === "warehouse").reduce((sum, allocation) => sum + Number(allocation.quantity), 0),
+    rentalUnitsNeeded: row.rentWithTransfer,
+    transferMovements: row.requiredWithTransfer === null ? null : row.routes.reduce((sum, route) => sum + Number(route.quantity), 0),
+    rentalTransferMovements: row.requiredWithTransfer === null ? null : row.rentalRoutes.reduce((sum, route) => sum + Number(route.quantity), 0),
+    pending: row.pending, reason: row.reason, eventQuantities: { ...row.eventQuantities }
+  }));
   return { ...base, reportMode: "planning", disclaimer: "PLAN PROVISIONAL · Compara los mismos eventos con el inventario vigente. Las rutas y sus tiempos estimados requieren revisión. Abrir o imprimir estos reportes no confirma reservas, movimientos, rentas ni compras.",
-    scenarioRows, rentalComparison: scenarioRows.filter(row => row.itemType !== "consumible" && !row.equipmentPurchase),
+    scenarioRows, physicalSummary, performedHandoffs: physicalHistory.performed.filter(receipt => !physicalHistory.reasons.has(receipt.itemId) && !physicalHistory.globalReason), rentalComparison: scenarioRows.filter(row => row.itemType !== "consumible" && !row.equipmentPurchase),
     consumablePurchases: scenarioRows.filter(row => row.itemType === "consumible"), otherEquipmentPurchases: scenarioRows.filter(row => row.equipmentPurchase),
     transferRoutes, rentalTransferRoutes, scenarioWarnings: [...new Set(scenarioWarnings)], scenarioExcludedEvents,
     logistics: availability.logistics, productionMutations: 0 };
@@ -501,72 +571,86 @@ function renderEquipmentReportHtml(model, mode = "summary") {
 
 function renderEquipmentPlanningReportHtml(model, mode = "transfer") {
   if (!["transfer", "rent", "purchase"].includes(mode)) throw invalid("Seleccione trasiego, renta o compra de consumibles.");
-  const titles = { transfer: "Trasiego de equipo", rent: "Renta con y sin trasiego", purchase: "Compra de consumibles" };
+  const titles = { transfer: "Trasiego de equipo", rent: "Renta con y sin trasiego", purchase: "Consumo y compra por evento" };
   const amount = value => value === null || value === undefined ? "Pendiente" : value;
   const eventName = event => event.client || event.name || event.place || event.id;
-  const eventCodes = new Map(model.events.map((event, index) => [event.id, `E${index + 1}`]));
-  const table = (headers, rows, className = "") => `<div class="table-scroll">${reportTable(headers, rows, className)}</div>`;
-  const eventsTable = table(["Evento", "Fecha", "Ubicación", "Montaje", "Inicio", "Finalización", "Regreso a bodega"], model.events.map(event => [`${eventCodes.get(event.id)} · ${eventName(event)}`, event.date || "Pendiente", event.place || "Pendiente",
-    eventScheduleLabel(event, "setupAt"), eventScheduleLabel(event, "startAt"), eventScheduleLabel(event, "endAt"), eventScheduleLabel(event, "equipmentInAt")]), "events-table");
-  const routeGroups = routes => {
-    const groups = new Map();
-    for (const route of routes) {
-      const key = JSON.stringify([route.fromEventId, route.toEventId]);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(route);
-    }
-    return groups;
+  const dateOnly = value => {
+    const ms = localTime(`${text(value).slice(0, 10)}T12:00`);
+    return Number.isFinite(ms) ? new Intl.DateTimeFormat("es-GT", { timeZone: "America/Guatemala", day: "numeric", month: "long", year: "numeric" }).format(new Date(ms)) : "Por revisar";
   };
-  const routeMarkup = (routes, rental = false) => [...routeGroups(routes).values()].map(entries => {
+  const dateTime = value => {
+    const ms = localTime(value);
+    return Number.isFinite(ms) ? new Intl.DateTimeFormat("es-GT", { timeZone: "America/Guatemala", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(ms)) : "Por revisar";
+  };
+  const scheduleLabel = (event, field) => {
+    if (field === "setupAt" && event.setupApplies === false) return "No aplica";
+    if (event[field]) return dateTime(event[field]);
+    const prefix = { setupAt: "setup", startAt: "start", endAt: "end", equipmentInAt: "equipmentIn" }[field];
+    const date = event[prefix + "Date"] || (field === "startAt" ? event.date : "");
+    const time = event[prefix + "Time"];
+    if (date && time && Number.isFinite(localTime(`${date}T${time}`))) return `${dateTime(`${date}T${time}`)} (por confirmar)`;
+    return date ? `${dateOnly(date)} · hora pendiente` : "Pendiente";
+  };
+  const table = (headers, rows, className = "") => `<div class="table-scroll">${reportTable(headers, rows, className)}</div>`;
+  const groups = routes => {
+    const result = new Map();
+    for (const route of routes) {
+      const id = JSON.stringify([route.fromEventId, route.toEventId]);
+      if (!result.has(id)) result.set(id, []);
+      result.get(id).push(route);
+    }
+    return [...result.values()];
+  };
+  const ownGroups = groups(model.transferRoutes), rentalGroups = groups(model.rentalTransferRoutes);
+  const timingLabel = route => `${route.travelMinutes} min de viaje + ${route.handlingMinutes} min para desmontar y preparar${route.requiresTimeConfirmation ? " (tiempos estimados: revisar)" : " (tiempos indicados)"}.`;
+  // Keep the route identity inside THEAD: it repeats when the equipment list
+  // crosses a printed page, so its destination can never become ambiguous.
+  const routeMarkup = (routeGroups, rental = false) => routeGroups.map(entries => {
     const route = entries[0], from = route.from, to = route.to;
-    const timing = route.requiresTimeConfirmation
-      ? `${route.travelMinutes} min de transporte y ${route.handlingMinutes} min de desmontaje / preparación, estimados y pendientes de revisar.`
-      : `${route.travelMinutes} min de transporte y ${route.handlingMinutes} min de desmontaje / preparación, indicados por el usuario.`;
-    return `<section class="route"><h3>${html(eventName(from))} → ${html(eventName(to))}</h3><p><strong>Origen:</strong> ${html(from.place)} · finaliza ${html(from.endAt)}. <strong>Destino:</strong> ${html(to.place)} · equipo requerido ${html(route.setupAt)}.</p><p>${html(timing)}${rental ? " Confirme con el proveedor que las mismas unidades rentadas pueden continuar al siguiente evento." : " Revise la ruta antes de confirmar el traslado."}</p>${table(["Categoría", "Equipo", "Cantidad a trasladar"], entries.map(entry => [entry.category, entry.description, entry.quantity]), "route-items")}</section>`;
+    return `<section class="route"><div class="table-scroll"><table class="route-items"><thead><tr class="route-repeat"><th colspan="3"><h3>${html(eventName(from))} → ${html(eventName(to))}</h3><p>Sale de ${html(from.place)} desde ${html(dateTime(from.endAt))} · Llegar a ${html(to.place)} antes de ${html(dateTime(route.setupAt))}</p><p>${html(timingLabel(route))}${rental ? " Coordinar estas mismas unidades con el proveedor de renta." : " Trasladar las mismas unidades; no solicitar otra salida de bodega por ellas."}</p></th></tr><tr><th>Categoría</th><th>Equipo</th><th>Cantidad a trasladar</th></tr></thead><tbody>${entries.map(entry => `<tr><td>${html(entry.category)}</td><td>${html(entry.description)}</td><td class="number">${html(entry.quantity)}</td></tr>`).join("")}</tbody></table></div></section>`;
   }).join("");
   const pendingRows = model.scenarioRows.filter(row => row.pending);
-  const pendingBanner = pendingRows.length ? `<p class="warning">${pendingRows.length} referencias tienen datos pendientes y pueden cambiar las cantidades finales. Revise la sección de pendientes antes de cerrar el reporte; sus datos no se sustituyen por cero ni se omiten del archivo.</p>` : "";
-  const rentalValues = rows => rows.map(row => [row.category, row.description, amount(row.ownedCapacity), amount(row.rentWithoutTransfer), amount(row.rentWithTransfer),
+  const pendingBanner = pendingRows.length ? `<p class="warning"><strong>Falta revisar ${pendingRows.length} equipos o materiales.</strong> Estos datos pueden cambiar las cantidades finales. La lista «Datos por revisar» se incluye al final de este reporte.</p>` : "";
+  const pendingSection = pendingRows.length ? `<section class="report-pending"><h2>Datos por revisar (${pendingRows.length})</h2><p>Resuelva estos datos antes de cerrar las cantidades de renta, compra o traslado. Pendiente no significa cero.</p>${table(["Categoría", "Equipo o material", "Solicitado", "Qué falta revisar"], pendingRows.map(row => [row.category, row.description, row.demand, row.reason || "Revise su identificación, clasificación o datos de los eventos."]), "review-table")}</section>` : "";
+  const physicalSummary = mode === "purchase" ? "" : `<section class="physical-summary"><h2>Resumen final: equipo físico que se necesita</h2><p>Si las mismas 2 unidades se usan en el evento A y después en el B, se necesitan <strong>2 unidades físicas, no 4</strong>. El traslado no vuelve a descontarlas de bodega. Solo se renta el faltante real; si otro evento necesita más unidades o coincide en horario, ese adicional sí puede generar renta.</p>${table(["Categoría", "Equipo", "Solicitado entre eventos", "Unidades físicas necesarias", "Unidades propias que se usan", "Unidades por rentar"], list(model.physicalSummary).map(row => [row.category, row.description, row.totalRequested, amount(row.uniquePhysicalNeeded), amount(row.ownUnitsPlanned), amount(row.rentalUnitsNeeded)]), "physical-summary-table")}<p>«Propias que se usan» cuenta las unidades una sola vez a lo largo de su recorrido; no es una nueva orden de salida.</p></section>`;
+  const overviewRow = (entries, source) => [source, eventName(entries[0].from), eventName(entries[0].to), dateTime(entries[0].from.endAt), dateTime(entries[0].setupAt)];
+  const overviewRows = [...ownGroups.map(entries => overviewRow(entries, "Propio")), ...rentalGroups.map(entries => overviewRow(entries, "Del proveedor"))];
+  const overview = overviewRows.length ? `<section class="route-overview"><h2>De dónde sale y a dónde va</h2>${table(["Tipo de equipo", "Sale del evento", "Va al evento", "Disponible desde", "Llegar antes de"], overviewRows, "route-overview-table")}</section>` : "";
+  const rentalValues = rows => rows.map(row => [row.category, row.description, amount(row.ownedCapacity), row.withoutTransferAlreadyPerformed ? "Ya trasladado" : amount(row.rentWithoutTransfer), amount(row.rentWithTransfer),
     row.rentWithoutTransfer === null || row.rentWithTransfer === null ? "Pendiente" : row.rentWithoutTransfer - row.rentWithTransfer,
-    row.events.map(event => `${eventCodes.get(event.id)}: ${row.eventQuantities[event.id] || 0}`).join("; "),
-    row.reason || (row.requiresRentalSupplierConfirmation ? "Requiere continuidad de las mismas unidades rentadas y confirmación del proveedor."
-      : row.requiresTimeConfirmation ? "El resultado con trasiego usa tiempos de transporte estimados; revíselos." : row.routes.length ? "Requiere realizar los trasiegos propuestos." : "Calculado con los horarios indicados.")]);
+    row.events.map(event => `${eventName(event)}: ${row.eventQuantities[event.id] || 0}`).join("; "),
+    row.reason || (row.requiresRentalSupplierConfirmation ? "Coordinar la continuidad con el proveedor." : row.requiresTimeConfirmation ? "Revisar tiempos estimados de traslado." : row.routes.length ? "Realizar los trasiegos indicados." : "Cubierto con los horarios indicados.")]);
   let content;
   if (mode === "transfer") {
-    const pairCount = routeGroups(model.transferRoutes).size;
-    content = `<p class="lead">${pairCount} tramos propuestos entre eventos con equipo propio · ${model.transferRoutes.length} referencias a trasladar.</p>${pendingBanner}`
-      + (model.transferRoutes.length ? routeMarkup(model.transferRoutes) : '<p>No hay trasiegos de equipo propio que se puedan proponer con los datos actuales. Revise los pendientes; la falta de una propuesta no significa que falte todo el equipo.</p>')
-      + (model.rentalTransferRoutes.length ? `<h2>Continuidad de equipo rentado</h2><p>Estas unidades corresponden al proveedor, y se muestran separadas del equipo propio. El escenario de renta con trasiego depende de coordinar esta continuidad.</p>${routeMarkup(model.rentalTransferRoutes, true)}` : "")
-      + (model.scenarioExcludedEvents.length ? `<h2>Eventos con logística pendiente</h2>${table(["Evento", "Dato por completar"], model.scenarioExcludedEvents.map(event => [event.event, event.reason]))}` : "")
-      + (pendingRows.length ? `<details class="optional-appendix report-pending"><summary>Consultar ${pendingRows.length} referencias pendientes de evaluar</summary>${table(["Categoría", "Equipo", "Cantidad solicitada", "Dato por completar"], pendingRows.map(row => [row.category, row.description, row.demand, row.reason]))}</details>` : "");
+    content = `<p class="lead">${ownGroups.length} trasiegos propuestos con equipo propio.</p>${pendingBanner}${overview}<h2>Qué equipo llevar en cada trasiego</h2>`
+      + (ownGroups.length ? routeMarkup(ownGroups) : '<p>No hay trasiegos propios calculables con los datos actuales. Revise el resumen final y los datos pendientes.</p>')
+      + (rentalGroups.length ? `<h2>Traslado de equipo del proveedor</h2><p>Este equipo es rentado y se coordina aparte. No se suma como equipo propio de bodega.</p>${routeMarkup(rentalGroups, true)}` : "")
+      + (model.scenarioExcludedEvents.length ? `<h2>Eventos con datos pendientes</h2>${table(["Evento", "Qué falta revisar"], model.scenarioExcludedEvents.map(event => [event.event, event.reason]))}` : "")
+      + physicalSummary;
   } else if (mode === "rent") {
     const relevant = model.rentalComparison.filter(row => !row.pending && (row.rentWithoutTransfer > 0 || row.rentWithTransfer > 0));
-    const rentalPending = model.rentalComparison.filter(row => row.pending);
     const covered = model.rentalComparison.filter(row => !row.pending && !relevant.includes(row));
-    const headers = ["Categoría", "Equipo", "Capacidad propia", "Rentar sin trasiego", "Rentar con trasiego", "Reducción de renta", "Eventos / cantidades", "Revisión"];
-    content = `<p class="lead">Compare las dos alternativas para los mismos ${model.events.length} eventos.</p><p><strong>Sin trasiego:</strong> el equipo regresa a bodega y cumple su tiempo de preparación antes de reutilizarse. <strong>Con trasiego:</strong> se propone trasladar las mismas unidades directamente entre eventos cuando los horarios lo permiten.</p>${pendingBanner}<section class="rental-results"><h2>Equipo por rentar calculado</h2>${!relevant.length && rentalPending.length ? '<p>La renta todavía no está cerrada: revise las referencias pendientes. La ausencia de cantidades calculadas no equivale a renta cero.</p>' : ""}${table(headers, rentalValues(relevant), "rental-table")}</section>`
-      + (model.transferRoutes.length || model.rentalTransferRoutes.length ? `<h2>Trasiegos necesarios para obtener el resultado con trasiego</h2>${routeMarkup(model.transferRoutes)}${model.rentalTransferRoutes.length ? `<h3>Continuidad con el proveedor de renta</h3>${routeMarkup(model.rentalTransferRoutes, true)}` : ""}` : "")
-      + (rentalPending.length ? `<details class="optional-appendix report-pending"><summary>Consultar ${rentalPending.length} referencias de renta pendientes</summary>${table(headers, rentalValues(rentalPending), "rental-table")}</details>` : "")
-      + (covered.length ? `<details class="optional-appendix"><summary>Ver ${covered.length} referencias cubiertas o con cantidad cero</summary>${table(headers, rentalValues(covered), "rental-table")}</details>` : "")
-      + (model.otherEquipmentPurchases.length ? `<h2>Equipo con decisión de compra</h2><p>Estas referencias no son consumibles ni se convirtieron automáticamente en renta.</p>${table(["Categoría", "Equipo", "Cantidad solicitada", "Revisión"], model.otherEquipmentPurchases.map(row => [row.category, row.description, row.demand, row.reason]))}` : "");
+    const headers = ["Categoría", "Equipo", "Propio disponible para el plan", "Rentar sin trasiego", "Rentar con trasiego", "Renta que se evita", "Uso por evento", "Qué hacer"];
+    content = `<p class="lead">Cuánto rentar para los mismos ${model.events.length} eventos.</p><p><strong>Sin trasiego:</strong> el equipo vuelve a bodega y cumple su preparación antes de salir otra vez. <strong>Con trasiego:</strong> las mismas unidades pasan directamente de un evento al siguiente.</p>${pendingBanner}<section class="rental-results"><h2>Equipo por rentar calculado</h2>${!relevant.length ? `<p>${pendingRows.length ? "La renta todavía tiene datos pendientes; no se debe interpretar la tabla vacía como renta cero." : "No hay renta adicional para las referencias calculadas."}</p>` : ""}${table(headers, rentalValues(relevant), "rental-table")}</section>${physicalSummary}${overview}`
+      + (ownGroups.length || rentalGroups.length ? `<h2>Trasiegos necesarios para este resultado</h2>${routeMarkup(ownGroups)}${rentalGroups.length ? `<h3>Coordinar con el proveedor de renta</h3>${routeMarkup(rentalGroups, true)}` : ""}` : "")
+      + (covered.length ? `<details class="optional-appendix"><summary>Consultar ${covered.length} equipos cubiertos o con cantidad cero</summary>${table(headers, rentalValues(covered), "rental-table")}</details>` : "")
+      + (model.otherEquipmentPurchases.length ? `<h2>Equipo con decisión de compra</h2>${table(["Categoría", "Equipo", "Solicitado", "Qué revisar"], model.otherEquipmentPurchases.map(row => [row.category, row.description, row.demand, row.reason]))}` : "");
   } else {
-    const relevant = model.consumablePurchases.filter(row => !row.pending && row.purchaseQuantity > 0);
-    const purchasePending = model.consumablePurchases.filter(row => row.pending);
-    const covered = model.consumablePurchases.filter(row => !row.pending && !relevant.includes(row));
-    const purchaseValues = rows => rows.map(row => [row.category, row.description, row.demand, amount(row.available), amount(row.purchaseQuantity), row.reason || "Se suman todos los eventos. El consumible no se reutiliza mediante trasiego."]);
-    const headers = ["Categoría", "Consumible", "Total solicitado", "Disponible en Contabilidad", "Comprar", "Revisión"];
-    content = `<p class="lead">Los consumibles de todos los eventos se suman una sola vez y se comparan con las existencias actuales. Hacer trasiegos no reduce su consumo.</p>${pendingBanner}${!relevant.length && pendingRows.length ? '<p class="warning">La compra de consumibles no está cerrada: primero se deben identificar o clasificar las referencias pendientes. Una tabla vacía no significa que no sea necesario comprar.</p>' : ""}<section class="purchase-results"><h2>Consumibles por comprar calculados</h2>${table(headers, purchaseValues(relevant), "purchase-table")}</section>`
-      + (purchasePending.length ? `<details class="optional-appendix report-pending"><summary>Consultar ${purchasePending.length} consumibles pendientes</summary>${table(headers, purchaseValues(purchasePending), "purchase-table")}</details>` : "")
-      + (covered.length ? `<details class="optional-appendix"><summary>Ver ${covered.length} consumibles cubiertos o con cantidad cero</summary>${table(headers, purchaseValues(covered), "purchase-table")}</details>` : "")
-      + (model.otherEquipmentPurchases.length ? `<h2>Otras decisiones de compra de equipo</h2><p>Se conservan aparte porque corresponden a equipo reutilizable.</p>${table(["Categoría", "Equipo", "Cantidad solicitada", "Revisión"], model.otherEquipmentPurchases.map(row => [row.category, row.description, row.demand, row.reason]))}` : "");
+    const headers = ["Categoría", "Consumible", ...model.events.map(eventName), "Consumo total", "Ya consumido", "Falta consumir", "Disponible ahora", "Comprar"];
+    const values = model.consumablePurchases.map(row => [row.category, row.description, ...model.events.map(event => row.eventQuantities[event.id] || 0), row.demand, amount(row.alreadyConsumed), amount(row.remainingConsumption), amount(row.available), amount(row.purchaseQuantity)]);
+    content = `<p class="lead">Los consumibles se cuentan por cada evento, aunque el equipo se trasiegue.</p><p>Ejemplo: 2 unidades para el evento A y 3 para el B son <strong>5 unidades de consumo</strong>. El trasiego del equipo no reduce ese consumo. Si un consumo ya está registrado en Contabilidad, se muestra aparte y no se compra otra vez.</p>${pendingBanner}<section class="purchase-results"><h2>Consumo por evento y compra necesaria</h2>${!values.length ? `<p>${pendingRows.length ? "Primero deben identificarse o clasificarse los materiales pendientes; una tabla vacía no significa consumo cero." : "No hay consumibles en los eventos incluidos."}</p>` : ""}${table(headers, values, "consumables-table")}</section>`
+      + (model.otherEquipmentPurchases.length ? `<h2>Compra de equipo reutilizable</h2><p>Se muestra aparte; no forma parte del consumo por evento.</p>${table(["Categoría", "Equipo", "Solicitado", "Qué revisar"], model.otherEquipmentPurchases.map(row => [row.category, row.description, row.demand, row.reason]))}` : "");
   }
-  const allSourceDetails = `<details class="source-appendix optional-appendix"><summary>Consultar el detalle completo del archivo y sus celdas originales</summary><h2>Equipos por evento</h2>${table(["Evento", "Fecha", "Categoría original", "Equipo", "Cantidad", "Observaciones", "Celdas"], model.details.map(row => [row.event, row.date, row.category, row.description, row.quantity, primitive(row.notes), row.sourceRefs]))}<h2>Encabezados, notas y filas originales</h2>${table(["Evento", "Sección", "Tipo", "Cantidad", "Contenido", "Observaciones", "Celdas"], model.preservedRows.map(row => [row.event, row.section, row.type, row.quantity, row.description, primitive(row.notes), row.refs]))}<h2>Celdas originales conservadas</h2>${table(["Evento", "Hoja", "Celda", "Valor", "Dato original completo"], model.sourceCells.map(cell => [cell.event, cell.sheet, cell.ref, primitive(cell.value), primitive(cell.cell)]))}</details>`;
-  const sourcePending = `<details class="optional-appendix"><summary>Consultar ${model.pending.length} avisos y referencias del archivo</summary>${table(["Tipo", "Evento", "Descripción", "Cantidad", "Motivo", "Celdas"], model.pending.map(row => [row.kind, row.event, row.description, row.quantity ?? "", row.reason, row.sourceRefs]), "pending-table")}</details>`;
-  const assumptions = model.scenarioWarnings.length ? `<details class="optional-appendix"><summary>Revisar supuestos y restricciones de logística (${model.scenarioWarnings.length})</summary><ul>${model.scenarioWarnings.map(warning => `<li>${html(warning)}</li>`).join("")}</ul></details>` : "";
+  const eventsTable = table(["Evento", "Fecha", "Lugar", "Montaje", "Inicio", "Termina", "Regresa a bodega"], model.events.map(event => [eventName(event), dateOnly(event.date), event.place || "Pendiente", scheduleLabel(event, "setupAt"), scheduleLabel(event, "startAt"), scheduleLabel(event, "endAt"), scheduleLabel(event, "equipmentInAt")]), "events-table");
+  const allSourceDetails = `<details class="source-appendix optional-appendix"><summary>Consultar el archivo original completo</summary><p>${model.counts.equipmentRows} líneas de equipo, ${model.counts.zeroQuantityRows} cantidades en cero y ${model.counts.sourceCells} celdas originales conservadas.</p><h2>Equipos por evento</h2>${table(["Evento", "Fecha original", "Categoría original", "Equipo", "Cantidad", "Observaciones", "Celdas"], model.details.map(row => [row.event, row.date, row.category, row.description, row.quantity, primitive(row.notes), row.sourceRefs]))}<h2>Encabezados, notas y filas originales</h2>${table(["Evento", "Sección", "Tipo", "Cantidad", "Contenido", "Observaciones", "Celdas"], model.preservedRows.map(row => [row.event, row.section, row.type, row.quantity, row.description, primitive(row.notes), row.refs]))}<h2>Celdas originales</h2>${table(["Evento", "Hoja", "Celda", "Valor", "Dato original completo"], model.sourceCells.map(cell => [cell.event, cell.sheet, cell.ref, primitive(cell.value), primitive(cell.cell)]))}</details>`;
+  const sourcePending = `<details class="optional-appendix"><summary>Consultar avisos del archivo y sus referencias (${model.pending.length})</summary>${table(["Tipo", "Evento", "Descripción", "Cantidad", "Motivo", "Celdas"], model.pending.map(row => [row.kind, row.event, row.description, row.quantity ?? "", row.reason, row.sourceRefs]), "pending-table")}</details>`;
+  const assumptions = model.scenarioWarnings.length ? `<details class="optional-appendix"><summary>Consultar detalles del cálculo y tiempos estimados</summary><ul>${model.scenarioWarnings.map(warning => `<li>${html(warning)}</li>`).join("")}</ul></details>` : "";
+  const movementDetail = mode === "purchase" ? "" : `<details class="optional-appendix"><summary>Consultar movimientos entre eventos (no son unidades nuevas de bodega)</summary>${table(["Equipo", "Movimientos de unidades propias entre tramos", "Movimientos de unidades del proveedor"], list(model.physicalSummary).map(row => [row.description, amount(row.transferMovements), amount(row.rentalTransferMovements)]))}<p>Una unidad que pasa de A a B y de B a C aparece en dos movimientos, pero sigue siendo una sola unidad física.</p></details>`;
+  const performedSection = list(model.performedHandoffs).length ? `<section class="performed-handoffs"><h2>Equipo que ya fue trasladado</h2><p>Estas entregas ya están registradas. No son nuevas propuestas ni otra salida de bodega. Para ellas, el escenario «sin trasiego» dice «Ya trasladado» porque no se deshace una entrega real.</p>${table(["Categoría", "Equipo", "Cantidad ya entregada", "Salió del evento", "Se recibió en"], model.performedHandoffs.map(receipt => [receipt.category, receipt.description, receipt.quantity, eventName(receipt.from), eventName(receipt.to)]))}</section>` : "";
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${html(titles[mode])} · Live Productions</title><style>
-  @page{size:letter landscape;margin:12mm}*{box-sizing:border-box}body{margin:0;background:#fff;color:#172638;font:13px Arial,sans-serif;line-height:1.45}.equipment-pdf-document{max-width:1200px;padding:22px;margin:auto}.brand{font-weight:700;letter-spacing:2px;color:#52647a;font-size:11px}h1{font-size:26px;margin:8px 0}h2{font-size:18px;margin:22px 0 9px}h3{font-size:15px;margin:16px 0 6px}.meta{font-size:12px;color:#52647a}.banner,.warning{padding:12px;border:1px solid #d7bf80;background:#fff9e9;border-radius:7px}.lead{font-size:15px;font-weight:600}.table-scroll{max-width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse;margin:10px 0;table-layout:auto}th,td{padding:7px;text-align:left;vertical-align:top;overflow-wrap:anywhere;border-bottom:1px solid #d9e2eb}th{background:#18324f;color:#fff}thead{display:table-header-group}.number{text-align:right}tr:nth-child(even) td{background:#f3f6fa}.route{margin:18px 0;padding:12px;border:1px solid #d9e2eb;border-radius:7px}.route p{margin:6px 0}details{margin:18px 0;padding:12px;border:1px solid #d9e2eb;border-radius:7px}summary{cursor:pointer;font-weight:700}.rental-table{min-width:1100px;table-layout:fixed}.rental-table th:nth-child(1){width:12%}.rental-table th:nth-child(2){width:23%}.rental-table th:nth-child(3){width:9%}.rental-table th:nth-child(4){width:9%}.rental-table th:nth-child(5){width:9%}.rental-table th:nth-child(6){width:8%}.rental-table th:nth-child(7){width:16%}.rental-table th:nth-child(8){width:14%}.source-appendix td{font-size:11px}.pending-table{table-layout:fixed}.pending-table th:nth-child(5){width:35%}.pending-table th:nth-child(6){width:20%}
-  @media(max-width:600px){.equipment-pdf-document{padding:14px}h1{font-size:23px}.events-table{min-width:850px}.route{padding:9px}}@media print{body{font-size:10px}.equipment-pdf-document{padding:0;max-width:none}.table-scroll{overflow:visible}table,.rental-table,.events-table{min-width:0}th,td{padding:4px}tr{break-inside:avoid}h1,h2,h3{break-after:avoid}.route{border:0;padding:0}.optional-appendix:not([open]){display:none!important}details[open]>summary{display:none}.banner{padding:7px}.meta{font-size:9px}}
-  </style></head><body><main class="equipment-pdf-document"><div class="brand">LIVE PRODUCTIONS · REQUERIMIENTO DE EQUIPO</div><h1>${html(titles[mode])}</h1><p class="meta">${model.counts.events} eventos · ${model.counts.equipmentRows} líneas de equipo (${model.counts.zeroQuantityRows} en cero) · ${model.counts.sourceCells} celdas originales conservadas · Inventario: ${html(displayTimestamp(model.inventorySavedAt))} · Generado: ${html(displayTimestamp(model.createdAt))}</p><p class="banner">${html(model.disclaimer)}</p>${content}<section><h2>Eventos incluidos</h2><p>Los códigos E1, E2 y siguientes identifican las cantidades por evento en los cuadros.</p>${eventsTable}</section>${assumptions}${sourcePending}${allSourceDetails}</main></body></html>`;
+  @page{size:letter landscape;margin:12mm}*{box-sizing:border-box}body{margin:0;background:#fff;color:#172638;font:13px Arial,sans-serif;line-height:1.45}.equipment-pdf-document{max-width:1200px;padding:22px;margin:auto}.brand{font-weight:700;letter-spacing:2px;color:#52647a;font-size:11px}h1{font-size:26px;margin:8px 0}h2{font-size:18px;margin:22px 0 9px}h3{font-size:15px;margin:16px 0 6px}.meta{font-size:12px;color:#52647a}.banner,.warning{padding:12px;border:1px solid #d7bf80;background:#fff9e9;border-radius:7px}.lead{font-size:15px;font-weight:600}.table-scroll{max-width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse;margin:10px 0;table-layout:auto}th,td{padding:7px;text-align:left;vertical-align:top;overflow-wrap:anywhere;border-bottom:1px solid #d9e2eb}th{background:#18324f;color:#fff}thead{display:table-header-group}.number{text-align:right}tr:nth-child(even) td{background:#f3f6fa}.route{margin:18px 0}.route-repeat th{background:#e7edf4;color:#172638}.route-repeat h3{margin:0}.route-repeat p{margin:5px 0;font-weight:400}.route-items{table-layout:fixed}.route-items th:nth-child(1){width:20%}.route-items th:nth-child(2){width:65%}.route-items th:nth-child(3){width:15%}details{margin:18px 0;padding:12px;border:1px solid #d9e2eb;border-radius:7px}summary{cursor:pointer;font-weight:700}.rental-table{min-width:1100px;table-layout:fixed}.rental-table th:nth-child(1){width:10%}.rental-table th:nth-child(2){width:24%}.rental-table th:nth-child(3){width:10%}.rental-table th:nth-child(4),.rental-table th:nth-child(5),.rental-table th:nth-child(6){width:8%}.rental-table th:nth-child(7){width:17%}.rental-table th:nth-child(8){width:15%}.physical-summary-table{table-layout:fixed;min-width:850px}.physical-summary-table th:nth-child(1){width:12%}.physical-summary-table th:nth-child(2){width:32%}.physical-summary-table th:nth-child(n+3){width:14%}.consumables-table{table-layout:fixed;min-width:1100px}.consumables-table th:first-child{width:10%}.consumables-table th:nth-child(2){width:24%}.review-table{table-layout:fixed}.review-table th:nth-child(2){width:28%}.review-table th:nth-child(4){width:40%}.source-appendix td{font-size:11px}.pending-table{table-layout:fixed}.pending-table th:nth-child(5){width:35%}.pending-table th:nth-child(6){width:20%}
+  @media(max-width:600px){.equipment-pdf-document{padding:14px}h1{font-size:23px}.events-table,.route-overview-table{min-width:850px}}@media print{body{font-size:10px}.equipment-pdf-document{padding:0;max-width:none}.table-scroll{overflow:visible}table,.rental-table,.events-table,.physical-summary-table,.consumables-table,.route-overview-table{min-width:0}th,td{padding:4px}tr{break-inside:avoid}h1,h2,h3{break-after:avoid}.route-items thead{display:table-header-group;break-inside:avoid}.route-items tbody tr:first-child{break-before:avoid}.optional-appendix:not([open]){display:none!important}details[open]>summary{display:none}.banner{padding:7px}.meta{font-size:9px}}
+  </style></head><body><main class="equipment-pdf-document"><div class="brand">LIVE PRODUCTIONS · REQUERIMIENTO DE EQUIPO</div><h1>${html(titles[mode])}</h1><p class="meta">${model.events.length} eventos · Generado: ${html(displayTimestamp(model.createdAt))} · Inventario consultado: ${html(displayTimestamp(model.inventorySavedAt))}</p><p class="banner">PROPUESTA PROVISIONAL · Plan para organizar el equipo. Revise los horarios y los tiempos de traslado antes de ejecutarlo. Abrir o imprimir este reporte no registra salidas de bodega, rentas ni compras.</p>${performedSection}${content}${pendingSection}<section><h2>Eventos incluidos</h2>${eventsTable}</section>${movementDetail}${assumptions}${sourcePending}${allSourceDetails}</main></body></html>`;
 }
 
 module.exports = { createEquipmentReportModel, createEquipmentTransferReportModel, createEquipmentPlanningReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml, renderEquipmentTransferReportHtml, renderEquipmentPlanningReportHtml, sourceCellsForEvent, warehouseRows, eventScheduleLabel, DISCLAIMER, TRANSFER_DISCLAIMER };

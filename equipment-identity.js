@@ -71,7 +71,8 @@
     const warnings = [];
     const likelyReusable = /\b(?:extintor|pata de gallo|consola|amplificador|microfono|bocina|soporte|estructura)\b/.test(name);
     const likelyConsumable = /\b(?:gafer|gaffer|marcador|duc tape|duct tape|liquido de humo|liquido de espuma|atomizador|desinfectante|silicon|bolsa jardinera|rollo de tela|cinchos|pirotecnia|monting|mounting)\b/.test(name)
-      || /\b(?:rollo|paquete|bolsa|galon)\b.*\b(?:cinta|tape|agua|vinil|espuma|humo|cincho|basura)\b/.test(name);
+      || /\b(?:rollo|paquete|bolsa|galon)\b.*\b(?:cinta|tape|agua|vinil|espuma|humo|cincho|basura)\b/.test(name)
+      || /^espuma limpiadora(?:\s|$)/.test(name);
     const suggestedType = currentType === "consumible" && likelyReusable ? "equipo"
       : currentType === "equipo" && likelyConsumable ? "consumible" : "";
     if (suggestedType && !classificationConfirmed(item)) warnings.push({

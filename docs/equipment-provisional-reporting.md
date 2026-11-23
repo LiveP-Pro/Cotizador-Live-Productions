@@ -27,6 +27,31 @@ HTML utiliza `no-store`, `nosniff` y una política de contenido restrictiva. El
 visor usa un marco sin permiso de ejecutar scripts, muestra errores HTTP útiles
 y permite reintentar sin volver a importar ni registrar reservas o movimientos.
 
+## Unidades físicas y consumos
+
+La suma de pedidos por evento conserva el documento original. El resumen del
+plan muestra aparte las unidades físicas necesarias y las unidades propias que
+se usarán. Las cantidades de los tramos son movimientos entre eventos: sumar
+esos tramos no equivale a sumar unidades físicas distintas. Las fechas se
+presentan en horario de Guatemala y cada tabla de traslado repite su ruta al
+continuar en otra página. El detalle compacto de pendientes permanece visible
+en la impresión; las celdas de evidencia se consultan por separado.
+
+Los consumibles se detallan por evento, incluyendo los cubiertos y los ceros.
+Un consumo ya registrado se conserva en el total de uso, pero no vuelve a
+pedirse como una compra pendiente. El equipo reutilizable y el material que se
+consume no comparten el cálculo de trasiego.
+
+Una recepción operativa por trasiego requiere ruta confirmada y unidades que
+realmente salieron del origen y siguen fuera de bodega. `equipmentHandoffs`
+conserva esa custodia sin crear una salida o un ingreso ficticio. La devolución
+real se enlaza con la salida original; así la unidad se acredita una sola vez.
+Estos registros los crea el servidor y no se aceptan como ediciones del cliente.
+Al recalcular un reporte se conserva la evidencia de los trasiegos ya realizados;
+no se vuelven a proponer ni se interpreta su equipo como una renta adicional.
+Si el historial físico no permite comparar el conjunto de eventos seleccionado,
+esa referencia permanece pendiente en lugar de presentar una cantidad ficticia.
+
 ## Descargas de archivo
 
 `POST /api/cuadros-equipo/reportes/provisional` requiere la sesión habitual. Recibe:

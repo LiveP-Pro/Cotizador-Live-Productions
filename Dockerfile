@@ -25,6 +25,7 @@ COPY equipment-event-store.cjs equipment-event-personalizer.js equipment-event-p
 COPY equipment-name-picker.js equipment-name-picker.css ./
 COPY equipment-identity.js equipment-document-audit.js equipment-planner.js equipment-planner.css equipment-batch-events.js equipment-batch-events.css equipment-event-import.cjs equipment-reporting.cjs ./
 COPY equipment-report-viewer.js equipment-report-viewer.css ./
+COPY equipment-handoffs.js ./
 COPY assets ./assets
 COPY luxury/package.json luxury/server.js ./luxury/
 COPY luxury/lib ./luxury/lib

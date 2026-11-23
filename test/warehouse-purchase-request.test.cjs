@@ -182,7 +182,7 @@ test("pending procurement decisions survive normalization and show the selected 
   assert.match(harness.form.eventsBoard.innerHTML, /Guardado tal cual, sin coincidencia en inventario/);
   assert.match(harness.form.eventsBoard.innerHTML, /Renta solicitada/);
   assert.match(harness.form.eventsBoard.innerHTML, /Compra pendiente/);
-  assert.match(harness.form.eventsBoard.innerHTML, /Salió: 0/);
+  assert.match(harness.form.eventsBoard.innerHTML, /Salió de bodega: 0/);
   assert.equal(harness.context.window.__purchaseHarness.eventRecords().length, 0);
   assert.doesNotMatch(harness.form.eventsBoard.innerHTML, /Registrar devolución/);
   harness.printEvent("cuadro:synthetic-document");

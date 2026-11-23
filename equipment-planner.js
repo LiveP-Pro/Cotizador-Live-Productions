@@ -233,8 +233,14 @@
         const onlyPending=!!$('#equipmentPlannerOnlyPending')?.checked;
         const visible=model.rows.filter(row=>(!query || Identity.normalizeName(row.description+' '+row.category).includes(query))&&(!onlyPending || row.missing>0 || row.available===null || row.classification.pending));
         const cats=new Map();visible.forEach(row=>{if(!cats.has(row.category))cats.set(row.category,[]);cats.get(row.category).push(row);});
-        const body=[...cats].sort((a,b)=>a[0].localeCompare(b[0])).map(([cat,rows])=>`<tr class="equipment-planner-category"><th colspan="${model.events.length+5}">${esc(cat)}</th></tr>${rows.map(row=>`<tr><td>${esc(row.item?.name || row.description)}</td>${model.events.map(e=>`<td>${row.eventQuantities[e.id] ?? 0}</td>`).join('')}<td><strong>${row.quantity}</strong></td><td>${row.available===null?'Por identificar':row.available}</td><td>${row.missing===null?'Pendiente':row.missing}</td><td>${esc(row.action)}</td></tr>`).join('')}`).join('');
-        table.innerHTML=`<table><thead><tr><th>Descripción de equipo</th>${model.events.map(e=>`<th>${esc(e.place || e.name || 'Evento')}<small>${esc(dateLabel(e.date))}</small></th>`).join('')}<th>Solicitado total</th><th>Disponible en bodega</th><th>Faltante provisional</th><th>Acción / revisión</th></tr></thead><tbody>${body}</tbody></table><p>Faltante conservador: suma de los cuadros menos disponibilidad actual. Sin retornos ni trasiegos supuestos. El plan con reservas confirmadas se consulta más abajo.</p>`;
+        const body=[...cats].sort((a,b)=>a[0].localeCompare(b[0])).map(([cat,rows])=>`<tr class="equipment-planner-category"><th colspan="${model.events.length+5}">${esc(cat)}</th></tr>${rows.map(row=>{
+          const reusable = row.item && Identity.itemType(row.item) !== 'consumible' && row.quantity > 0 && !row.invalidQuantity && !row.classification.pending;
+          const consumable = row.item && Identity.itemType(row.item) === 'consumible' && row.quantity > 0 && !row.invalidQuantity && !row.classification.pending;
+          const shortage = reusable ? 'Ver plan con trasiego' : consumable ? 'Ver consumo por evento' : row.missing===null?'Pendiente':row.missing;
+          const action = reusable && row.action === 'RENTA' ? 'Comparar renta con y sin trasiego' : consumable && row.action === 'COMPRA' ? 'Ver compra de consumibles' : row.action;
+          return `<tr><td>${esc(row.item?.name || row.description)}</td>${model.events.map(e=>`<td>${row.eventQuantities[e.id] ?? 0}</td>`).join('')}<td><strong>${row.quantity}</strong></td><td>${row.available===null?'Por identificar':row.available}</td><td>${esc(shortage)}</td><td>${esc(action)}</td></tr>`;
+        }).join('')}`).join('');
+        table.innerHTML=`<table><thead><tr><th>Descripción de equipo</th>${model.events.map(e=>`<th>${esc(e.place || e.name || 'Evento')}<small>${esc(dateLabel(e.date))}</small></th>`).join('')}<th>Total pedido entre eventos</th><th>Disponible en bodega</th><th>Preparación / compra</th><th>Acción / revisión</th></tr></thead><tbody>${body}</tbody></table><p>El total por eventos muestra dónde se pide cada equipo. Una misma unidad puede pasar de un evento al siguiente: el reporte de trasiego y renta indica las unidades físicas necesarias, sin volver a contarlas por cada uso. Los consumibles se suman por evento.</p>`;
       }
     }
     function init(){

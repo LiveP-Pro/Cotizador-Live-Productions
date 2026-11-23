@@ -42,6 +42,17 @@ const ITEM_FIELDS = Object.freeze([
 ]);
 const STATE_FIELDS = Object.freeze(["version", "datasetId", "createdAt", "updatedAt", "title", "subtitles"]);
 const INVENTORY_METADATA_FIELDS = Object.freeze(["source", "sourceSpreadsheetId", "sourceSheetId", "importedSource"]);
+const HANDOFF_FIELDS = Object.freeze(["id", "transferId", "fromEventId", "toEventId", "fromDocumentId", "toDocumentId",
+  "fromEventName", "fromEventPlace", "toEventName", "toEventPlace", "toEventDate", "toExpectedReturnAt", "itemId", "itemName", "quantity", "createdAt", "links"]);
+
+function projectHandoff(handoff, user) {
+  if (handoff?.activityExcluded !== true && fullHistoryAccess(user)) return clone(handoff);
+  const result = pick(handoff, HANDOFF_FIELDS);
+  result.links = (Array.isArray(handoff?.links) ? handoff.links : []).map(link => pick(link,
+    ["sourceMovementId", "sourceDocumentId", "sourceEventId", "parentHandoffId", "quantity"]));
+  if (handoff?.activityExcluded === true) result.activityExcluded = true;
+  return result;
+}
 
 function projectMovement(movement, user) {
   if (movement?.activityExcluded === true) return { ...pick(movement, MOVEMENT_FIELDS), activityExcluded: true };
@@ -94,6 +105,8 @@ function projectState(state, user) {
   result.auditEntries = full ? redactExcludedActivity(Array.isArray(state?.auditEntries) ? state.auditEntries : []) : [];
   result.equipmentStockReceipts = (Array.isArray(state?.equipmentStockReceipts) ? state.equipmentStockReceipts : [])
     .map((receipt) => full ? redactExcludedActivity(receipt) : projectReceipt(receipt));
+  if (Array.isArray(state?.equipmentHandoffs)) result.equipmentHandoffs = state.equipmentHandoffs
+    .map(handoff => projectHandoff(handoff, user));
   // Drafts are shared operational lists, rather than historical evidence. Keep
   // just the identity/quantity needed to use them, not arbitrary embedded files.
   for (const field of ["rentalDraft", "workshopDraft"]) if (!full && Array.isArray(state?.[field])) {
@@ -150,7 +163,7 @@ function mergeWarehousePrivateFields(currentState, candidateState, user) {
     // Work on metadata separately so no array-index merge can resurrect deleted
     // movements or associate one employee's private evidence with another ID.
     const currentMetadata = { ...current }, candidateMetadata = { ...candidate }, visibleMetadata = { ...visible };
-    for (const field of ["items", "movements", "equipmentStockReceipts", "auditEntries"]) {
+    for (const field of ["items", "movements", "equipmentStockReceipts", "equipmentHandoffs", "auditEntries"]) {
       delete currentMetadata[field]; delete candidateMetadata[field]; delete visibleMetadata[field];
     }
     if (has(user, "warehouse.inventory")) for (const field of INVENTORY_METADATA_FIELDS) {
@@ -189,6 +202,7 @@ function mergeWarehousePrivateFields(currentState, candidateState, user) {
   // new evidence/receipts after it validates the actual requested changes.
   candidate.auditEntries = clone(Array.isArray(current.auditEntries) ? current.auditEntries : []);
   candidate.equipmentStockReceipts = clone(Array.isArray(current.equipmentStockReceipts) ? current.equipmentStockReceipts : []);
+  candidate.equipmentHandoffs = clone(Array.isArray(current.equipmentHandoffs) ? current.equipmentHandoffs : []);
   return candidate;
 }
 
