@@ -173,7 +173,7 @@ function browserHarness(options = {}) {
   }
   const opener = new Element("equipmentBatchImportButton"); ids.set(opener.id, opener);
   const doc = { body: { appendChild(element) { ids.set(element.id, element); } }, createElement() { return new Element(); }, getElementById(id) { return ids.get(id); } };
-  const api = ui.init({ document: doc, confirmWarnings: () => true, ...options }); const dialog = ids.get("equipmentBatchDialog");
+  const api = ui.init({ document: doc, confirmWarnings: () => true, retryDelayMs: 0, ...options }); const dialog = ids.get("equipmentBatchDialog");
   return { api, dialog, get: (id) => ids.get(id), async action(action) { const target = { dataset: { batchAction: action }, closest() { return this; } }; await dialog.emit("click", { target }); } };
 }
 const fakeFile = () => ({ name: "sintetico.xlsx", size: 10, type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", arrayBuffer: async () => new ArrayBuffer(10) });
@@ -345,7 +345,7 @@ test("el selector permite reintentar el mismo archivo después de un rechazo y c
   assert.equal(input.value, ""); assert.equal(h.api.getPreview(), null); assert.equal(imports, 0);
   assert.equal(h.get("equipmentBatchApply").disabled, true);
   assert.match(h.get("equipmentBatchContent").innerHTML, /reporte de trasiego/);
-  assert.match(h.get("equipmentBatchContent").innerHTML, /Elegir Excel o PDF original/);
+  assert.match(h.get("equipmentBatchContent").innerHTML, /Volver a elegir Excel o PDF/);
   assert.doesNotMatch(h.get("equipmentBatchContent").innerHTML, /<equipo>/);
   input.files = [file]; input.value = "same-file.xlsx";
   await h.dialog.emit("change", { target: input });
@@ -359,11 +359,81 @@ test("una respuesta HTML o una sesión vencida muestra una acción de reintento 
   for (const status of [401, 502]) {
     const h = browserHarness({ fetch: async () => ({ status, ok: false, json: async () => { throw new SyntaxError("Unexpected token <, gateway HTML"); } }) });
     assert.equal(await h.api.openFile(fakeFile()), null);
-    assert.match(h.get("equipmentBatchStatus").textContent, status === 401 ? /sesión terminó/ : /Vuelva a elegirlo para reintentar/);
+    assert.match(h.get("equipmentBatchStatus").textContent, status === 401 ? /sesión terminó/ : /HTTP 502/);
     assert.doesNotMatch(h.get("equipmentBatchContent").innerHTML, /Unexpected token|gateway HTML/);
     assert.equal(h.get("equipmentBatchChoose").disabled, false); assert.equal(h.get("equipmentBatchApply").disabled, true);
     assert.equal(h.api.getImported(), null);
   }
+});
+
+test("el envío estándar conserva el nombre Unicode y todos los bytes del archivo", async () => {
+  const bytes = Uint8Array.from([0, 255, 13, 10, 34, 128, 1]);
+  const file = { ...fakeFile(), name: "Evento mañana & salón.xlsx", size: bytes.length, arrayBuffer: async () => bytes.buffer };
+  const h = browserHarness({ fetch: async (url, options) => {
+    assert.equal(url, "/api/requerimientos-equipo/importar-eventos");
+    assert.equal(options.credentials, "same-origin");
+    assert.equal(options.headers["Content-Type"], undefined, "el navegador debe generar el boundary");
+    assert.equal(options.headers["X-File-Name"], undefined);
+    const uploaded = options.body.get("file");
+    assert.equal(uploaded.name, file.name); assert.deepEqual(new Uint8Array(await uploaded.arrayBuffer()), bytes);
+    return deliverPreview(clientPreview());
+  } });
+  assert.ok(await h.api.openFile(file)); assert.equal(h.api.getImported(), null);
+});
+
+test("los fallos transitorios reintentan la misma revisión sin duplicar eventos", async () => {
+  for (const failure of [502, 503, 504, "truncated", "network"]) {
+    let attempts = 0, imports = 0;
+    const bodies = [];
+    const h = browserHarness({ fetch: async (url, options) => {
+      bodies.push(Buffer.from(await options.body.get("file").arrayBuffer()));
+      if (++attempts === 1) {
+        if (failure === "network") throw new TypeError("Failed to fetch");
+        return { ok: failure === "truncated", status: failure === "truncated" ? 200 : failure, json: async () => { throw new SyntaxError("non-JSON upstream body"); } };
+      }
+      return deliverPreview(clientPreview());
+    }, bridge: { importEvents(events) { imports++; return { count: events.length }; } } });
+    assert.ok(await h.api.openFile(fakeFile()), String(failure));
+    assert.equal(attempts, 2); assert.equal(imports, 0); assert.deepEqual(bodies[0], bodies[1]);
+    await h.action("apply"); await h.action("apply");
+    assert.equal(imports, 1); assert.equal(attempts, 2);
+  }
+});
+
+test("errores de archivo, permisos y saturación no se reenvían automáticamente", async () => {
+  for (const code of [400, 401, 403, 413, 429]) {
+    let attempts = 0, imports = 0;
+    const h = browserHarness({ fetch: async () => { attempts++; return { ok: false, status: code, json: async () => ({ error: `Aviso sintético ${code}` }) }; }, bridge: { importEvents() { imports++; } } });
+    assert.equal(await h.api.openFile(fakeFile()), null); assert.equal(attempts, 1);
+    assert.match(h.get("equipmentBatchStatus").textContent, new RegExp(String(code)));
+    assert.equal(h.api.getPreview(), null); assert.equal(imports, 0);
+  }
+});
+
+test("cerrar durante el reintento cancela la lectura y descarta resultados tardíos", async () => {
+  let attempts = 0;
+  const h = browserHarness({ retryDelayMs: 100, fetch: async () => { attempts++; return { ok: false, status: 503, json: async () => { throw new SyntaxError("HTML"); } }; } });
+  const pending = h.api.openFile(fakeFile());
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(h.get("equipmentBatchStatus").textContent, /Reintentando/);
+  h.api.close(); await pending;
+  assert.equal(attempts, 1); assert.equal(h.dialog.open, false); assert.equal(h.api.getPreview(), null);
+  h.api.open(); assert.equal(h.get("equipmentBatchStatus").textContent, "");
+  assert.equal(h.get("equipmentBatchContent").innerHTML, "");
+});
+
+test("una lectura que no responde termina, desbloquea el selector y permite reintentar", async () => {
+  let attempts = 0;
+  const h = browserHarness({ requestTimeoutMs: 10, fetch: async (url, options) => {
+    if (++attempts > 1) return deliverPreview(clientPreview());
+    return new Promise((resolve, reject) => options.signal.addEventListener("abort", () => reject(Object.assign(new Error("Aborted"), { name: "AbortError" })), { once: true }));
+  } });
+  assert.equal(await h.api.openFile(fakeFile()), null);
+  assert.match(h.get("equipmentBatchStatus").textContent, /tardó demasiado y se canceló/);
+  assert.equal(h.get("equipmentBatchChoose").disabled, false); assert.equal(h.get("equipmentBatchApply").disabled, true);
+  assert.equal(h.api.getImported(), null);
+  assert.ok(await h.api.openFile(fakeFile())); assert.equal(attempts, 2);
+  assert.equal(h.get("equipmentBatchApply").disabled, false);
 });
 
 test("una carga prepara todos los reportes, bloquea concurrencia y conserva el resultado al cerrar", async () => {

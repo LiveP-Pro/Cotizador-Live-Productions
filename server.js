@@ -705,24 +705,52 @@ async function previewEquipmentEventFile(request, response) {
   }
   activeWarehouseImports += 1;
   try {
-    let fileName, selectedSheets;
+    const contentType = String(request.headers["content-type"] || "");
+    const multipart = /^multipart\/form-data(?:\s*;|\s*$)/i.test(contentType);
+    // Bound the entire form before parsing it, including fields and headers.
+    // Raw uploads keep the original exact file limit for older clients.
+    const maxUploadBytes = maxWarehouseImportBytes + (multipart ? 64 * 1024 : 0);
+    let fileName, selectedSheets, mimeType = contentType.split(";")[0];
     try {
-      fileName = decodeURIComponent(String(request.headers["x-file-name"] || ""));
+      if (!multipart) fileName = decodeURIComponent(String(request.headers["x-file-name"] || ""));
       selectedSheets = request.headers["x-event-sheets"] ? JSON.parse(decodeURIComponent(request.headers["x-event-sheets"])) : undefined;
     } catch { throw Object.assign(new Error("El nombre del archivo o las hojas seleccionadas no son válidos."), { statusCode: 400 }); }
-    if (!/\.(xlsx|pdf)$/i.test(fileName) || fileName.length > 250) throw Object.assign(new Error("Seleccione un archivo Excel .xlsx o PDF con texto."), { statusCode: 400 });
-    if (Number(request.headers["content-length"] || 0) > maxWarehouseImportBytes) {
+    if (!multipart && (!/\.(xlsx|pdf)$/i.test(fileName) || fileName.length > 250)) throw Object.assign(new Error("Seleccione un archivo Excel .xlsx o PDF con texto."), { statusCode: 400 });
+    if (Number(request.headers["content-length"] || 0) > maxUploadBytes) {
       errorResponse(response, 413, "El archivo supera el límite de 15 MB."); return;
     }
     const chunks = []; let size = 0;
     for await (const chunk of request) {
       size += chunk.length;
-      if (size > maxWarehouseImportBytes) { errorResponse(response, 413, "El archivo supera el límite de 15 MB."); return; }
+      if (size > maxUploadBytes) { errorResponse(response, 413, "El archivo supera el límite de 15 MB."); return; }
       chunks.push(chunk);
     }
     if (!size) throw Object.assign(new Error("El archivo está vacío."), { statusCode: 400 });
-    const preview = await parseEventFile(Buffer.concat(chunks), { fileName,
-      mimeType: String(request.headers["content-type"] || "").split(";")[0], selectedSheets });
+    let bytes = Buffer.concat(chunks);
+    if (multipart) {
+      let fields;
+      try { fields = [...(await new Response(bytes, { headers: { "Content-Type": contentType } }).formData()).entries()]; }
+      catch { throw Object.assign(new Error("No se recibió el archivo completo. Vuelva a seleccionarlo para reintentar."), { statusCode: 400 }); }
+      const files = fields.filter(([, value]) => typeof value !== "string");
+      const selections = fields.filter(([name]) => name === "selectedSheets");
+      if (files.length !== 1 || files[0][0] !== "file" || typeof files[0][1]?.arrayBuffer !== "function"
+          || fields.filter(([name]) => name === "file").length !== 1
+          || selections.length > 1 || selections.some(([, value]) => typeof value !== "string")
+          || fields.some(([name]) => !["file", "selectedSheets"].includes(name))) {
+        throw Object.assign(new Error("Seleccione un solo archivo Excel o PDF para importar."), { statusCode: 400 });
+      }
+      const file = files[0][1];
+      fileName = file.name; mimeType = file.type;
+      if (typeof fileName !== "string" || !/\.(xlsx|pdf)$/i.test(fileName) || fileName.length > 250) throw Object.assign(new Error("Seleccione un archivo Excel .xlsx o PDF con texto."), { statusCode: 400 });
+      if (file.size > maxWarehouseImportBytes) { errorResponse(response, 413, "El archivo supera el límite de 15 MB."); return; }
+      if (!file.size) throw Object.assign(new Error("El archivo está vacío."), { statusCode: 400 });
+      if (selections.length) {
+        try { selectedSheets = JSON.parse(selections[0][1]); }
+        catch { throw Object.assign(new Error("Las hojas seleccionadas no son válidas."), { statusCode: 400 }); }
+      }
+      bytes = Buffer.from(await file.arrayBuffer());
+    }
+    const preview = await parseEventFile(bytes, { fileName, mimeType, selectedSheets });
     jsonResponse(response, 200, { ...preview, preview: true, productionMutations: 0 });
   } catch (error) {
     errorResponse(response, error.statusCode || 400, error.message || "No se pudo leer el archivo de eventos.");

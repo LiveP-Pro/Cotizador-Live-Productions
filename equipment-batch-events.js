@@ -246,34 +246,71 @@
       return true;
     }
     async function openFile(file) { if (!file || !open()) return null; return read(file); }
+    async function requestPreview(file, bytes, signal) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        let response;
+        try {
+          const body = new FormData();
+          body.append("file", new Blob([bytes], { type: file.type || (/\.pdf$/i.test(file.name) ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") }), file.name);
+          // Let the browser set the multipart boundary. Ordinary file uploads
+          // avoid custom binary request headers at the public reverse proxy.
+          response = await (options.fetch || fetch)("/api/requerimientos-equipo/importar-eventos", { method: "POST", credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" }, body, signal });
+          let result;
+          try { result = await response.json(); }
+          catch (_) {
+            const code = Number(response.status) || 0;
+            const message = code === 401 ? "Su sesión terminó. Inicie sesión de nuevo y vuelva a elegir el archivo."
+              : code === 403 ? "El servidor no permitió leer el archivo. Inicie sesión de nuevo y vuelva a intentarlo."
+                : `El servicio devolvió una respuesta incompleta${code ? ` (HTTP ${code})` : ""}. Vuelva a elegir el archivo para reintentar.`;
+            throw Object.assign(new Error(message), { retryable: code === 200 || [502, 503, 504].includes(code) });
+          }
+          if (!response.ok) throw Object.assign(new Error(result?.error || `No se pudo leer el archivo${response.status ? ` (HTTP ${response.status})` : ""}.`), { retryable: [502, 503, 504].includes(response.status) });
+          return result;
+        } catch (error) {
+          if (signal.aborted) throw error;
+          const networkFailure = !response && error instanceof TypeError;
+          if (attempt || !networkFailure && !error?.retryable) {
+            if (networkFailure) throw new Error("Se interrumpió la conexión al leer el archivo. Sus datos no se cargaron; vuelva a intentarlo.");
+            throw error;
+          }
+          status("La conexión de lectura se interrumpió. Reintentando el mismo archivo automáticamente…");
+          // Only this read-only preview is retried. Loading the events and
+          // generating reports still require their own single user action.
+          await new Promise((resolve, reject) => {
+            const aborted = () => { clearTimeout(timer); signal.removeEventListener("abort", aborted); reject(Object.assign(new Error("Lectura cancelada"), { name: "AbortError" })); };
+            const timer = setTimeout(() => { signal.removeEventListener("abort", aborted); resolve(); }, options.retryDelayMs ?? 600);
+            signal.addEventListener("abort", aborted, { once: true });
+            if (signal.aborted) aborted();
+          });
+        }
+      }
+    }
     async function read(file) {
       if (!file || destroyed || applying || reporting) return null;
       const token = ++generation; confirmation = null; request?.abort(); const controller = new AbortController(); request = controller;
       busy = true; preview = null; selections = []; imported = null; update();
       get("equipmentBatchContent").textContent = "Leyendo todos los cuadros y comprobando cada celda…"; status("La lectura no guarda datos ni reserva equipo.");
+      let timer, timedOut = false;
       try {
         if (!/\.(xlsx|pdf)$/i.test(file.name)) throw new Error("Use un archivo Excel .xlsx o PDF digital. Guarde primero los archivos .xls como .xlsx.");
         if (file.size > MAX_FILE_BYTES) throw new Error("El archivo supera el límite de 15 MB. Divídalo sin eliminar datos.");
         const bytes = await file.arrayBuffer(); if (token !== generation) return null;
-        const response = await (options.fetch || fetch)("/api/requerimientos-equipo/importar-eventos", { method: "POST", credentials: "same-origin", headers: { "X-File-Name": encodeURIComponent(file.name), "Content-Type": file.type || (/\.pdf$/i.test(file.name) ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") }, body: bytes, signal: controller.signal });
-        let result;
-        try { result = await response.json(); }
-        catch (_) { throw new Error(response.status === 401 ? "Su sesión terminó. Inicie sesión de nuevo y vuelva a elegir el archivo." : "El servidor no pudo completar la lectura del archivo. Vuelva a elegirlo para reintentar."); }
+        timer = setTimeout(() => { timedOut = true; controller.abort(); }, options.requestTimeoutMs ?? 45000);
+        const result = await requestPreview(file, bytes, controller.signal);
         if (token !== generation) return null;
-        if (!response.ok) throw new Error(result?.error || "No se pudo leer el archivo.");
         if (!Array.isArray(result?.events) || !result.verification || result.events.some((event) => !event || typeof event.id !== "string") || new Set(result.events.map((event) => event.id)).size !== result.events.length) throw new Error("El servidor no devolvió una revisión válida. No se cargó ningún evento.");
         preview = result; selections = selectionsFor(result); get("equipmentBatchContent").innerHTML = renderPreview(preview, selections); get("equipmentBatchBody").scrollTop = 0;
         const error = selectionError(preview, selections);
         status(error ? "Revise los cuadros señalados antes de continuar." : "Archivo listo. Pulse Continuar para preparar trasiego, renta y compra de consumibles.");
         return clone(preview);
       } catch (error) {
-        if (token !== generation || error?.name === "AbortError") return null;
-        const message = error?.message || "No se pudo leer el archivo.";
+        if (token !== generation || error?.name === "AbortError" && !timedOut) return null;
+        const message = timedOut ? "La lectura tardó demasiado y se canceló. No se cargó ningún evento; puede volver a elegir el mismo archivo." : error?.message || "No se pudo leer el archivo.";
         preview = null; selections = [];
-        get("equipmentBatchContent").innerHTML = `<section class="equipment-batch-correction" role="alert"><h3>No se pudo preparar este archivo</h3><p>${escape(message)}</p><p>No se cargó ningún evento. Elija el archivo original con los cuadros completos de equipo de cada evento.</p><button type="button" data-batch-action="choose">Elegir Excel o PDF original</button></section>`;
+        get("equipmentBatchContent").innerHTML = `<section class="equipment-batch-correction" role="alert"><h3>No se pudo completar la lectura</h3><p>${escape(message)}</p><p>No se cargó ningún evento. Puede volver a elegir el mismo archivo o seleccionar otro.</p><button type="button" data-batch-action="choose">Volver a elegir Excel o PDF</button></section>`;
         get("equipmentBatchBody").scrollTop = 0;
         status(message, true); return null;
-      } finally { if (token === generation) { busy = false; request = null; update(); } }
+      } finally { clearTimeout(timer); if (token === generation) { busy = false; request = null; update(); } }
     }
     function renderReady() {
       const source = imported.fileName || "Archivo", events = Array.isArray(imported.result?.events) ? imported.result.events : imported.events, count = events.length;
