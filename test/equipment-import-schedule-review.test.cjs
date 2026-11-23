@@ -35,7 +35,7 @@ test("review imports complete source schedules and records corrections apart fro
 });
 test("a source final hour without a day remains incomplete instead of inventing a same-day or overnight finish", () => {
   const source = preview({ startTime: "20:00", endTime: "01:00" });
-  const selections = batch.selectionsFor(source), event = batch.prepareEvents(source, selections)[0];
+  const selections = batch.selectionsFor(source), event = batch.prepareEvents(source, selections, { acknowledgeWarnings: true })[0];
   assert.equal(event.startAt, "2026-11-25T20:00");
   assert.equal(event.endTime, "01:00");
   assert.equal(event.endDate, "");
@@ -45,7 +45,8 @@ test("a source final hour without a day remains incomplete instead of inventing 
   assert.equal(event.equipmentInAt, "");
   assert.equal(event.pendingLogistics, true);
   selections[0].endDate = "2026-11-25";
-  assert.match(batch.selectionError(source, selections), /otro día/);
+  assert.equal(batch.selectionError(source, selections), "");
+  assert.ok(batch.selectionWarnings(source, selections).some((warning) => warning.code === "schedule_pending"));
   selections[0].endDate = "2026-11-26";
   assert.equal(batch.prepareEvents(source, selections)[0].endAt, "2026-11-26T01:00");
 });
@@ -60,15 +61,20 @@ test("explicit no-mount review clears effective mount data without editing origi
   assert.equal(source.events[0].setupAt, "2026-11-24T16:00");
   assert.equal(eventReservationStartAt(event), "2026-11-25T11:00");
 });
-test("schedule review rejects impossible dates, malformed clocks, and inverted return chronology", () => {
+test("schedule warnings allow drafts after one acknowledgement and keep invalid literal dates out of effective timestamps", () => {
   const source = preview(), selections = batch.selectionsFor(source);
   selections[0].date = "2026-02-30";
-  assert.match(batch.selectionError(source, selections), /fechas/);
+  assert.equal(batch.selectionError(source, selections), "");
+  assert.throws(() => batch.prepareEvents(source, selections), /Confirme las advertencias/);
+  const invalidDateDraft = batch.prepareEvents(source, selections, { acknowledgeWarnings: true })[0];
+  assert.equal(invalidDateDraft.date, ""); assert.equal(invalidDateDraft.sourceImport.reviewedInput.date, "2026-02-30");
   selections[0].date = "2026-11-25"; selections[0].startTime = "24:00";
-  assert.match(batch.selectionError(source, selections), /horas/);
+  assert.ok(batch.selectionWarnings(source, selections).some((warning) => warning.code === "schedule_pending"));
+  assert.equal(batch.prepareEvents(source, selections, { acknowledgeWarnings: true })[0].startAt, "");
   selections[0].startTime = "18:00"; selections[0].endDate = "2026-11-25"; selections[0].endTime = "20:00";
   selections[0].equipmentInDate = "2026-11-25"; selections[0].equipmentInTime = "19:00";
-  assert.match(batch.selectionError(source, selections), /regreso/);
+  assert.ok(batch.selectionWarnings(source, selections).some((warning) => warning.code === "schedule_pending"));
+  assert.equal(batch.prepareEvents(source, selections, { acknowledgeWarnings: true })[0].equipmentInAt, "2026-11-25T19:00");
   selections[0].equipmentInTime = "21:00";
   assert.equal(batch.selectionError(source, selections), "");
 });

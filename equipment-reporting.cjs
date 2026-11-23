@@ -83,6 +83,54 @@ function sourceRefs(line, section) {
   refs.push(...list(sourceRow?.sourceRefs), ...list(sourceRow?.cells).map(cell => cell.ref || cell.address));
   return [...new Set(refs.filter(Boolean))].join("; ");
 }
+function warningRefs(message) {
+  const refs = [message?.sourceRefs, message?.refs].flatMap(value => typeof value === "string" ? [value] : list(value));
+  return [...new Set(refs.filter(Boolean))];
+}
+function sourceDocuments(event) {
+  const documents = [], seen = new Set();
+  function visit(document, reference = false) {
+    if (!document || typeof document !== "object" || seen.has(document)) return;
+    seen.add(document); documents.push({ document, reference });
+    for (const entry of [...list(document.referenceTables), ...list(document.sourceImport?.referenceTables)]) visit(entry, true);
+  }
+  visit(event); return documents;
+}
+function sourceWarningRows(event) {
+  const unique = new Map();
+  for (const { document, reference } of sourceDocuments(event)) {
+    const source = document.sourceImport || {};
+    const eventIds = new Set([event.id, event.sourceImport?.sourceEventId, document.id, source.sourceEventId].filter(Boolean));
+    const messages = [...list(document.warnings), ...list(document.issues), ...list(source.warnings),
+      ...list(source.sourceIssues), ...list(source.sourceWarnings), ...list(source.acceptedWarnings)];
+    for (const message of messages) {
+      // A reference copy has no separate event schedule or location to finish.
+      if (reference && ["pending_times", "missing_date", "missing_place"].includes(message?.code)) continue;
+      if (list(message?.eventIds).length && !message.eventIds.some(id => eventIds.has(id))) continue;
+      const reason = typeof message === "string" ? message : message?.message || message?.reason || message?.description || message?.code || (message && JSON.stringify(message)) || "";
+      if (!reason) continue;
+      const key = message?.code === "pending_times" ? "pending_times" : reason;
+      const refs = warningRefs(message);
+      if (unique.has(key)) {
+        const row = unique.get(key); row.refs = [...new Set([...row.refs, ...refs])];
+        continue;
+      }
+      unique.set(key, { kind: "FUENTE", eventId: event.id, event: event.place || event.name || event.id,
+        description: typeof message === "object" ? message.description || message.code || "Aviso del archivo" : "Aviso del archivo",
+        quantity: ["number", "string"].includes(typeof message?.quantity) ? message.quantity : null, reason, refs });
+    }
+  }
+  return [...unique.values()].map(({ refs, ...row }) => ({ ...row,
+    reason: event.sourceImport?.warningsAccepted ? `Aviso del archivo aceptado al cargar: ${row.reason}` : row.reason,
+    sourceRefs: refs.join("; ") }));
+}
+function unresolvedSourceRow(event, row, reference = false) {
+  const literal = text(row.description) || list(row.cells || row.sourceCells).map(cell => text(originalCellValue(cell))).join(" | ");
+  return { kind: "FUENTE", eventId: event.id, event: event.place || event.name || event.id,
+    description: reference ? "Fila de referencia sin interpretar" : "Fila del archivo sin interpretar", quantity: row.quantity ?? null,
+    reason: `Revise la fila original: ${literal}. Su cantidad no se convirtió en cero ni se incluyó en la demanda de equipo.`,
+    sourceRefs: [...new Set([...warningRefs(row), ...list(row.cells || row.sourceCells).map(cell => cell.ref || cell.address)].filter(Boolean))].join("; ") };
+}
 function warehouseRows(inventory) {
   const state = inventory?.state || inventory || {};
   const changes = { salida: ["out", 1], ingreso_evento: ["out", -1], consumo: ["consumed", 1], taller: ["workshop", 1], danado: ["workshop", 1], devolucion_taller: ["workshop", -1], renta: ["rented", 1], devolucion_renta: ["rented", -1], perdido: ["lost", 1], recuperado: ["lost", -1] };
@@ -131,17 +179,7 @@ function createEquipmentReportModel(payload, inventory, options = {}) {
   const pending = [], details = [], sourceCells = [], preservedRows = [];
   const metadataNames = { setupAt: "Fecha y hora de montaje", startAt: "Fecha y hora de inicio", endAt: "Fecha y hora de finalización", equipmentInAt: "Regreso a bodega" };
   for (const event of events) {
-    const sourceMessages = [...list(event.warnings), ...list(event.issues), ...list(event.sourceImport?.warnings)];
-    const knownMessages = new Set();
-    for (const message of sourceMessages) {
-      const reason = typeof message === "string" ? message : message?.message || message?.reason || message?.description || message?.code || (message && JSON.stringify(message)) || "";
-      if (!reason || knownMessages.has(reason)) continue;
-      knownMessages.add(reason);
-      pending.push({ kind: "FUENTE", eventId: event.id, event: event.place || event.name || event.id,
-        description: typeof message === "object" ? message.description || message.code || "Aviso del archivo" : "Aviso del archivo",
-        quantity: typeof message?.quantity === "number" ? message.quantity : null, reason,
-        sourceRefs: typeof message?.sourceRefs === "string" ? message.sourceRefs : list(message?.sourceRefs).join("; ") });
-    }
+    pending.push(...sourceWarningRows(event));
     pending.push(...EquipmentDocumentAudit.audit(event));
     const applicableTimes = Object.entries(metadataNames).filter(([field]) => field !== "setupAt" || event.setupApplies !== false);
     for (const [field, label] of applicableTimes) if (!event[field] || !Number.isFinite(localTime(event[field]))) pending.push({ kind: "HORARIO", eventId: event.id, event: event.place || event.name || event.id,
@@ -166,11 +204,23 @@ function createEquipmentReportModel(payload, inventory, options = {}) {
           warehouseInventoryId: line.warehouseInventoryId || "", resolvedInventoryId: !effectiveChoice && resolved.item ? String(resolved.item.id) : "", notes: list(line.notes).join("\n") || line.notes || line.observations || "",
           sourceRefs: sourceRefs({ ...line, sourceItemIndex: line.sourceItemIndex ?? itemIndex }, section), original: line });
       });
-      list(section.rows).forEach((row, rowIndex) => preservedRows.push({ eventId: event.id, event: event.place || event.name || event.id, sectionIndex,
-        section: section.title || "", rowIndex, type: row.type || row.kind || "", quantity: row.quantity ?? "", description: row.description ?? "",
-        notes: list(row.notes).join("\n") || row.notes || "", refs: [...list(row.sourceRefs), ...list(row.cells).map(cell => cell.ref || cell.address)].filter(Boolean).join("; "), original: row }));
+      list(section.rows).forEach((row, rowIndex) => {
+        preservedRows.push({ eventId: event.id, event: event.place || event.name || event.id, sectionIndex,
+          section: section.title || "", rowIndex, type: row.type || row.kind || "", quantity: row.quantity ?? "", description: row.description ?? "",
+          notes: list(row.notes).join("\n") || row.notes || "", refs: [...list(row.sourceRefs), ...list(row.cells).map(cell => cell.ref || cell.address)].filter(Boolean).join("; "), original: row });
+        if ((row.type || row.kind) === "unresolved") pending.push(unresolvedSourceRow(event, row));
+      });
       if (section.notes?.length) preservedRows.push({ eventId: event.id, event: event.place || event.name || event.id, sectionIndex, section: section.title || "", rowIndex: "", type: "notes", quantity: "", description: "Notas de la sección", notes: list(section.notes).join("\n"), refs: "", original: section.notes });
     });
+    for (const { document, reference } of sourceDocuments(event)) {
+      if (!reference) continue;
+      list(document.sections).forEach((section, sectionIndex) => list(section.rows).forEach((row, rowIndex) => {
+        preservedRows.push({ eventId: event.id, event: event.place || event.name || event.id, sectionIndex,
+          section: `Referencia del archivo · ${section.title || document.sourceSheet || ""}`, rowIndex, type: row.type || row.kind || "", quantity: row.quantity ?? "", description: row.description ?? "",
+          notes: list(row.notes).join("\n") || row.notes || "", refs: [...list(row.sourceRefs), ...list(row.cells).map(cell => cell.ref || cell.address)].filter(Boolean).join("; "), original: row });
+        if ((row.type || row.kind) === "unresolved") pending.push(unresolvedSourceRow(event, row, true));
+      }));
+    }
     for (const row of list(event.nonEquipmentRows)) preservedRows.push({ eventId: event.id, event: event.place || event.name || event.id, sectionIndex: "", section: "Fuente del evento", rowIndex: row.row ?? "", type: row.type || "fuente", quantity: row.quantity ?? "", description: row.description || "", notes: list(row.notes).join("\n") || "", refs: list(row.sourceCells).map(cell => cell.ref || cell.address).filter(Boolean).join("; "), original: row });
   }
   const rows = availability.rows.map(row => {

@@ -95,14 +95,22 @@ cargar los eventos. Se conservan las filas en cero, encabezados, notas y celdas
 originales.
 
 El lector reconoce los horarios de montaje, intervalos del evento, desmontaje y
-llegada a bodega. Los días de la semana se relacionan con la fecha escrita en el
-documento. Una fecha contradictoria se muestra para corregirla. Si dos cuadros
-tienen el mismo equipo, se pregunta si corresponden a eventos distintos o si uno
-es una copia; al elegir una copia, su contenido original se conserva como
-referencia y sus cantidades se cuentan una sola vez.
+llegada a bodega. Cuando los días escritos corroboran otra fecha, se propone esa
+fecha y se conserva la original. Dentro de una misma hoja, una tabla sin datos
+propios de evento que repite exactamente el equipo de un único evento
+identificado se conserva como referencia; sus cantidades se cuentan una sola
+vez. Los cuadros que podrían corresponder a eventos distintos permanecen
+seleccionados y ofrecen una opción para elegir cuáles cargar.
 
-Después de revisar esos puntos, `Cargar eventos y preparar reportes` carga todos
-los cuadros seleccionados. El período del resumen se ajusta a las fechas del
+Las fechas contradictorias, los metadatos pendientes y las filas de origen sin
+interpretar se reúnen en un solo aviso. `Cargar eventos y preparar reportes`
+permite aceptar ese aviso y cargar los cuadros seleccionados como borradores.
+Cancelar conserva la revisión sin cargar eventos. Las filas pendientes conservan
+sus valores originales y aparecen en los reportes; no se les inventa una
+cantidad. Un archivo ilegible, una verificación incompleta o líneas activas de
+equipo con cantidades o descripciones inválidas siguen requiriendo corrección.
+
+El período del resumen se ajusta a las fechas del
 archivo. La pantalla ofrece revisar trasiego y generar renta o compra de
 consumibles sin repetir la importación si una descarga falla. Los eventos se
 cargan como borradores: los reportes provisionales permiten revisar los

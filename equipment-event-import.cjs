@@ -262,6 +262,37 @@ function scheduleForMetadata(metadata, parsed, metadataRefs, warnings, issues) {
   }
   return { schedule, refs, derivedFields };
 }
+function corroboratedScheduleSuggestion(metadata, parsed, metadataRefs, original, originalIssues) {
+  // A correction needs independent written days at both ends of a complete
+  // range. Keep the original schedule intact; consumers may review this proposal.
+  if (originalIssues.some((issue) => ["conflicting_metadata", "conflicting_schedule", "conflicting_schedule_weekday", "conflicting_setup"].includes(issue.code))) return undefined;
+  const anchors = ["date", "startDate", "startTime", "startAt", "eventTimeRange"].filter((field) => parsed[field]?.date);
+  if (anchors.length !== 1) return undefined;
+  const anchor = anchors[0], originalDate = parsed[anchor].date;
+  const writtenDayFields = (prefix) => ["Date", "Time", "At"].map((suffix) => prefix + suffix)
+    .filter((field) => parsed[field]?.date || parsed[field]?.weekday !== undefined);
+  const setupFields = writtenDayFields("setup"), teardownFields = writtenDayFields("teardown"), returnFields = writtenDayFields("equipmentIn");
+  const rangeFields = ["eventTimeRange", "startTime", "startAt"].filter((field) => parsed[field]?.endTime);
+  const date = original.setupDate;
+  if (!setupFields.length || !teardownFields.length || !returnFields.length || !rangeFields.length
+    || !date || date === originalDate || date !== original.teardownDate
+    || !original.setupTime || !original.startTime || !original.endTime || !original.teardownTime
+    || original.startTime > original.endTime || original.setupTime > original.startTime || original.teardownTime !== original.endTime) return undefined;
+  const revised = clone(parsed);
+  revised[anchor].date = date;
+  const warnings = [], issues = [];
+  const proposed = scheduleForMetadata(metadata, revised, metadataRefs, warnings, issues);
+  const schedule = proposed.schedule;
+  if (issues.length || schedule.startDate !== date || schedule.endDate !== date
+    || schedule.setupDate !== date || schedule.teardownDate !== date
+    || !schedule.setupAt || !schedule.startAt || !schedule.endAt || !schedule.teardownAt || !schedule.equipmentInAt
+    || schedule.setupAt > schedule.startAt || schedule.endAt !== schedule.teardownAt || schedule.equipmentInAt <= schedule.teardownAt) return undefined;
+  const fields = [...new Set([anchor, ...setupFields, ...rangeFields, ...teardownFields, ...returnFields])];
+  const evidence = fields.map((field) => ({ field, value: metadata[field], refs: clone(metadataRefs[field] || []) }));
+  return { code: "corroborated_event_date", originalDate, date, schedule, scheduleRefs: proposed.refs, derivedFields: proposed.derivedFields,
+    reason: "matching_setup_teardown_days_and_event_range", message: "Montaje y desmontaje indican el mismo día, sus horas enmarcan el evento y el regreso es posterior. Se propone usar ese día como fecha del evento; el dato original se conserva.",
+    evidence, refs: [...new Set(evidence.flatMap((entry) => entry.refs))] };
+}
 function candidatesForRows(rows) {
   const candidates = new Map();
   for (const row of rows) {
@@ -402,20 +433,21 @@ function eventForBlock(rows, { sheet, index, quantityColumn, descriptionColumn, 
   }
   if (!itemRows) issues.push({ code: "no_equipment", message: "No se identificó un cuadro con cantidad y descripción. Todo el contenido se conserva para revisarlo; esta hoja no se cargará como evento.", refs: [] });
   const { schedule, refs: scheduleRefs, derivedFields: scheduleDerivedFields } = scheduleForMetadata(metadata, metadataParsed, metadataRefs, warnings, issues);
+  const scheduleSuggestion = corroboratedScheduleSuggestion(metadata, metadataParsed, metadataRefs, schedule, issues);
   if (!metadata.parsedDate && schedule.startDate) metadata.parsedDate = schedule.startDate;
   if (!metadata.parsedDate) warnings.push({ code: "missing_date", message: "Confirme la fecha del evento con año; no se dedujo del nombre de la pestaña." });
   if (!metadata.place) warnings.push({ code: "missing_place", message: "Indique la ubicación para planificar los trayectos." });
   warnings.push({ code: "pending_times", message: "Borrador sin reservas. Revise los horarios leídos y complete los datos pendientes antes de confirmar equipo." });
   const id = `file-${source.sha256.slice(0, 16)}-${index}`;
   return { id, sourceSheet: sheet, sourceBlock: index, date: metadata.parsedDate || "", dateLiteral: metadata.date || metadata.startAt || metadata.startDate || "", place: metadata.place || "", name: metadata.client || "", type: metadata.type || "", client: metadata.client || "",
-    ...schedule, contracted: metadata.contracted || "", metadataRefs, scheduleRefs, scheduleDerivedFields, sections, documentSections: clone(sections), sourceCells,
+    ...schedule, ...(scheduleSuggestion ? { scheduleSuggestion } : {}), contracted: metadata.contracted || "", metadataRefs, scheduleRefs, scheduleDerivedFields, sections, documentSections: clone(sections), sourceCells,
     documentServiceName: "Cuadro personalizado", snapshotLocked: true, sourceImport: { ...clone(source), sheet, block: index, metadata: clone(metadata), schedule: clone(schedule), scheduleRefs: clone(scheduleRefs), scheduleDerivedFields: clone(scheduleDerivedFields), sourceCells: clone(sourceCells) },
     itemCount: itemRows, zeroCount: zeroRows, issues, warnings, canImport: itemRows > 0 && !issues.length };
 }
 function verifyEventImport(preview) {
   const expected = new Map((preview.sourceCells || []).map((cell) => [cell.ref, cell]));
   const represented = new Map(), duplicates = [], changed = [], itemMismatches = [];
-  for (const event of preview.events || []) {
+  const inspect = (event) => {
     let previousOrder = -1;
     for (const section of event.sections || []) for (const row of section.rows || []) {
       if (row.sourceOrder < previousOrder) itemMismatches.push(...row.sourceRefs); previousOrder = row.sourceOrder;
@@ -433,7 +465,10 @@ function verifyEventImport(preview) {
     }
     if (JSON.stringify(event.sourceCells) !== JSON.stringify((event.sections || []).flatMap((section) => section.rows.flatMap((row) => row.cells)))) changed.push(`event:${event.id}`);
     if (JSON.stringify(event.documentSections) !== JSON.stringify(event.sections)) changed.push(`sections:${event.id}`);
-  }
+    if (event.sourceImport?.sourceCells && JSON.stringify(event.sourceImport.sourceCells) !== JSON.stringify(event.sourceCells)) changed.push(`source:${event.id}`);
+    for (const reference of event.sourceImport?.referenceTables || []) inspect(reference);
+  };
+  for (const event of preview.events || []) inspect(event);
   const missing = [...expected.keys()].filter((ref) => !represented.has(ref));
   return { algorithm: "event-source-cell-ledger-v1", complete: expected.size > 0 && expected.size === preview.sourceCells.length && !missing.length && !duplicates.length && !changed.length && !itemMismatches.length,
     sourceCellCount: expected.size, representedCellCount: represented.size, missingRefs: missing, duplicateRefs: [...new Set(duplicates)], mismatchedRefs: [...new Set([...changed, ...itemMismatches])] };
@@ -490,9 +525,9 @@ function buildEventPreview(data) {
     }
     sheetList.push({ name: sheet, sourceCellCount: cells.length, eventIds: events.slice(first).map((event) => event.id) });
   }
-  // Equal parallel tables can be an extra event or a reference copy. Retain
-  // both complete ledgers and expose the choice; this reader never discards one.
-  const duplicateCandidates = [];
+  // A copy without any event metadata has one unambiguous owner only when
+  // exactly one equal table on this sheet supplies a complete event identity.
+  const duplicateCandidates = [], referenceCopies = [], referenceIds = new Set();
   for (const sheet of sheetList) {
     const matches = new Map();
     for (const event of events.filter((entry) => entry.sourceSheet === sheet.name && entry.itemCount)) {
@@ -502,10 +537,25 @@ function buildEventPreview(data) {
     }
     for (const group of matches.values()) if (group.length > 1) {
       const identities = group.map((event) => [key(event.client), event.date, key(event.place)]);
+      const identified = group.filter((event, index) => identities[index].every(Boolean));
+      const anonymous = group.filter((event) => Object.keys(event.sourceImport.metadata).length === 0);
+      const owner = identified.length === 1 && anonymous.length === group.length - 1 ? identified[0] : null;
       const distinctSourceEvents = identities.every((identity) => identity.every(Boolean))
         && new Set(identities.map((identity) => JSON.stringify(identity))).size === group.length;
-      const candidate = { id: `duplicate-equipment-${duplicateCandidates.length + 1}`, sourceSheet: sheet.name, eventIds: group.map((event) => event.id), itemCount: group[0].itemCount, reason: "identical_equipment", requiresReview: !distinctSourceEvents };
+      const candidate = { id: `duplicate-equipment-${duplicateCandidates.length + 1}`, sourceSheet: sheet.name, eventIds: group.map((event) => event.id), itemCount: group[0].itemCount, reason: "identical_equipment", requiresReview: !owner && !distinctSourceEvents };
       duplicateCandidates.push(candidate);
+      if (owner) {
+        owner.sourceImport.referenceTables = anonymous;
+        owner.referenceTableIds = anonymous.map((event) => event.id);
+        owner.referenceTableCount = anonymous.length;
+        anonymous.forEach((event) => referenceIds.add(event.id));
+        const reference = { id: `reference-equipment-${referenceCopies.length + 1}`, sourceSheet: sheet.name, eventId: owner.id,
+          referenceTableIds: [...owner.referenceTableIds], itemCount: owner.itemCount, reason: "identical_equipment_without_identity" };
+        referenceCopies.push(reference);
+        Object.assign(candidate, { resolution: "reference_copy", activeEventIds: [owner.id], referenceTableIds: [...owner.referenceTableIds] });
+        owner.warnings.push({ code: "reference_equipment_table", severity: "info", message: "El cuadro sin metadatos de evento repite el equipo del único evento identificado en esta hoja. Se conserva completo como referencia y el equipo se cuenta una vez.", refs: anonymous.flatMap((event) => event.sourceCells.map((cell) => cell.ref)) });
+        continue;
+      }
       for (const event of group) {
         event.duplicateCandidateIds = [candidate.id];
         event.warnings.push({ code: "duplicate_equipment_tables", severity: distinctSourceEvents ? "info" : "warning", message: distinctSourceEvents
@@ -514,7 +564,18 @@ function buildEventPreview(data) {
       }
     }
   }
-  const preview = { source: clone(data.source), sourceCells: clone(data.sourceCells), documentLines: clone(data.documentLines || []), sheets: sheetList, events, duplicateCandidates };
+  for (const sheet of sheetList) {
+    sheet.tableIds = [...sheet.eventIds];
+    sheet.referenceTableIds = sheet.tableIds.filter((id) => referenceIds.has(id));
+    sheet.eventIds = sheet.tableIds.filter((id) => !referenceIds.has(id));
+    sheet.tableCount = sheet.tableIds.length;
+    sheet.eventCount = sheet.eventIds.length;
+    sheet.referenceTableCount = sheet.referenceTableIds.length;
+  }
+  const activeEvents = events.filter((event) => !referenceIds.has(event.id));
+  const preview = { source: clone(data.source), sourceCells: clone(data.sourceCells), documentLines: clone(data.documentLines || []), sheets: sheetList,
+    events: activeEvents, duplicateCandidates, referenceCopies, tableCount: events.length, eventCount: activeEvents.length, referenceTableCount: referenceIds.size,
+    itemCount: activeEvents.reduce((sum, event) => sum + event.itemCount, 0), zeroCount: activeEvents.reduce((sum, event) => sum + event.zeroCount, 0) };
   preview.verification = verifyEventImport(preview);
   return preview;
 }

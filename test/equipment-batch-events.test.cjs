@@ -12,7 +12,7 @@ async function syntheticWorkbook({ ambiguous = false } = {}) {
     const sheet = book.addWorksheet(`Dia ${sheetIndex + 1}`);
     for (let block = 0; block < blocks; block++) {
       const col = block * 3 + 1;
-      const data = [["Fecha del evento:", `jueves, ${5 + sheetIndex} de noviembre de 2026`], ["Equipo contratado:", `Servicio sintetico ${sheetIndex}-${block}`], ["Nombre del cliente:", `Cliente ${sheetIndex}-${block}`], ["Lugar del evento:", `Lugar ${sheetIndex}-${block}`], ["Cantidad de invitados:", "Dato literal 100-200"], ["AUDIO"], ["Cantidad", "Descripcion"], [0, `Equipo en cero ${sheetIndex}-${block}`], [2, `Equipo prueba ${sheetIndex}-${block}`], ["Nota: conservar el orden"], [1, "Equipo final"]];
+      const data = [["Fecha del evento:", `${["jueves", "viernes", "sábado"][sheetIndex]}, ${5 + sheetIndex} de noviembre de 2026`], ["Equipo contratado:", `Servicio sintetico ${sheetIndex}-${block}`], ["Nombre del cliente:", `Cliente ${sheetIndex}-${block}`], ["Lugar del evento:", `Lugar ${sheetIndex}-${block}`], ["Cantidad de invitados:", "Dato literal 100-200"], ["AUDIO"], ["Cantidad", "Descripcion"], [0, `Equipo en cero ${sheetIndex}-${block}`], [2, `Equipo prueba ${sheetIndex}-${block}`], ["Nota: conservar el orden"], [1, "Equipo final"]];
       data.forEach((row, ri) => row.forEach((value, ci) => { sheet.getCell(ri + 1, col + ci).value = value; }));
       sheet.getCell(6, col).font = { bold: true };
       sheet.getCell(9, col + 1).note = "Nota original del equipo";
@@ -64,16 +64,18 @@ test("importacion multiple conserva seis cuadros, metadatos, todas celdas, notas
   assert.equal(ui.totals(preview, selections).zeros, 5);
 });
 
-test("un cuadro ambiguo conserva todas las celdas y bloquea la carga completa sin omitirlo", async () => {
+test("un cuadro ambiguo conserva las filas pendientes y permite cargar tras aceptar una advertencia", async () => {
   const preview = await parseEventFile(await syntheticWorkbook({ ambiguous: true }), { fileName: "ambiguo-sintetico.xlsx" });
   assert.equal(preview.verification.complete, true, "la fuente sigue completa aunque requiera correccion");
   assert.equal(preview.events.filter((event) => !event.canImport).length, 1);
   const selections = ui.selectionsFor(preview);
-  assert.throws(() => ui.prepareEvents(preview, selections), /pendiente de interpretar/);
+  assert.throws(() => ui.prepareEvents(preview, selections), /Confirme las advertencias/);
   const unresolved = preview.events.find((event) => !event.canImport);
   assert.ok(unresolved.sections.flatMap((section) => section.rows).some((row) => row.type === "unresolved" && row.cells.some((cell) => cell.value === 3)));
-  selections.find((entry) => entry.id === unresolved.id).selected = true;
-  assert.throws(() => ui.prepareEvents(preview, selections), /pendiente de interpretar/);
+  const drafts = ui.prepareEvents(preview, selections, { acknowledgeWarnings: true });
+  assert.equal(drafts.length, 6);
+  assert.ok(drafts.find((event) => event.id === unresolved.id).sections.flatMap((section) => section.rows).some((row) => row.type === "unresolved"));
+  assert.ok(drafts.every((event) => event.sourceImport.warningsAccepted));
 });
 
 test("verificacion detecta borrar una nota, alterar cantidad o perder un cero antes de cargar", async () => {
@@ -171,7 +173,7 @@ function browserHarness(options = {}) {
   }
   const opener = new Element("equipmentBatchImportButton"); ids.set(opener.id, opener);
   const doc = { body: { appendChild(element) { ids.set(element.id, element); } }, createElement() { return new Element(); }, getElementById(id) { return ids.get(id); } };
-  const api = ui.init({ document: doc, ...options }); const dialog = ids.get("equipmentBatchDialog");
+  const api = ui.init({ document: doc, confirmWarnings: () => true, ...options }); const dialog = ids.get("equipmentBatchDialog");
   return { api, dialog, get: (id) => ids.get(id), async action(action) { const target = { dataset: { batchAction: action }, closest() { return this; } }; await dialog.emit("click", { target }); } };
 }
 const fakeFile = () => ({ name: "sintetico.xlsx", size: 10, type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", arrayBuffer: async () => new ArrayBuffer(10) });
@@ -365,38 +367,39 @@ test("conflictos de fecha se corrigen sin alterar la fuente ni mover fechas escr
     startAt: "2026-11-25T11:00", endAt: "2026-11-25T14:00", teardownAt: "2026-11-26T15:00", equipmentInAt: "2026-11-27T10:00",
     scheduleDerivedFields: { endDate: "event.date", setupDate: "event.date + weekday" }, issues: [{ code: "conflicting_schedule_order", message: "Fechas originales contradictorias", refs: ["A1"] }] });
   const original = JSON.stringify(preview), selections = ui.selectionsFor(preview);
-  assert.equal(selections[0].selected, true); assert.throws(() => ui.prepareEvents(preview, selections), /Confirme las fechas/);
+  assert.equal(selections[0].selected, true); assert.throws(() => ui.prepareEvents(preview, selections), /Confirme las advertencias/);
   const html = ui.renderPreview(preview, selections);
-  assert.match(html, /data-batch-review="0"/); assert.doesNotMatch(html, /data-batch-field="date"[^>]* disabled/);
+  assert.doesNotMatch(html, /data-batch-review=/); assert.doesNotMatch(html, /data-batch-field="date"[^>]* disabled/);
   const h = browserHarness({ fetch: async () => deliverPreview(preview), bridge: { importEvents(events) {
     assert.equal(events[0].date, "2026-11-26"); assert.equal(events[0].endDate, "2026-11-26");
     assert.equal(events[0].setupAt, "2026-11-26T10:00"); assert.equal(events[0].equipmentInAt, "2026-11-27T10:00");
-    assert.equal(events[0].sourceImport.metadata.date, "25/11/2026"); assert.equal(events[0].sourceImport.scheduleConflictsReviewed, true); return { count: 1 };
+    assert.equal(events[0].sourceImport.metadata.date, "25/11/2026"); assert.equal(events[0].sourceImport.warningsAccepted, true); return { count: 1 };
   } } });
   await h.api.openFile(fakeFile());
   await h.dialog.emit("input", { target: { dataset: { batchField: "date", batchIndex: "0" }, value: "2026-11-26" } });
-  await h.dialog.emit("change", { target: { dataset: { batchReview: "0" }, checked: true } });
   assert.equal(h.get("equipmentBatchApply").disabled, false); await h.action("apply");
   assert.equal(JSON.stringify(preview), original);
   const manual = browserHarness({ fetch: async () => deliverPreview(preview) }); await manual.api.openFile(fakeFile());
   await manual.dialog.emit("input", { target: { dataset: { batchField: "endDate", batchIndex: "0" }, value: "2026-11-27" } });
   await manual.dialog.emit("input", { target: { dataset: { batchField: "date", batchIndex: "0" }, value: "2026-11-26" } });
-  await manual.dialog.emit("change", { target: { dataset: { batchReview: "0" }, checked: true } });
-  assert.match(manual.get("equipmentBatchValidation").textContent, /orden/, "la fecha final editada no se mueve por cambiar la fecha del evento");
+  assert.equal(manual.get("equipmentBatchApply").disabled, false);
+  assert.match(manual.get("equipmentBatchWarnings").innerHTML, /contradictorios/, "la fecha final editada se conserva y queda pendiente de revisión");
 });
 
-test("cuadros idénticos requieren decisión explícita y el cuadro excluido permanece íntegro como referencia", async () => {
+test("cuadros idénticos pueden cargarse con una advertencia y el cuadro excluido permanece íntegro como referencia", async () => {
   const preview = clientPreview(), second = structuredClone(preview.events[0]);
   second.id = "client-synthetic-2"; second.sourceCells = [{ ref: "synthetic-D1", sheet: second.sourceSheet, address: "D1", value: 0 }];
   preview.events.push(second); preview.sheets[0].eventIds.push(second.id); preview.verification.sourceCellCount = preview.verification.representedCellCount = 2;
   preview.duplicateCandidates = [{ id: "synthetic-duplicate", eventIds: preview.events.map((event) => event.id), requiresReview: true }];
   const original = JSON.stringify(preview), selections = ui.selectionsFor(preview);
-  assert.ok(selections.every((entry) => entry.selected)); assert.match(ui.selectionError(preview, selections), /equipo idéntico/);
+  assert.ok(selections.every((entry) => entry.selected)); assert.equal(ui.selectionError(preview, selections), "");
+  assert.ok(ui.selectionWarnings(preview, selections).some((warning) => warning.code === "unresolved_duplicates"));
+  assert.equal(ui.prepareEvents(preview, selections, { acknowledgeWarnings: true }).length, 2);
   selections.forEach((entry) => { entry.duplicateReviews["synthetic-duplicate"] = "all"; });
   assert.equal(ui.prepareEvents(preview, selections).length, 2, "incluir ambos requiere confirmar que son eventos distintos");
   let imported;
   const h = browserHarness({ fetch: async () => deliverPreview(preview), bridge: { importEvents(events) { imported = events; return { count: events.length }; } } });
-  await h.api.openFile(fakeFile()); assert.equal(h.get("equipmentBatchApply").disabled, true);
+  await h.api.openFile(fakeFile()); assert.equal(h.get("equipmentBatchApply").disabled, false);
   await h.dialog.emit("change", { target: { dataset: { batchDuplicate: "0" }, value: preview.events[0].id } });
   assert.equal(h.get("equipmentBatchApply").disabled, false); await h.action("apply");
   assert.equal(imported.length, 1); assert.equal(imported[0].sections[0].items.length, 1);
@@ -405,4 +408,97 @@ test("cuadros idénticos requieren decisión explícita y el cuadro excluido per
   assert.deepEqual(reference.sourceCells, second.sourceCells); assert.deepEqual(reference.sections, second.sections);
   assert.equal(reference.selectionDecision.choice, preview.events[0].id);
   assert.equal(JSON.stringify(preview), original);
+});
+
+test("una sola confirmación permite aceptar avisos; Cancelar conserva el archivo y no carga nada", async () => {
+  const preview = clientPreview({ date: "", place: "", issues: [{ code: "conflicting_schedule", message: "Horario original contradictorio" }], warnings: [{ code: "pending_times", message: "Horario pendiente" }] });
+  let calls = 0, imports = 0, notified = 0, approve;
+  const h = browserHarness({ fetch: async () => deliverPreview(preview), confirmWarnings(message, warnings) {
+    calls++; assert.match(message, /como borradores/); assert.ok(warnings.length >= 1);
+    if (calls === 1) return false;
+    return new Promise((resolve) => { approve = resolve; });
+  }, onImported() { notified++; }, bridge: { importEvents(events) {
+    imports++; assert.equal(events.length, 1); assert.equal(events[0].sourceImport.warningsAccepted, true); assert.equal(events[0].sections[0].items[0].quantity, 0); return { count: 1 };
+  } } });
+  await h.api.openFile(fakeFile()); assert.equal(h.get("equipmentBatchApply").disabled, false);
+  assert.match(h.get("equipmentBatchWarnings").innerHTML, /Advertencias para la carga/);
+  assert.doesNotMatch(h.get("equipmentBatchContent").innerHTML, /data-batch-review|equipment-batch-error|equipment-batch-warnings/);
+  await h.action("apply"); assert.equal(calls, 1); assert.equal(imports, 0); assert.equal(h.dialog.open, true); assert.ok(h.api.getPreview());
+  const accepted = h.action("apply"); await h.action("apply"); await h.action("apply-rent");
+  assert.equal(calls, 2); assert.equal(imports, 0); approve(true); await accepted;
+  assert.equal(imports, 1); assert.equal(notified, 1); assert.equal(h.api.getPreview(), null);
+  await h.action("apply"); assert.equal(imports, 1); assert.equal(calls, 2);
+});
+
+test("confirmaciones tardías no cargan después de cerrar, cambiar archivo, editar selección o revocar permisos", async () => {
+  const soft = clientPreview({ issues: [{ code: "conflicting_schedule", message: "Horario por revisar" }] });
+  for (const action of ["close", "replace", "edit", "revoke", "destroy"]) {
+    let approve, imports = 0;
+    const session = { permissions: ["equipment.write", "equipment.reports"] };
+    const h = browserHarness({ fetch: async () => deliverPreview(soft), confirmWarnings: () => new Promise((resolve) => { approve = resolve; }),
+      access: { can(user, permission) { return user.permissions.includes(permission); } }, session, bridge: { importEvents() { imports++; return { count: 1 }; } } });
+    await h.api.openFile(fakeFile()); const pending = h.action("apply");
+    if (action === "close") h.api.close();
+    if (action === "replace") await h.api.openFile(fakeFile());
+    if (action === "edit") await h.dialog.emit("input", { target: { dataset: { batchField: "name", batchIndex: "0" }, value: "Referencia editada" } });
+    if (action === "revoke") session.permissions = [];
+    if (action === "destroy") h.api.destroy();
+    approve(true); await pending; assert.equal(imports, 0, action);
+  }
+});
+
+test("una confirmación reemplazada no desbloquea otra carga en curso", async () => {
+  const soft = clientPreview({ date: "" }), approvals = []; let imports = 0, finish;
+  const h = browserHarness({ fetch: async () => deliverPreview(soft), confirmWarnings: () => new Promise((resolve) => approvals.push(resolve)), bridge: {
+    importEvents() { imports++; return new Promise((resolve) => { finish = resolve; }); }
+  } });
+  await h.api.openFile(fakeFile()); const old = h.action("apply"); await h.api.openFile(fakeFile()); const current = h.action("apply");
+  approvals[1](true); await new Promise((resolve) => setImmediate(resolve)); assert.equal(imports, 1);
+  approvals[0](true); await old; await h.action("apply"); assert.equal(h.api.close(), false); assert.equal(imports, 1);
+  finish({ count: 1 }); await current; assert.equal(imports, 1);
+});
+
+test("datos activos inválidos y pérdida de celdas siguen bloqueados aunque se acepten advertencias", () => {
+  const source = clientPreview(), selections = ui.selectionsFor(source);
+  for (const quantity of [null, undefined, "", "dos", -1, false, Infinity]) {
+    const invalid = structuredClone(source); invalid.events[0].sections[0].items[0].quantity = quantity;
+    assert.match(ui.selectionError(invalid, selections), /cantidad o descripción inválida/);
+    assert.throws(() => ui.prepareEvents(invalid, selections, { acknowledgeWarnings: true }), /cantidad o descripción inválida/);
+  }
+  const missingDescription = structuredClone(source); missingDescription.events[0].sections[0].items[0].description = " ";
+  assert.throws(() => ui.prepareEvents(missingDescription, selections, { acknowledgeWarnings: true }), /cantidad o descripción inválida/);
+  source.verification.complete = false;
+  assert.throws(() => ui.prepareEvents(source, selections, { acknowledgeWarnings: true }), /todas las celdas/);
+});
+
+test("una propuesta corroborada completa los horarios revisados y conserva la fecha original", () => {
+  const preview = clientPreview({ date: "2026-11-06", startAt: "2026-11-06T16:00", endAt: "2026-11-06T23:00", setupAt: "2026-11-07T10:00", setupApplies: true,
+    sourceImport: { metadata: { date: "06/11/2026" }, schedule: { startAt: "2026-11-06T16:00" } },
+    scheduleSuggestion: { code: "corroborated_event_date", date: "2026-11-07", originalDate: "2026-11-06", schedule: { startDate: "2026-11-07", startAt: "2026-11-07T16:00", endDate: "2026-11-07", endAt: "2026-11-07T23:00", setupAt: "2026-11-07T10:00", setupApplies: true, equipmentInAt: "2026-11-08T10:00" } } });
+  const original = JSON.stringify(preview), selections = ui.selectionsFor(preview);
+  assert.equal(selections[0].date, "2026-11-07"); assert.equal(selections[0].endDate, "2026-11-07"); assert.equal(selections[0].equipmentInDate, "2026-11-08");
+  assert.throws(() => ui.prepareEvents(preview, selections), /Confirme las advertencias/);
+  const draft = ui.prepareEvents(preview, selections, { acknowledgeWarnings: true })[0];
+  assert.equal(draft.sourceImport.sourceEventId, preview.events[0].id);
+  assert.equal(draft.sourceImport.scheduleSuggestionAccepted, true); assert.equal(draft.sourceImport.metadata.date, "06/11/2026"); assert.equal(draft.sourceImport.schedule.startAt, "2026-11-06T16:00");
+  selections[0].date = "2026-11-08";
+  assert.equal(ui.prepareEvents(preview, selections, { acknowledgeWarnings: true })[0].sourceImport.scheduleSuggestionAccepted, false);
+  assert.equal(JSON.stringify(preview), original);
+});
+
+test("las celdas de cuadros de referencia cuentan en la selección sin añadir líneas de equipo", () => {
+  const preview = clientPreview(), reference = structuredClone(preview.events[0]);
+  reference.id = "reference-synthetic"; reference.sourceCells = [{ ref: "synthetic-reference-B1", sheet: reference.sourceSheet, address: "B1", value: "Dato de referencia" }];
+  preview.events[0].sourceImport.referenceTables = [reference]; preview.referenceTableCount = 1; preview.tableCount = 2;
+  const counts = ui.totals(preview, ui.selectionsFor(preview));
+  assert.equal(counts.events, 1); assert.equal(counts.items, 1); assert.equal(counts.zeros, 1); assert.equal(counts.cells, 2);
+  const html = ui.renderPreview(preview, ui.selectionsFor(preview));
+  assert.match(html, /1 eventos · 1 hojas · 1 cuadro de referencia/); assert.match(html, /Cuadro original de referencia/); assert.match(html, /Dato de referencia/);
+});
+
+test("pendientes rutinarios sin horarios escritos no obligan a confirmar un archivo válido", async () => {
+  const preview = clientPreview({ warnings: [{ code: "pending_times", message: "Horarios pendientes" }, { code: "incomplete_schedule", message: "Hora inicial pendiente" }] });
+  let confirmations = 0, imports = 0;
+  const h = browserHarness({ fetch: async () => deliverPreview(preview), confirmWarnings() { confirmations++; return false; }, bridge: { importEvents() { imports++; return { count: 1 }; } } });
+  await h.api.openFile(fakeFile()); await h.action("apply"); assert.equal(confirmations, 0); assert.equal(imports, 1);
 });

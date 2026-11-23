@@ -314,6 +314,88 @@ test("weekday mounting after the explicit event date requires correction without
   assert.equal(event.sourceImport.metadata.setupTime, "miércoles 9:00am");
 });
 
+function correctionRows(overrides = {}) {
+  const values = {
+    date: "24/11/2026", setup: "miércoles 9:00am", range: "4:00pm a 11:00pm",
+    teardown: "miércoles 11:00pm", equipmentIn: "jueves 3:00am", ...overrides
+  };
+  return [
+    ["Fecha del evento", values.date], ["Horario de montaje", values.setup],
+    ["Horario del evento general", values.range], ["Horario de desmontaje", values.teardown],
+    ...(values.equipmentIn ? [["Horario que llega a bodega", values.equipmentIn]] : []), ...equipment
+  ];
+}
+
+test("corroborated weekday schedules suggest a unique corrected date while preserving the written conflict", async () => {
+  const preview = await previewRows(correctionRows());
+  const event = preview.events[0], suggestion = event.scheduleSuggestion;
+  assert.equal(preview.verification.complete, true);
+  assert.equal(event.date, "2026-11-24");
+  assert.equal(event.startAt, "2026-11-24T16:00");
+  assert.equal(event.dateLiteral, "24/11/2026");
+  assert.equal(event.sourceImport.metadata.date, "24/11/2026");
+  assert.equal(event.sourceImport.schedule.startDate, "2026-11-24");
+  assert.ok(event.issues.some((issue) => issue.code === "conflicting_schedule_order"));
+  assert.equal(suggestion.code, "corroborated_event_date");
+  assert.equal(suggestion.originalDate, "2026-11-24");
+  assert.equal(suggestion.date, "2026-11-25");
+  assert.equal(suggestion.schedule.setupAt, "2026-11-25T09:00");
+  assert.equal(suggestion.schedule.startAt, "2026-11-25T16:00");
+  assert.equal(suggestion.schedule.endAt, "2026-11-25T23:00");
+  assert.equal(suggestion.schedule.teardownAt, "2026-11-25T23:00");
+  assert.equal(suggestion.schedule.equipmentInAt, "2026-11-26T03:00");
+  for (const field of ["date", "setupTime", "eventTimeRange", "teardownTime", "equipmentInTime"]) {
+    const evidence = suggestion.evidence.find((entry) => entry.field === field);
+    assert.ok(evidence, `Missing source evidence for ${field}`);
+    assert.equal(evidence.value, event.sourceImport.metadata[field]);
+    assert.deepEqual(evidence.refs, event.metadataRefs[field]);
+    assert.ok(evidence.refs.every((ref) => suggestion.refs.includes(ref)));
+  }
+  assert.equal(verifyEventImport(preview).complete, true);
+});
+
+test("fully written setup, teardown and return dates corroborate a corrected event date", async () => {
+  const preview = await previewRows(correctionRows({
+    setup: "25/11/2026 9:00am", teardown: "25/11/2026 11:00pm", equipmentIn: "26/11/2026 3:00am"
+  }));
+  const event = preview.events[0];
+  assert.equal(preview.verification.complete, true);
+  assert.equal(event.date, "2026-11-24");
+  assert.equal(event.sourceImport.metadata.date, "24/11/2026");
+  assert.equal(event.scheduleSuggestion.date, "2026-11-25");
+  assert.equal(event.scheduleSuggestion.schedule.startAt, "2026-11-25T16:00");
+  assert.equal(event.scheduleSuggestion.schedule.endAt, "2026-11-25T23:00");
+  assert.equal(event.scheduleSuggestion.schedule.equipmentInAt, "2026-11-26T03:00");
+});
+
+test("date corrections require the complete independent schedule corroboration", async () => {
+  const incompleteOrConflicting = [
+    { equipmentIn: "" },
+    { setup: "miércoles 5:00pm" },
+    { teardown: "miércoles 10:00pm" },
+    { teardown: "jueves 11:00pm" },
+    { equipmentIn: "miércoles 10:00pm" },
+    { setup: "miércoles de la próxima semana 9:00am" },
+    { date: "" },
+    { date: "25/11/2026" },
+    { range: "4:00pm a 11:00pm a 1:00am" },
+    { range: "24/11/2026 4:00pm a 24/11/2026 11:00pm" },
+    { setup: "martes 25/11/2026 9:00am" }
+  ];
+  for (const overrides of incompleteOrConflicting) {
+    const preview = await previewRows(correctionRows(overrides));
+    assert.equal(preview.verification.complete, true);
+    assert.ok(!preview.events[0].scheduleSuggestion, JSON.stringify(overrides));
+  }
+  const contradictorySetup = await previewRows([["Requiere montaje", "No"], ...correctionRows()]);
+  assert.equal(contradictorySetup.verification.complete, true);
+  assert.ok(!contradictorySetup.events[0].scheduleSuggestion);
+  const conflictingDates = await previewRows([["Fecha del evento", "23/11/2026"], ...correctionRows()]);
+  assert.equal(conflictingDates.verification.complete, true);
+  assert.ok(conflictingDates.events[0].issues.some((issue) => issue.code === "conflicting_metadata"));
+  assert.ok(!conflictingDates.events[0].scheduleSuggestion);
+});
+
 test("a written weekday that disagrees with a full written date stays a source conflict", async () => {
   const preview = await previewRows([
     ["Fecha del evento", "24/11/2026"], ["Montaje", "lunes 24/11/2026 09:00"], ...equipment
@@ -380,6 +462,134 @@ test("identical complete event identities still require duplicate-table review",
   assert.equal(preview.duplicateCandidates.length, 1);
   assert.equal(preview.duplicateCandidates[0].requiresReview, true);
   assert.ok(preview.events.every((event) => event.warnings.some((warning) => warning.code === "duplicate_equipment_tables" && warning.severity === "warning")));
+});
+
+function identicalTableRows(identities) {
+  return [
+    identities.flatMap((identity) => identity?.date ? ["Fecha del evento", identity.date] : ["", ""]),
+    identities.flatMap((identity) => identity?.client ? ["Nombre del cliente", identity.client] : ["", ""]),
+    identities.flatMap((identity) => identity?.place ? ["Lugar del evento", identity.place] : ["", ""]),
+    identities.flatMap(() => ["Cantidad", "Descripción"]),
+    identities.flatMap(() => [0, "Equipo sintetico cero"]),
+    identities.flatMap(() => [2, "Equipo sintetico segundo"])
+  ];
+}
+const completeIdentity = { date: "24/11/2026", client: "Cliente sintetico", place: "Salon sintetico" };
+
+test("one fully identified event retains an identical anonymous table as a complete reference without active double counting", async () => {
+  const preview = await previewRows(identicalTableRows([null, completeIdentity]), (sheet) => {
+    sheet.getCell("A5").note = "Nota sintetica de la copia con cero";
+    sheet.getCell("A5").numFmt = '0 "unidades"';
+  });
+  assert.equal(preview.events.length, 1);
+  assert.equal(preview.tableCount, 2);
+  assert.equal(preview.eventCount, 1);
+  assert.equal(preview.itemCount, 2);
+  assert.equal(preview.zeroCount, 1);
+  assert.equal(preview.referenceTableCount, 1);
+  const event = preview.events[0], [reference] = event.sourceImport.referenceTables;
+  assert.equal(event.client, completeIdentity.client);
+  assert.equal(event.itemCount, 2);
+  assert.equal(event.zeroCount, 1);
+  assert.equal(reference.client, "");
+  assert.equal(reference.date, "");
+  assert.equal(reference.place, "");
+  assert.equal(reference.itemCount, 2);
+  assert.equal(reference.zeroCount, 1);
+  assert.deepEqual(reference.sections.flatMap((section) => section.items.map((item) => item.quantity)), [0, 2]);
+  assert.deepEqual(reference.documentSections, reference.sections);
+  assert.deepEqual(reference.sourceCells, reference.sourceImport.sourceCells);
+  assert.ok(reference.sourceCells.some((cell) => cell.address === "A5" && String(cell.note).includes("Nota sintetica de la copia con cero")));
+  assert.deepEqual(preview.sheets[0].eventIds, [event.id]);
+  assert.deepEqual(preview.sheets[0].tableIds, [reference.id, event.id]);
+  assert.deepEqual(preview.sheets[0].referenceTableIds, [reference.id]);
+  assert.equal(preview.referenceCopies.length, 1);
+  assert.equal(preview.referenceCopies[0].eventId, event.id);
+  assert.deepEqual(preview.referenceCopies[0].referenceTableIds, [reference.id]);
+  assert.equal(preview.sourceCells.length, event.sourceCells.length + reference.sourceCells.length);
+  assert.equal(preview.verification.representedCellCount, preview.sourceCells.length);
+  assert.equal(preview.verification.complete, true);
+});
+
+test("the source-cell verifier applies quantity, item and cell checks recursively to retained references", async () => {
+  const original = await previewRows(identicalTableRows([null, completeIdentity]));
+  assert.equal(original.verification.complete, true);
+  const mutations = [
+    (reference) => { reference.sections.flatMap((section) => section.rows).find((row) => row.type === "item").quantity = 9; },
+    (reference) => { reference.sections.flatMap((section) => section.items)[0].quantity = 9; },
+    (reference) => { reference.sourceCells[0].value = "Celda sintetica alterada"; },
+    (reference) => { reference.sourceImport.sourceCells[0].value = "Celda sintetica alterada"; },
+    (reference) => { reference.sections.flatMap((section) => section.rows).find((row) => row.type === "item").cells[0].value = 9; },
+    (reference) => { reference.documentSections[0].title = "Seccion sintetica alterada"; }
+  ];
+  for (const mutate of mutations) {
+    const preview = JSON.parse(JSON.stringify(original));
+    mutate(preview.events[0].sourceImport.referenceTables[0]);
+    assert.equal(verifyEventImport(preview).complete, false);
+  }
+});
+
+test("a unique complete identity can retain multiple anonymous copies while partially identified copies stay reviewable", async () => {
+  const consolidated = await previewRows(identicalTableRows([null, completeIdentity, null]));
+  assert.equal(consolidated.events.length, 1);
+  assert.equal(consolidated.tableCount, 3);
+  assert.equal(consolidated.eventCount, 1);
+  assert.equal(consolidated.referenceTableCount, 2);
+  assert.equal(consolidated.itemCount, 2);
+  assert.equal(consolidated.zeroCount, 1);
+  assert.equal(consolidated.events[0].sourceImport.referenceTables.length, 2);
+  assert.equal(consolidated.verification.complete, true);
+  const ambiguous = await previewRows(identicalTableRows([{ client: "Otro cliente sintetico" }, completeIdentity]));
+  assert.equal(ambiguous.events.length, 2);
+  assert.equal(ambiguous.referenceTableCount, 0);
+  assert.equal(ambiguous.duplicateCandidates[0].requiresReview, true);
+  assert.ok(ambiguous.events.every((event) => event.warnings.some((warning) => warning.code === "duplicate_equipment_tables")));
+  assert.equal(ambiguous.verification.complete, true);
+});
+
+test("identical tables with any metadata remain separate for review even without client, date or place", async () => {
+  const metadataCases = [
+    ["Cantidad de invitados", 0, "guests"],
+    ["Tipo de evento", "Celebracion sintetica", "type"],
+    ["Equipo contratado", "Servicio sintetico", "contracted"],
+    ["Hora de montaje", "09:00", "setupTime"],
+    ["Hora de finalización", "23:00", "endTime"],
+    ["Regreso a bodega", "25/11/2026 03:00", "equipmentInAt"],
+    ["Requiere montaje", "No", "setupApplies"]
+  ];
+  for (const [label, value, field] of metadataCases) {
+    const preview = await previewRows([[label, value, "", ""], ...identicalTableRows([null, completeIdentity])]);
+    assert.equal(preview.events.length, 2, label);
+    assert.equal(preview.eventCount, 2, label);
+    assert.equal(preview.tableCount, 2, label);
+    assert.equal(preview.itemCount, 4, label);
+    assert.equal(preview.zeroCount, 2, label);
+    assert.equal(preview.referenceTableCount, 0, label);
+    assert.equal(preview.events[0].sourceImport.metadata[field], String(value), label);
+    assert.equal(preview.duplicateCandidates[0].requiresReview, true, label);
+    assert.ok(preview.events.every((event) => !event.sourceImport.referenceTables?.length), label);
+    assert.equal(preview.sourceCells.length, preview.events.reduce((sum, event) => sum + event.sourceCells.length, 0), label);
+    assert.equal(preview.verification.complete, true, label);
+    assert.equal(preview.verification.representedCellCount, preview.sourceCells.length, label);
+  }
+});
+
+test("anonymous identical tables with multiple complete identities or different sheets remain separate", async () => {
+  const ambiguous = await previewRows(identicalTableRows([
+    completeIdentity, null, { date: "25/11/2026", client: "Otro cliente sintetico", place: "Otro salon sintetico" }
+  ]));
+  assert.equal(ambiguous.events.length, 3);
+  assert.equal(ambiguous.referenceTableCount, 0);
+  assert.equal(ambiguous.duplicateCandidates[0].requiresReview, true);
+  assert.equal(ambiguous.verification.complete, true);
+  const workbook = new ExcelJS.Workbook();
+  const anonymous = workbook.addWorksheet("Copia sintetica"), identified = workbook.addWorksheet("Evento sintetico");
+  identicalTableRows([null]).forEach((row) => anonymous.addRow(row));
+  identicalTableRows([completeIdentity]).forEach((row) => identified.addRow(row));
+  const separateSheets = await parseEventFile(Buffer.from(await workbook.xlsx.writeBuffer()), { fileName: "cuadros-sinteticos.xlsx" });
+  assert.equal(separateSheets.events.length, 2);
+  assert.equal(separateSheets.referenceTableCount, 0);
+  assert.equal(separateSheets.verification.complete, true);
 });
 
 function syntheticPdf(lines) {
