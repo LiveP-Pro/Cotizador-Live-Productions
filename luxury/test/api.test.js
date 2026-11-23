@@ -4,15 +4,17 @@ import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createApp } from "../server.js";
+import { hashPassword } from "../lib/auth.js";
 
 async function startTestApp() {
   const directory = await mkdtemp(join(tmpdir(), "luxury-travel-test-"));
-  const { server } = await createApp({ dataFile: join(directory, "database.json") });
+  const { server, db } = await createApp({ dataFile: join(directory, "database.json") });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
     directory,
+    db,
     close: async () => {
       await new Promise((resolve) => server.close(resolve));
       await rm(directory, { recursive: true, force: true });
@@ -591,18 +593,11 @@ test("flujo principal: login, cotización, PDF e itinerario", async (context) =>
 test("un vendedor no puede modificar tarifas", async (context) => {
   const app = await startTestApp();
   context.after(app.close);
-  const admin = await login(app.baseUrl);
-
-  const createUserResponse = await request(app.baseUrl, admin.cookie, "/api/users", {
-    method: "POST",
-    body: JSON.stringify({
-      name: "Vendedor Prueba",
-      email: "ventas@example.com",
-      password: "Ventas2026!",
-      role: "vendedor",
-    }),
-  });
-  assert.equal(createUserResponse.status, 201);
+  // Account setup is performed internally on the server, never over HTTP.
+  await app.db.create("users", {
+    name: "Vendedor Prueba", email: "ventas@example.com", active: true,
+    passwordHash: hashPassword("Ventas2026!"), role: "vendedor",
+  }, "system");
 
   const seller = await login(app.baseUrl, "ventas@example.com", "Ventas2026!");
   assert.ok(seller.payload.permissions.includes("quotes"));
@@ -613,6 +608,56 @@ test("un vendedor no puede modificar tarifas", async (context) => {
     body: JSON.stringify({ pricePerKm: 1 }),
   });
   assert.equal(ratesResponse.status, 403);
+});
+
+test("las cuentas nativas conservan el acceso sin exponer administración de usuarios", async (context) => {
+  const app = await startTestApp();
+  context.after(app.close);
+  const admin = await login(app.baseUrl);
+  const usersBefore = app.db.exportSnapshot().users;
+  assert.equal(admin.payload.permissions.includes("users"), false);
+  assert.equal(admin.payload.user.permissions.includes("users"), false);
+  for (const endpoint of ["/api/session", "/api/bootstrap"]) {
+    const response = await request(app.baseUrl, admin.cookie, endpoint);
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(Object.hasOwn(payload, "users"), false);
+    assert.equal(payload.permissions.includes("users"), false);
+    assert.ok(payload.permissions.includes("settings"));
+    assert.ok(payload.permissions.includes("quotes"));
+  }
+  for (const cookie of ["", admin.cookie]) {
+    for (const method of ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]) {
+      for (const endpoint of ["/api/users", `/api/users/${usersBefore[0].id}`, "/api/users/unknown/action"]) {
+        const response = await request(app.baseUrl, cookie, endpoint, { method,
+          ...(["POST", "PUT", "PATCH"].includes(method) ? { body: JSON.stringify({
+            name: "Cuenta prohibida", email: "forbidden@example.test", password: "Never-created-test-123", role: "administrador",
+          }) } : {}) });
+        assert.equal(response.status, 404, `${method} ${endpoint}`);
+      }
+    }
+  }
+  assert.deepEqual(app.db.exportSnapshot().users, usersBefore);
+  assert.equal((await request(app.baseUrl, admin.cookie, "/api/dashboard")).status, 200);
+});
+
+test("editar pilotos conserva los vínculos de cuentas administrados en el servidor", async (context) => {
+  const app = await startTestApp();
+  context.after(app.close);
+  const admin = await login(app.baseUrl);
+  const driver = await app.db.create("drivers", { name: "Piloto interno", userId: "native-driver-account" }, "system");
+  for (const body of [{ name: "Piloto actualizado" }, { name: "Piloto actualizado", userId: "another-account" }]) {
+    const response = await request(app.baseUrl, admin.cookie, `/api/drivers/${driver.id}`, {
+      method: "PUT", body: JSON.stringify(body),
+    });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).userId, "native-driver-account");
+  }
+  const created = await request(app.baseUrl, admin.cookie, "/api/drivers", {
+    method: "POST", body: JSON.stringify({ name: "Piloto nuevo", userId: "another-account" }),
+  });
+  assert.equal(created.status, 201);
+  assert.equal((await created.json()).userId, "");
 });
 
 test("reutiliza el mismo cliente aunque cambien mayúsculas, acentos o datos de contacto", async (context) => {
@@ -674,6 +719,9 @@ test("un administrador puede exportar e importar un respaldo sin perder su acces
   assert.equal(exportResponse.status, 200);
   assert.match(exportResponse.headers.get("content-disposition"), /luxury-travel-backup/);
   const snapshot = await exportResponse.json();
+  const usersBefore = app.db.exportSnapshot().users;
+  assert.equal(Object.hasOwn(snapshot, "users"), false);
+  assert.equal(JSON.stringify(snapshot).includes("passwordHash"), false);
   snapshot.clients.push({
     id: "cliente-migrado",
     name: "Cliente migrado",
@@ -681,8 +729,13 @@ test("un administrador puede exportar e importar un respaldo sin perder su acces
     phone: "5555-1000",
     email: "cliente-migrado@example.com",
     createdAt: new Date().toISOString(),
-    createdBy: snapshot.users[0].id,
+    createdBy: admin.payload.user.id,
   });
+  // Legacy/malicious account content cannot change any existing account.
+  snapshot.users = [{ ...usersBefore[0], name: "Nombre alterado", email: "changed@example.test",
+    passwordHash: hashPassword("Changed-test-123"), role: "vendedor", active: false },
+  { id: "web-created-account", name: "Cuenta prohibida", email: "new@example.test", role: "administrador",
+    active: true, passwordHash: hashPassword("New-account-test-123") }];
 
   const importResponse = await request(
     app.baseUrl,
@@ -697,6 +750,7 @@ test("un administrador puede exportar e importar un respaldo sin perder su acces
   const importResult = await importResponse.json();
   assert.equal(importResult.counts.clients, 1);
   assert.match(importResponse.headers.get("set-cookie"), /Max-Age=0/);
+  assert.deepEqual(app.db.exportSnapshot().users, usersBefore);
 
   const expiredSessionResponse = await request(app.baseUrl, admin.cookie, "/api/bootstrap");
   assert.equal(expiredSessionResponse.status, 401);

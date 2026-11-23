@@ -19,7 +19,8 @@ COPY warehouse-module.html warehouse-inventory.css inventory.js inventory-initia
 COPY warehouse-xlsx-normalize.cjs ./
 COPY warehouse-import-corrections.js ./
 COPY equipment-service-import.cjs equipment-service-import.js equipment-service-import.css ./
-COPY live-access.js live-users.cjs live-users.js live-users.css live-warehouse-access.cjs ./
+COPY live-access.js live-users.cjs live-warehouse-access.cjs ./
+COPY scripts/live-users-admin.cjs ./scripts/
 COPY equipment-event-store.cjs equipment-event-personalizer.js equipment-event-personalizer.css equipment-extras-library.js equipment-extras-library.css equipment-workspace.js equipment-workspace.css ./
 COPY equipment-name-picker.js equipment-name-picker.css ./
 COPY equipment-identity.js equipment-document-audit.js equipment-planner.js equipment-planner.css equipment-batch-events.js equipment-batch-events.css equipment-event-import.cjs equipment-reporting.cjs ./

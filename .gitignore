@@ -11,6 +11,7 @@ respaldo-cotizaciones/
 cotizador-auth.json
 usuarios-live.json
 usuarios-live.json.tmp-*
+usuarios-live.lock
 cotizador-servidor.log
 inventario-bodega*.json
 catalogo-requerimiento-equipo*.json

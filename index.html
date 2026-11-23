@@ -10,10 +10,8 @@
     <link rel="stylesheet" href="warehouse-inventory.css?v=20261008-stock-ingress-04" />
     <link rel="stylesheet" href="equipment-service-import.css?v=20261122-event-times-users-01" />
     <link rel="stylesheet" href="equipment-name-picker.css?v=20261007-extras-02" />
-    <link rel="stylesheet" href="live-users.css?v=20261122-account-activation-01" />
-    <script src="live-access.js?v=20261122-event-times-users-01" defer></script>
-    <script src="live-users.js?v=20261122-account-activation-01" defer></script>
-    <script src="app.js?v=20261122-developer-account-01" defer></script>
+    <script src="live-access.js?v=20261123-server-user-admin-01" defer></script>
+    <script src="app.js?v=20261123-server-user-admin-01" defer></script>
     <script src="equipment-catalog.js?v=20261014-dj-audio-01" defer></script>
     <script src="equipment-inventory.js?v=20261122-event-times-users-01" defer></script>
     <script src="equipment-service-import.js?v=20261122-event-times-users-01" defer></script>
@@ -93,7 +91,6 @@
           <button type="button" data-page-link="requerimientos">Requerimientos</button>
           <button type="button" data-page-link="requerimiento-equipo">Requerimiento de equipo</button>
           <button type="button" data-page-link="contabilidad-equipo">Contabilidad de equipo</button>
-          <button type="button" data-page-link="usuarios" hidden>Usuarios y permisos</button>
         </nav>
 
         <div class="division-heading"><span>Divisiones</span></div>
@@ -743,13 +740,6 @@
       <section id="contabilidadEquipoPage" class="site-page no-print" data-page="contabilidad-equipo">
         <div id="warehouseModuleHost" class="warehouse-module-host" aria-live="polite">
           <p class="warehouse-module-loading">Cargando Inventario Bodega...</p>
-        </div>
-      </section>
-
-      <section id="liveUsersPage" class="site-page no-print" data-page="usuarios">
-        <div class="site-page-card"><p class="eyebrow">Administración</p><h1>Usuarios y permisos</h1>
-          <p>Cree una cuenta por empleado y defina sus accesos. Los movimientos quedan asociados a la cuenta que los registra.</p>
-          <div id="liveUsersContainer"></div>
         </div>
       </section>
 

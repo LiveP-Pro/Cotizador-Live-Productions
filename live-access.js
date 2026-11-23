@@ -11,18 +11,21 @@
     requerimientos: ["requirements.read", "requirements.write"],
     "requerimiento-equipo": EQUIPMENT_READ,
     "contabilidad-equipo": WAREHOUSE_READ,
-    usuarios: ["users.manage"],
     inicio: [], quienes: []
   });
-  const can = (user, permission) => Array.isArray(user?.permissions) && user.permissions.includes(permission);
+  function isOwner(user) {
+    return Boolean(user && user.active !== false && user.isDeveloper === true
+      && (user.id || user.userId) === "live-developer-dgiant"
+      && String(user.username || (typeof user.user === "string" ? user.user : "")).trim().toLowerCase() === "dgiant");
+  }
+  const can = (user, permission) => user?.active !== false && Array.isArray(user?.permissions)
+    && user.permissions.includes(permission) && (permission !== "users.manage" || isOwner(user));
   const canAny = (user, permissions) => permissions.some((permission) => can(user, permission));
   const any = (...permissions) => permissions.map((permission) => [permission]);
 
   function routePermissions(method, rawPath) {
     const pathname = String(rawPath || "").split("?")[0];
     const read = method === "GET" || method === "HEAD";
-    if (/^\/api\/users(?:\/[^/]+)?$/.test(pathname)) return [["users.manage"]];
-    if (pathname === "/api/account/password") return [[]];
     if (pathname === "/api/inventario-bodega") return read
       ? any(...WAREHOUSE_READ, ...EQUIPMENT_READ)
       : any("warehouse.inventory", "warehouse.movements", "warehouse.movements.manage");
@@ -66,5 +69,5 @@
       element.setAttribute("aria-hidden", String(!allowed));
     });
   }
-  return Object.freeze({ can, canAny, canRoute, routePermissions, canPage, applyUi, PAGE_PERMISSIONS });
+  return Object.freeze({ can, canAny, canRoute, routePermissions, canPage, applyUi, isOwner, PAGE_PERMISSIONS });
 });

@@ -63,7 +63,7 @@ function createHarness(t) {
     static now() { return now; }
   }
   const principal = Object.freeze({ id: "synthetic-tester", username: "Synthetic tester", displayName: "Synthetic tester",
-    active: true, permissions: [...ALL_PERMISSION_IDS] });
+    active: true, permissions: ALL_PERMISSION_IDS.filter((permission) => permission !== "users.manage") });
   const context = vm.createContext({
     fs, fsp: fs.promises, path, crypto, Buffer, URL, Date: Clock,
     process: { pid: process.pid }, console: { warn() {}, log() {} },

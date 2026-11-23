@@ -3001,7 +3001,7 @@ async function apiRequest(path, options = {}) {
 function setActivePage(page) {
   const exists = elements.sitePages.some((section) => section.dataset.page === page);
   const allowed = !isLocalServerAvailable() || window.LiveAccess?.canPage(window.LIVE_SESSION, page);
-  const fallback = ["requerimiento-equipo", "contabilidad-equipo", "cotizador", "requerimientos", "usuarios", "inicio"]
+  const fallback = ["requerimiento-equipo", "contabilidad-equipo", "cotizador", "requerimientos", "inicio"]
     .find((candidate) => !isLocalServerAvailable() || window.LiveAccess?.canPage(window.LIVE_SESSION, candidate)) || "inicio";
   const validPage = exists && allowed
     ? page
@@ -3016,7 +3016,6 @@ function setActivePage(page) {
     window.history.replaceState(null, "", `#${validPage}`);
   }
   setMenuOpen(false);
-  if (validPage === "usuarios") window.liveUsersPanel?.load();
 }
 
 function liveCan(permission) {
@@ -3031,19 +3030,6 @@ function updateLiveSession(session) {
     ? `${session.displayName || session.user}${session.isDeveloper ? " · Desarrollador" : ""}` : "";
   const developerNotice = document.querySelector("#liveDeveloperNotice");
   if (developerNotice) developerNotice.hidden = session?.isDeveloper !== true;
-  const container = document.querySelector("#liveUsersContainer");
-  if (container && window.LiveUsers && !window.liveUsersPanel) {
-    window.liveUsersPanel = window.LiveUsers.init({ container, session: window.LIVE_SESSION,
-      onUnauthorized: () => showLogin("Inicie sesión para continuar."),
-      onSaved: async () => {
-        const response = await fetch("/api/sesion");
-        const current = await readApiJson(response);
-        updateLiveSession(current);
-        if (!current.authenticated) showLogin("Sus permisos o contraseña cambiaron. Inicie sesión de nuevo.");
-      }
-    });
-  }
-  window.liveUsersPanel?.setSession(window.LIVE_SESSION);
   document.dispatchEvent(new CustomEvent("live:session-updated", { detail: window.LIVE_SESSION }));
   if (!window.liveAccessObserver && typeof MutationObserver === "function") {
     window.liveAccessObserver = new MutationObserver(() => window.LiveAccess?.applyUi(document, window.LIVE_SESSION));

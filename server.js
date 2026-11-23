@@ -15,7 +15,7 @@ const EquipmentIdentity = require("./equipment-identity.js");
 const { createEquipmentReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml } = require("./equipment-reporting.cjs");
 const { parseEventFile } = require("./equipment-event-import.cjs");
 const LiveAccess = require("./live-access.js");
-const { createLiveUserStore, PERMISSION_DEFINITIONS, ROLE_PRESETS, isDeveloperIdentity } = require("./live-users.cjs");
+const { createLiveUserStore, isDeveloperIdentity } = require("./live-users.cjs");
 const { projectWarehousePayload, mergeWarehousePrivateFields } = require("./live-warehouse-access.cjs");
 
 const rootDir = __dirname;
@@ -57,7 +57,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261122-account-activation-01";
+const warehouseAssetVersion = "20261123-server-user-admin-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -1286,6 +1286,7 @@ function authenticatedUser(request) {
 }
 
 function authenticatedPrincipal(request) {
+  liveUsers.reload();
   const cookies = parseCookies(request);
   const session = verifySessionToken(cookies.cotizador_session);
   return session ? liveUsers.resolveSession(session) : null;
@@ -1295,7 +1296,8 @@ function liveSessionResponse(user) {
   return user ? { authenticated: true, user: user.username, username: user.username,
     userId: user.id, id: user.id, displayName: user.displayName, permissions: user.permissions,
     role: user.role, sessionVersion: user.sessionVersion, isDeveloper: isDeveloperIdentity(user),
-    auditExempt: isDeveloperIdentity(user) } : { authenticated: false, user: "", permissions: [] };
+    auditExempt: isDeveloperIdentity(user) }
+    : { authenticated: false, user: "", permissions: [] };
 }
 
 function sessionCookie(request, token) {
@@ -3881,7 +3883,7 @@ function serveStatic(request, response, pathname) {
   const isPdfRequest = requestedPath.startsWith("/cotizaciones-generadas/");
   const isEquipmentPdfRequest = requestedPath.startsWith("/cuadros-equipo/");
   if ((isPdfRequest || isEquipmentPdfRequest) && !requireAuth(request, response)) return;
-  const publicFile = /^\/(?:index\.html|warehouse-module\.html|warehouse-inventory\.css|(?:app|styles|inventory|equipment(?:-[a-z-]+)?|warehouse-import-(?:review|corrections)|live-(?:access|users))\.(?:js|css))$/.test(requestedPath);
+  const publicFile = /^\/(?:index\.html|warehouse-module\.html|warehouse-inventory\.css|(?:app|styles|inventory|equipment(?:-[a-z-]+)?|warehouse-import-(?:review|corrections)|live-access)\.(?:js|css))$/.test(requestedPath);
   const publicAsset = /^\/assets\/[a-zA-Z0-9_./ -]+\.(?:png|jpe?g|webp|svg|ico|woff2?|ttf)$/i.test(requestedPath);
   if (!isPdfRequest && !isEquipmentPdfRequest && !publicFile && !publicAsset) {
     errorResponse(response, 404, "Archivo no encontrado.");
@@ -3913,14 +3915,14 @@ function serveStatic(request, response, pathname) {
           data
             .toString("utf8")
             .replace(
-              /(app\.js|live-(?:access|users)\.(?:js|css)|equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import)\.(?:js|css)|equipment\.js|inventory\.js|warehouse-import-(?:review|corrections)\.js)\?v=[^"'&<>\s]+/g,
+              /(app\.js|live-access\.(?:js|css)|equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import)\.(?:js|css)|equipment\.js|inventory\.js|warehouse-import-(?:review|corrections)\.js)\?v=[^"'&<>\s]+/g,
               `$1?v=${warehouseAssetVersion}`
             ),
           "utf8"
         )
       : data;
     const headers = { "Content-Type": contentType };
-    if (requestedPath === "/index.html" || ["app.js", "live-access.js", "live-users.js", "live-users.css", "equipment-identity.js", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "warehouse-import-corrections.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
+    if (requestedPath === "/index.html" || ["app.js", "live-access.js", "equipment-identity.js", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "warehouse-import-review.js", "warehouse-import-corrections.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
       (asset) => requestedPath === `/${asset}`
     )) {
       headers["Cache-Control"] = "no-store";
@@ -3934,6 +3936,11 @@ async function handleRequest(request, response) {
   const url = new URL(request.url, `http://${request.headers.host || "127.0.0.1"}`);
 
   try {
+    if (url.pathname === "/api/users" || url.pathname.startsWith("/api/users/")
+      || url.pathname === "/api/account/password" || url.pathname.startsWith("/api/account/password/")) {
+      errorResponse(response, 404, "Ruta no encontrada.");
+      return;
+    }
     if (request.method === "GET" && ["/api/sesion", "/api/session"].includes(url.pathname)) {
       jsonResponse(response, 200, liveSessionResponse(authenticatedPrincipal(request)));
       return;
@@ -3941,6 +3948,7 @@ async function handleRequest(request, response) {
 
     if (request.method === "POST" && url.pathname === "/api/login") {
       const payload = await readJsonBody(request);
+      liveUsers.reload();
       const user = liveUsers.authenticate(payload.username, payload.password);
       if (!user) {
         errorResponse(response, 401, "Usuario o contraseña incorrectos.");
@@ -3966,44 +3974,6 @@ async function handleRequest(request, response) {
         "Set-Cookie": [expiredSessionCookie(), "lt_luxury_session=; Path=/luxury/; HttpOnly; SameSite=Lax; Max-Age=0"]
       });
       response.end(JSON.stringify({ authenticated: false }));
-      return;
-    }
-
-    if (url.pathname === "/api/users" && ["GET", "POST"].includes(request.method)) {
-      if (!requireAuth(request, response)) return;
-      if (request.method === "GET") {
-        jsonResponse(response, 200, { users: liveUsers.list(), permissions: PERMISSION_DEFINITIONS, roles: ROLE_PRESETS });
-      } else {
-        const payload = await readJsonBody(request);
-        await enqueueSave(() => jsonResponse(response, 201, { user: liveUsers.create(payload, authenticatedPrincipal(request)) }));
-      }
-      return;
-    }
-    if (request.method === "POST" && url.pathname === "/api/users/developer") {
-      if (!requireAuth(request, response)) return;
-      const payload = await readJsonBody(request);
-      await enqueueSave(() => jsonResponse(response, 201, { user: liveUsers.provisionDeveloperAccount(payload, authenticatedPrincipal(request)) }));
-      return;
-    }
-    if (request.method === "GET" && url.pathname === "/api/users/audit") {
-      if (!requireAuth(request, response)) return;
-      jsonResponse(response, 200, { entries: liveUsers.audit() });
-      return;
-    }
-    const liveUserMatch = url.pathname.match(/^\/api\/users\/([A-Za-z0-9_-]+)$/);
-    if (request.method === "PATCH" && liveUserMatch) {
-      if (!requireAuth(request, response)) return;
-      const payload = await readJsonBody(request);
-      await enqueueSave(() => jsonResponse(response, 200, { user: liveUsers.update(liveUserMatch[1], payload, authenticatedPrincipal(request)) }));
-      return;
-    }
-    if (request.method === "POST" && url.pathname === "/api/account/password") {
-      if (!requireAuth(request, response)) return;
-      const payload = await readJsonBody(request);
-      const user = authenticatedPrincipal(request);
-      await enqueueSave(() => liveUsers.changeOwnPassword(user.id, payload, user));
-      response.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Set-Cookie": expiredSessionCookie(), "Cache-Control": "no-store" });
-      response.end(JSON.stringify({ changed: true, reauthenticate: true }));
       return;
     }
 

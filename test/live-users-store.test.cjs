@@ -15,26 +15,30 @@ function legacyConfig() {
   return { username: "AdministradorPrueba", password: { algorithm: "pbkdf2-sha256", iterations: 210000, salt,
     hash: crypto.pbkdf2Sync(legacyPassword, salt, 210000, 32, "sha256").toString("hex") } };
 }
-function fixture(t) {
+function fixture(t, { provision = true } = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "live-users-test-"));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const legacyAdmin = legacyConfig();
   const options = { directory, legacyAdmin, clock: () => new Date("2026-11-22T12:30:45.000Z") };
   const store = createLiveUserStore(options);
-  return { directory, options, store, admin: store.list()[0] };
+  const legacy = store.list()[0];
+  const admin = provision ? store.provisionDeveloperAccount({ password: "Owner-test-123" }, legacy) : legacy;
+  return { directory, options, store, admin, legacy };
 }
 const session = (store, user) => ({ ...store.sessionFor(user), exp: Date.now() + 3600000 });
 const createEmployee = (store, admin, overrides = {}) => store.create({ username: "bodega.prueba", displayName: "Empleado sintético",
   password: "Employee-test-123", role: "bodega", ...overrides }, admin);
 
 test("migrates the existing administrator without changing credentials or exposing password hashes", (t) => {
-  const { store, options, directory, admin } = fixture(t);
+  const { store, options, directory, admin } = fixture(t, { provision: false });
   assert.equal(store.authenticate(admin.username, legacyPassword).id, admin.id);
   assert.equal(store.authenticate("administradorprueba", legacyPassword).id, admin.id);
   assert.equal(store.authenticate(admin.username, "wrong-password"), null);
-  assert.deepEqual(admin.permissions, ALL_PERMISSION_IDS);
+  assert.deepEqual(admin.permissions, ALL_PERMISSION_IDS.filter((permission) => permission !== "users.manage"));
   assert.equal(admin.sessionVersion, 1);
-  assert.equal(hasPermission(admin, "users.manage"), true);
+  assert.equal(hasPermission(admin, "users.manage"), false);
+  assert.equal(admin.canActivateDeveloper, true);
+  assert.equal(store.canActivateDeveloper(admin), true);
   const publicOutput = JSON.stringify({ list: store.list(), authenticated: store.authenticate(admin.username, legacyPassword), audit: store.audit() });
   assert.equal(publicOutput.includes(legacyPassword), false);
   assert.equal(publicOutput.includes(options.legacyAdmin.password.hash), false);
@@ -67,15 +71,15 @@ test("new employee credentials use individual salted scrypt hashes and persist a
   assert.equal(reopened.getUser(second.username).id, second.id);
 });
 
-test("legacy administrator sessions survive migration only until the first account update", (t) => {
-  const { store, options, admin } = fixture(t);
+test("legacy administrator sessions survive bootstrap until a verified own password change", (t) => {
+  const { store, options, admin } = fixture(t, { provision: false });
   const old = { user: admin.username, exp: Date.now() + 3600000 };
   assert.equal(store.resolveSession(old).id, admin.id);
   assert.equal(store.resolveSession({ ...old, user: "another-user" }), null);
   assert.equal(store.resolveSession({ ...old, exp: Date.now() - 1 }), null);
   assert.equal(store.resolveSession({ user: admin.username }), null);
   const signed = session(store, admin);
-  store.update(admin.id, { displayName: "Administrador actualizado" }, admin);
+  store.changeOwnPassword(admin.id, { currentPassword: legacyPassword, newPassword: "Updated-legacy-123" }, admin);
   assert.equal(store.resolveSession(old), null);
   assert.equal(store.resolveSession(signed), null);
   assert.equal(store.resolveSession(session(store, admin)).id, admin.id);
@@ -118,17 +122,18 @@ test("role labels never override explicit granular permissions or grant administ
   assert.equal(hasPermission(empty, "warehouse.read"), false);
 });
 
-test("the last active administrator cannot be disabled or lose management permissions", (t) => {
+test("the protected owner stays active and user management cannot be delegated", (t) => {
   const { store, admin } = fixture(t);
   const before = fs.readFileSync(store.filePath, "utf8");
   assert.throws(() => store.update(admin.id, { active: false }, admin), { statusCode: 409 });
   assert.throws(() => store.update(admin.id, { permissions: ["warehouse.read"] }, admin), { statusCode: 409 });
   assert.equal(fs.readFileSync(store.filePath, "utf8"), before);
-  const backup = createEmployee(store, admin, { username: "admin.respaldo", role: "personalizado", permissions: ["users.manage"] });
-  store.update(admin.id, { active: false }, backup);
-  assert.equal(store.getUser(admin.id).active, false);
-  assert.throws(() => store.update(backup.id, { permissions: [] }, backup), { statusCode: 409 });
-  assert.equal(hasPermission(store.getUser(backup.id), "users.manage"), true);
+  assert.throws(() => createEmployee(store, admin, { username: "admin.respaldo", role: "personalizado", permissions: ["users.manage"] }), { statusCode: 403 });
+  const backup = createEmployee(store, admin, { username: "admin.respaldo", role: "administrador" });
+  assert.throws(() => store.update(backup.id, { permissions: ["users.manage"] }, admin), { statusCode: 403 });
+  assert.throws(() => store.update(admin.id, { active: false }, backup), { statusCode: 403 });
+  assert.equal(store.getUser(admin.id).active, true);
+  assert.equal(hasPermission(store.getUser(backup.id), "users.manage"), false);
 });
 
 test("user validation rejects duplicate identities, weak passwords, unknown permissions and protected fields before writing", (t) => {
@@ -148,26 +153,27 @@ test("user validation rejects duplicate identities, weak passwords, unknown perm
   ]) assert.throws(() => store.create(payload, admin));
   assert.equal(fs.readFileSync(store.filePath, "utf8"), before);
   assert.throws(() => store.update(admin.id, { username: "bodega.prueba" }, admin), { statusCode: 409 });
-  assert.equal(store.list().length, 2);
+  assert.equal(store.list().length, 3);
 });
 
 test("audits use authenticated employee identities and server timestamps without recording any passwords", (t) => {
   const { store, options, admin } = fixture(t);
+  const prior = store.audit().length;
   const employee = createEmployee(store, { ...admin, username: "forged.name", displayName: "Forged actor" });
   store.update(employee.id, { password: "Another-test-123", permissions: ["equipment.read", "warehouse.read"] }, admin);
   const audit = store.audit();
-  assert.equal(audit.length, 3);
-  assert.equal(audit[1].action, "users.create");
-  assert.deepEqual(audit[1].actor, { id: admin.id, username: admin.username, displayName: admin.displayName });
-  assert.equal(audit[1].timestamp, "2026-11-22T12:30:45.000Z");
-  assert.equal(audit[2].changes.passwordChanged, true);
-  assert.equal(audit[2].target.id, employee.id);
+  assert.equal(audit.length, prior + 2);
+  assert.equal(audit[prior].action, "users.create");
+  assert.deepEqual(audit[prior].actor, { id: admin.id, username: admin.username, displayName: admin.displayName });
+  assert.equal(audit[prior].timestamp, "2026-11-22T12:30:45.000Z");
+  assert.equal(audit[prior + 1].changes.passwordChanged, true);
+  assert.equal(audit[prior + 1].target.id, employee.id);
   const serialized = JSON.stringify(audit);
   assert.equal(serialized.includes("Another-test-123"), false);
   assert.equal(serialized.includes("Employee-test-123"), false);
   assert.equal(serialized.includes(options.legacyAdmin.password.hash), false);
-  audit[1].actor.username = "mutated outside store";
-  assert.equal(store.audit()[1].actor.username, admin.username);
+  audit[prior].actor.username = "mutated outside store";
+  assert.equal(store.audit()[prior].actor.username, admin.username);
 });
 
 test("a corrupt or inaccessible user file never triggers an administrator reset or overwrites existing accounts", (t) => {
@@ -202,7 +208,7 @@ test("the permission catalog and role presets are stable, complete and isolated 
   assert.equal(ALL_PERMISSION_IDS.includes("warehouse.movements.manage"), true);
   assert.equal(ALL_PERMISSION_IDS.includes("luxury.access"), true);
   const administrator = ROLE_PRESETS.find((role) => role.id === "administrador");
-  assert.deepEqual(administrator.permissions, ALL_PERMISSION_IDS);
+  assert.deepEqual(administrator.permissions, ALL_PERMISSION_IDS.filter((permission) => permission !== "users.manage"));
   assert.equal(ROLE_PRESETS.find((role) => role.id === "bodega").permissions.includes("warehouse.movements.manage"), false);
   assert.equal(ROLE_PRESETS.find((role) => role.id === "bodega").permissions.includes("users.manage"), false);
   assert.throws(() => administrator.permissions.push("fake"));
@@ -223,15 +229,15 @@ test("eight-character passwords are accepted and a read-only identity bridge can
 });
 
 test("the protected developer is unique, authenticates normally and alone receives server-derived exemption flags", (t) => {
-  const { store, options, admin } = fixture(t);
-  const ordinaryAdministrator = createEmployee(store, admin, { username: "all.permissions", role: "administrador", permissions: [...ALL_PERMISSION_IDS] });
-  assert.equal(admin.isDeveloper, false);
-  assert.equal(admin.auditExempt, false);
+  const { store, options, admin, legacy } = fixture(t);
+  const ordinaryAdministrator = createEmployee(store, admin, { username: "all.permissions", role: "administrador" });
+  assert.equal(legacy.isDeveloper, false);
+  assert.equal(legacy.auditExempt, false);
   assert.equal(ordinaryAdministrator.isDeveloper, false);
   assert.equal(ordinaryAdministrator.auditExempt, false);
   assert.throws(() => createEmployee(store, admin, { username: " DGIANT " }), { statusCode: 409 });
   assert.throws(() => store.update(ordinaryAdministrator.id, { username: "Dgiant" }, admin), { statusCode: 409 });
-  const developer = store.provisionDeveloperAccount({ username: "dgiant", displayName: "Propietario sintético", password: "Owner-test-123" }, admin);
+  const developer = store.getUser(admin.id);
   assert.equal(developer.id, DEVELOPER_USER_ID);
   assert.equal(developer.username, "Dgiant");
   assert.equal(developer.isDeveloper, true);
@@ -249,19 +255,18 @@ test("the protected developer is unique, authenticates normally and alone receiv
 });
 
 test("developer credentials and identity cannot be reset, transferred or forged by another administrator", (t) => {
-  const { store, admin } = fixture(t);
-  const developer = store.provisionDeveloperAccount({ password: "Owner-test-123" }, admin);
-  const employee = createEmployee(store, admin);
+  const { store, admin: developer, legacy: admin } = fixture(t);
+  const employee = createEmployee(store, developer);
   const before = fs.readFileSync(store.filePath, "utf8");
   for (const patch of [{ password: "Stolen-test-123" }, { displayName: "Otro propietario" }, { active: false }, { permissions: [] }]) {
     assert.throws(() => store.update(developer.id, patch, admin), { statusCode: 403 });
   }
   for (const patch of [{ id: DEVELOPER_USER_ID }, { isDeveloper: true }, { auditExempt: true }]) {
-    assert.throws(() => store.update(employee.id, patch, admin), { statusCode: 400 });
-    assert.throws(() => store.create({ username: "forged.developer", password: "Forged-test-123", ...patch }, admin), { statusCode: 400 });
+    assert.throws(() => store.update(employee.id, patch, developer), { statusCode: 400 });
+    assert.throws(() => store.create({ username: "forged.developer", password: "Forged-test-123", ...patch }, developer), { statusCode: 400 });
   }
   assert.throws(() => store.update(developer.id, { password: "Stolen-test-123" }, { ...employee, isDeveloper: true, auditExempt: true }), { statusCode: 403 });
-  assert.throws(() => store.provisionDeveloperAccount({ username: "another.owner", password: "Owner-test-123" }, admin), { statusCode: 400 });
+  assert.throws(() => store.provisionDeveloperAccount({ username: "another.owner", password: "Owner-test-123" }, admin), { statusCode: 409 });
   assert.throws(() => store.changeOwnPassword(developer.id, { currentPassword: "Owner-test-123", newPassword: "Stolen-test-123" }, employee), { statusCode: 403 });
   assert.equal(fs.readFileSync(store.filePath, "utf8"), before);
   assert.equal(isDeveloperIdentity({ ...employee, isDeveloper: true, auditExempt: true }), false);
@@ -271,8 +276,7 @@ test("developer credentials and identity cannot be reset, transferred or forged 
 });
 
 test("the developer can update their own name and password while protected access remains immutable", (t) => {
-  const { store, admin } = fixture(t);
-  const developer = store.provisionDeveloperAccount({ password: "Owner-test-123" }, admin);
+  const { store, admin: developer } = fixture(t);
   for (const patch of [{ username: "different.owner" }, { role: "personalizado" }, { active: false }, { permissions: ["users.manage"] }]) {
     assert.throws(() => store.update(developer.id, patch, developer), { statusCode: 409 });
   }
@@ -289,21 +293,21 @@ test("the developer can update their own name and password while protected acces
 });
 
 test("explicit developer migration requires the existing password and preserves past audit entries", (t) => {
-  const { store, options, admin } = fixture(t);
-  const employee = createEmployee(store, admin);
+  const { store, options, admin } = fixture(t, { provision: false });
   const raw = JSON.parse(fs.readFileSync(store.filePath, "utf8"));
-  raw.users.find((user) => user.id === employee.id).username = "Dgiant";
+  const employee = { ...raw.users[0], id: "synthetic-existing-owner", username: "Dgiant", legacySessionEligible: false };
+  raw.users.push(employee);
   fs.writeFileSync(store.filePath, JSON.stringify(raw), { mode: 0o600 });
   const existing = createLiveUserStore(options);
   assert.equal(existing.getUser("Dgiant").isDeveloper, false);
   const before = existing.audit();
   const oldSession = session(existing, existing.getUser("Dgiant"));
   assert.throws(() => existing.provisionDeveloperAccount({ password: "Different-owner-123" }, admin), { statusCode: 401 });
-  const migrated = existing.provisionDeveloperAccount({ password: "Employee-test-123" }, admin);
+  const migrated = existing.provisionDeveloperAccount({ password: legacyPassword }, admin);
   assert.equal(migrated.id, DEVELOPER_USER_ID);
   assert.equal(migrated.isDeveloper, true);
   assert.equal(existing.resolveSession(oldSession), null);
   assert.equal(existing.getUser(employee.id), null);
   assert.deepEqual(existing.audit().slice(0, before.length), before);
-  assert.equal(existing.authenticate("Dgiant", "Employee-test-123").auditExempt, true);
+  assert.equal(existing.authenticate("Dgiant", legacyPassword).auditExempt, true);
 });

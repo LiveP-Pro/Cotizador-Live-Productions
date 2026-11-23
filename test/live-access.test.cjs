@@ -3,6 +3,36 @@ const test = require("node:test");
 const access = require("../live-access.js");
 
 const principal = (...permissions) => ({ id: "synthetic-employee", username: "empleado.sintetico", permissions });
+const owner = (...permissions) => ({ id: "live-developer-dgiant", username: "Dgiant", active: true,
+  isDeveloper: true, permissions });
+const bootstrap = () => ({ id: "synthetic-legacy-admin", username: "legacy.sintetico", active: true,
+  canActivateDeveloper: true, permissions: [] });
+
+test("user administration has no web page or route, including for the protected owner", () => {
+  const identities = [null, principal(), principal("users.manage"), owner("users.manage"), bootstrap(),
+    { ...owner("users.manage"), active: false }];
+  const paths = ["/api/users", "/api/users/", "/api/users/bootstrap", "/api/users/developer",
+    "/api/users/audit", "/api/users/synthetic-employee", "/api/users/a/b", "/api/account/password"];
+  for (const user of identities) {
+    assert.equal(access.canPage(user, "usuarios"), false);
+    for (const path of paths) {
+      for (const method of ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]) {
+        assert.equal(access.routePermissions(method, path), null, `${method} ${path}`);
+        assert.equal(access.canRoute(user, method, path), false, `${method} ${path}`);
+      }
+    }
+  }
+});
+
+test("the protected owner retains its internal identity without delegating administration to an employee", () => {
+  const developer = owner("users.manage");
+  assert.equal(access.can(developer, "users.manage"), true);
+  for (const impostor of [principal("users.manage"),
+    { ...developer, id: "other-user" }, { ...developer, username: "other.user" },
+    { ...developer, isDeveloper: false }, { ...developer, active: false }]) {
+    assert.equal(access.can(impostor, "users.manage"), false);
+  }
+});
 
 test("a role name or an empty permission list cannot authorize module APIs", () => {
   const paths = [
@@ -127,18 +157,18 @@ test("read-only quotes and general requirements cannot use save, delete or outbo
   assert.equal(access.canRoute(requirements, "GET", "/api/cotizaciones"), false);
 });
 
-test("unmapped routes and pages fail closed, including for a user manager", () => {
-  const manager = principal("users.manage");
+test("unmapped routes and pages fail closed, including for the owner", () => {
+  const manager = owner("users.manage");
   for (const path of ["", "/api/unknown", "/api/users/employee-1/unknown", "/api/cuadros-equipo/unknown", "/api/requerimientos-equipo/unknown"]) {
     assert.equal(access.routePermissions("GET", path), null, path);
     assert.equal(access.canRoute(manager, "GET", path), false, path);
   }
   assert.equal(access.canPage(manager, "unknown-module"), false);
-  assert.equal(access.canPage(manager, "usuarios"), true);
+  assert.equal(access.canPage(manager, "usuarios"), false);
   assert.equal(access.canPage(principal(), "usuarios"), false);
   assert.equal(access.canPage(principal(), "inicio"), true);
   assert.equal(access.canRoute(null, "POST", "/api/account/password"), false);
-  assert.equal(access.canRoute(principal(), "POST", "/api/account/password"), true);
+  assert.equal(access.canRoute(principal(), "POST", "/api/account/password"), false);
 });
 
 test("UI navigation and feature controls follow current permissions and are hidden again on revocation", () => {
@@ -152,11 +182,12 @@ test("UI navigation and feature controls follow current permissions and are hidd
   const report = element({ "data-live-permission": "equipment.reports" });
   const edit = element({ "data-live-permission": "equipment.write" });
   const stock = element({ "data-live-any-permission": "warehouse.inventory warehouse.movements" });
+  const manageUsers = element({ "data-live-permission": "users.manage" });
   const navEquipment = element({}, { pageLink: "requerimiento-equipo" });
   const navWarehouse = element({}, { pageLink: "contabilidad-equipo" });
   const navUsers = element({}, { pageLink: "usuarios" });
   const navUnknown = element({}, { pageLink: "unknown-module" });
-  const controls = [report, edit, stock];
+  const controls = [report, edit, stock, manageUsers];
   const links = [navEquipment, navWarehouse, navUsers, navUnknown];
   const document = { querySelectorAll(selector) { return selector === "[data-page-link]" ? links : controls; } };
   access.applyUi(document, principal("equipment.reports"));
@@ -174,7 +205,15 @@ test("UI navigation and feature controls follow current permissions and are hidd
   assert.equal(stock.hidden, false);
   assert.equal(navEquipment.hidden, true);
   assert.equal(navWarehouse.hidden, false);
-  assert.equal(navUsers.hidden, false);
+  assert.equal(navUsers.hidden, true);
+  assert.equal(manageUsers.hidden, true);
+  access.applyUi(document, owner("users.manage", "warehouse.movements"));
+  assert.equal(navUsers.hidden, true);
+  assert.equal(manageUsers.hidden, false);
+  access.applyUi(document, bootstrap());
+  assert.equal(navUsers.hidden, true);
+  assert.equal(manageUsers.hidden, true);
+  assert.equal(navWarehouse.hidden, true);
   access.applyUi(document, null);
   for (const control of [...controls, ...links]) {
     assert.equal(control.hidden, true);

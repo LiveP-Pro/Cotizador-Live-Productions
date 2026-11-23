@@ -145,3 +145,74 @@ Para subir cambios:
 - `Subir Cambios a GitHub Windows.bat` en Windows.
 
 Para que los cambios aparezcan en todas las computadoras, cada equipo debe hacer `git pull` o abrir el cotizador con los accesos actualizados. GitHub no cambia archivos locales por si solo si la computadora no sincroniza.
+
+
+## Administración interna de cuentas
+
+Crear cuentas, cambiar contraseñas y asignar permisos requiere acceso a la consola
+del servidor. No existe un panel ni una ruta HTTP para administrar cuentas.
+Ejecute la herramienta desde el código instalado, con Node.js 22.13 o posterior:
+
+```bash
+npm run users:admin -- --help
+npm run users:admin -- list --data-dir /ruta/privada/datos
+```
+
+Indique siempre el directorio privado que usa el servidor mediante `--data-dir`
+o `COTIZADOR_DATA_DIR`. Manténgalo fuera del repositorio. `list` y los resultados
+excluyen contraseñas, hashes, sales y secretos de sesión.
+
+`apply` recibe un único objeto JSON por la entrada estándar. No acepta contraseñas
+como argumentos. Este ejemplo sintético solicita la contraseña sin mostrarla y
+la envía directamente a la herramienta, sin guardarla en un archivo ni en el
+historial de comandos:
+
+```bash
+python3 -c 'import getpass,json; print(json.dumps({"version":1,"users":[{"username":"empleado.ejemplo","displayName":"Empleado de ejemplo","role":"consulta","password":getpass.getpass("Nueva contraseña: ")}]}))' | npm run users:admin -- apply --data-dir /ruta/privada/datos
+```
+
+Puede agregar `--dry-run` para validar y revisar el resultado antes de aplicar.
+La simulación no crea directorios ni modifica archivos. Para una operación que
+incluya varias cuentas, envíe todas dentro del mismo objeto; se valida el lote
+completo y se guarda mediante un reemplazo atómico. Los escritores de consola
+se excluyen mediante `usuarios-live.lock`. Si un proceso termina abruptamente,
+revise que no siga ejecutándose antes de retirar un bloqueo abandonado.
+
+El formato admite:
+
+- `version`: debe ser `1`.
+- `users`: cuentas para crear o actualizar, identificadas por `username`, sin
+  distinguir mayúsculas. Cada entrada admite `displayName`, `password`, `role`,
+  `permissions` y `active`. Las cuentas nuevas necesitan `password`; las existentes
+  conservan los campos omitidos. No se eliminan cuentas por omisión.
+- `owner`: activa o actualiza la identidad protegida del propietario y solo admite
+  `displayName` y `password`. No permite cambiar su identidad, desactivarla ni
+  reducir sus permisos. Una cuenta nueva necesita `password`.
+- `bootstrapAdministrator`: cuenta inicial para un directorio sin cuentas ni
+  `cotizador-auth.json`. Admite los mismos campos que una entrada de `users` y
+  necesita `password`. Al repetir el lote solo puede coincidir con la cuenta
+  administradora original. Si ya existe `cotizador-auth.json`, la herramienta
+  conserva la cuenta original y su hash; actualícela mediante `users`.
+
+Los perfiles disponibles son `administrador`, `bodega`, `planificacion`, `consulta`
+y `personalizado`. El perfil aplica sus permisos iniciales al crear la cuenta.
+Al actualizar una cuenta, cambiar solo `role` conserva sus permisos anteriores;
+para cambiar accesos, indique expresamente `permissions`. Los identificadores
+válidos están en `PERMISSION_DEFINITIONS` de `live-users.cjs`. `users.manage`
+está reservado al propietario y se rechaza para otras cuentas, incluso con perfil
+`administrador`. Tampoco se aceptan identificadores internos ni banderas de
+identidad, exención o privilegios dentro del lote.
+
+El acceso al sistema operativo autoriza estos cambios; no necesita conocer la
+contraseña anterior. Repetir los mismos valores conserva hashes, identificadores,
+fechas e historial. Los cambios revocan las sesiones de las cuentas afectadas;
+el servidor los observa en la siguiente autenticación o solicitud autenticada.
+La activación de una identidad protegida previamente registrada conserva su
+historial y fecha de creación, asigna su identificador reservado y revoca sus
+sesiones anteriores. La herramienta conserva otros usuarios y los datos de los
+módulos. Los registros dañados causan un error sin reiniciar cuentas ni sobrescribir
+el archivo original. El registro se guarda con permisos `0600`.
+
+No guarde contraseñas en archivos del repositorio, comandos, registros ni ejemplos.
+Si prepara un lote privado temporal, manténgalo fuera del repositorio y elimínelo
+tras usarlo. No copie `usuarios-live.json` ni `cotizador-auth.json` a una publicación.

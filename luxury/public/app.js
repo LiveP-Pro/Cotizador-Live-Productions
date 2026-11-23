@@ -9,7 +9,6 @@ const state = {
   history: [],
   rates: null,
   settings: null,
-  users: [],
   module: "dashboard",
   deferredInstall: null,
 };
@@ -223,7 +222,7 @@ const serviceRateColumns = [
 ];
 const QUOTE_DRAFT_KEY = "luxury-travel:new-quote-draft";
 const REMEMBERED_USERNAME_KEY = "luxury-travel-remembered-username-v1";
-const APP_VERSION = "96";
+const APP_VERSION = "97";
 const destinationRates = [
   { id: "aeropuerto-ciudad", destination: "AEROPUERTO / CIUDAD", oneWay: 1250, roundTrip: 2500, internal: 3000 },
   { id: "antigua", destination: "ANTIGUA", oneWay: 1500, roundTrip: 3000, internal: 3000 },
@@ -1255,7 +1254,7 @@ function renderHistory() {
 function renderSettings() {
   const settings = state.settings;
   $("#app-content").innerHTML = `
-    <div class="page-actions"><p>Información corporativa, numeración de documentos, plantillas y acceso de usuarios.</p></div>
+    <div class="page-actions"><p>Información corporativa, numeración de documentos y plantillas.</p></div>
     <div class="settings-grid">
       <form id="settings-form" class="panel">
         <div class="panel-header"><h2>Empresa y documentos</h2></div>
@@ -1278,26 +1277,6 @@ function renderSettings() {
           <div class="form-footer"><button class="button button-primary" type="submit">Guardar configuración</button></div>
         </div>
       </form>
-      <div class="panel">
-        <div class="panel-header"><h2>Usuarios y roles</h2><button class="button button-secondary button-small" data-action="new-user">${icons.plus} Nuevo</button></div>
-        ${
-          state.users.length
-            ? `<div class="table-wrap"><table>
-                <thead><tr><th>Usuario</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
-                <tbody>${state.users
-                  .map(
-                    (user) => `<tr>
-                      <td><span class="cell-primary">${escapeHtml(user.name)}</span><span class="cell-secondary">${escapeHtml(user.email)}</span></td>
-                      <td>${escapeHtml(user.role)}</td>
-                      <td>${statusBadge(user.active ? "activo" : "inactivo")}</td>
-                      <td><div class="table-actions"><button class="icon-button" data-action="edit-user" data-id="${user.id}">${icons.edit}</button></div></td>
-                    </tr>`,
-                  )
-                  .join("")}</tbody>
-              </table></div>`
-            : emptyState("Sin usuarios", "Cree cuentas para vendedores y pilotos.")
-        }
-      </div>
     </div>
   `;
   $("#settings-form").addEventListener("submit", saveSettings);
@@ -1364,8 +1343,6 @@ async function handleAction(event) {
   if (action === "edit-record") openRecordModal(collection, state[collection].find((item) => item.id === id));
   if (action === "new-client") openRecordModal("clients");
   if (action === "new-vehicle") openRecordModal("vehicles");
-  if (action === "new-user") openUserModal();
-  if (action === "edit-user") openUserModal(state.users.find((item) => item.id === id));
   if (action === "delete-record") await deleteRecord(collection, id);
 }
 
@@ -1434,10 +1411,6 @@ function openRecordModal(collection, record = {}) {
         <label>Número de licencia<input name="license" value="${escapeHtml(record.license)}" /></label>
         <label>Vencimiento de licencia<input type="date" name="licenseExpires" value="${escapeHtml(record.licenseExpires)}" /></label>
         <label>Estado<select name="status">${statusOptions(record.status)}</select></label>
-        <label>Usuario piloto vinculado<select name="userId"><option value="">Sin vincular</option>${state.users
-          .filter((user) => user.role === "piloto")
-          .map((user) => `<option value="${user.id}" ${record.userId === user.id ? "selected" : ""}>${escapeHtml(user.name)}</option>`)
-          .join("")}</select></label>
         <label class="full">Notas<textarea name="notes">${escapeHtml(record.notes)}</textarea></label>
       </div>`,
   }[collection];
@@ -4534,42 +4507,6 @@ async function printDocumentFromCanvas(title, options, printWindow) {
     if (printWindow && !printWindow.closed) printWindow.close();
     toast(error?.message || "No fue posible preparar el documento completo para impresión.", "error");
   }
-}
-
-function openUserModal(user = {}) {
-  const isEdit = Boolean(user.id);
-  openModal(isEdit ? "Editar usuario" : "Nuevo usuario", `
-    <form id="user-form">
-      <div class="form-grid">
-        <label>Nombre completo<input name="name" value="${escapeHtml(user.name)}" required /></label>
-        <label>Correo electrónico<input type="email" name="email" value="${escapeHtml(user.email)}" required /></label>
-        <label>Teléfono<input name="phone" value="${escapeHtml(user.phone)}" /></label>
-        <label>Rol<select name="role">${["administrador", "vendedor", "piloto"].map((role) => `<option ${user.role === role ? "selected" : ""}>${role}</option>`).join("")}</select></label>
-        <label class="full">${isEdit ? "Nueva contraseña (opcional)" : "Contraseña"}<input type="password" name="password" ${isEdit ? "" : "required"} minlength="8" /></label>
-        ${isEdit ? `<label><span><input type="checkbox" name="active" ${user.active ? "checked" : ""} /> Usuario activo</span></label>` : ""}
-      </div>
-      <p class="form-error" data-form-error></p>
-      <div class="form-footer"><button type="button" class="button button-secondary" data-close-form>Cancelar</button><button class="button button-primary" type="submit">Guardar usuario</button></div>
-    </form>
-  `);
-  $("[data-close-form]").addEventListener("click", closeModal);
-  $("#user-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const body = Object.fromEntries(new FormData(form));
-    if (isEdit) body.active = form.elements.active.checked;
-    try {
-      await api(`/api/users${isEdit ? `/${user.id}` : ""}`, {
-        method: isEdit ? "PUT" : "POST",
-        body: JSON.stringify(body),
-      });
-      toast("Usuario guardado.");
-      closeModal();
-      await navigate("settings");
-    } catch (error) {
-      $("[data-form-error]", form).textContent = error.message;
-    }
-  });
 }
 
 async function deleteRecord(collection, id) {

@@ -49,7 +49,16 @@ test("el manifiesto PWA instala Luxury con accesos a Resumen y Cotizador", async
 });
 
 test("el service worker elimina solo cachés anteriores de Luxury Travel", async () => {
-  const source = await readFile(path.join(PUBLIC, "sw.js"), "utf8");
+  const [source, appSource, indexSource] = await Promise.all([
+    readFile(path.join(PUBLIC, "sw.js"), "utf8"),
+    readFile(path.join(PUBLIC, "app.js"), "utf8"),
+    readFile(path.join(PUBLIC, "index.html"), "utf8"),
+  ]);
+  const version = source.match(/const VERSION = "(\d+)";/)?.[1];
+  assert.match(version, /^\d+$/);
+  assert.equal(appSource.match(/const APP_VERSION = "(\d+)";/)?.[1], version);
+  assert.ok(indexSource.includes(`href="styles.css?v=${version}"`));
+  assert.ok(indexSource.includes(`src="app.js?v=${version}"`));
   const listeners = {};
   const deleted = [];
   let navigationPreloadEnabled = false;
@@ -69,6 +78,10 @@ test("el service worker elimina solo cachés anteriores de Luxury Travel", async
         "luxury-travel-runtime-v79",
         "luxury-travel-shell-v80",
         "luxury-travel-runtime-v80",
+        "luxury-travel-shell-v96",
+        "luxury-travel-runtime-v96",
+        `luxury-travel-shell-v${version}`,
+        `luxury-travel-runtime-v${version}`,
       ],
       delete: async (key) => {
         deleted.push(key);
@@ -112,6 +125,8 @@ test("el service worker elimina solo cachés anteriores de Luxury Travel", async
     "luxury-travel-runtime-v79",
     "luxury-travel-shell-v80",
     "luxury-travel-runtime-v80",
+    "luxury-travel-shell-v96",
+    "luxury-travel-runtime-v96",
   ]);
   assert.equal(navigationPreloadEnabled, true);
   assert.equal(clientsClaimed, true);

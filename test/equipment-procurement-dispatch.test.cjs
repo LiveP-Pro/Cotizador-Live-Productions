@@ -13,7 +13,7 @@ function createDispatchHarness(items, movements = []) {
     savedAt: "2026-10-07T00:00:00.000Z"
   };
   const principal = { id: "synthetic-dispatch-user", username: "synthetic.dispatch", displayName: "Usuario de despacho sintético",
-    active: true, permissions: [...ALL_PERMISSION_IDS] };
+    active: true, permissions: ALL_PERMISSION_IDS.filter((permission) => permission !== "users.manage") };
   const context = { crypto, Date, Map, Set, console, LiveAccess, isDeveloperIdentity, EquipmentIdentity: require("../equipment-identity.js"),
     authenticatedPrincipal(request) { return request.principal; },
     readWarehouseInventory() { return structuredClone(inventory); },

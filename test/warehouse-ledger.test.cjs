@@ -249,7 +249,7 @@ test("server ingress re-ingestion returns a durable duplicate receipt without wr
   let response;
   const context = {
     applyStockIngress, nextWarehouseTimestamp, ...warehouseAccess,
-    authenticatedPrincipal() { return { ...actor, permissions: [...ALL_PERMISSION_IDS] }; },
+    authenticatedPrincipal() { return { ...actor, permissions: ALL_PERMISSION_IDS.filter((permission) => permission !== "users.manage") }; },
     readWarehouseInventory() { return structuredClone(saved); },
     warehouseAuditActor() { return actor; },
     async writeWarehouseInventory(value, options) { writes += 1; Object.assign(value, prepareWarehouseSave(saved, value.state, options)); saved = structuredClone(value); },
@@ -279,7 +279,8 @@ test("server ordinary saves preserve authoritative history and reject a stale in
   let current = commitIngress(inventory(), payload()).saved;
   let writes = 0;
   let response;
-  const principal = { ...actor, displayName: actor.name, active: true, permissions: [...ALL_PERMISSION_IDS] };
+  const principal = { ...actor, displayName: actor.name, active: true,
+    permissions: ALL_PERMISSION_IDS.filter((permission) => permission !== "users.manage") };
   const context = {
     LiveAccess, ...warehouseAccess,
     authenticatedPrincipal() { return principal; },

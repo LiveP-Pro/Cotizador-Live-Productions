@@ -3,7 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
-const { createLiveUserStore, hasPermission } = require("../../live-users.cjs");
+const { createLiveUserStore, hasPermission, isDeveloperIdentity, DEVELOPER_USER_ID, DEVELOPER_USERNAME } = require("../../live-users.cjs");
 
 const key = (value) => String(value || "").normalize("NFC").trim().toLocaleLowerCase("en-US");
 
@@ -20,7 +20,7 @@ function createLiveAuthBridge({ directory = "" } = {}) {
   const liveUser = (user) => user && ({
     id: `live:${user.id}`, liveUserId: user.id, username: user.username, name: user.displayName || user.username,
     email: user.username, role: "administrador", active: true, authProvider: "live-productions",
-    isDeveloper: user.isDeveloper === true, auditExempt: user.auditExempt === true
+    isDeveloper: isDeveloperIdentity(user), auditExempt: isDeveloperIdentity(user)
   });
   const matchIdentity = (store, identifier, nativeUser) => {
     const identities = [identifier, nativeUser?.username, nativeUser?.email, nativeUser?.name].map(key).filter(Boolean);
@@ -85,7 +85,17 @@ function createLiveAuthBridge({ directory = "" } = {}) {
     const user = current?.store.getUser(String(id).slice(5));
     return hasPermission(user, "luxury.access") ? liveUser(user) : null;
   };
-  return { enabled, authenticate, resolveRootCookie, resolveFederatedSession, allowNativeSession, resolveActor };
+  const canManageDatabaseBackups = (user) => {
+    if (!enabled || user?.authProvider !== "live-productions"
+      || user.id !== `live:${DEVELOPER_USER_ID}` || user.liveUserId !== DEVELOPER_USER_ID
+      || key(user.username) !== key(DEVELOPER_USERNAME)) return false;
+    // Read the protected root identity again: neither the Luxury role, a client
+    // flag nor an earlier session snapshot can grant database administration.
+    const owner = snapshot()?.store.getUser(DEVELOPER_USER_ID);
+    return Boolean(isDeveloperIdentity(owner) && hasPermission(owner, "users.manage")
+      && hasPermission(owner, "luxury.access"));
+  };
+  return { enabled, authenticate, resolveRootCookie, resolveFederatedSession, allowNativeSession, resolveActor, canManageDatabaseBackups };
 }
 
 module.exports = { createLiveAuthBridge };

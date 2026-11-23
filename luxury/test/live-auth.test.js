@@ -10,7 +10,7 @@ import { createApp } from "../server.js";
 import { hashPassword, parseCookies } from "../lib/auth.js";
 
 const require = createRequire(import.meta.url);
-const { createLiveUserStore } = require("../../live-users.cjs");
+const { createLiveUserStore, ALL_PERMISSION_IDS } = require("../../live-users.cjs");
 
 async function fixture(t) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "luxury-live-auth-"));
@@ -21,10 +21,11 @@ async function fixture(t) {
   fs.writeFileSync(path.join(directory, "cotizador-auth.json"), JSON.stringify(legacyAdmin), { mode: 0o600 });
   const store = createLiveUserStore({ directory, legacyAdmin });
   const admin = store.list()[0];
+  const owner = store.provisionDeveloperAccount({ password: "Owner-test-123" }, admin);
   const full = store.create({ username: "Full.employee", displayName: "Empleado completo sintético", password: "Eight888",
-    permissions: ["luxury.access"] }, admin);
+    permissions: ["luxury.access"] }, owner);
   const restricted = store.create({ username: "Warehouse.employee", displayName: "Empleado de bodega sintético", password: "Store-test-123",
-    permissions: ["warehouse.read", "warehouse.movements"] }, admin);
+    permissions: ["warehouse.read", "warehouse.movements"] }, owner);
   const app = await createApp({ dataFile: path.join(directory, "luxury-fixture.json"), liveAuthDataDir: directory });
   await app.db.create("users", { name: "Usuario nativo independiente", email: "native@example.test", role: "administrador", active: true,
     passwordHash: hashPassword("Native-test-123") }, "system");
@@ -39,7 +40,7 @@ async function fixture(t) {
     const response = await fetch(origin + url, { method,
       headers: { ...(cookie ? { cookie } : {}), ...(body ? { "content-type": "application/json" } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}) });
-    const json = await response.json();
+    const json = method === "HEAD" ? null : await response.json();
     return { status: response.status, body: json, cookie: response.headers.get("set-cookie")?.split(";")[0] || "",
       cookies: response.headers.getSetCookie() };
   }
@@ -49,19 +50,21 @@ async function fixture(t) {
     const signature = crypto.createHmac("sha256", legacyAdmin.sessionSecret).update(body).digest("base64url");
     return `cotizador_session=${body}.${signature}`;
   };
-  return { directory, legacyAdmin, store, admin, full, restricted, app, request, rootCookie };
+  return { directory, legacyAdmin, store, admin, owner, full, restricted, app, request, rootCookie };
 }
 
-test("a signed current Live account with luxury.access opens every Luxury module without duplicating credentials", async (t) => {
+test("a signed current Live account opens Luxury operational modules without duplicating credentials", async (t) => {
   const h = await fixture(t);
   const response = await h.request("/api/bootstrap", { cookie: h.rootCookie(h.full) });
   assert.equal(response.status, 200);
   assert.equal(response.body.user.username, h.full.username);
   assert.equal(response.body.user.authProvider, "live-productions");
   assert.equal(response.body.user.role, "administrador");
-  for (const permission of ["dashboard", "quotes", "clients", "vehicles", "drivers", "rates", "users", "history"]) {
+  for (const permission of ["dashboard", "quotes", "clients", "vehicles", "drivers", "rates", "history"]) {
     assert.ok(response.body.permissions.includes(permission), permission);
   }
+  assert.equal(response.body.permissions.includes("users"), false);
+  assert.equal(Object.hasOwn(response.body, "users"), false);
   assert.equal(h.app.db.list("users").some((user) => user.id === response.body.user.id), false);
   const created = await h.request("/api/clients", { method: "POST", cookie: h.rootCookie(h.full),
     body: { name: "Cliente de prueba federada", phone: "55555555" } });
@@ -78,11 +81,11 @@ test("Luxury login accepts root usernames and keeps federated sessions bound to 
   assert.equal(login.body.user.username, h.full.username);
   assert.ok(login.cookie.startsWith("lt_session="));
   assert.equal((await h.request("/api/session", { cookie: login.cookie })).status, 200);
-  h.store.update(h.full.id, { password: "Replacement-test-123" }, h.admin);
+  h.store.update(h.full.id, { password: "Replacement-test-123" }, h.owner);
   assert.equal((await h.request("/api/session", { cookie: login.cookie })).status, 401);
   const next = await h.request("/api/login", { method: "POST", body: { username: h.full.username, password: "Replacement-test-123" } });
   assert.equal(next.status, 200);
-  h.store.update(h.full.id, { permissions: ["warehouse.read"] }, h.admin);
+  h.store.update(h.full.id, { permissions: ["warehouse.read"] }, h.owner);
   assert.equal((await h.request("/api/session", { cookie: next.cookie })).status, 401);
   assert.equal((await h.request("/api/login", { method: "POST", body: { username: h.full.username, password: "Replacement-test-123" } })).status, 403);
 });
@@ -95,7 +98,7 @@ test("restricted and disabled root identities cannot fall back to a valid indepe
   assert.equal((await h.request("/api/session", { cookie: `${h.rootCookie(h.restricted)}; ${native.cookie}` })).status, 401);
   assert.equal((await h.request("/api/login", { method: "POST", body: { email: h.restricted.username, password: "Store-test-123" } })).status, 403);
   const previous = h.rootCookie(h.full);
-  h.store.update(h.full.id, { active: false }, h.admin);
+  h.store.update(h.full.id, { active: false }, h.owner);
   assert.equal((await h.request("/api/session", { cookie: `${previous}; ${native.cookie}` })).status, 401);
   assert.equal((await h.request("/api/session", { cookie: `cotizador_session=invalid-signature; ${native.cookie}` })).status, 200);
 });
@@ -133,18 +136,20 @@ test("single sign-out expires both root and Luxury cookies for a root-cookie ses
   assert.deepEqual(parseCookies("malformed=%E0%A4%A; valid=value; bare"), { valid: "value" });
 });
 
-test("a federated administrator can restore a valid Luxury snapshot while preserving its native administrator", async (t) => {
+test("the protected owner can restore a valid Luxury snapshot while preserving its native administrator", async (t) => {
   const h = await fixture(t);
   const snapshot = h.app.db.exportSnapshot();
-  const nativeAdministrator = snapshot.users.find((user) => user.role === "administrador");
-  const hash = nativeAdministrator.passwordHash;
-  const response = await h.request("/api/admin/database-backup", { method: "POST", cookie: h.rootCookie(h.full),
+  const usersBefore = snapshot.users;
+  // A legacy snapshot may contain users, but HTTP restore cannot alter them.
+  snapshot.users = [{ id: "injected-owner", name: "Cuenta no permitida", email: "injected@example.test",
+    role: "administrador", active: true, passwordHash: hashPassword("Injected-test-123") }];
+  const response = await h.request("/api/admin/database-backup", { method: "POST", cookie: h.rootCookie(h.owner),
     body: { confirmation: "IMPORTAR RESPALDO", database: snapshot } });
   assert.equal(response.status, 200);
-  assert.equal(h.app.db.find("users", nativeAdministrator.id).passwordHash, hash);
-  assert.equal(h.app.db.data.history[0].userId, `live:${h.full.id}`);
-  assert.equal(h.app.db.data.history[0].userName, h.full.displayName);
-  assert.equal(h.app.db.list("users").some((user) => user.liveUserId === h.full.id), false);
+  assert.deepEqual(h.app.db.exportSnapshot().users, usersBefore);
+  assert.equal(h.app.db.data.history[0].userId, `live:${h.owner.id}`);
+  assert.equal(h.app.db.data.history[0].userName, h.owner.displayName);
+  assert.equal(h.app.db.list("users").some((user) => user.liveUserId === h.owner.id), false);
 });
 
 test("a missing root registry fails closed without bootstrapping or writing identity files", async (t) => {
@@ -159,7 +164,7 @@ test("a missing root registry fails closed without bootstrapping or writing iden
 
 test("Luxury carries the protected developer identity only from the current root account", async (t) => {
   const h = await fixture(t);
-  const developer = h.store.provisionDeveloperAccount({ password: "Owner-test-123" }, h.admin);
+  const developer = h.owner;
   const ownerSession = await h.request("/api/session", { cookie: h.rootCookie(developer) });
   assert.equal(ownerSession.status, 200);
   assert.equal(ownerSession.body.user.isDeveloper, true);
@@ -172,4 +177,139 @@ test("Luxury carries the protected developer identity only from the current root
   assert.equal(login.status, 200);
   assert.equal(login.body.user.isDeveloper, true);
   assert.equal(login.body.user.liveUserId, developer.id);
+});
+
+test("legacy all-access administrators and native administrators cannot administer Luxury accounts or backups", async (t) => {
+  const h = await fixture(t);
+  const jorge = h.store.create({ username: "JorgeJJ.test", displayName: "Jorge JJ sintético", role: "administrador",
+    password: "Jorge-test-123", permissions: ALL_PERMISSION_IDS.filter((permission) => permission !== "users.manage") }, h.owner);
+  const diana = h.store.create({ username: "DianaDall.test", displayName: "Diana Dall sintética", role: "administrador",
+    password: "Diana-test-123", permissions: ALL_PERMISSION_IDS.filter((permission) => permission !== "users.manage") }, h.owner);
+  // Simulate an untouched registry written before users.manage became reserved.
+  const registryPath = path.join(h.directory, "usuarios-live.json");
+  const registry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
+  for (const user of registry.users.filter((user) => [h.admin.id, jorge.id, diana.id].includes(user.id))) {
+    user.permissions = [...ALL_PERMISSION_IDS];
+    user.isDeveloper = true;
+    user.auditExempt = true;
+  }
+  fs.writeFileSync(registryPath, JSON.stringify(registry), { mode: 0o600 });
+
+  const nativeLogin = await h.request("/api/login", { method: "POST", body: {
+    email: "native@example.test", password: "Native-test-123", role: "administrador",
+    isDeveloper: true, auditExempt: true, permissions: ["users"] } });
+  assert.equal(nativeLogin.status, 200);
+  const userId = h.app.db.list("users")[0].id;
+  const newUser = { name: "Usuario no permitido", email: "forbidden@example.test", password: "Forbidden-test-123", role: "administrador" };
+  const cookies = [h.rootCookie(h.admin), h.rootCookie(jorge), h.rootCookie(diana), nativeLogin.cookie];
+  for (const cookie of cookies) {
+    for (const endpoint of ["/api/session", "/api/bootstrap"]) {
+      const response = await h.request(endpoint, { cookie });
+      assert.equal(response.status, 200);
+      assert.equal(response.body.permissions.includes("users"), false);
+      assert.equal(response.body.user.permissions.includes("users"), false);
+      assert.ok(response.body.permissions.includes("quotes"));
+      assert.ok(response.body.permissions.includes("settings"));
+      assert.equal(Object.hasOwn(response.body, "users"), false);
+    }
+    for (const [method, endpoint] of [
+      ["GET", "/api/users"], ["POST", "/api/users"], ["GET", `/api/users/${userId}`],
+      ["PUT", `/api/users/${userId}`], ["PATCH", `/api/users/${userId}`], ["DELETE", `/api/users/${userId}`],
+      ["PATCH", "/api/users/unknown/action"],
+    ]) {
+      const response = await h.request(endpoint, { method, cookie, ...(method === "GET" ? {} : { body: newUser }) });
+      assert.equal(response.status, 404, `${method} ${endpoint}`);
+    }
+    for (const method of ["GET", "POST"]) {
+      assert.equal((await h.request("/api/admin/database-backup", { method, cookie,
+        ...(method === "POST" ? { body: newUser } : {}) })).status, 403);
+    }
+    assert.equal((await h.request("/api/dashboard", { cookie })).status, 200);
+    assert.equal((await h.request("/api/clients", { method: "POST", cookie,
+      body: { name: `Cliente permitido ${cookies.indexOf(cookie)}` } })).status, 201);
+  }
+  for (const [username, password] of [[h.admin.username, "Root-test-123"], [jorge.username, "Jorge-test-123"],
+    [diana.username, "Diana-test-123"]]) {
+    const login = await h.request("/api/login", { method: "POST", body: { username, password,
+      liveUserId: h.owner.id, isDeveloper: true, permissions: ["users"] } });
+    assert.equal(login.status, 200);
+    assert.equal(login.body.permissions.includes("users"), false);
+    assert.equal(login.body.user.permissions.includes("users"), false);
+    assert.equal(login.body.user.isDeveloper, false);
+    assert.equal((await h.request("/api/users", { cookie: login.cookie })).status, 404);
+  }
+  assert.equal(h.app.db.list("users").some((user) => user.email === newUser.email), false);
+});
+
+test("protected Dgiant has operational access and secure backups without web account administration", async (t) => {
+  const h = await fixture(t);
+  const login = await h.request("/api/login", { method: "POST", body: { username: "Dgiant", password: "Owner-test-123" } });
+  assert.equal(login.status, 200);
+  for (const response of [login, await h.request("/api/session", { cookie: login.cookie }),
+    await h.request("/api/bootstrap", { cookie: h.rootCookie(h.owner) })]) {
+    assert.equal(response.status, 200);
+    assert.equal(response.body.permissions.includes("users"), false);
+    assert.equal(response.body.user.permissions.includes("users"), false);
+    assert.equal(Object.hasOwn(response.body, "users"), false);
+    assert.ok(response.body.permissions.includes("quotes"));
+    assert.ok(response.body.permissions.includes("settings"));
+  }
+  const usersBefore = h.app.db.exportSnapshot().users;
+  for (const cookie of ["", login.cookie, h.rootCookie(h.owner)]) {
+    for (const method of ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]) {
+      for (const endpoint of ["/api/users", `/api/users/${usersBefore[0].id}`, "/api/users/unknown/action"]) {
+        const response = await h.request(endpoint, { method, cookie,
+          ...(["POST", "PUT", "PATCH"].includes(method) ? { body: {
+            name: "Cuenta prohibida", email: "owner-created@example.test", password: "Created-test-123", role: "administrador",
+          } } : {}) });
+        assert.equal(response.status, 404, `${method} ${endpoint}`);
+      }
+    }
+  }
+  const backup = await h.request("/api/admin/database-backup", { cookie: login.cookie });
+  assert.equal(backup.status, 200);
+  assert.equal(Object.hasOwn(backup.body, "users"), false);
+  assert.equal(JSON.stringify(backup.body).includes("passwordHash"), false);
+  assert.deepEqual(h.app.db.exportSnapshot().users, usersBefore);
+  const restored = await h.request("/api/admin/database-backup", { method: "POST", cookie: login.cookie,
+    body: { confirmation: "IMPORTAR RESPALDO", database: backup.body } });
+  assert.equal(restored.status, 200);
+  assert.deepEqual(h.app.db.exportSnapshot().users, usersBefore);
+});
+
+test("owner-pending federation denies user management without falling back to the legacy or native administrator", async (t) => {
+  const h = await fixture(t);
+  const registryPath = path.join(h.directory, "usuarios-live.json");
+  const registry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
+  registry.users = registry.users.filter((user) => user.id !== h.owner.id);
+  fs.writeFileSync(registryPath, JSON.stringify(registry), { mode: 0o600 });
+  const native = await h.request("/api/login", { method: "POST", body: { email: "native@example.test", password: "Native-test-123" } });
+  assert.equal(native.status, 200);
+  for (const cookie of [h.rootCookie(h.admin), native.cookie]) {
+    const session = await h.request("/api/session", { cookie });
+    assert.equal(session.status, 200);
+    assert.equal(session.body.permissions.includes("users"), false);
+    assert.equal((await h.request("/api/users", { cookie })).status, 404);
+    assert.equal((await h.request("/api/users", { method: "POST", cookie,
+      body: { name: "No permitido", email: "pending@example.test", password: "Pending-test-123" } })).status, 404);
+    assert.equal((await h.request("/api/admin/database-backup", { cookie })).status, 403);
+    assert.equal((await h.request("/api/dashboard", { cookie })).status, 200);
+  }
+});
+
+test("changing the protected owner's password immediately revokes both types of Luxury sessions", async (t) => {
+  const h = await fixture(t);
+  const login = await h.request("/api/login", { method: "POST", body: { username: "Dgiant", password: "Owner-test-123" } });
+  const rootCookie = h.rootCookie(h.owner);
+  assert.equal((await h.request("/api/session", { cookie: login.cookie })).status, 200);
+  h.store.update(h.owner.id, { password: "Owner-replacement-test-123" }, h.owner);
+  for (const cookie of [rootCookie, login.cookie]) {
+    assert.equal((await h.request("/api/session", { cookie })).status, 401);
+    assert.equal((await h.request("/api/users", { cookie })).status, 404);
+    assert.equal((await h.request("/api/admin/database-backup", { cookie })).status, 401);
+  }
+  const next = await h.request("/api/login", { method: "POST", body: { username: "Dgiant", password: "Owner-replacement-test-123" } });
+  assert.equal(next.status, 200);
+  assert.equal((await h.request("/api/session", { cookie: next.cookie })).status, 200);
+  assert.equal((await h.request("/api/users", { cookie: next.cookie })).status, 404);
 });

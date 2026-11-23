@@ -84,7 +84,8 @@ test("the shipped static handler serves every page script and stylesheet without
   assert.ok(assets.length > 0, "No page assets were checked");
   const privateFiles = [
     "cotizador-auth.json", "usuarios-live.json", "inventory-initial-state.json",
-    "live-users.cjs", "live-warehouse-access.cjs", "server.js", "platform-server.js",
+    "live-users.cjs", "live-users.js", "live-users.css", "scripts/live-users-admin.cjs",
+    "live-warehouse-access.cjs", "server.js", "platform-server.js",
     "luxury/lib/live-auth.cjs", "data/cotizador-auth.json", "data/usuarios-live.json",
     ".equipment-private/usuarios-live.json", "assets/cotizador-auth.json"
   ];

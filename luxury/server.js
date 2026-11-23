@@ -56,7 +56,6 @@ const ROLE_PERMISSIONS = {
     "rates",
     "history",
     "settings",
-    "users",
   ]),
   vendedor: new Set([
     "dashboard",
@@ -78,7 +77,6 @@ const COLLECTION_PERMISSION = {
   quotes: "quotes",
   itineraries: "clientItineraries",
   history: "history",
-  users: "users",
 };
 
 function cleanString(value, max = 500) {
@@ -800,21 +798,8 @@ function routeMatch(pathname, pattern) {
   return Object.fromEntries(keys.map((key, index) => [key, decodeURIComponent(match[index + 1])]));
 }
 
-function hasPermission(user, permission) {
-  return ROLE_PERMISSIONS[user?.role]?.has(permission) || false;
-}
-
-function requirePermission(user, permission) {
-  if (!hasPermission(user, permission)) {
-    const error = new Error("No tiene permisos para realizar esta acción.");
-    error.statusCode = 403;
-    throw error;
-  }
-}
-
 function databaseCounts(snapshot) {
   return {
-    users: snapshot.users.length,
     clients: snapshot.clients.length,
     drivers: snapshot.drivers.length,
     vehicles: snapshot.vehicles.length,
@@ -908,6 +893,32 @@ export async function createApp(options = {}) {
   const mirrorFile = options.mirrorFile || process.env.DATA_MIRROR_FILE || "";
   const backupDirectory = options.backupDirectory || process.env.DATA_BACKUP_DIR || "";
   const liveAuth = LiveAuth.createLiveAuthBridge({ directory: options.liveAuthDataDir || process.env.LIVE_AUTH_DATA_DIR || "" });
+  function effectivePermissions(user) {
+    return [...(ROLE_PERMISSIONS[user?.role] || [])];
+  }
+  function canPermission(user, permission) {
+    return Boolean(ROLE_PERMISSIONS[user?.role]?.has(permission));
+  }
+  function requirePermission(user, permission) {
+    if (!canPermission(user, permission)) {
+      const error = new Error("No tiene permisos para realizar esta acción.");
+      error.statusCode = 403;
+      throw error;
+    }
+  }
+  function sessionPayload(user) {
+    const permissions = effectivePermissions(user);
+    return { user: { ...publicUser(user), permissions }, permissions };
+  }
+  function requireDatabaseBackupAccess(user) {
+    // Standalone installations retain native backups. Federated installations
+    // require the current protected root owner, independently of web modules.
+    if (user?.role !== "administrador" || liveAuth.enabled && !liveAuth.canManageDatabaseBackups(user)) {
+      const error = new Error("No tiene permisos para realizar esta acción.");
+      error.statusCode = 403;
+      throw error;
+    }
+  }
   const db = await new JsonDatabase(dataFile, { mirrorFile, backupDirectory, externalActor: liveAuth.resolveActor }).init();
   const production = String(process.env.NODE_ENV || "").toLowerCase() === "production";
   const administratorEmail = cleanString(
@@ -968,6 +979,12 @@ export async function createApp(options = {}) {
 
   async function apiHandler(req, res, url) {
     const { pathname } = url;
+    // Account administration is available only through internal server tools.
+    // Retire this entire route family for every method and identity.
+    if (pathname === "/api/users" || pathname.startsWith("/api/users/")) {
+      json(res, 404, { error: "Endpoint no encontrado." });
+      return;
+    }
     if (pathname === "/api/health" && req.method === "GET") {
       json(res, 200, { ok: true, service: "Luxury Travel Manager" });
       return;
@@ -1011,7 +1028,7 @@ export async function createApp(options = {}) {
       json(
         res,
         200,
-        { user: publicUser(user), permissions: [...ROLE_PERMISSIONS[user.role]] },
+        sessionPayload(user),
         {
           "Set-Cookie": sessionCookie(token, {
             maxAge,
@@ -1031,8 +1048,8 @@ export async function createApp(options = {}) {
     const { user } = session;
 
     if (pathname === "/api/admin/database-backup" && req.method === "GET") {
-      requirePermission(user, "users");
-      const snapshot = db.exportSnapshot();
+      requireDatabaseBackupAccess(user);
+      const { users: _users, ...snapshot } = db.exportSnapshot();
       const date = guatemalaDateValue();
       res.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
@@ -1045,7 +1062,7 @@ export async function createApp(options = {}) {
     }
 
     if (pathname === "/api/admin/database-backup" && req.method === "POST") {
-      requirePermission(user, "users");
+      requireDatabaseBackupAccess(user);
       const body = await readJson(req);
       if (cleanString(body.confirmation, 80) !== "IMPORTAR RESPALDO") {
         const error = new Error("Confirme la importación con el texto IMPORTAR RESPALDO.");
@@ -1058,29 +1075,11 @@ export async function createApp(options = {}) {
         error.statusCode = 400;
         throw error;
       }
-      const currentAdministrator = user.authProvider === "live-productions"
-        ? db.list("users").find((entry) => entry.active !== false && entry.role === "administrador" && entry.passwordHash)
-        : db.find("users", user.id);
-      const importedAdministrator = Array.isArray(snapshot.users)
-        ? snapshot.users.find(
-            (item) =>
-              item?.role === "administrador" &&
-              String(item?.email || "").toLowerCase() === String(currentAdministrator?.email || "").toLowerCase(),
-          )
-        : null;
-      if (!currentAdministrator?.passwordHash || !importedAdministrator) {
-        const error = new Error("El respaldo no contiene la cuenta administradora actual.");
-        error.statusCode = 400;
-        throw error;
-      }
-      importedAdministrator.passwordHash = currentAdministrator.passwordHash;
-      importedAdministrator.active = true;
-      await db.replaceSnapshot(snapshot);
-      const restoredAdministrator = db
-        .list("users")
-        .find((item) => item.email.toLowerCase() === currentAdministrator.email.toLowerCase());
+      // A business backup never replaces accounts, even when an older or
+      // crafted snapshot contains users. Credentials remain server-managed.
+      await db.replaceSnapshot({ ...snapshot, users: db.exportSnapshot().users });
       await db.audit(
-        user.authProvider === "live-productions" ? user.id : restoredAdministrator.id,
+        user.id,
         "respaldo_importado",
         "database",
         "luxury-travel",
@@ -1119,30 +1118,25 @@ export async function createApp(options = {}) {
     }
 
     if (pathname === "/api/session" && req.method === "GET") {
-      json(res, 200, {
-        user: publicUser(user),
-        permissions: [...ROLE_PERMISSIONS[user.role]],
-      });
+      json(res, 200, sessionPayload(user));
       return;
     }
 
     if (pathname === "/api/bootstrap" && req.method === "GET") {
       const payload = {
-        user: publicUser(user),
-        permissions: [...ROLE_PERMISSIONS[user.role]],
-        clients: hasPermission(user, "clients") ? db.list("clients") : [],
-        drivers: hasPermission(user, "drivers") ? db.list("drivers") : [],
-        vehicles: hasPermission(user, "vehicles") ? db.list("vehicles") : [],
-        quotes: hasPermission(user, "quotes")
+        ...sessionPayload(user),
+        clients: canPermission(user, "clients") ? db.list("clients") : [],
+        drivers: canPermission(user, "drivers") ? db.list("drivers") : [],
+        vehicles: canPermission(user, "vehicles") ? db.list("vehicles") : [],
+        quotes: canPermission(user, "quotes")
           ? db.list("quotes").map((quote) => withNames(db, quote))
           : [],
         itineraries: filterForUser(db, "itineraries", user, db.list("itineraries")),
-        history: hasPermission(user, "history")
+        history: canPermission(user, "history")
           ? filterForUser(db, "history", user, db.list("history")).slice(0, 250)
           : [],
-        rates: hasPermission(user, "rates") || hasPermission(user, "quotes") ? db.data.rates : null,
+        rates: canPermission(user, "rates") || canPermission(user, "quotes") ? db.data.rates : null,
         settings: db.data.settings,
-        users: hasPermission(user, "users") ? db.list("users").map(publicUser) : [],
       };
       json(res, 200, payload);
       return;
@@ -1395,14 +1389,10 @@ export async function createApp(options = {}) {
         return;
       }
       if (req.method === "GET") {
-        json(res, 200, collection === "users" ? publicUser(current) : current);
+        json(res, 200, current);
         return;
       }
       if (req.method === "DELETE") {
-        if (collection === "users" && id === user.id) {
-          json(res, 400, { error: "No puede eliminar su propio usuario." });
-          return;
-        }
         await db.remove(collection, id);
         await db.audit(user.id, "eliminar", collection, id, "Registro eliminado");
         json(res, 200, { ok: true });
@@ -1428,29 +1418,9 @@ export async function createApp(options = {}) {
           Number(current.quoteSequence || extractQuoteSequence(current.number)) || nextQuoteSequence(db);
         patch.quoteSequence = sequence;
         patch.number = formatQuoteNumber(sequence, patch.clientName, patch.clientPhone);
-      } else if (collection === "users") {
-        validateRequired(body, ["name", "email"]);
-        const email = cleanString(body.email, 160).toLowerCase();
-        if (db.list("users").some((item) => item.id !== id && item.email === email)) {
-          json(res, 409, { error: "Ya existe un usuario con ese correo." });
-          return;
-        }
-        if (body.password && String(body.password).length < 8) {
-          json(res, 400, { error: "La contraseña debe tener al menos 8 caracteres." });
-          return;
-        }
-        patch = {
-          name: cleanString(body.name, 120),
-          email,
-          phone: cleanString(body.phone, 40),
-          role: ["administrador", "vendedor", "piloto"].includes(body.role)
-            ? body.role
-            : current.role,
-          active: body.active === undefined ? current.active : parseBoolean(body.active),
-        };
-        if (body.password) patch.passwordHash = hashPassword(String(body.password));
       } else {
         patch = normalizeEntity(collection, body);
+        if (collection === "drivers") patch.userId = current.userId || "";
         if (collection === "clients") {
           validateRequired(patch, ["name"]);
           const clientNameKey = normalizeClientName(patch.name);
@@ -1468,7 +1438,7 @@ export async function createApp(options = {}) {
       }
       const updated = await db.update(collection, id, patch, user.id);
       await db.audit(user.id, "actualizar", collection, id, updated.number || updated.name || "");
-      json(res, 200, collection === "users" ? publicUser(updated) : updated);
+      json(res, 200, updated);
       return;
     }
 
@@ -1490,11 +1460,9 @@ export async function createApp(options = {}) {
         json(
           res,
           200,
-          collection === "users"
-            ? records.map(publicUser)
-            : collection === "quotes"
-              ? records.map((quote) => withNames(db, quote))
-              : records,
+          collection === "quotes"
+            ? records.map((quote) => withNames(db, quote))
+            : records,
         );
         return;
       }
@@ -1517,29 +1485,9 @@ export async function createApp(options = {}) {
         entity.quoteSequence = sequence;
         entity.number = formatQuoteNumber(sequence, entity.clientName, entity.clientPhone);
         await syncClientForQuote(db, entity, user.id);
-      } else if (collection === "users") {
-        validateRequired(body, ["name", "email", "password"]);
-        if (String(body.password).length < 8) {
-          json(res, 400, { error: "La contraseña debe tener al menos 8 caracteres." });
-          return;
-        }
-        const email = cleanString(body.email, 160).toLowerCase();
-        if (db.list("users").some((item) => item.email === email)) {
-          json(res, 409, { error: "Ya existe un usuario con ese correo." });
-          return;
-        }
-        entity = {
-          name: cleanString(body.name, 120),
-          email,
-          phone: cleanString(body.phone, 40),
-          role: ["administrador", "vendedor", "piloto"].includes(body.role)
-            ? body.role
-            : "vendedor",
-          active: true,
-          passwordHash: hashPassword(String(body.password)),
-        };
       } else {
         entity = normalizeEntity(collection, body);
+        if (collection === "drivers") entity.userId = "";
         validateRequired(
           entity,
           collection === "vehicles"
@@ -1580,7 +1528,7 @@ export async function createApp(options = {}) {
         created.id,
         created.number || created.name || created.plate || "",
       );
-      json(res, 201, collection === "users" ? publicUser(created) : created);
+      json(res, 201, created);
       return;
     }
 

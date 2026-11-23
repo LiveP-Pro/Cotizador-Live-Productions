@@ -23,7 +23,7 @@ const PERMISSION_DEFINITIONS = Object.freeze([
 ].map((entry) => Object.freeze(entry)));
 const ALL_PERMISSION_IDS = Object.freeze(PERMISSION_DEFINITIONS.map((entry) => entry.id));
 const ROLE_PRESETS = Object.freeze([
-  { id: "administrador", label: "Administración", permissions: [...ALL_PERMISSION_IDS] },
+  { id: "administrador", label: "Administración", permissions: ALL_PERMISSION_IDS.filter((permission) => permission !== "users.manage") },
   { id: "bodega", label: "Bodega", permissions: ["equipment.read", "warehouse.read", "warehouse.movements", "warehouse.logs"] },
   { id: "planificacion", label: "Planificación", permissions: ["equipment.read", "equipment.write", "equipment.reports", "warehouse.read"] },
   { id: "consulta", label: "Consulta", permissions: ["quotes.read", "requirements.read", "equipment.read", "warehouse.read"] },
@@ -92,15 +92,29 @@ function publicUser(user) {
   return {
     id: user.id, username: user.username, displayName: user.displayName,
     role: isDeveloper ? "administrador" : user.role, active: user.active,
-    permissions: isDeveloper ? [...ALL_PERMISSION_IDS] : [...user.permissions],
-    isDeveloper, auditExempt: isDeveloper,
+    permissions: effectivePermissions(user),
+    isDeveloper, auditExempt: isDeveloper, canActivateDeveloper: false,
     sessionVersion: user.sessionVersion, createdAt: user.createdAt, updatedAt: user.updatedAt
   };
 }
 
 function hasPermission(user, permission) {
-  return Boolean(user && user.active !== false && (isDeveloperIdentity(user) && ALL_PERMISSION_IDS.includes(permission)
-    || Array.isArray(user.permissions) && user.permissions.includes(permission)));
+  if (!user || user.active === false) return false;
+  if (permission === "users.manage") return isDeveloperIdentity(user);
+  return Boolean(isDeveloperIdentity(user) && ALL_PERMISSION_IDS.includes(permission)
+    || Array.isArray(user.permissions) && user.permissions.includes(permission));
+}
+
+function effectivePermissions(user) {
+  return isDeveloperIdentity(user) ? [...ALL_PERMISSION_IDS]
+    : (Array.isArray(user?.permissions) ? user.permissions : []).filter((permission) => permission !== "users.manage");
+}
+
+function requireDelegablePermissions(permissions) {
+  if (permissions.includes("users.manage")) {
+    throw invalid("La administración de usuarios es exclusiva del propietario y no se puede delegar.", 403);
+  }
+  return permissions;
 }
 
 function normalizePermissions(value) {
@@ -140,37 +154,64 @@ function validatePayload(payload) {
   if (own(payload, "active") && typeof payload.active !== "boolean") throw invalid("El estado del usuario no es válido.");
 }
 
+// This input belongs only to the server console; no HTTP handler may invoke it.
+function normalizeInternalBatch(payload) {
+  const object = (value, allowed) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)
+      || Object.keys(value).some((key) => !allowed.includes(key))) {
+      throw invalid("El lote contiene un objeto o campo no permitido.");
+    }
+  };
+  object(payload, ["version", "owner", "users", "bootstrapAdministrator"]);
+  if (payload.version !== 1) throw invalid("La versión del lote no es válida.");
+  if (!own(payload, "owner") && !own(payload, "bootstrapAdministrator") && !own(payload, "users")) {
+    throw invalid("El lote debe incluir cuentas para crear o actualizar.");
+  }
+  const normalizeEntry = (entry, owner = false) => {
+    object(entry, owner ? ["displayName", "password"] : ["username", "displayName", "password", "role", "permissions", "active"]);
+    const result = {};
+    if (!owner) {
+      result.username = normalizeUsername(entry.username);
+      if (usernameKey(result.username) === usernameKey(DEVELOPER_USERNAME)) {
+        throw invalid("La identidad reservada solo se puede configurar mediante owner.");
+      }
+      if (own(entry, "role")) result.role = normalizeRole(entry.role);
+      if (own(entry, "permissions")) result.permissions = requireDelegablePermissions(normalizePermissions(entry.permissions));
+      if (own(entry, "active")) {
+        if (typeof entry.active !== "boolean") throw invalid("El estado del usuario no es válido.");
+        result.active = entry.active;
+      }
+    }
+    if (own(entry, "displayName")) result.displayName = normalizeDisplayName(entry.displayName);
+    if (own(entry, "password")) result.password = validatePassword(entry.password);
+    return result;
+  };
+  const result = { version: 1, users: [] };
+  if (own(payload, "owner")) result.owner = normalizeEntry(payload.owner, true);
+  if (own(payload, "bootstrapAdministrator")) result.bootstrapAdministrator = normalizeEntry(payload.bootstrapAdministrator);
+  if (own(payload, "users")) {
+    if (!Array.isArray(payload.users) || payload.users.length > MAX_USERS) throw invalid("La lista de cuentas no es válida.");
+    result.users = payload.users.map((entry) => normalizeEntry(entry));
+    const keys = new Set();
+    for (const entry of result.users) {
+      const key = usernameKey(entry.username);
+      if (keys.has(key)) throw invalid("El lote contiene nombres de usuario repetidos.");
+      keys.add(key);
+    }
+  }
+  return result;
+}
+
 function legacyFingerprint(legacyAdmin) {
   return crypto.createHash("sha256").update(JSON.stringify({
     username: String(legacyAdmin.username || ""), password: legacyAdmin.password
   })).digest("hex");
 }
 
-function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(), readOnly = false } = {}) {
-  if (!directory) throw new Error("Indique el directorio privado para guardar los usuarios.");
-  const filePath = path.join(directory, "usuarios-live.json");
-  let state;
-  const timestamp = () => {
-    const value = clock();
-    const date = value instanceof Date ? value : new Date(value);
-    if (!Number.isFinite(date.getTime())) throw new Error("El reloj del servidor no es válido.");
-    return date.toISOString();
-  };
-  const persist = (next) => {
-    if (readOnly) throw invalid("El registro de usuarios está abierto solo para consulta.", 403);
-    fs.mkdirSync(directory, { recursive: true });
-    const temporary = `${filePath}.tmp-${process.pid}-${crypto.randomUUID()}`;
-    try {
-      fs.writeFileSync(temporary, JSON.stringify(next, null, 2) + "\n", { mode: 0o600, flag: "wx" });
-      fs.renameSync(temporary, filePath);
-      state = next;
-    } finally {
-      try { fs.unlinkSync(temporary); } catch (error) { if (error.code !== "ENOENT") throw error; }
-    }
-  };
-
+function readStoredState(filePath) {
+  const raw = fs.readFileSync(filePath, "utf8");
   try {
-    const stored = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const stored = JSON.parse(raw);
     if (stored?.version !== 1 || !Array.isArray(stored.users) || !Array.isArray(stored.audit)
       || !stored.users.length || stored.users.length > MAX_USERS || typeof stored.legacyAdminId !== "string"
       || !/^[a-f0-9]{64}$/.test(stored.legacyFingerprint || "")) throw new Error("invalid");
@@ -187,27 +228,78 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
       if (isDeveloperIdentity(user) && (user.role !== "administrador" || !user.active)) throw new Error("invalid");
       ids.add(user.id); usernames.add(usernameKey(user.username));
     }
-    if (!ids.has(stored.legacyAdminId) || !stored.users.some((user) => hasPermission(user, "users.manage"))) throw new Error("invalid");
-    state = stored;
+    const developer = stored.users.find(isDeveloperIdentity);
+    const bootstrapAdministrator = stored.users.find((user) => user.id === stored.legacyAdminId);
+    if (!ids.has(stored.legacyAdminId) || !(developer ? developer.active : bootstrapAdministrator?.active)) throw new Error("invalid");
+    return { state: stored, raw };
+  } catch {
+    throw new Error("No se pudo leer el registro de usuarios. Se conservó el archivo original; no se restablecieron las cuentas.");
+  }
+}
+
+function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(), readOnly = false, deferBootstrap = false } = {}) {
+  if (!directory) throw new Error("Indique el directorio privado para guardar los usuarios.");
+  const filePath = path.join(directory, "usuarios-live.json");
+  let state, diskContents;
+  const timestamp = () => {
+    const value = clock();
+    const date = value instanceof Date ? value : new Date(value);
+    if (!Number.isFinite(date.getTime())) throw new Error("El reloj del servidor no es válido.");
+    return date.toISOString();
+  };
+  const persist = (next) => {
+    if (readOnly) throw invalid("El registro de usuarios está abierto solo para consulta.", 403);
+    fs.mkdirSync(directory, { recursive: true });
+    const temporary = `${filePath}.tmp-${process.pid}-${crypto.randomUUID()}`;
+    try {
+      const serialized = JSON.stringify(next, null, 2) + "\n";
+      fs.writeFileSync(temporary, serialized, { mode: 0o600, flag: "wx" });
+      fs.renameSync(temporary, filePath);
+      diskContents = serialized;
+      state = next;
+    } finally {
+      try { fs.unlinkSync(temporary); } catch (error) { if (error.code !== "ENOENT") throw error; }
+    }
+  };
+
+  try {
+    const loaded = readStoredState(filePath);
+    state = loaded.state;
+    diskContents = loaded.raw;
   } catch (error) {
     if (error.code !== "ENOENT") {
       throw new Error("No se pudo leer el registro de usuarios. Se conservó el archivo original; no se restablecieron las cuentas.");
     }
-    if (readOnly) throw new Error("El registro de usuarios todavía no está disponible para consulta.");
-    if (!legacyAdmin || !String(legacyAdmin.username || "").trim() || !validPasswordHash(legacyAdmin.password)) {
-      throw new Error("Se necesita la cuenta administradora existente para inicializar los usuarios sin cambiar su contraseña.");
+    if (deferBootstrap) {
+      state = null;
+    } else {
+      if (readOnly) throw new Error("El registro de usuarios todavía no está disponible para consulta.");
+      if (!legacyAdmin || !String(legacyAdmin.username || "").trim() || !validPasswordHash(legacyAdmin.password)) {
+        throw new Error("Se necesita la cuenta administradora existente para inicializar los usuarios sin cambiar su contraseña.");
+      }
+      const createdAt = timestamp();
+      const legacyAdminId = crypto.randomUUID();
+      const administrator = {
+        id: legacyAdminId, username: String(legacyAdmin.username), displayName: String(legacyAdmin.username),
+        role: "administrador", active: true, permissions: ALL_PERMISSION_IDS.filter((permission) => permission !== "users.manage"), password: clone(legacyAdmin.password),
+        sessionVersion: 1, legacySessionEligible: true, createdAt, updatedAt: createdAt
+      };
+      persist({ version: 1, legacyAdminId, legacyFingerprint: legacyFingerprint(legacyAdmin), users: [administrator], audit: [{ id: crypto.randomUUID(), timestamp: createdAt, action: "users.bootstrap",
+        actor: { id: administrator.id, username: administrator.username, displayName: administrator.displayName },
+        target: { id: administrator.id, username: administrator.username }, changes: { migratedExistingAdministrator: true } }] });
     }
-    const createdAt = timestamp();
-    const legacyAdminId = crypto.randomUUID();
-    const administrator = {
-      id: legacyAdminId, username: String(legacyAdmin.username), displayName: String(legacyAdmin.username),
-      role: "administrador", active: true, permissions: [...ALL_PERMISSION_IDS], password: clone(legacyAdmin.password),
-      sessionVersion: 1, legacySessionEligible: true, createdAt, updatedAt: createdAt
-    };
-    persist({ version: 1, legacyAdminId, legacyFingerprint: legacyFingerprint(legacyAdmin), users: [administrator], audit: [{ id: crypto.randomUUID(), timestamp: createdAt, action: "users.bootstrap",
-      actor: { id: administrator.id, username: administrator.username, displayName: administrator.displayName },
-      target: { id: administrator.id, username: administrator.username }, changes: { migratedExistingAdministrator: true } }] });
   }
+
+  const reload = () => {
+    try {
+      const loaded = readStoredState(filePath);
+      state = loaded.state;
+      diskContents = loaded.raw;
+    } catch {
+      state = null;
+      throw new Error("No se pudo leer el registro de usuarios. No se autorizaron sesiones ni se restablecieron las cuentas.");
+    }
+  };
 
   const findUser = (identifier) => {
     if (identifier && typeof identifier === "object") {
@@ -220,12 +312,17 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
   const requireAdministrator = (actor) => {
     const user = findUser(actor);
     if (!user || !user.active) throw invalid("Inicie sesión para administrar usuarios.", 401);
-    if (!hasPermission(user, "users.manage")) throw invalid("No tiene permiso para administrar usuarios.", 403);
+    if (!isDeveloperIdentity(user)) throw invalid("Solo el propietario puede administrar usuarios y permisos.", 403);
     return user;
   };
+  const canActivateDeveloper = (actor) => {
+    const user = findUser(actor);
+    return Boolean(user?.active && user.id === state.legacyAdminId && !state.users.some(isDeveloperIdentity));
+  };
+  const exposeUser = (user) => user ? { ...publicUser(user), canActivateDeveloper: canActivateDeveloper(user) } : null;
   const ensureAdministrator = (users) => {
     if (!users.some((user) => hasPermission(user, "users.manage"))) {
-      throw invalid("Debe conservar al menos un administrador activo con permiso para administrar usuarios.", 409);
+      throw invalid("Debe conservar la cuenta activa del propietario para administrar usuarios.", 409);
     }
   };
   const appendAudit = (next, action, actor, target, changes, at) => {
@@ -236,7 +333,7 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
   const authenticate = (username, password) => {
     const user = state.users.find((entry) => usernameKey(entry.username) === usernameKey(username));
     if (!user || !user.active || !verifyPassword(password, user.password)) return null;
-    return publicUser(user);
+    return exposeUser(user);
   };
   const sessionFor = (identifier) => {
     const user = findUser(identifier);
@@ -247,12 +344,12 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
     if (!payload || !Number.isFinite(payload.exp) || payload.exp <= Date.now()) return null;
     if (payload.userId) {
       const user = state.users.find((entry) => entry.id === payload.userId);
-      return user?.active && payload.user === user.username && payload.sessionVersion === user.sessionVersion ? publicUser(user) : null;
+      return user?.active && payload.user === user.username && payload.sessionVersion === user.sessionVersion ? exposeUser(user) : null;
     }
     const administrator = state.users.find((user) => user.id === state.legacyAdminId);
     const sameLegacyConfig = legacyAdmin && state.legacyFingerprint === legacyFingerprint(legacyAdmin);
     return administrator?.active && administrator.legacySessionEligible === true && administrator.sessionVersion === 1
-      && sameLegacyConfig && payload.user === administrator.username ? publicUser(administrator) : null;
+      && sameLegacyConfig && payload.user === administrator.username ? exposeUser(administrator) : null;
   };
   const create = (payload, actor) => {
     const administrator = requireAdministrator(actor);
@@ -262,7 +359,7 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
     if (usernameKey(username) === usernameKey(DEVELOPER_USERNAME)) throw invalid("La cuenta del desarrollador requiere la provisión protegida del servidor.", 409);
     if (state.users.some((user) => usernameKey(user.username) === usernameKey(username))) throw invalid("Ese nombre de usuario ya está registrado.", 409);
     const role = normalizeRole(payload.role);
-    const permissions = own(payload, "permissions") ? normalizePermissions(payload.permissions)
+    const permissions = own(payload, "permissions") ? requireDelegablePermissions(normalizePermissions(payload.permissions))
       : [...ROLE_PRESETS.find((preset) => preset.id === role).permissions];
     const at = timestamp();
     const user = { id: crypto.randomUUID(), username, displayName: normalizeDisplayName(payload.displayName, username),
@@ -273,7 +370,7 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
     appendAudit(next, "users.create", administrator, user,
       { displayName: user.displayName, role, active: user.active, permissions: [...permissions] }, at);
     persist(next);
-    return publicUser(user);
+    return exposeUser(user);
   };
   const update = (id, payload, actor) => {
     const administrator = requireAdministrator(actor);
@@ -284,11 +381,15 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
       throw invalid("Solo el propietario puede modificar su cuenta de desarrollador.", 403);
     }
     const user = clone(original);
+    user.permissions = effectivePermissions(original);
     if (own(payload, "username")) user.username = normalizeUsername(payload.username);
     if (state.users.some((entry) => entry.id !== id && usernameKey(entry.username) === usernameKey(user.username))) throw invalid("Ese nombre de usuario ya está registrado.", 409);
     if (own(payload, "displayName")) user.displayName = normalizeDisplayName(payload.displayName, user.username);
     if (own(payload, "role")) user.role = normalizeRole(payload.role);
-    if (own(payload, "permissions")) user.permissions = normalizePermissions(payload.permissions);
+    if (own(payload, "permissions")) {
+      user.permissions = normalizePermissions(payload.permissions);
+      if (!isDeveloperIdentity(original)) requireDelegablePermissions(user.permissions);
+    }
     if (own(payload, "active")) user.active = payload.active;
     if (isDeveloperIdentity(original)) {
       if (user.username !== original.username || user.role !== "administrador" || !user.active
@@ -305,7 +406,7 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
       if (JSON.stringify(original[key]) !== JSON.stringify(user[key])) changes[key] = { before: clone(original[key]), after: clone(user[key]) };
     }
     if (user.password.hash !== original.password.hash) changes.passwordChanged = true;
-    if (!Object.keys(changes).length) return publicUser(original);
+    if (!Object.keys(changes).length) return exposeUser(original);
     const at = timestamp();
     user.sessionVersion += 1; user.legacySessionEligible = false; user.updatedAt = at;
     const next = clone(state);
@@ -313,7 +414,7 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
     ensureAdministrator(next.users);
     appendAudit(next, "users.update", administrator, user, changes, at);
     persist(next);
-    return publicUser(user);
+    return exposeUser(user);
   };
   const changeOwnPassword = (id, payload, actor) => {
     const user = findUser(actor);
@@ -324,10 +425,13 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
     updated.sessionVersion += 1; updated.legacySessionEligible = false; updated.updatedAt = timestamp();
     appendAudit(next, "users.password.change", user, updated, { passwordChanged: true }, updated.updatedAt);
     persist(next);
-    return publicUser(updated);
+    return exposeUser(updated);
   };
   const provisionDeveloperAccount = (payload, actor) => {
-    const administrator = requireAdministrator(actor);
+    const administrator = findUser(actor);
+    if (!administrator?.active) throw invalid("Inicie sesión para activar la cuenta del propietario.", 401);
+    if (state.users.some(isDeveloperIdentity)) throw invalid("La cuenta del desarrollador ya está provisionada.", 409);
+    if (!canActivateDeveloper(administrator)) throw invalid("Solo la cuenta administradora original puede activar al propietario.", 403);
     if (!payload || typeof payload !== "object" || Array.isArray(payload)
       || Object.keys(payload).some((key) => !["username", "displayName", "password"].includes(key))) {
       throw invalid("La provisión del desarrollador solo admite nombre, usuario y contraseña.");
@@ -352,17 +456,144 @@ function createLiveUserStore({ directory, legacyAdmin, clock = () => new Date(),
     const next = clone(state);
     next.users = existing ? next.users.map((user) => user.id === existing.id ? developer : user) : [...next.users, developer];
     if (existing && next.legacyAdminId === existing.id) next.legacyAdminId = developer.id;
+    for (const user of next.users) {
+      if (isDeveloperIdentity(user)) continue;
+      const lostManagement = user.permissions.includes("users.manage");
+      if (lostManagement) user.permissions = effectivePermissions(user);
+      if (lostManagement || user.id === state.legacyAdminId) {
+        user.sessionVersion += 1;
+        user.legacySessionEligible = false;
+        user.updatedAt = at;
+      }
+    }
     appendAudit(next, "users.developer.provision", administrator, developer,
       { protectedIdentity: true, migratedExistingAccount: Boolean(existing) }, at);
     persist(next);
-    return publicUser(developer);
+    return exposeUser(developer);
   };
 
-  return { filePath, list: () => state.users.map(publicUser), getUser: (id) => publicUser(findUser(id)),
-    authenticate, sessionFor, resolveSession, create, update, changeOwnPassword, provisionDeveloperAccount,
+  const applyInternalBatch = (payload, { dryRun = false } = {}) => {
+    if (readOnly) throw invalid("El registro de usuarios está abierto solo para consulta.", 403);
+    const batch = normalizeInternalBatch(payload);
+    if (typeof dryRun !== "boolean") throw invalid("La opción de simulación no es válida.");
+    if (batch.bootstrapAdministrator && (state
+      ? usernameKey(state.users.find((user) => user.id === state.legacyAdminId)?.username) !== usernameKey(batch.bootstrapAdministrator.username)
+      : legacyAdmin)) {
+      throw invalid("La cuenta inicial no puede reemplazar a una cuenta administradora existente.", 409);
+    }
+    const entries = state && batch.bootstrapAdministrator ? [batch.bootstrapAdministrator, ...batch.users] : batch.users;
+    if (new Set(entries.map((entry) => usernameKey(entry.username))).size !== entries.length) {
+      throw invalid("El lote contiene nombres de usuario repetidos.");
+    }
+    const at = timestamp();
+    const actor = { id: "server-console", username: "server-console", displayName: "Consola interna del servidor" };
+    let next = state ? clone(state) : null;
+    if (!next) {
+      const supplied = batch.bootstrapAdministrator;
+      if (!supplied && (!legacyAdmin || typeof legacyAdmin.username !== "string" || !legacyAdmin.username.trim()
+        || !validPasswordHash(legacyAdmin.password))) {
+        throw invalid("Indique bootstrapAdministrator para inicializar un directorio sin cuentas existentes.");
+      }
+      if (supplied && !own(supplied, "password")) throw invalid("La cuenta inicial requiere una contraseña.");
+      const username = supplied ? supplied.username : legacyAdmin.username;
+      const role = supplied?.role || "administrador";
+      const administrator = { id: crypto.randomUUID(), username, displayName: supplied?.displayName || username,
+        role, active: supplied?.active !== false,
+        permissions: supplied?.permissions || [...ROLE_PRESETS.find((preset) => preset.id === role).permissions],
+        password: supplied ? hashPassword(supplied.password) : clone(legacyAdmin.password),
+        sessionVersion: 1, legacySessionEligible: !supplied, createdAt: at, updatedAt: at };
+      const source = { username, password: administrator.password };
+      next = { version: 1, legacyAdminId: administrator.id, legacyFingerprint: legacyFingerprint(source), users: [administrator], audit: [] };
+      appendAudit(next, "users.bootstrap", actor, administrator, { migratedExistingAdministrator: !supplied, internal: true }, at);
+    }
+    // Validate existence-dependent requirements before computing any replacement hashes.
+    for (const entry of entries) {
+      if (!next.users.some((user) => usernameKey(user.username) === usernameKey(entry.username)) && !own(entry, "password")) {
+        throw invalid("Cada cuenta nueva requiere una contraseña.");
+      }
+    }
+    const previousOwner = next.users.find(isDeveloperIdentity);
+    const reserved = next.users.find((user) => usernameKey(user.username) === usernameKey(DEVELOPER_USERNAME));
+    if (batch.owner && !reserved && !own(batch.owner, "password")) throw invalid("La cuenta nueva del propietario requiere una contraseña.");
+    const originals = new Map(next.users.map((user) => [user.id, clone(user)]));
+    const newIds = new Set();
+    let migratedOwnerId;
+    const setPassword = (target, entry) => {
+      if (own(entry, "password") && !verifyPassword(entry.password, target.password)) target.password = hashPassword(entry.password);
+    };
+    if (batch.owner) {
+      let owner = reserved;
+      if (!owner) {
+        owner = { id: DEVELOPER_USER_ID, username: DEVELOPER_USERNAME, displayName: DEVELOPER_USERNAME,
+          password: hashPassword(batch.owner.password), sessionVersion: 1, legacySessionEligible: false, createdAt: at, updatedAt: at };
+        next.users.push(owner); newIds.add(owner.id);
+      } else if (!isDeveloperIdentity(owner)) {
+        migratedOwnerId = owner.id;
+        owner.id = DEVELOPER_USER_ID;
+        if (next.legacyAdminId === migratedOwnerId) next.legacyAdminId = owner.id;
+      }
+      owner.username = DEVELOPER_USERNAME; owner.role = "administrador"; owner.active = true;
+      owner.permissions = [...ALL_PERMISSION_IDS];
+      if (own(batch.owner, "displayName")) owner.displayName = batch.owner.displayName;
+      setPassword(owner, batch.owner);
+    }
+    for (const entry of entries) {
+      let user = next.users.find((candidate) => usernameKey(candidate.username) === usernameKey(entry.username));
+      if (!user) {
+        const role = entry.role || "personalizado";
+        user = { id: crypto.randomUUID(), username: entry.username, displayName: entry.displayName || entry.username,
+          role, active: entry.active !== false, permissions: entry.permissions || [...ROLE_PRESETS.find((preset) => preset.id === role).permissions],
+          password: hashPassword(entry.password), sessionVersion: 1, legacySessionEligible: false, createdAt: at, updatedAt: at };
+        next.users.push(user); newIds.add(user.id);
+      } else {
+        for (const key of ["username", "displayName", "role", "active", "permissions"]) {
+          if (own(entry, key)) user[key] = clone(entry[key]);
+        }
+        setPassword(user, entry);
+      }
+    }
+    if (next.users.length > MAX_USERS) throw invalid("Se alcanzó el límite de usuarios registrados.", 409);
+    const owner = next.users.find(isDeveloperIdentity);
+    if (!(owner ? owner.active : next.users.find((user) => user.id === next.legacyAdminId)?.active)) {
+      throw invalid("Debe conservar la cuenta activa del propietario o la cuenta administradora inicial.", 409);
+    }
+    const changedUsers = [];
+    for (const user of next.users) {
+      if (!isDeveloperIdentity(user)) user.permissions = effectivePermissions(user);
+      const original = originals.get(user.id) || (user.id === DEVELOPER_USER_ID && migratedOwnerId ? originals.get(migratedOwnerId) : null);
+      const changes = {};
+      if (newIds.has(user.id)) changes.created = true;
+      if (original) {
+        for (const key of ["id", "username", "displayName", "role", "active", "permissions"]) {
+          if (JSON.stringify(original[key]) !== JSON.stringify(user[key])) changes[key] = { before: clone(original[key]), after: clone(user[key]) };
+        }
+        if (JSON.stringify(original.password) !== JSON.stringify(user.password)) changes.passwordChanged = true;
+        if (!previousOwner && owner && original.id === (state?.legacyAdminId || next.legacyAdminId)) changes.legacySessionsRevoked = true;
+      }
+      if (!Object.keys(changes).length) continue;
+      if (original) {
+        if (original.sessionVersion >= Number.MAX_SAFE_INTEGER) throw invalid("No se pudo renovar la versión de sesión de una cuenta.", 409);
+        user.sessionVersion = original.sessionVersion + 1;
+      }
+      user.legacySessionEligible = false; user.updatedAt = at;
+      appendAudit(next, newIds.has(user.id) ? "users.internal.create" : "users.internal.update", actor, user, changes, at);
+      changedUsers.push(publicUser(user));
+    }
+    const changed = !state || changedUsers.length > 0;
+    if (changed && !dryRun) {
+      let current;
+      try { current = fs.readFileSync(filePath, "utf8"); } catch (error) { if (error.code !== "ENOENT") throw error; }
+      if (current !== diskContents) throw invalid("El registro cambió durante la operación; vuelva a ejecutar el lote.", 409);
+      persist(next);
+    }
+    return { dryRun, changed, changedUsers, users: next.users.map(publicUser) };
+  };
+
+  return { filePath, list: () => state.users.map(exposeUser), getUser: (id) => exposeUser(findUser(id)),
+    authenticate, sessionFor, resolveSession, create, update, changeOwnPassword, provisionDeveloperAccount, canActivateDeveloper, reload, applyInternalBatch,
     audit: () => clone(state.audit), hasPermission: (identifier, permission) => hasPermission(findUser(identifier), permission) };
 }
 
 module.exports = { createLiveUserStore, publicUser, hasPermission, hashPassword, verifyPassword,
   PERMISSION_DEFINITIONS, ROLE_PRESETS, ALL_PERMISSION_IDS, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH,
-  DEVELOPER_USER_ID, DEVELOPER_USERNAME, isDeveloperIdentity };
+  DEVELOPER_USER_ID, DEVELOPER_USERNAME, isDeveloperIdentity, normalizeInternalBatch };
