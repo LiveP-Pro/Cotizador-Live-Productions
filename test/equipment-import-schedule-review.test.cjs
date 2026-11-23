@@ -180,11 +180,11 @@ function batchHarness(options) {
   return { api, dialog, get: (id) => ids.get(id), emitSession() { listeners.get("live:session-updated")?.(); }, async action(action) { const target = { dataset: { batchAction: action }, closest() { return this; } }; for (const callback of dialog.listeners.click || []) await callback({ target }); } };
 }
 const syntheticFile = () => ({ name: "agenda-sintetica.xlsx", size: 10, type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", arrayBuffer: async () => new ArrayBuffer(10) });
-test("each import report action loads exactly once and continues only after closing the consumed preview", async () => {
+test("each import report action loads exactly once and reports from the consumed preview", async () => {
   for (const mode of ["transfer", "rent", "purchase"]) {
     let imports = 0, after = 0, finish;
     const harness = batchHarness({ bridge: { importEvents(events) { imports++; assert.equal(events[0].sections[0].items[0].quantity, 0); return new Promise((resolve) => { finish = resolve; }); }, afterImport(receivedMode, context) {
-      after++; assert.equal(receivedMode, mode); assert.equal(context.result.count, 1); assert.equal(context.events.length, 1); assert.equal(harness.dialog.open, false); assert.equal(harness.api.getPreview(), null);
+      after++; assert.equal(receivedMode, mode); assert.equal(context.result.count, 1); assert.equal(context.events.length, 1); assert.equal(harness.dialog.open, true); assert.equal(harness.api.getPreview(), null);
     } } });
     harness.api.open(); await harness.api.read(syntheticFile());
     const applying = harness.action(`apply-${mode}`);
@@ -192,17 +192,19 @@ test("each import report action loads exactly once and continues only after clos
     assert.equal(imports, 1); assert.equal(after, 0);
     finish({ count: 1 }); await applying;
     assert.equal(after, 1); assert.equal(imports, 1);
+    assert.equal(harness.dialog.open, mode !== "transfer");
+    assert.notEqual(harness.get("equipmentBatchStatus").dataset.error, "true");
   }
 });
-test("a failed report callback keeps imported events consumed and cannot duplicate them on retry", async () => {
+test("a failed report callback retries only the report and retains imported events", async () => {
   let imports = 0, reports = 0, errorMessage = "";
   const harness = batchHarness({ onError(error) { errorMessage = error.message; }, bridge: { importEvents() { imports++; return { count: 1 }; }, afterImport() { reports++; throw new Error("Fallo sintético de descarga"); } } });
   harness.api.open(); await harness.api.read(syntheticFile());
   await harness.action("apply-rent");
   assert.equal(imports, 1); assert.equal(reports, 1); assert.match(errorMessage, /Fallo sintético/);
-  assert.equal(harness.dialog.open, false); assert.equal(harness.api.getPreview(), null);
+  assert.equal(harness.dialog.open, true); assert.equal(harness.api.getPreview(), null);
   await harness.action("apply-rent");
-  assert.equal(imports, 1); assert.equal(reports, 1);
+  assert.equal(imports, 1); assert.equal(reports, 2);
 });
 test("import report shortcuts require both event writing and report permissions", async () => {
   let imports = 0;
@@ -213,6 +215,8 @@ test("import report shortcuts require both event writing and report permissions"
   for (const id of ["equipmentBatchTransfer", "equipmentBatchRent", "equipmentBatchPurchase"]) assert.equal(harness.get(id).hidden, true);
   await harness.action("apply-rent"); assert.equal(imports, 0);
   session.permissions.push("equipment.reports"); harness.emitSession();
+  assert.equal(harness.get("equipmentBatchRent").hidden, true, "el paso inicial solo muestra la carga completa");
+  await harness.action("apply");
   assert.equal(harness.get("equipmentBatchRent").hidden, false);
   assert.equal(harness.get("equipmentBatchRent").disabled, false);
   session.permissions = ["equipment.reports"]; harness.emitSession();

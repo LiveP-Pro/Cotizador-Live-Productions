@@ -97,9 +97,9 @@
     const status = message => { const target=$('#equipmentPlannerStatus'); if(target) target.textContent=message; };
     function snapshot() { return analyze(bridge.events(),bridge.inventory()); }
     async function download(mode, button, selectedEvents = null) {
-      if (busy) return;
+      if (busy) return { ok: false, message: 'Espere a que termine la descarga actual.' };
       const events = selectedEvents || bridge.events();
-      if (!events.length) { status('Cargue al menos un evento con equipo.'); return; }
+      if (!events.length) { const message = 'Cargue al menos un evento con equipo.'; status(message); return { ok: false, message }; }
       busy = true; if(button)button.disabled=true;
       status('Generando el reporte provisional con el inventario actual de Contabilidad…');
       try {
@@ -112,7 +112,8 @@
         const name=encoded ? decodeURIComponent(encoded[1]) : plain ? plain[1] : `Resumen-provisional.${mode==='master'?'xlsx':'pdf'}`;
         const url=URL.createObjectURL(blob), link=document.createElement('a'); link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
         status('Descarga lista. Reporte provisional; no se confirmaron reservas ni movimientos de inventario.');
-      } catch(error) { status(error.message); }
+        return { ok: true, fileName: name };
+      } catch(error) { status(error.message); return { ok: false, message: error.message }; }
       finally { busy=false;if(button)button.disabled=false; }
     }
     function render() {

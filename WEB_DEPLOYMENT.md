@@ -86,6 +86,28 @@ conectado a esta rama con Auto Deploy, se inicia al subir el commit; si Auto
 Deploy está desactivado, se debe elegir `Deploy latest commit` en Render. La
 configuración del entorno de Codex es independiente del despliegue del sitio.
 
+## Importar cuadros de eventos desde un archivo
+
+En Requerimiento de Equipo, abra `Personaliza tu Cuadro de Evento` y pulse
+`Importar Excel o PDF`. El botón abre el selector de archivos de la computadora.
+Se leen todas las hojas y todos los cuadros del archivo seleccionado antes de
+cargar los eventos. Se conservan las filas en cero, encabezados, notas y celdas
+originales.
+
+El lector reconoce los horarios de montaje, intervalos del evento, desmontaje y
+llegada a bodega. Los días de la semana se relacionan con la fecha escrita en el
+documento. Una fecha contradictoria se muestra para corregirla. Si dos cuadros
+tienen el mismo equipo, se pregunta si corresponden a eventos distintos o si uno
+es una copia; al elegir una copia, su contenido original se conserva como
+referencia y sus cantidades se cuentan una sola vez.
+
+Después de revisar esos puntos, `Cargar eventos y preparar reportes` carga todos
+los cuadros seleccionados. El período del resumen se ajusta a las fechas del
+archivo. La pantalla ofrece revisar trasiego y generar renta o compra de
+consumibles sin repetir la importación si una descarga falla. Los eventos se
+cargan como borradores: los reportes provisionales permiten revisar los
+requerimientos antes de confirmar reservas y movimientos.
+
 ## Dominio
 
 Dominio deseado:

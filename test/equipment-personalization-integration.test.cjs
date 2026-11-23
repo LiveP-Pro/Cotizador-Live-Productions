@@ -344,6 +344,14 @@ test("inicializar agenda compartida conserva borrador activo y conecta ambos mod
   assert.equal(h.context.extrasOptions.inventoryReady(), false);
   assert.equal(typeof h.context.personalizerOptions.beforeOpen, "function");
   assert.equal(typeof h.context.personalizerOptions.onCommit, "function");
+  assert.equal(typeof h.context.personalizerOptions.onImportFile, "function");
+  const file = { name: "actual-sintetico.xlsx" };
+  assert.equal(h.context.personalizerOptions.onImportFile(file, { isCurrent: () => false }), null);
+  let received;
+  h.context.window.syntheticFileOpener = async candidate => { received = candidate; return { events: [] }; };
+  h.run("equipmentSharedWorkspace.batchImport={openFile:window.syntheticFileOpener};");
+  await h.context.personalizerOptions.onImportFile(file, { isCurrent: () => true });
+  assert.equal(received, file);
   assert.equal(h.run("equipmentSharedWorkspace.state.events[0].id"), "init-remote");
 });
 

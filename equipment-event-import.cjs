@@ -19,18 +19,24 @@ const metadataLabels = {
   setupApplies: ["requiere montaje", "montaje requerido", "aplica montaje", "montaje aplica"],
   startDate: ["fecha de inicio", "fecha inicio", "fecha de inicio del evento"],
   startTime: ["hora", "hora evento", "hora del evento", "hora de inicio", "hora inicio", "hora de inicio del evento", "inicio", "horario del evento"],
+  eventTimeRange: ["horario del evento general", "horario general del evento"],
   startAt: ["inicio del evento", "inicio evento", "fecha y hora del evento", "fecha y hora de inicio", "fecha y hora de inicio del evento", "fecha hora evento"],
   endDate: ["fecha final", "fecha fin", "fecha de fin", "fecha de finalizacion", "fecha finalizacion", "fecha de finalizacion del evento"],
   endTime: ["hora final", "hora fin", "hora de fin", "hora de finalizacion", "hora finalizacion", "hora de finalizacion del evento", "hora en que finaliza el evento", "finaliza", "finalizacion", "finalizacion del evento", "fin", "fin del evento", "termina", "hora de cierre"],
   endAt: ["fecha y hora de fin", "fecha y hora de finalizacion", "fecha y hora de finalizacion del evento"],
+  teardownDate: ["fecha desmontaje", "fecha de desmontaje", "fecha del desmontaje"],
+  teardownTime: ["hora desmontaje", "hora de desmontaje", "hora del desmontaje", "horario de desmontaje"],
+  teardownAt: ["desmontaje", "fecha y hora de desmontaje", "fecha y hora del desmontaje"],
   equipmentInDate: ["fecha de regreso", "fecha regreso", "fecha de retorno", "fecha de regreso a bodega"],
-  equipmentInTime: ["hora de regreso", "hora regreso", "hora de retorno", "hora de regreso a bodega"],
+  equipmentInTime: ["hora de regreso", "hora regreso", "hora de retorno", "hora de regreso a bodega", "horario que llega a bodega", "horario de llegada a bodega", "hora de llegada a bodega"],
   equipmentInAt: ["regreso a bodega", "retorno a bodega", "fecha y hora de regreso", "fecha y hora de regreso a bodega"],
   type: ["evento", "tipo de evento", "event type"],
   contracted: ["equipo contratado", "servicio contratado", "servicios contratados", "contratado"],
   guests: ["cantidad de invitados", "invitados", "numero de invitados"]
 };
 const labelField = (value) => Object.keys(metadataLabels).find((field) => metadataLabels[field].includes(key(value)));
+const weekdays = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+const schedulePrefixes = ["setup", "start", "end", "teardown", "equipmentIn"];
 
 function validDay(year, month, day) {
   if (year < 1900 || year > 2200 || month < 1 || month > 12 || day < 1 || day > 31) return "";
@@ -84,9 +90,20 @@ function temporalParts(value, cell = {}, { allowBareHour = false } = {}) {
   const raw = typeof original === "string" && /^\d{4}-\d{2}-\d{2}T/.test(original) ? original : clean(value);
   const dateToken = raw.match(/\d{4}-\d{2}-\d{2}|\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{4}|\d{1,2}\s*(?:de\s+)?[a-záéíóúñ]+\s*(?:de\s+|del\s+)?\d{4}/i)?.[0];
   const date = parseDate(dateToken || value, cell);
-  const clockToken = raw.match(/(?:^|[\sT,;])(\d{1,2}:\d{2}(?::\d{2})?\s*(?:a\.?\s*m\.?|p\.?\s*m\.?)?|\d{1,2}\s*(?:a\.?\s*m\.?|p\.?\s*m\.?))(?=$|[\sZ,+;)-])/i)?.[1];
-  const time = parseTime(clockToken || (!date ? value : ""), cell, { allowBareHour });
-  return { date, time };
+  const weekdayMatch = key(raw).match(/^(domingo|lunes|martes|miercoles|jueves|viernes|sabado)\s*,?\s*(?=(?:a\s+las\s+)?\d)/);
+  const clockSource = weekdayMatch ? key(raw).slice(weekdayMatch[0].length) : raw;
+  const clockToken = clockSource.match(/(?:^|[\sT,;])(\d{1,2}:\d{2}(?::\d{2})?\s*(?:a\.?\s*m\.?|p\.?\s*m\.?)?|\d{1,2}\s*(?:a\.?\s*m\.?|p\.?\s*m\.?))(?=$|[\sZ,+;)-])/i)?.[1];
+  const time = parseTime(clockToken || (!date ? clockSource : ""), cell, { allowBareHour });
+  return { date, time, ...(weekdayMatch ? { weekday: weekdays.indexOf(weekdayMatch[1]) } : {}) };
+}
+function eventRangeParts(value, cell, options) {
+  const parts = clean(value).replace(/^de\s+/i, "").split(/\s+(?:a(?!\s+las\b)|al|hasta)\s+|\s*[–—]\s*|\s+-\s+/i);
+  if (parts.length === 1) return temporalParts(value, cell, options);
+  if (parts.length !== 2) return { date: "", time: "" };
+  const start = temporalParts(parts[0], {}, options), end = temporalParts(parts[1], {}, options);
+  // Never accept half a range by accidentally retaining just its first clock.
+  if (!start.time || !end.time) return { date: "", time: "" };
+  return { ...start, endDate: end.date, endTime: end.time, ...(end.weekday !== undefined ? { endWeekday: end.weekday } : {}) };
 }
 function appliesValue(value) {
   const normalized = key(value).replace(/[.]/g, "");
@@ -108,13 +125,14 @@ function metadataInRow(cells) {
     const inline = colon >= 0 ? raw.slice(colon + 1).trim() : "";
     const valueCell = inline ? cell : cells[index + 1];
     let value = inline || text(valueCell?.value);
-    const scheduleField = /^(?:setup|start|end|equipmentIn)/.test(field);
+    const scheduleField = /^(?:setup|start|end|teardown|equipmentIn|eventTimeRange)/.test(field);
     // Equipment named "Montaje" or "Inicio" is still equipment when paired
     // with a quantity, even in a table whose description column comes first.
     if (scheduleField && !inline && (count(cells[index - 1]?.value) !== null || count(valueCell?.value) !== null)
       && !/hora|fecha|requiere|aplica/.test(key(raw))) continue;
     if (clean(value)) {
-      let parts = temporalParts(value, valueCell, { allowBareHour: /Time$/.test(field) });
+      const partsReader = ["eventTimeRange", "startTime", "startAt"].includes(field) ? eventRangeParts : temporalParts;
+      let parts = partsReader(value, valueCell, { allowBareHour: /Time$/.test(field) });
       let refs = inline ? cell.refs || [cell.ref] : [cell.ref, ...(valueCell?.refs || [valueCell?.ref])].filter(Boolean);
       // Some files write a single "Fecha y hora" label followed by a date and
       // a separate hour cell. Join only complementary temporal values, never
@@ -135,7 +153,8 @@ function metadataInRow(cells) {
   return result;
 }
 function scheduleForMetadata(metadata, parsed, metadataRefs, warnings, issues) {
-  const schedule = {}, refs = {}, derivedFields = {};
+  const schedule = {}, refs = {}, derivedFields = {}, weekdaySources = [];
+  let hasEventRangeEnd = false;
   const add = (name, value, field) => {
     if (!value) return;
     if (schedule[name] && schedule[name] !== value) {
@@ -145,12 +164,23 @@ function scheduleForMetadata(metadata, parsed, metadataRefs, warnings, issues) {
     schedule[name] = value;
     refs[name] = [...new Set([...(refs[name] || []), ...(metadataRefs[field] || [])])];
   };
-  for (const prefix of ["setup", "start", "end", "equipmentIn"]) {
+  const rememberWeekday = (prefix, parts, field) => {
+    if (parts.weekday !== undefined) weekdaySources.push({ prefix, weekday: parts.weekday, field });
+  };
+  const addRangeEnd = (parts, field) => {
+    if (parts.endTime) hasEventRangeEnd = true;
+    add("endTime", parts.endTime, field);
+    add("endDate", parts.endDate, field);
+    if (parts.endWeekday !== undefined) weekdaySources.push({ prefix: "end", weekday: parts.endWeekday, field });
+  };
+  for (const prefix of schedulePrefixes) {
     for (const suffix of ["Date", "Time", "At"]) {
       const field = prefix + suffix, parts = parsed[field];
       if (!parts) continue;
       if (suffix !== "Time" || parts.date && parts.time) add(prefix + "Date", parts.date, field);
       if (suffix !== "Date") add(prefix + "Time", parts.time, field);
+      rememberWeekday(prefix, parts, field);
+      if (prefix === "start") addRangeEnd(parts, field);
       if (!parts.date && !parts.time && appliesValue(metadata[field]) === undefined) {
         warnings.push({ code: "unreadable_schedule", message: `Revise el horario «${metadata[field]}»; se conservó el texto original sin asignar una fecha u hora.`, refs: metadataRefs[field] || [] });
       }
@@ -160,6 +190,36 @@ function scheduleForMetadata(metadata, parsed, metadataRefs, warnings, issues) {
   // A full date/time explicitly written or formatted in the event-date value
   // carries its clock too. Date-only Excel formats never supply a time.
   add("startTime", parsed.date?.time, "date");
+  if (parsed.eventTimeRange) {
+    const parts = parsed.eventTimeRange;
+    add("startDate", parts.date, "eventTimeRange");
+    add("startTime", parts.time, "eventTimeRange");
+    addRangeEnd(parts, "eventTimeRange");
+    rememberWeekday("start", parts, "eventTimeRange");
+    if (!parts.time || !parts.endTime) warnings.push({ code: "unreadable_schedule", message: `Revise el horario «${metadata.eventTimeRange}»; se conservó el texto original sin asignar un rango completo.`, refs: metadataRefs.eventTimeRange || [] });
+  }
+  const shiftDate = (date, offset) => {
+    const shifted = new Date(`${date}T00:00:00Z`);
+    shifted.setUTCDate(shifted.getUTCDate() + offset);
+    return shifted.toISOString().slice(0, 10);
+  };
+  // A weekday is relative to the explicitly written event date, never the
+  // worksheet name or today's date. Use the nearest occurrence and expose the
+  // derivation for review; chronology checks below flag contradictory days.
+  for (const { prefix, weekday, field } of weekdaySources) {
+    const name = prefix + "Date", writtenDate = schedule[name];
+    if (writtenDate) {
+      if (new Date(`${writtenDate}T00:00:00Z`).getUTCDay() !== weekday) issues.push({ code: "conflicting_schedule_weekday", message: "Una fecha y su día de la semana no coinciden. Revise los horarios originales.", refs: [...new Set([...(refs[name] || []), ...(metadataRefs[field] || [])])] });
+      continue;
+    }
+    if (!schedule.startDate) continue;
+    const eventWeekday = new Date(`${schedule.startDate}T00:00:00Z`).getUTCDay();
+    const offset = (weekday - eventWeekday + 10) % 7 - 3;
+    schedule[name] = shiftDate(schedule.startDate, offset);
+    refs[name] = [...new Set([...(refs.startDate || []), ...(metadataRefs[field] || [])])];
+    derivedFields[name] = "event.date + weekday";
+    warnings.push({ code: "schedule_date_from_weekday", message: `La fecha de ${prefix === "setup" ? "montaje" : prefix === "teardown" ? "desmontaje" : prefix === "equipmentIn" ? "regreso a bodega" : prefix === "end" ? "finalización" : "inicio"} se calculó con el día escrito y la fecha del evento. Revísela antes de confirmar.`, refs: refs[name] });
+  }
   let setupApplies = appliesValue(metadata.setupApplies);
   if (setupApplies === undefined) setupApplies = appliesValue(metadata.setupAt);
   if (setupApplies === false && (schedule.setupDate || schedule.setupTime)) issues.push({ code: "conflicting_setup", message: "El documento dice que no aplica montaje y también indica su fecha u hora. Revise ambos datos.", refs: [...new Set([...(metadataRefs.setupApplies || []), ...(metadataRefs.setupAt || []), ...(refs.setupDate || []), ...(refs.setupTime || [])])] });
@@ -173,14 +233,32 @@ function scheduleForMetadata(metadata, parsed, metadataRefs, warnings, issues) {
     derivedFields.endDate = "event.date";
     warnings.push({ code: "schedule_date_from_event", message: "La finalización usa la misma fecha del evento porque su hora es posterior o igual al inicio. Revise esta fecha antes de confirmar.", refs: [...new Set([...(refs.startDate || []), ...(refs.endTime || [])])] });
   }
-  for (const prefix of ["setup", "start", "end", "equipmentIn"]) {
+  // An overnight range alone does not prove the next day. A written teardown
+  // day/date at the exact end clock corroborates that date without inventing it.
+  if (hasEventRangeEnd && !schedule.endDate && schedule.endTime && schedule.startDate && schedule.startTime && schedule.endTime < schedule.startTime
+    && schedule.teardownDate === shiftDate(schedule.startDate, 1) && schedule.teardownTime === schedule.endTime) {
+    schedule.endDate = schedule.teardownDate;
+    refs.endDate = [...new Set([...(refs.startDate || []), ...(refs.endTime || []), ...(refs.teardownDate || []), ...(refs.teardownTime || [])])];
+    derivedFields.endDate = "teardown.date + matching event end time";
+    warnings.push({ code: "schedule_date_from_teardown", message: "La finalización pasa al día siguiente porque el desmontaje indica ese día y la misma hora. Revise esta fecha antes de confirmar.", refs: refs.endDate });
+  }
+  for (const prefix of schedulePrefixes) {
     schedule[prefix + "Date"] ||= "";
     schedule[prefix + "Time"] ||= "";
     schedule[prefix + "At"] = schedule[prefix + "Date"] && schedule[prefix + "Time"] ? `${schedule[prefix + "Date"]}T${schedule[prefix + "Time"]}` : "";
     if (schedule[prefix + "Date"] || schedule[prefix + "Time"]) {
-      if (!schedule[prefix + "At"]) warnings.push({ code: "incomplete_schedule", message: `Falta confirmar ${schedule[prefix + "Date"] ? "la hora" : "la fecha"} de ${prefix === "setup" ? "montaje" : prefix === "start" ? "inicio del evento" : prefix === "end" ? "finalización del evento" : "regreso a bodega"}. No se dedujo del resto del documento.`, refs: [...(refs[prefix + "Date"] || []), ...(refs[prefix + "Time"] || [])] });
+      if (!schedule[prefix + "At"]) warnings.push({ code: "incomplete_schedule", message: `Falta confirmar ${schedule[prefix + "Date"] ? "la hora" : "la fecha"} de ${prefix === "setup" ? "montaje" : prefix === "start" ? "inicio del evento" : prefix === "end" ? "finalización del evento" : prefix === "teardown" ? "desmontaje" : "regreso a bodega"}. No se dedujo del resto del documento.`, refs: [...(refs[prefix + "Date"] || []), ...(refs[prefix + "Time"] || [])] });
       refs[prefix + "At"] = [...new Set([...(refs[prefix + "Date"] || []), ...(refs[prefix + "Time"] || [])])];
     }
+  }
+  const orderChecks = [
+    ["setup", "start", "El montaje queda después del inicio del evento. Revise la fecha del evento y el día de montaje."],
+    ["start", "end", "La finalización queda antes del inicio del evento. Revise sus fechas y horarios."],
+    [schedule.endAt ? "end" : "start", "teardown", "El desmontaje queda antes del evento. Revise sus fechas y horarios."],
+    [schedule.teardownAt ? "teardown" : schedule.endAt ? "end" : "start", "equipmentIn", "El regreso a bodega queda antes de terminar el evento o desmontaje. Revise sus fechas y horarios."]
+  ];
+  for (const [before, after, message] of orderChecks) if (schedule[before + "At"] && schedule[after + "At"] && schedule[before + "At"] > schedule[after + "At"]) {
+    issues.push({ code: "conflicting_schedule_order", message, refs: [...new Set([...(refs[before + "At"] || []), ...(refs[after + "At"] || [])])] });
   }
   return { schedule, refs, derivedFields };
 }
@@ -281,7 +359,7 @@ function eventForBlock(rows, { sheet, index, quantityColumn, descriptionColumn, 
     sourceCells.push(...cells);
     const fields = metadataInRow(parsedCells);
     for (const field of fields) {
-      if (metadata[field.field] && metadata[field.field] !== field.value) issues.push({ code: "conflicting_metadata", message: `${field.field === "place" ? "Ubicación" : field.field === "date" ? "Fecha" : "Dato del evento"} tiene valores distintos. Separe los eventos o revise este cuadro.`, refs: field.refs });
+      if (metadata[field.field] && metadata[field.field] !== field.value) issues.push({ code: "conflicting_metadata", field: field.field, message: `${field.field === "place" ? "Ubicación" : field.field === "date" ? "Fecha" : "Dato del evento"} tiene valores distintos. Separe los eventos o revise este cuadro.`, refs: field.refs });
       else { metadata[field.field] = field.value; metadataRefs[field.field] = field.refs; metadataParsed[field.field] = field.parts; if (field.field === "date") metadata.parsedDate = field.date; }
     }
     const quantityCell = parsedCells.find((cell) => cell.column === (row.quantityColumn ?? quantityColumn));
@@ -412,7 +490,31 @@ function buildEventPreview(data) {
     }
     sheetList.push({ name: sheet, sourceCellCount: cells.length, eventIds: events.slice(first).map((event) => event.id) });
   }
-  const preview = { source: clone(data.source), sourceCells: clone(data.sourceCells), documentLines: clone(data.documentLines || []), sheets: sheetList, events };
+  // Equal parallel tables can be an extra event or a reference copy. Retain
+  // both complete ledgers and expose the choice; this reader never discards one.
+  const duplicateCandidates = [];
+  for (const sheet of sheetList) {
+    const matches = new Map();
+    for (const event of events.filter((entry) => entry.sourceSheet === sheet.name && entry.itemCount)) {
+      const signature = JSON.stringify(event.sections.flatMap((section) => section.items.map((item) => [item.quantity, item.description])));
+      if (!matches.has(signature)) matches.set(signature, []);
+      matches.get(signature).push(event);
+    }
+    for (const group of matches.values()) if (group.length > 1) {
+      const identities = group.map((event) => [key(event.client), event.date, key(event.place)]);
+      const distinctSourceEvents = identities.every((identity) => identity.every(Boolean))
+        && new Set(identities.map((identity) => JSON.stringify(identity))).size === group.length;
+      const candidate = { id: `duplicate-equipment-${duplicateCandidates.length + 1}`, sourceSheet: sheet.name, eventIds: group.map((event) => event.id), itemCount: group[0].itemCount, reason: "identical_equipment", requiresReview: !distinctSourceEvents };
+      duplicateCandidates.push(candidate);
+      for (const event of group) {
+        event.duplicateCandidateIds = [candidate.id];
+        event.warnings.push({ code: "duplicate_equipment_tables", severity: distinctSourceEvents ? "info" : "warning", message: distinctSourceEvents
+          ? "Los cuadros tienen el mismo equipo y datos completos que identifican eventos distintos. Todos se conservaron completos."
+          : "Hay cuadros con las mismas cantidades y descripciones en esta hoja. Confirme si son eventos separados o una copia de referencia; ambos se conservaron completos.", refs: event.sections.flatMap((section) => section.items.flatMap((item) => item.sourceRefs)) });
+      }
+    }
+  }
+  const preview = { source: clone(data.source), sourceCells: clone(data.sourceCells), documentLines: clone(data.documentLines || []), sheets: sheetList, events, duplicateCandidates };
   preview.verification = verifyEventImport(preview);
   return preview;
 }

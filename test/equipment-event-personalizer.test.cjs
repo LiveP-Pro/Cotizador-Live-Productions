@@ -178,13 +178,17 @@ test("un error de lectura no reemplaza la tabla actual y quitar fila conserva la
 function browserHarness(options = {}) {
   const elements = new Map();
   class Element {
-    constructor(id = "") { this.id = id; this.dataset = {}; this.listeners = {}; this.value = ""; this.disabled = false; this.open = false; this.hidden = false; this.textContent = ""; }
+    constructor(id = "") { this.id = id; this.dataset = {}; this.listeners = {}; this.value = ""; this.files = []; this.clicks = 0; this.disabled = false; this.open = false; this.hidden = false; this.textContent = ""; }
     set innerHTML(html) {
       this.html = html;
       for (const match of html.matchAll(/<(?:[\w-]+)\b([^>]*\bid="([^"]+)"[^>]*)>/g)) {
         const child = new Element(match[2]);
         child.disabled = /\sdisabled(?:\s|\/|$)/.test(match[1]);
         child.hidden = /\shidden(?:\s|\/|$)/.test(match[1]);
+        child.type = match[1].match(/\btype="([^"]+)"/)?.[1];
+        child.accept = match[1].match(/\baccept="([^"]+)"/)?.[1];
+        const action = match[1].match(/data-personalizer-action="([^"]+)"/)?.[1];
+        if (action) child.dataset.personalizerAction = action;
         const metadataName = match[1].match(/data-personalizer-metadata="([^"]+)"/)?.[1];
         if (metadataName) child.dataset.personalizerMetadata = metadataName;
         const usageMode = match[1].match(/data-personalizer-usage-mode="([^"]+)"/)?.[1];
@@ -203,6 +207,7 @@ function browserHarness(options = {}) {
     showModal() { this.open = true; }
     close() { this.open = false; for (const handler of this.listeners.close || []) handler({ target: this }); }
     focus() { this.focused = true; }
+    click() { this.clicks += 1; }
     remove() { elements.delete(this.id); }
   }
   const doc = { body: { appendChild(element) { elements.set(element.id, element); } }, createElement() { return new Element(); }, getElementById(id) { return elements.get(id); } };
@@ -212,9 +217,114 @@ function browserHarness(options = {}) {
   return { api, doc, dialog, get: (id) => elements.get(id),
     async action(action) { const target = { dataset: { personalizerAction: action }, closest() { return this; } }; await dialog.emit("click", { target }); },
     async input(id, value) { const target = elements.get(id); target.value = value; await dialog.emit("input", { target }); },
+    choose(file) { const target = elements.get("equipmentPersonalizerImportFile"); target.files = file ? [file] : []; target.value = file ? `C:\\fakepath\\${file.name}` : ""; return dialog.emit("change", { target }); },
     async valid() { for (const [field, value] of Object.entries(metadata())) await this.input(`equipmentPersonalizer-${field}`, value); await this.input("equipmentPersonalizerClipboard", "0\tConsola análoga"); await this.action("parse"); }
   };
 }
+
+test("Importar Excel o PDF abre el selector nativo en el mismo gesto y cancelar conserva el cuadro", async () => {
+  let imports = 0;
+  const harness = browserHarness({ onImportFile: async () => { imports += 1; } });
+  await harness.api.open(); await harness.valid();
+  await harness.input("equipmentPersonalizerUsageService", "service");
+  await harness.input("equipmentPersonalizerServiceName", "Borrador que sigue abierto");
+  await harness.input("equipmentPersonalizerClipboard", "2\tCinta negra");
+  const before = harness.api.getDraft();
+  const input = harness.get("equipmentPersonalizerImportFile");
+  assert.equal(input.type, "file"); assert.equal(input.accept, ".xlsx,.pdf"); assert.equal(input.hidden, true);
+  assert.match(personalizer.renderMarkup(), /id="equipmentPersonalizerImportButton"[^>]*>Importar Excel o PDF<\/button>/);
+  const action = harness.action("import-file");
+  assert.equal(input.clicks, 1, "el selector se activa antes de ceder el gesto del usuario");
+  await action; await harness.choose();
+  assert.equal(imports, 0); assert.equal(harness.dialog.open, true);
+  assert.deepEqual(harness.api.getDraft(), before);
+  assert.equal(harness.get("equipmentPersonalizerClipboard").value, "2\tCinta negra");
+  assert.equal(harness.get("equipmentPersonalizerServiceName").value, "Borrador que sigue abierto");
+  assert.equal(harness.get("equipmentPersonalizerImportStatus").textContent, "");
+});
+
+test("el selector valida formato y límite de 15 MB antes de entregar el archivo", async () => {
+  const received = [];
+  const harness = browserHarness({ onImportFile: async file => { received.push(file); return true; } });
+  await harness.api.open(); await harness.valid();
+  const before = harness.api.getDraft();
+  for (const name of ["cuadro.xls", "cuadro.csv", "cuadro.pdf.exe"]) {
+    await harness.choose({ name, size: 100 });
+    assert.match(harness.get("equipmentPersonalizerImportStatus").textContent, /Excel \(\.xlsx\) o PDF/);
+  }
+  await harness.choose({ name: "cuadro.xlsx", size: 15 * 1024 * 1024 + 1 });
+  assert.match(harness.get("equipmentPersonalizerImportStatus").textContent, /límite de 15 MB/);
+  assert.equal(received.length, 0); assert.deepEqual(harness.api.getDraft(), before);
+  const valid = { name: "CUADRO.PDF", size: 15 * 1024 * 1024 };
+  await harness.choose(valid);
+  assert.deepEqual(received, [valid]); assert.deepEqual(harness.api.getDraft(), before);
+  assert.equal(harness.get("equipmentPersonalizerImportFile").value, "");
+});
+
+test("entregar un archivo no guarda ni cambia el borrador y puede repetirse el mismo archivo", async () => {
+  const received = []; let commits = 0;
+  const harness = browserHarness({ onImportFile: async file => { received.push(file); return received.length === 1 ? false : true; }, onCommit: async () => { commits += 1; } });
+  await harness.api.open(); await harness.valid(); await harness.action("review");
+  const before = harness.api.getDraft();
+  const file = { name: "mismo-cuadro.xlsx", size: 1024 };
+  await harness.choose(file);
+  assert.equal(harness.get("equipmentPersonalizerImportStatus").textContent, "");
+  await harness.action("import-file"); await harness.choose(file);
+  assert.deepEqual(received, [file, file]); assert.equal(commits, 0);
+  assert.deepEqual(harness.api.getDraft(), before); assert.equal(harness.dialog.open, true);
+  assert.equal(harness.get("equipmentPersonalizerCommitButton").disabled, false, "la revisión previa se conserva");
+  assert.match(harness.get("equipmentPersonalizerImportStatus").textContent, /Revisa sus eventos/);
+});
+
+test("un fallo al abrir el archivo conserva cuadro y opciones y permite reintentar", async () => {
+  let imports = 0;
+  const harness = browserHarness({ onImportFile: async () => { if (++imports === 1) throw new Error("No se pudo leer este PDF de prueba"); return true; } });
+  await harness.api.open(); await harness.valid();
+  await harness.input("equipmentPersonalizerUsageService", "service");
+  await harness.input("equipmentPersonalizerServiceName", "Servicio pendiente");
+  const before = harness.api.getDraft();
+  const file = { name: "cuadro.pdf", size: 1024 };
+  await harness.choose(file);
+  assert.deepEqual(harness.api.getDraft(), before); assert.equal(harness.dialog.open, true);
+  assert.match(harness.get("equipmentPersonalizerErrors").innerHTML, /No se pudo leer este PDF/);
+  assert.match(harness.get("equipmentPersonalizerImportStatus").textContent, /No se pudo leer este PDF/);
+  assert.equal(harness.get("equipmentPersonalizerImportButton").disabled, false);
+  await harness.choose(file);
+  assert.equal(imports, 2); assert.deepEqual(harness.api.getDraft(), before);
+  assert.equal(harness.get("equipmentPersonalizerErrors").hidden, true);
+});
+
+test("la lectura de archivo evita entregas repetidas y permite cerrar sin resultados tardíos", async () => {
+  let finish, current, imports = 0;
+  const harness = browserHarness({ onImportFile: (file, context) => { imports += 1; current = context.isCurrent; return new Promise(resolve => { finish = resolve; }); } });
+  await harness.api.open(); await harness.valid();
+  const pending = harness.choose({ name: "cuadro.xlsx", size: 100 });
+  assert.equal(imports, 1); assert.equal(current(), true);
+  assert.equal(harness.get("equipmentPersonalizerImportButton").disabled, true);
+  assert.equal(harness.get("equipmentPersonalizerCloseButton").disabled, false);
+  await harness.choose({ name: "repetido.pdf", size: 100 });
+  await harness.action("import-file");
+  assert.equal(imports, 1); assert.equal(harness.get("equipmentPersonalizerImportFile").clicks, 0);
+  await harness.action("close");
+  assert.equal(harness.dialog.open, false); assert.equal(current(), false);
+  await harness.api.open();
+  const next = harness.api.getDraft();
+  finish(true); await pending;
+  assert.deepEqual(harness.api.getDraft(), next); assert.equal(harness.dialog.open, true);
+  assert.equal(harness.get("equipmentPersonalizerImportStatus").textContent, "");
+});
+
+test("destruir durante una lectura invalida el archivo y no muestra errores tardíos", async () => {
+  let fail, current;
+  const harness = browserHarness({ onImportFile: (file, context) => { current = context.isCurrent; return new Promise((resolve, reject) => { fail = reject; }); } });
+  await harness.api.open();
+  const pending = harness.choose({ name: "cuadro.pdf", size: 100 });
+  assert.equal(current(), true); assert.equal(harness.api.destroy(), true); assert.equal(current(), false);
+  fail(new Error("Fallo tardío")); await pending;
+  assert.equal(harness.get("equipmentPersonalizerDialog"), undefined);
+  assert.equal(harness.get("equipmentPersonalizerImportStatus").textContent, "");
+  assert.equal(harness.get("equipmentPersonalizerErrors").hidden, true);
+});
 
 function previewPlan(event, changes = {}) {
   return { revision: 4, inventorySavedAt: "synthetic-stock-v1", rows: [{ warehouseInventoryId: "synthetic-console", description: "Consola análoga", category: "Audio", itemType: "equipo",

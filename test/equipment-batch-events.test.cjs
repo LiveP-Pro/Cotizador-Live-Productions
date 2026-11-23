@@ -12,7 +12,7 @@ async function syntheticWorkbook({ ambiguous = false } = {}) {
     const sheet = book.addWorksheet(`Dia ${sheetIndex + 1}`);
     for (let block = 0; block < blocks; block++) {
       const col = block * 3 + 1;
-      const data = [["Fecha del evento:", `jueves, ${5 + sheetIndex} de noviembre de 2026`], ["Equipo contratado:", `Servicio sintetico ${sheetIndex}-${block}`], ["Nombre del cliente:", `Cliente ${sheetIndex}-${block}`], ["Lugar del evento:", `Lugar ${sheetIndex}-${block}`], ["Cantidad de invitados:", "Dato literal 100-200"], ["AUDIO"], ["Cantidad", "Descripcion"], [0, "Equipo en cero"], [2, "Equipo prueba"], ["Nota: conservar el orden"], [1, "Equipo final"]];
+      const data = [["Fecha del evento:", `jueves, ${5 + sheetIndex} de noviembre de 2026`], ["Equipo contratado:", `Servicio sintetico ${sheetIndex}-${block}`], ["Nombre del cliente:", `Cliente ${sheetIndex}-${block}`], ["Lugar del evento:", `Lugar ${sheetIndex}-${block}`], ["Cantidad de invitados:", "Dato literal 100-200"], ["AUDIO"], ["Cantidad", "Descripcion"], [0, `Equipo en cero ${sheetIndex}-${block}`], [2, `Equipo prueba ${sheetIndex}-${block}`], ["Nota: conservar el orden"], [1, "Equipo final"]];
       data.forEach((row, ri) => row.forEach((value, ci) => { sheet.getCell(ri + 1, col + ci).value = value; }));
       sheet.getCell(6, col).font = { bold: true };
       sheet.getCell(9, col + 1).note = "Nota original del equipo";
@@ -64,12 +64,12 @@ test("importacion multiple conserva seis cuadros, metadatos, todas celdas, notas
   assert.equal(ui.totals(preview, selections).zeros, 5);
 });
 
-test("un cuadro ambiguo bloquea ese cuadro y conserva sus celdas sin ocultar los otros eventos", async () => {
+test("un cuadro ambiguo conserva todas las celdas y bloquea la carga completa sin omitirlo", async () => {
   const preview = await parseEventFile(await syntheticWorkbook({ ambiguous: true }), { fileName: "ambiguo-sintetico.xlsx" });
   assert.equal(preview.verification.complete, true, "la fuente sigue completa aunque requiera correccion");
   assert.equal(preview.events.filter((event) => !event.canImport).length, 1);
   const selections = ui.selectionsFor(preview);
-  assert.equal(ui.prepareEvents(preview, selections).length, 5);
+  assert.throws(() => ui.prepareEvents(preview, selections), /pendiente de interpretar/);
   const unresolved = preview.events.find((event) => !event.canImport);
   assert.ok(unresolved.sections.flatMap((section) => section.rows).some((row) => row.type === "unresolved" && row.cells.some((cell) => cell.value === 3)));
   selections.find((entry) => entry.id === unresolved.id).selected = true;
@@ -204,7 +204,10 @@ test("Cargar todos entrega solo borradores; una falla conserva el archivo y evit
   assert.equal(harness.dialog.open, true); assert.equal(harness.api.getPreview().events.length, 6);
   assert.match(harness.get("equipmentBatchStatus").textContent, /conexion sintetico/);
   const retry = harness.action("apply"); finish.resolve({ count: 6 }); await retry;
-  assert.equal(calls, 2); assert.equal(harness.dialog.open, false); assert.equal(harness.api.getPreview(), null);
+  assert.equal(calls, 2); assert.equal(harness.dialog.open, true); assert.equal(harness.api.getPreview(), null);
+  assert.equal(harness.api.getImported().events.length, 6);
+  assert.equal(harness.get("equipmentBatchRent").hidden, false);
+  await harness.action("apply"); assert.equal(calls, 2, "la vista lista no vuelve a importar");
 });
 
 test("pares numericos paralelos sin metadatos ni encabezados requieren revision, sin inferir eventos", async () => {
@@ -281,4 +284,125 @@ test("una cantidad textual o negativa despues del encabezado no se omite ni se t
     assert.equal(preview.verification.complete, true); assert.equal(preview.events[0].canImport, false); assert.ok(preview.events[0].issues.some((issue) => issue.code === "invalid_quantity")); assert.equal(preview.events[0].itemCount, 1); assert.equal(preview.events[0].zeroCount, 1);
     assert.ok(preview.sourceCells.some((cell) => cell.value === badQuantity));
   }
+});
+
+function clientPreview(fields = {}) {
+  const event = { id: "client-synthetic-1", canImport: true, date: "2026-11-25", place: "Lugar sintético", client: "Cliente sintético", itemCount: 1, zeroCount: 1,
+    sourceSheet: "Agenda sintética", sourceCells: [{ ref: "synthetic-A1", sheet: "Agenda sintética", address: "A1", value: 0 }],
+    sections: [{ title: "Equipo sintético", items: [{ quantity: 0, description: "Unidad sintética" }], rows: [{ type: "item", quantity: 0, description: "Unidad sintética", cells: [{ address: "A1", value: 0 }] }] }],
+    sourceImport: { metadata: { date: "25/11/2026", place: "Lugar sintético" } }, ...fields };
+  return { source: { fileName: "cliente-sintetico.xlsx" }, sheets: [{ name: event.sourceSheet, sourceCellCount: 1, eventIds: [event.id] }], verification: { complete: true, sourceCellCount: 1, representedCellCount: 1 }, events: [event] };
+}
+const deliverPreview = (preview) => ({ ok: true, json: async () => structuredClone(preview) });
+
+// These tests exercise the browser client with synthetic data only.
+test("openFile abre directamente y descarta lecturas reemplazadas, canceladas o inválidas", async () => {
+  const pending = [], first = clientPreview(), second = clientPreview({ id: "client-synthetic-2", place: "Segundo lugar sintético" });
+  const h = browserHarness({ fetch: (url, options) => new Promise((resolve) => pending.push({ resolve, signal: options.signal })) });
+  assert.equal(await h.api.openFile(null), null); assert.equal(h.dialog.open, false);
+  const oldRead = h.api.openFile(fakeFile()); await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(h.dialog.open, true); assert.equal(pending.length, 1);
+  const latestRead = h.api.openFile(fakeFile()); await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(pending[0].signal.aborted, true);
+  pending[1].resolve(deliverPreview(second)); assert.equal((await latestRead).events[0].id, "client-synthetic-2");
+  pending[0].resolve(deliverPreview(first)); assert.equal(await oldRead, null);
+  assert.equal(h.api.getPreview().events[0].place, "Segundo lugar sintético");
+  assert.equal(await h.api.read(null), null); assert.equal(h.api.getPreview().events[0].id, "client-synthetic-2");
+  h.api.close(); assert.equal(h.api.getPreview(), null);
+  assert.equal(await h.api.openFile({ ...fakeFile(), name: "invalido.xls" }), null);
+  assert.match(h.get("equipmentBatchStatus").textContent, /\.xlsx/);
+  assert.equal(pending.length, 2);
+});
+
+test("openFile devuelve null ante respuestas malformadas y errores sin objeto; conserva una ruta de reintento", async () => {
+  let attempt = 0;
+  const h = browserHarness({ fetch: async () => { attempt++; if (attempt === 1) throw null; if (attempt === 2) return deliverPreview({ events: null }); return deliverPreview(clientPreview()); } });
+  assert.equal(await h.api.openFile(fakeFile()), null);
+  assert.match(h.get("equipmentBatchStatus").textContent, /No se pudo leer/);
+  assert.equal(await h.api.openFile(fakeFile()), null);
+  assert.match(h.get("equipmentBatchStatus").textContent, /revisión válida/);
+  assert.ok(await h.api.openFile(fakeFile())); assert.equal(h.get("equipmentBatchApply").disabled, false);
+});
+
+test("una carga prepara todos los reportes, bloquea concurrencia y conserva el resultado al cerrar", async () => {
+  let imports = 0, notified = 0, releaseNotification, releaseReport;
+  const reports = [], result = { count: 1, events: [{ id: "actual-synthetic-id" }] };
+  const h = browserHarness({ fetch: async () => deliverPreview(clientPreview()), onImported: async (received, events) => {
+    notified++; assert.equal(received, result); assert.equal(events.length, 1); await new Promise((resolve) => { releaseNotification = resolve; });
+  }, bridge: { importEvents() { imports++; return result; }, afterImport(mode, context) { reports.push(mode); assert.equal(context.result, result); assert.equal(context.events.length, 1); if (mode === "rent") return new Promise((resolve) => { releaseReport = resolve; }); } } });
+  await h.api.openFile(fakeFile()); const importing = h.action("apply");
+  await new Promise((resolve) => setImmediate(resolve));
+  await h.action("apply"); await h.action("apply-rent"); assert.equal(h.api.close(), false);
+  assert.equal(imports, 1); assert.equal(notified, 1); assert.deepEqual(reports, []);
+  releaseNotification(); await importing;
+  assert.equal(h.dialog.open, true); assert.equal(h.api.getPreview(), null);
+  assert.equal(h.get("equipmentBatchApply").hidden, true);
+  const reporting = h.action("apply-rent");
+  await h.action("apply-rent"); await h.action("apply-purchase"); await h.action("apply");
+  assert.equal(h.api.close(), false); assert.deepEqual(reports, ["rent"]);
+  releaseReport(); await reporting; await h.action("apply-purchase");
+  assert.deepEqual(reports, ["rent", "purchase"]); assert.equal(imports, 1); assert.equal(notified, 1);
+  await h.action("report-summary"); assert.equal(h.dialog.open, false);
+  h.api.open(); assert.equal(h.dialog.open, true); await h.action("apply-purchase");
+  assert.equal(imports, 1); assert.equal(notified, 1); assert.equal(h.api.getImported().events.length, 1);
+});
+
+test("fallos del reporte o de onImported no vuelven a ofrecer importar el archivo", async () => {
+  let imports = 0, notified = 0, reports = 0;
+  const h = browserHarness({ fetch: async () => deliverPreview(clientPreview()), onImported() { notified++; throw null; }, bridge: {
+    importEvents() { imports++; return { count: 1 }; }, afterImport() { reports++; if (reports === 1) throw new Error("Reporte sintético fallido"); }
+  } });
+  await h.api.openFile(fakeFile()); await h.action("apply");
+  assert.match(h.get("equipmentBatchStatus").textContent, /ya se cargaron/);
+  await h.action("apply-rent"); assert.match(h.get("equipmentBatchStatus").textContent, /Reporte sintético fallido/);
+  await h.action("apply-rent"); await h.action("apply");
+  assert.equal(imports, 1); assert.equal(notified, 1); assert.equal(reports, 2);
+  assert.equal(h.dialog.open, true); assert.equal(h.api.getPreview(), null);
+});
+
+test("conflictos de fecha se corrigen sin alterar la fuente ni mover fechas escritas de otros horarios", async () => {
+  const preview = clientPreview({ canImport: false, date: "2026-11-25", setupAt: "2026-11-26T10:00", setupApplies: true,
+    startAt: "2026-11-25T11:00", endAt: "2026-11-25T14:00", teardownAt: "2026-11-26T15:00", equipmentInAt: "2026-11-27T10:00",
+    scheduleDerivedFields: { endDate: "event.date", setupDate: "event.date + weekday" }, issues: [{ code: "conflicting_schedule_order", message: "Fechas originales contradictorias", refs: ["A1"] }] });
+  const original = JSON.stringify(preview), selections = ui.selectionsFor(preview);
+  assert.equal(selections[0].selected, true); assert.throws(() => ui.prepareEvents(preview, selections), /Confirme las fechas/);
+  const html = ui.renderPreview(preview, selections);
+  assert.match(html, /data-batch-review="0"/); assert.doesNotMatch(html, /data-batch-field="date"[^>]* disabled/);
+  const h = browserHarness({ fetch: async () => deliverPreview(preview), bridge: { importEvents(events) {
+    assert.equal(events[0].date, "2026-11-26"); assert.equal(events[0].endDate, "2026-11-26");
+    assert.equal(events[0].setupAt, "2026-11-26T10:00"); assert.equal(events[0].equipmentInAt, "2026-11-27T10:00");
+    assert.equal(events[0].sourceImport.metadata.date, "25/11/2026"); assert.equal(events[0].sourceImport.scheduleConflictsReviewed, true); return { count: 1 };
+  } } });
+  await h.api.openFile(fakeFile());
+  await h.dialog.emit("input", { target: { dataset: { batchField: "date", batchIndex: "0" }, value: "2026-11-26" } });
+  await h.dialog.emit("change", { target: { dataset: { batchReview: "0" }, checked: true } });
+  assert.equal(h.get("equipmentBatchApply").disabled, false); await h.action("apply");
+  assert.equal(JSON.stringify(preview), original);
+  const manual = browserHarness({ fetch: async () => deliverPreview(preview) }); await manual.api.openFile(fakeFile());
+  await manual.dialog.emit("input", { target: { dataset: { batchField: "endDate", batchIndex: "0" }, value: "2026-11-27" } });
+  await manual.dialog.emit("input", { target: { dataset: { batchField: "date", batchIndex: "0" }, value: "2026-11-26" } });
+  await manual.dialog.emit("change", { target: { dataset: { batchReview: "0" }, checked: true } });
+  assert.match(manual.get("equipmentBatchValidation").textContent, /orden/, "la fecha final editada no se mueve por cambiar la fecha del evento");
+});
+
+test("cuadros idénticos requieren decisión explícita y el cuadro excluido permanece íntegro como referencia", async () => {
+  const preview = clientPreview(), second = structuredClone(preview.events[0]);
+  second.id = "client-synthetic-2"; second.sourceCells = [{ ref: "synthetic-D1", sheet: second.sourceSheet, address: "D1", value: 0 }];
+  preview.events.push(second); preview.sheets[0].eventIds.push(second.id); preview.verification.sourceCellCount = preview.verification.representedCellCount = 2;
+  preview.duplicateCandidates = [{ id: "synthetic-duplicate", eventIds: preview.events.map((event) => event.id), requiresReview: true }];
+  const original = JSON.stringify(preview), selections = ui.selectionsFor(preview);
+  assert.ok(selections.every((entry) => entry.selected)); assert.match(ui.selectionError(preview, selections), /equipo idéntico/);
+  selections.forEach((entry) => { entry.duplicateReviews["synthetic-duplicate"] = "all"; });
+  assert.equal(ui.prepareEvents(preview, selections).length, 2, "incluir ambos requiere confirmar que son eventos distintos");
+  let imported;
+  const h = browserHarness({ fetch: async () => deliverPreview(preview), bridge: { importEvents(events) { imported = events; return { count: events.length }; } } });
+  await h.api.openFile(fakeFile()); assert.equal(h.get("equipmentBatchApply").disabled, true);
+  await h.dialog.emit("change", { target: { dataset: { batchDuplicate: "0" }, value: preview.events[0].id } });
+  assert.equal(h.get("equipmentBatchApply").disabled, false); await h.action("apply");
+  assert.equal(imported.length, 1); assert.equal(imported[0].sections[0].items.length, 1);
+  assert.equal(imported[0].sourceImport.referenceTables.length, 1);
+  const reference = imported[0].sourceImport.referenceTables[0];
+  assert.deepEqual(reference.sourceCells, second.sourceCells); assert.deepEqual(reference.sections, second.sections);
+  assert.equal(reference.selectionDecision.choice, preview.events[0].id);
+  assert.equal(JSON.stringify(preview), original);
 });

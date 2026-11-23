@@ -79,7 +79,7 @@ let equipmentUnknownItemDecision = null;
 let equipmentDjAudioDecision = null;
 let equipmentDjServiceSelectionBusy = false;
 let equipmentExtraEntryBusy = false;
-const equipmentSharedWorkspace = { enabled: false, client: null, state: null, dirty: false, saving: false, refreshTimer: null, personalizer: null, extras: null, purchaseSyncPromise: null, renderFingerprint: null };
+const equipmentSharedWorkspace = { enabled: false, client: null, state: null, dirty: false, saving: false, refreshTimer: null, personalizer: null, batchImport: null, extras: null, purchaseSyncPromise: null, renderFingerprint: null };
 
 const equipmentPlannerDirtyIds = new Set();
 let equipmentPlannerInstance = null;
@@ -7521,6 +7521,12 @@ async function initEquipmentSharedWorkspace() {
     serviceGroups: equipmentPersonalizedServiceGroups,
     beforeOpen: equipmentSharedBeforeOpen, onPreview: previewEquipmentSharedEvent, onCommit: savePersonalizedEquipmentEvent,
     onDraft: event => window.liveEquipmentPlanner.importEvents([event]),
+    onImportFile: (file, context) => {
+      if (context?.isCurrent && !context.isCurrent()) return null;
+      const importer = equipmentSharedWorkspace.batchImport;
+      if (!importer?.openFile) throw new Error("No se pudo abrir la lectura del archivo. Vuelva a abrir Requerimiento de Equipo.");
+      return importer.openFile(file);
+    },
     onSummary: () => switchEquipmentWindow("summary"),
     onError: error => equipmentSharedStatus(error.message, true)
   });
@@ -7602,6 +7608,10 @@ function initEquipmentPlannerBridge() {
       sections.forEach(section => section.items.forEach(item => {
         if (item.quantity === null || item.quantity === undefined || String(item.quantity).trim() === "" || !Number.isFinite(Number(item.quantity)) || Number(item.quantity)<0 || !String(item.description || "").trim()) throw new Error("Hay una cantidad o descripción pendiente. Corrija el archivo antes de cargarlo; no se omitió ninguna línea.");
       }));
+      const source = raw.sourceImport;
+      const existing = source?.sha256 && equipmentState.events.find(event => event.status !== "cancelled"
+        && event.sourceImport?.sha256 === source.sha256 && event.sourceImport?.sheet === source.sheet && event.sourceImport?.block === source.block);
+      if (existing) return existing;
       const event = { ...clone(raw), id:createEquipmentWarehouseDispatchId(), warehouseDispatchId:createEquipmentWarehouseDispatchId(), status:"draft",
         snapshotLocked:true, sections, documentSections:cloneEquipmentSnapshotSections(sections),
         serviceIds:[],serviceId:"",serviceName:raw.type || raw.name || "Evento personalizado",documentServiceName:raw.type || raw.name || "Evento personalizado",
@@ -7609,21 +7619,30 @@ function initEquipmentPlannerBridge() {
       delete event.updatedAt; delete event.createdAt; return event;
     });
     if (equipmentState.selectedEventId) { if(equipmentSharedWorkspace.dirty)equipmentPlannerDirtyIds.add(equipmentState.selectedEventId); syncActiveEquipmentEvent(); }
-    events.forEach(event => { equipmentState.events.push(event); equipmentPlannerDirtyIds.add(event.id); });
+    let addedCount = 0;
+    events.forEach(event => { if (!equipmentState.events.some(existing => existing.id === event.id)) { equipmentState.events.push(event); equipmentPlannerDirtyIds.add(event.id); addedCount++; } });
+    const dates = events.flatMap(event => [event.setupAt, event.startAt, event.endAt, event.equipmentInAt, event.date])
+      .map(value => String(value || "").slice(0, 10)).filter(value => /^\d{4}-\d{2}-\d{2}$/.test(value)).sort();
+    if (dates.length) {
+      const range = { from: dates[0], to: dates.at(-1) };
+      for (const [id, value] of [["#equipmentAgendaFrom", range.from], ["#equipmentAgendaTo", range.to]]) { const input = equipmentQuery(id); if (input) input.value = value; }
+      equipmentSharedWorkspace.client?.setRange?.(range);
+    }
     invalidateEquipmentRentalPreview(); equipmentState.summaryTransferEnabled=false;equipmentState.summaryTransferAutomatic=false;
     loadEquipmentEvent(events[0].id,"summary");equipmentSharedWorkspace.dirty=true;
     const status=equipmentQuery("#equipmentSaveStatus");if(status)status.textContent=`${events.length} eventos cargados como borradores. Puede descargar el provisional o completar los datos para confirmar reservas.`;
-    return {count:events.length};
+    return {count:events.length, addedCount, events:clone(events)};
   }
   const bridge = {
     events:plannerEvents,
     inventory:()=>equipmentWarehouseInventoryState.records,
     range:()=>({from:equipmentQuery("#equipmentAgendaFrom")?.value || "",to:equipmentQuery("#equipmentAgendaTo")?.value || ""}),
     importEvents,
-    afterImport: async (mode) => {
+    afterImport: async (mode, context = {}) => {
       switchEquipmentWindow("summary");
       if (mode === "rent" || mode === "purchase") {
-        await equipmentPlannerInstance.download(mode);
+        const outcome = await equipmentPlannerInstance.download(mode, undefined, context.result?.events || context.events || null);
+        if (outcome?.ok === false) throw new Error(outcome.message);
       } else if (mode === "transfer") {
         requestEquipmentTransferDecision("summary");
       }
@@ -7670,7 +7689,9 @@ function initEquipmentPlannerBridge() {
   };
   window.liveEquipmentPlanner=bridge;
   equipmentPlannerInstance=window.EquipmentPlanner.create(bridge).init();
-  window.EquipmentBatchEvents?.init({bridge, onError: error => equipmentSharedStatus(error.message, true)});
+  equipmentSharedWorkspace.batchImport = window.EquipmentBatchEvents?.init({bridge,
+    onImported: () => { equipmentSharedWorkspace.personalizer?.close(); switchEquipmentWindow("summary"); },
+    onError: error => equipmentSharedStatus(error.message, true)});
 }
 
 

@@ -7,6 +7,7 @@
   "use strict";
 
   const PAGE_SIZE = 75;
+  const MAX_IMPORT_BYTES = 15 * 1024 * 1024;
   const instances = new WeakMap();
   let sequence = 0;
   const text = (value) => value === undefined || value === null ? "" : String(value);
@@ -302,7 +303,7 @@
       ["setupAt", "Fecha y hora del montaje", "datetime-local"], ["startAt", "Fecha y hora del evento", "datetime-local"],
       ["endAt", "Fecha y hora de finalización", "datetime-local"], ["equipmentInAt", "Regreso previsto a bodega", "datetime-local"]];
     return `<div class="equipment-personalizer-shell"><header class="equipment-personalizer-header"><div><p class="equipment-personalizer-eyebrow">Evento personalizado</p><h2 id="equipmentPersonalizerTitle">Personaliza tu Cuadro de Evento</h2></div><button type="button" class="equipment-personalizer-close" id="equipmentPersonalizerCloseButton" data-personalizer-action="close" aria-label="Cerrar sin guardar">×</button></header>
-      <div id="equipmentPersonalizerEditor" class="equipment-personalizer-body"><ol class="equipment-personalizer-steps" aria-label="Pasos del evento"><li>1. Armar evento</li><li>2. Revisar equipo</li><li>3. Cargar borrador o confirmar</li></ol>
+      <div id="equipmentPersonalizerEditor" class="equipment-personalizer-body"><section class="equipment-personalizer-import" aria-labelledby="equipmentPersonalizerImportHeading"><div><h3 id="equipmentPersonalizerImportHeading">¿Ya tienes tu cuadro en un archivo?</h3><p>Selecciona un Excel o PDF de tu computadora. Revisarás sus eventos antes de cargarlos. También puedes pegar las celdas más abajo.</p><p id="equipmentPersonalizerImportStatus" class="equipment-personalizer-import-status" role="status" aria-live="polite"></p></div><button type="button" id="equipmentPersonalizerImportButton" data-personalizer-action="import-file">Importar Excel o PDF</button><input id="equipmentPersonalizerImportFile" type="file" accept=".xlsx,.pdf" aria-label="Seleccionar archivo Excel o PDF" hidden></section><ol class="equipment-personalizer-steps" aria-label="Pasos del evento"><li>1. Armar evento</li><li>2. Revisar equipo</li><li>3. Cargar borrador o confirmar</li></ol>
       <section aria-labelledby="equipmentPersonalizerMetadataHeading"><h3 id="equipmentPersonalizerMetadataHeading">Datos del evento</h3><label class="equipment-personalizer-setup-choice"><input id="equipmentPersonalizer-setupApplies" data-personalizer-metadata="setupApplies" type="checkbox" checked>Este evento requiere montaje</label><div class="equipment-personalizer-fields">${fields.map(([field, label, type]) => `<label>${label}<input id="equipmentPersonalizer-${field}" data-personalizer-metadata="${field}" type="${type}"${field === "place" ? ' placeholder="Lugar y dirección del evento"' : ""} required /></label>`).join("")}</div><label class="equipment-personalizer-notes">Observaciones del evento<textarea id="equipmentPersonalizer-notes" data-personalizer-metadata="notes" rows="2"></textarea></label><p class="equipment-personalizer-hint">Escriba la ubicación de forma precisa para identificar cada trayecto. El equipo queda ocupado desde el montaje hasta su regreso a bodega. Si no aplica montaje, se reserva desde el inicio del evento. Incluya desmontaje y transporte en el regreso previsto.</p></section>
       <fieldset class="equipment-personalizer-usage"><legend>¿Cómo quieres usar este cuadro?</legend><div class="equipment-personalizer-usage-options"><label><input id="equipmentPersonalizerUsageOnce" type="radio" name="equipmentPersonalizerUsage" value="once" data-personalizer-usage-mode="once" checked><span><strong>Usar una vez</strong><small>Cargar únicamente este evento.</small></span></label><label><input id="equipmentPersonalizerUsageService" type="radio" name="equipmentPersonalizerUsage" value="service" data-personalizer-usage-mode="service"><span><strong>Guardar también como nuevo tipo de servicio</strong><small>Reutilizar este cuadro en futuros eventos.</small></span></label></div><div id="equipmentPersonalizerServiceFields" class="equipment-personalizer-service-fields" hidden><label>Nombre del nuevo servicio<input id="equipmentPersonalizerServiceName" type="text" maxlength="240" data-personalizer-template-field="name" placeholder="Ej. Producción personalizada para evento corporativo"></label><label>Categoría del nuevo servicio<select id="equipmentPersonalizerServiceGroup" data-personalizer-template-field="groupId"><option value="">Seleccione una categoría</option></select></label><p class="equipment-personalizer-permanent-hint">Al confirmar se guardará este cuadro de forma permanente en Tipo de Servicio. No se guardará ningún cambio al cerrar o cancelar.</p></div></fieldset>
       <section aria-labelledby="equipmentPersonalizerPasteHeading"><h3 id="equipmentPersonalizerPasteHeading">Pega tu cuadro de Excel</h3><p class="equipment-personalizer-hint">Copia las celdas y pégalas aquí. Usa encabezados Cantidad, Descripción, Categoría y Observaciones; también puedes pegar cantidad y descripción sin encabezados. Se conservarán las columnas adicionales, las notas y las cantidades en 0.</p><textarea id="equipmentPersonalizerClipboard" class="equipment-personalizer-clipboard" rows="5" spellcheck="false" aria-label="Pegar celdas de Excel" placeholder="Cantidad&#9;Descripción&#9;Categoría&#9;Observaciones"></textarea><div class="equipment-personalizer-inline-actions"><button type="button" data-personalizer-action="parse">Preparar cuadro pegado</button><button type="button" class="equipment-personalizer-secondary" data-personalizer-action="add">Agregar fila</button></div></section>
@@ -392,7 +393,7 @@
     const session = createSession(options);
     const inventory = () => typeof options.inventory === "function" ? options.inventory() : options.inventory || [];
     const groups = () => serviceGroups(typeof options.serviceGroups === "function" ? options.serviceGroups() : options.serviceGroups || []);
-    let page = 0, busyOpening = false, destroyed = false, clipboardDirty = false, previewBusy = false, previewGeneration = 0, completed = null;
+    let page = 0, busyOpening = false, destroyed = false, clipboardDirty = false, previewBusy = false, previewGeneration = 0, importBusy = false, importGeneration = 0, completed = null;
     const status = (value) => { get("equipmentPersonalizerStatus").textContent = value; };
     function errors(entries) {
       const panel = get("equipmentPersonalizerErrors");
@@ -460,6 +461,8 @@
       get("equipmentPersonalizerCloseButton").setAttribute("aria-label", "Cerrar sin guardar");
       for (const field of Object.keys(session.draft.metadata)) { const input = get(`equipmentPersonalizer-${field}`); if (input) { if (input.type === "checkbox") input.checked = session.draft.metadata[field] !== false; else input.value = ""; } }
       get("equipmentPersonalizerClipboard").value = "";
+      get("equipmentPersonalizerImportFile").value = "";
+      get("equipmentPersonalizerImportStatus").textContent = "";
       clipboardDirty = false;
       get("equipmentPersonalizerReview").hidden = true;
       get("equipmentPersonalizerCommitButton").disabled = true;
@@ -471,8 +474,13 @@
       previewGeneration += 1;
       if (previewBusy) { previewBusy = false; setBusy(false); }
     }
+    function stopImport() {
+      importGeneration += 1;
+      if (importBusy) { importBusy = false; setBusy(false); }
+    }
     function close() {
       if (!session.discard()) return false;
+      stopImport();
       stopPreview();
       if (dialog.open) dialog.close();
       clearForm();
@@ -519,8 +527,14 @@
         }
         return;
       }
-      if (previewBusy) return;
-      if (action === "parse") {
+      if (previewBusy || importBusy) return;
+      if (action === "import-file") {
+        if (!session.isOpen || !dialog.open || destroyed) return;
+        const input = get("equipmentPersonalizerImportFile");
+        input.value = "";
+        // Keep the native chooser inside this click's user gesture.
+        input.click();
+      } else if (action === "parse") {
         const input = get("equipmentPersonalizerClipboard").value;
         if (!meaningful(input)) { errors([{ message: "Pegue las celdas de Excel antes de preparar el cuadro." }]); return; }
         try {
@@ -604,7 +618,7 @@
       }
     }
     function onInput(event) {
-      if (previewBusy || session.busy || !session.isOpen) return;
+      if (previewBusy || importBusy || session.busy || !session.isOpen) return;
       const target = event.target;
       if (target?.dataset?.personalizerUsageMode) {
         if (!["once", "service"].includes(target.dataset.personalizerUsageMode)) return;
@@ -620,13 +634,41 @@
       else if (target?.dataset?.personalizerField) readRowField(target);
       else if (target?.id === "equipmentPersonalizerClipboard") { clipboardDirty = true; changed(); status("Pulse Preparar cuadro pegado para incorporar este contenido a la tabla."); }
     }
+    async function importFile(input) {
+      const file = input.files?.[0];
+      input.value = "";
+      if (!file || importBusy || previewBusy || session.busy || !session.isOpen || !dialog.open || destroyed) return;
+      const importStatus = get("equipmentPersonalizerImportStatus");
+      let validation = "";
+      if (!/\.(xlsx|pdf)$/i.test(text(file.name))) validation = "Seleccione un archivo Excel (.xlsx) o PDF (.pdf).";
+      else if (file.size > MAX_IMPORT_BYTES) validation = "El archivo supera el límite de 15 MB. Seleccione un archivo más pequeño.";
+      if (validation) { errors([validation]); importStatus.textContent = validation; return; }
+      const generation = ++importGeneration;
+      const isCurrent = () => generation === importGeneration && session.isOpen && dialog.open && !destroyed;
+      importBusy = true;
+      setBusy(true, true); errors([]);
+      importStatus.textContent = `Abriendo ${text(file.name)} para revisar sus eventos…`;
+      try {
+        if (typeof options.onImportFile !== "function") throw new Error("No se pudo preparar la importación. Vuelva a abrir el cuadro e inténtelo de nuevo.");
+        const result = await options.onImportFile(file, { isCurrent });
+        if (!isCurrent()) return;
+        importStatus.textContent = result === false || result == null ? "" : "Archivo preparado. Revisa sus eventos antes de confirmar la carga.";
+      } catch (error) {
+        if (!isCurrent()) return;
+        errors([error]);
+        importStatus.textContent = text(error?.message || error) || "No se pudo abrir el archivo. Inténtelo de nuevo.";
+      } finally {
+        if (generation === importGeneration) { importBusy = false; setBusy(false); }
+      }
+    }
     function onChange(event) {
-      if (previewBusy || session.busy) return;
+      if (event.target?.id === "equipmentPersonalizerImportFile") return importFile(event.target);
+      if (previewBusy || importBusy || session.busy || !session.isOpen) return;
       if (event.target?.dataset?.personalizerUsageMode || event.target?.dataset?.personalizerTemplateField || event.target?.dataset?.personalizerMetadata) { onInput(event); return; }
       const changedRow = readRowField(event.target); if (changedRow) renderRows();
     }
     function onCancel(event) { event.preventDefault(); close(); }
-    function onClose() { if (!session.busy && session.isOpen) { stopPreview(); session.discard(); clearForm(); } }
+    function onClose() { if (!session.busy && session.isOpen) { stopImport(); stopPreview(); session.discard(); clearForm(); } }
     dialog.addEventListener("click", onClick);
     dialog.addEventListener("input", onInput);
     dialog.addEventListener("change", onChange);

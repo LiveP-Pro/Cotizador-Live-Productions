@@ -52,6 +52,15 @@ test("split setup date and hour and inline event date/time retain their exact pr
   assert.equal(event.dateLiteral, "24/11/2026 18:00");
 });
 
+test("a las joins a full event date and time without turning it into a range", async () => {
+  for (const value of ["24/11/2026 a las 18:00", "24 de noviembre de 2026 a las 6 p.m."]) {
+    const event = onlyEvent(await previewRows([["Inicio del evento", value], ...equipment]));
+    assert.equal(event.startAt, "2026-11-24T18:00");
+    assert.equal(event.endTime, "");
+    assert.equal(event.sourceImport.metadata.startAt, value);
+  }
+});
+
 test("no setup is read only when explicitly stated; event start uses its written event date", async () => {
   const event = onlyEvent(await previewRows([
     ["Montaje", "No aplica"], ["Fecha del evento", "24/11/2026"], ["Hora del evento", "6 p.m."],
@@ -199,6 +208,178 @@ test("equipment named Montaje or Inicio is never reclassified as schedule metada
     assert.equal(event.setupAt, "");
     assert.equal(event.startAt, "");
   }
+});
+
+test("general event ranges and weekday clocks retain metadata, dates and source references", async () => {
+  const preview = await previewRows([
+    ["Fecha del evento", "24/11/2026"], ["Nombre del cliente", "Cliente sintetico"],
+    ["Lugar del evento", "Salon sintetico"], ["Tipo de evento", "Celebracion sintetica"],
+    ["Horario de montaje", "martes10:00am"], ["Horario del evento general", "2:00pm a 9:00pm"],
+    ["Horario de desmontaje", "MARTES 9:00pm"], ["Horario que llega a bodega", "miércoles1:00am"], ...equipment
+  ]);
+  const event = onlyEvent(preview);
+  assert.equal(event.name, "Cliente sintetico");
+  assert.equal(event.client, "Cliente sintetico");
+  assert.equal(event.place, "Salon sintetico");
+  assert.equal(event.type, "Celebracion sintetica");
+  assert.equal(event.setupAt, "2026-11-24T10:00");
+  assert.equal(event.startAt, "2026-11-24T14:00");
+  assert.equal(event.endAt, "2026-11-24T21:00");
+  assert.equal(event.teardownAt, "2026-11-24T21:00");
+  assert.equal(event.equipmentInAt, "2026-11-25T01:00");
+  assert.equal(event.scheduleDerivedFields.setupDate, "event.date + weekday");
+  assert.equal(event.scheduleDerivedFields.teardownDate, "event.date + weekday");
+  assert.equal(event.scheduleDerivedFields.equipmentInDate, "event.date + weekday");
+  assert.deepEqual(event.scheduleRefs.startTime, ["xlsx:1:A6", "xlsx:1:B6"]);
+  assert.deepEqual(event.scheduleRefs.equipmentInAt, ["xlsx:1:A1", "xlsx:1:B1", "xlsx:1:A8", "xlsx:1:B8"]);
+  assert.equal(event.sourceImport.metadata.eventTimeRange, "2:00pm a 9:00pm");
+  assert.equal(event.sourceImport.metadata.teardownTime, "MARTES 9:00pm");
+  assert.equal(event.sourceImport.metadata.equipmentInTime, "miércoles1:00am");
+  assert.equal(verifyEventImport(preview).complete, true);
+});
+
+test("overnight range uses only a matching explicit following-day teardown to resolve its end date", async () => {
+  const rows = [
+    ["Fecha del evento", "24/11/2026"], ["Horario de montaje", "lunes 6:00am"],
+    ["Horario del evento general", "8:00pm a 1:00am"]
+  ];
+  const event = onlyEvent(await previewRows([...rows, ["Horario de desmontaje", "miércoles 1:00am"], ...equipment]));
+  assert.equal(event.setupAt, "2026-11-23T06:00");
+  assert.equal(event.startAt, "2026-11-24T20:00");
+  assert.equal(event.endAt, "2026-11-25T01:00");
+  assert.equal(event.teardownAt, "2026-11-25T01:00");
+  assert.equal(event.scheduleDerivedFields.endDate, "teardown.date + matching event end time");
+  assert.ok(event.warnings.some((warning) => warning.code === "schedule_date_from_teardown"));
+  assert.deepEqual(event.scheduleRefs.endAt, ["xlsx:1:A1", "xlsx:1:B1", "xlsx:1:A3", "xlsx:1:B3", "xlsx:1:A4", "xlsx:1:B4"]);
+  for (const teardown of [[], [["Horario de desmontaje", "miércoles 2:00am"]]]) {
+    const pending = onlyEvent(await previewRows([...rows, ...teardown, ...equipment]));
+    assert.equal(pending.endTime, "01:00");
+    assert.equal(pending.endDate, "");
+    assert.equal(pending.endAt, "");
+    assert.equal(pending.scheduleDerivedFields.endDate, undefined);
+  }
+  const finalHour = onlyEvent(await previewRows([
+    ["Fecha del evento", "24/11/2026"], ["Hora de inicio", "20:00"], ["Hora fin", "01:00"],
+    ["Horario de desmontaje", "miércoles 1:00am"], ...equipment
+  ]));
+  assert.equal(finalHour.endTime, "01:00");
+  assert.equal(finalHour.endDate, "");
+  assert.equal(finalHour.endAt, "");
+});
+
+test("qualified weekdays and malformed ranges retain source text without an invented complete schedule", async () => {
+  const event = onlyEvent(await previewRows([
+    ["Fecha del evento", "24/11/2026"], ["Horario de montaje", "lunes de la próxima semana 9:00am"],
+    ["Horario del evento general", "6:00pm a 8:00pm a 10:00pm"], ...equipment
+  ]));
+  assert.equal(event.setupTime, "09:00");
+  assert.equal(event.setupDate, "");
+  assert.equal(event.setupAt, "");
+  assert.equal(event.startTime, "");
+  assert.equal(event.endTime, "");
+  assert.equal(event.sourceImport.metadata.eventTimeRange, "6:00pm a 8:00pm a 10:00pm");
+  assert.ok(event.warnings.some((warning) => warning.code === "unreadable_schedule"));
+});
+
+test("weekday schedules without an explicit event date stay pending even when the sheet name has a date", async () => {
+  const event = onlyEvent(await previewRows([
+    ["Horario de montaje", "martes 10:00am"], ["Horario del evento general", "8:00pm a 1:00am"],
+    ["Horario de desmontaje", "miércoles 1:00am"], ["Horario que llega a bodega", "miércoles 3:00am"], ...equipment
+  ]));
+  assert.equal(event.date, "");
+  assert.equal(event.startTime, "20:00");
+  assert.equal(event.endTime, "01:00");
+  assert.equal(event.teardownTime, "01:00");
+  assert.equal(event.equipmentInTime, "03:00");
+  for (const prefix of ["setup", "start", "end", "teardown", "equipmentIn"]) {
+    assert.equal(event[prefix + "Date"], "");
+    assert.equal(event[prefix + "At"], "");
+  }
+  assert.deepEqual(event.scheduleDerivedFields, {});
+});
+
+test("weekday mounting after the explicit event date requires correction without rewriting that date", async () => {
+  const preview = await previewRows([
+    ["Fecha del evento", "24/11/2026"], ["Horario de montaje", "miércoles 9:00am"],
+    ["Horario del evento general", "4:00pm a 11:00pm"], ["Horario de desmontaje", "miércoles 11:00pm"], ...equipment
+  ]);
+  const event = preview.events[0];
+  assert.equal(preview.verification.complete, true);
+  assert.equal(event.date, "2026-11-24");
+  assert.equal(event.dateLiteral, "24/11/2026");
+  assert.equal(event.startAt, "2026-11-24T16:00");
+  assert.equal(event.setupAt, "2026-11-25T09:00");
+  assert.equal(event.canImport, false);
+  assert.ok(event.issues.some((issue) => issue.code === "conflicting_schedule_order" && /montaje/.test(issue.message)));
+  assert.equal(event.sourceImport.metadata.setupTime, "miércoles 9:00am");
+});
+
+test("a written weekday that disagrees with a full written date stays a source conflict", async () => {
+  const preview = await previewRows([
+    ["Fecha del evento", "24/11/2026"], ["Montaje", "lunes 24/11/2026 09:00"], ...equipment
+  ]);
+  assert.equal(preview.verification.complete, true);
+  assert.equal(preview.events[0].setupAt, "2026-11-24T09:00");
+  assert.equal(preview.events[0].canImport, false);
+  assert.ok(preview.events[0].issues.some((issue) => issue.code === "conflicting_schedule_weekday"));
+});
+
+test("identical parallel tables remain complete candidates for an explicit reference-or-separate-event choice", async () => {
+  const preview = await previewRows([
+    ["", "", "Fecha del evento", "24/11/2026"],
+    ["", "", "Nombre del cliente", "Cliente sintetico"],
+    ["Cantidad", "Descripción", "Cantidad", "Descripción"],
+    [0, "Equipo sintetico cero", 0, "Equipo sintetico cero"],
+    [2, "Equipo sintetico segundo", 2, "Equipo sintetico segundo"]
+  ]);
+  assert.equal(preview.verification.complete, true);
+  assert.equal(preview.events.length, 2);
+  assert.deepEqual(preview.events.map((event) => event.itemCount), [2, 2]);
+  assert.deepEqual(preview.events.map((event) => event.zeroCount), [1, 1]);
+  assert.deepEqual(preview.events.map((event) => event.name), ["", "Cliente sintetico"]);
+  assert.equal(preview.duplicateCandidates.length, 1);
+  assert.deepEqual(preview.duplicateCandidates[0].eventIds, preview.events.map((event) => event.id));
+  assert.equal(preview.duplicateCandidates[0].requiresReview, true);
+  assert.ok(preview.events.every((event) => event.duplicateCandidateIds[0] === preview.duplicateCandidates[0].id));
+  assert.ok(preview.events.every((event) => event.warnings.some((warning) => warning.code === "duplicate_equipment_tables")));
+  assert.equal(preview.sourceCells.length, preview.events.reduce((sum, event) => sum + event.sourceCells.length, 0));
+});
+
+test("identical equipment in explicitly identified distinct events is informational and keeps both ledgers", async () => {
+  const preview = await previewRows([
+    ["Fecha del evento", "24/11/2026", "Fecha del evento", "25/11/2026"],
+    ["Nombre del cliente", "Cliente sintetico A", "Nombre del cliente", "Cliente sintetico B"],
+    ["Lugar del evento", "Salon sintetico A", "Lugar del evento", "Salon sintetico B"],
+    ["Cantidad", "Descripción", "Cantidad", "Descripción"],
+    [0, "Equipo sintetico cero", 0, "Equipo sintetico cero"],
+    [2, "Equipo sintetico segundo", 2, "Equipo sintetico segundo"]
+  ]);
+  assert.equal(preview.verification.complete, true);
+  assert.equal(preview.events.length, 2);
+  assert.ok(preview.events.every((event) => event.canImport));
+  assert.deepEqual(preview.events.map((event) => event.itemCount), [2, 2]);
+  assert.deepEqual(preview.events.map((event) => event.zeroCount), [1, 1]);
+  assert.equal(preview.duplicateCandidates.length, 1);
+  assert.equal(preview.duplicateCandidates[0].requiresReview, false);
+  assert.deepEqual(preview.duplicateCandidates[0].eventIds, preview.events.map((event) => event.id));
+  assert.ok(preview.events.every((event) => event.warnings.some((warning) => warning.code === "duplicate_equipment_tables" && warning.severity === "info")));
+  assert.equal(preview.sourceCells.length, preview.events.reduce((sum, event) => sum + event.sourceCells.length, 0));
+});
+
+test("identical complete event identities still require duplicate-table review", async () => {
+  const preview = await previewRows([
+    ["Fecha del evento", "24/11/2026", "Fecha del evento", "24/11/2026"],
+    ["Nombre del cliente", "Cliente sintetico", "Nombre del cliente", "CLIENTE SINTETICO"],
+    ["Lugar del evento", "Salon sintetico", "Lugar del evento", "SALON SINTETICO"],
+    ["Cantidad", "Descripción", "Cantidad", "Descripción"],
+    [0, "Equipo sintetico cero", 0, "Equipo sintetico cero"],
+    [2, "Equipo sintetico segundo", 2, "Equipo sintetico segundo"]
+  ]);
+  assert.equal(preview.verification.complete, true);
+  assert.equal(preview.events.length, 2);
+  assert.equal(preview.duplicateCandidates.length, 1);
+  assert.equal(preview.duplicateCandidates[0].requiresReview, true);
+  assert.ok(preview.events.every((event) => event.warnings.some((warning) => warning.code === "duplicate_equipment_tables" && warning.severity === "warning")));
 });
 
 function syntheticPdf(lines) {

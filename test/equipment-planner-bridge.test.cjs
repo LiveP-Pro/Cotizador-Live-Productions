@@ -192,3 +192,35 @@ test("vincular manualmente y elegir renta o compra conserva toda metadata origin
   h.run("startNewEquipmentWindowDraft()"); h.selectEvent(event.id); retained();
   assert.equal(h.requests.length, 0); assert.equal(h.saves.length, 0);
 });
+
+test("reimporting the same file does not duplicate edited drafts and selects the source report dates", () => {
+  const h = harness(), source = syntheticEvents(2);
+  source.forEach((event, index) => { Object.assign(event.sourceImport, { sha256: "synthetic-current-file", sheet: "Fuente actual", block: index }); });
+  source[0].setupAt = "2026-11-04T18:00";
+  source[1].equipmentInAt = "2026-11-08T03:00";
+  h.field("AgendaFrom", "2026-11-23"); h.field("AgendaTo", "2026-11-29");
+  const first = h.importEvents(source);
+  assert.equal(first.addedCount, 2);
+  assert.equal(first.events.length, 2);
+  assert.equal(h.nodes.get("#equipmentAgendaFrom").value, "2026-11-04");
+  assert.equal(h.nodes.get("#equipmentAgendaTo").value, "2026-11-08");
+  h.selectEvent(first.events[0].id); h.field("Notes", "Correccion manual que se debe conservar"); h.markDirty();
+  const again = h.importEvents(source);
+  assert.equal(again.addedCount, 0);
+  assert.equal(h.events().length, 2);
+  assert.deepEqual(again.events.map(event => event.id), first.events.map(event => event.id));
+  assert.equal(h.events().find(event => event.id === first.events[0].id).notes, "Correccion manual que se debe conservar");
+  assert.equal(h.requests.length, 0);
+});
+
+test("file report actions use the imported event IDs and surface a failed download without reimporting", async () => {
+  const h = harness(), result = h.importEvents(syntheticEvents(2));
+  h.context.window.syntheticReportResult = result;
+  h.run("window.syntheticReportCalls=[];equipmentPlannerInstance={render(){},async download(mode,button,events){window.syntheticReportCalls.push({mode,events});return {ok:false,message:'Fallo sintetico de descarga'};}};");
+  await assert.rejects(h.run("window.liveEquipmentPlanner.afterImport('rent',{result:window.syntheticReportResult})"), /Fallo sintetico/);
+  const calls = plain(h.context.window.syntheticReportCalls);
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].events.map(event => event.id), result.events.map(event => event.id));
+  assert.equal(h.events().length, 2);
+  assert.equal(h.requests.length, 0);
+});
