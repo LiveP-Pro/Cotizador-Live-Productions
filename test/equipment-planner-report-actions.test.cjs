@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-function harness(respond) {
+function harness(respond, options = {}) {
   const requests = [], downloads = [], status = { textContent: "" };
   const context = vm.createContext({
     Blob, console, setTimeout() {},
@@ -14,8 +14,9 @@ function harness(respond) {
     fetch: async (url, options) => { requests.push({ url, body: JSON.parse(options.body) }); return respond(); }
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "equipment-planner.js"), "utf8"), context);
+  if (options.window) context.window = options.window;
   const planner = context.EquipmentPlanner.create({ events: () => [{ id: "unrelated-event" }], inventory: () => [],
-    range: () => ({ from: "2026-11-05", to: "2026-11-08" }) });
+    range: () => ({ from: "2026-11-05", to: "2026-11-08" }), transferOptions: () => options.transferOptions || {} });
   return { planner, requests, downloads, status };
 }
 
@@ -47,4 +48,41 @@ test("a second report request cannot report success while the first download is 
   assert.equal(h.requests.length, 1);
   finish({ ok: false, json: async () => ({ error: "Servicio temporalmente ocupado" }) });
   assert.equal((await first).ok, false);
+});
+
+test("transfer reports include current route estimates and retry the same selected draft events", async () => {
+  let attempt = 0;
+  const routeEstimates = [{ fromEventId: "source", toEventId: "destination", travelMinutes: 35, handlingMinutes: 20, reviewed: true }];
+  const h = harness(() => ++attempt === 1
+    ? { ok: false, json: async () => ({ error: "Fallo de trasiego sintético" }) }
+    : { ok: true, blob: async () => new Blob(["synthetic transfer"]), headers: { get: () => 'attachment; filename="Trasiego-PROVISIONAL.pdf"' } }, { transferOptions: { routeEstimates } });
+  const selected = [{ id: "current-draft", sections: [{ items: [{ quantity: 0, description: "Línea original en cero" }] }] }], original = JSON.stringify(selected), button = { disabled: false };
+  assert.equal((await h.planner.download("transfer", button, selected)).ok, false);
+  assert.equal(button.disabled, false);
+  assert.equal((await h.planner.download("transfer", button, selected)).ok, true);
+  assert.deepEqual(h.downloads, ["Trasiego-PROVISIONAL.pdf"]);
+  assert.ok(h.requests.every(request => request.url === "/api/cuadros-equipo/reportes/provisional" && request.body.mode === "transfer"));
+  assert.deepEqual(h.requests.map(request => request.body.events), [selected, selected]);
+  assert.deepEqual(h.requests.map(request => request.body.routeEstimates), [routeEstimates, routeEstimates]);
+  assert.equal(JSON.stringify(selected), original);
+});
+
+test("concurrent transfer downloads are locked until completion and permission denial sends nothing", async () => {
+  let finish;
+  const h = harness(() => new Promise(resolve => { finish = resolve; })), button = { disabled: false };
+  const pending = h.planner.download("transfer", button);
+  assert.equal(button.disabled, true);
+  assert.equal((await h.planner.download("transfer")).ok, false); assert.equal(h.requests.length, 1);
+  finish({ ok: true, blob: async () => new Blob(["synthetic transfer"]), headers: { get: () => 'attachment; filename="Trasiego.pdf"' } });
+  assert.equal((await pending).ok, true); assert.equal(button.disabled, false);
+  const denied = harness(() => { throw new Error("Permission denial must occur before fetch"); }, { window: { LiveAccess: { can: () => false } } });
+  const result = await denied.planner.download("transfer");
+  assert.equal(result.ok, false); assert.match(result.message, /permiso/);
+  assert.equal(denied.requests.length, 0); assert.equal(denied.downloads.length, 0);
+});
+
+test("route estimates are not added to rent or purchase report payloads", async () => {
+  const h = harness(() => ({ ok: true, blob: async () => new Blob(["synthetic report"]), headers: { get: () => 'attachment; filename="Reporte.pdf"' } }), { transferOptions: { routeEstimates: [{ travelMinutes: 99 }] } });
+  assert.equal((await h.planner.download("rent")).ok, true); assert.equal((await h.planner.download("purchase")).ok, true);
+  assert.ok(h.requests.every(request => !Object.hasOwn(request.body, "routeEstimates")));
 });

@@ -111,10 +111,19 @@ cantidad. Un archivo ilegible, una verificación incompleta o líneas activas de
 equipo con cantidades o descripciones inválidas siguen requiriendo corrección.
 
 El período del resumen se ajusta a las fechas del
-archivo. La pantalla ofrece revisar trasiego y generar renta o compra de
+archivo. La pantalla ofrece generar trasiego, renta o compra de
 consumibles sin repetir la importación si una descarga falla. Los eventos se
 cargan como borradores: los reportes provisionales permiten revisar los
 requerimientos antes de confirmar reservas y movimientos.
+
+`Trasegar equipo` también permite descargar el trasiego provisional cuando hay
+eventos cargados sin confirmar. Incluye los horarios, los equipos por evento,
+las propuestas de traslado entre eventos que pueden calcularse y los datos
+pendientes. Las propuestas usan el inventario activo de Contabilidad; los tiempos
+estimados quedan identificados para revisión. Un horario contradictorio o una
+identidad pendiente no impide descargar el reporte, pero esas líneas no generan
+una propuesta de ruta. Las rutas confirmadas de la agenda conservan su reporte
+operativo. Descargar el provisional no guarda reservas ni registra movimientos.
 
 ## Dominio
 

@@ -5964,7 +5964,40 @@ function queueEquipmentAutomaticLogisticsRecommendation(focusEventId = "") {
   else callback();
 }
 
+function equipmentHasTransferDrafts() {
+  return equipmentSharedWorkspace.enabled && (equipmentSharedWorkspace.dirty
+    || activeEquipmentEvents().some(event => event.status === "draft" || !event.updatedAt));
+}
+
+async function downloadEquipmentDraftTransfer(button = null) {
+  const status = equipmentQuery("#equipmentSaveStatus");
+  if (window.LiveAccess?.can && !window.LiveAccess.can(window.LIVE_SESSION, "equipment.reports")) {
+    const message = "Su usuario no tiene permiso para generar reportes de equipo.";
+    if (status) status.textContent = message;
+    return { ok: false, message };
+  }
+  if (equipmentSharedWorkspace.saving) {
+    const message = "Espere a que termine el guardado actual para descargar el trasiego.";
+    if (status) status.textContent = message;
+    return { ok: false, message };
+  }
+  if (!equipmentPlannerInstance?.download) {
+    const message = "No se pudo abrir el generador de trasiego. Sus cuadros se conservan; vuelva a intentarlo.";
+    if (status) status.textContent = message;
+    return { ok: false, message };
+  }
+  if (status) status.textContent = "Generando el trasiego provisional con los eventos cargados…";
+  let result;
+  try { result = await equipmentPlannerInstance.download("transfer", button); }
+  catch (error) { result = { ok: false, message: error.message || "No se pudo descargar el trasiego. Sus eventos se conservan para reintentar." }; }
+  if (status) status.textContent = result?.ok
+    ? "Trasiego provisional descargado. Incluye las propuestas y los datos pendientes de los eventos cargados."
+    : result?.message || "No se pudo descargar el trasiego. Sus eventos se conservan para reintentar.";
+  return result;
+}
+
 function requestEquipmentTransferDecision(target = "summary") {
+  if (equipmentHasTransferDrafts()) return downloadEquipmentDraftTransfer(equipmentQuery(target === "preview" ? "#equipmentTransferWindowButton" : "#equipmentSummaryTransferButton"));
   const status = equipmentQuery("#equipmentSaveStatus");
   if (equipmentSharedWorkspace.enabled) {
     const plan = equipmentSharedTransferPlanData();
@@ -6744,6 +6777,7 @@ async function saveEquipmentPdfOnlyCopyToComputer(data, savedLabel, directoryHan
 
 async function saveEquipmentPdf(mode = "full") {
   const status = equipmentQuery("#equipmentSaveStatus");
+  if (mode === "transfer" && equipmentHasTransferDrafts()) return downloadEquipmentDraftTransfer(equipmentQuery("#equipmentSaveTransferPdfButton"));
   if (equipmentExtraEntryBusy) return;
   let purchases;
   try { purchases = await resolveEquipmentPendingExtraChoices(); }
@@ -7239,7 +7273,7 @@ function renderEquipmentSharedPlan() {
   if (!host) return;
   const state = equipmentSharedWorkspace.state;
   if (!state?.plan || equipmentSharedWorkspace.dirty) {
-    host.innerHTML = equipmentSharedWorkspace.dirty ? '<p class="equipment-summary-notice">El provisional de arriba permite revisar y descargar sin reservas. Complete los pendientes y confirme el evento cuando desee reservar equipo.</p>' : "";
+    host.innerHTML = equipmentSharedWorkspace.dirty ? '<p class="equipment-summary-notice">Puede generar trasiego, renta y compra con los eventos cargados. Los reportes incluyen los datos pendientes; confirme el evento cuando desee reservar equipo.</p>' : "";
     return;
   }
   const rows = state.plan.rows || [];
@@ -7637,14 +7671,13 @@ function initEquipmentPlannerBridge() {
     events:plannerEvents,
     inventory:()=>equipmentWarehouseInventoryState.records,
     range:()=>({from:equipmentQuery("#equipmentAgendaFrom")?.value || "",to:equipmentQuery("#equipmentAgendaTo")?.value || ""}),
+    transferOptions:()=>({routeEstimates:clone(equipmentSharedWorkspace.state?.routeEstimates || [])}),
     importEvents,
     afterImport: async (mode, context = {}) => {
       switchEquipmentWindow("summary");
-      if (mode === "rent" || mode === "purchase") {
+      if (mode === "rent" || mode === "purchase" || mode === "transfer") {
         const outcome = await equipmentPlannerInstance.download(mode, undefined, context.result?.events || context.events || null);
         if (outcome?.ok === false) throw new Error(outcome.message);
-      } else if (mode === "transfer") {
-        requestEquipmentTransferDecision("summary");
       }
     },
     openEvent:id=>{ if(loadEquipmentEvent(id))equipmentQuery("#equipmentEventPlace")?.scrollIntoView?.({behavior:"smooth",block:"center"}); },

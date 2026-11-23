@@ -67,13 +67,24 @@ test("fallo o conflicto al reservar no permite PDF ni descarta el borrador", asy
   assert.equal(h.notes.value, "Borrador sintético conservado");
 });
 
-test("renta, compra y trasiego bloquean reportes con cambios sin guardar", async () => {
-  for (const mode of ["rent", "purchase", "transfer"]) {
+test("reportes operativos de renta y compra requieren guardar los cambios", async () => {
+  for (const mode of ["rent", "purchase"]) {
     const h = harness();
     await h.run(`saveEquipmentPdf(${JSON.stringify(mode)})`);
     assert.deepEqual(h.actions(), [], mode);
     assert.match(h.status.textContent, /Guarde la ventana/, mode);
   }
+});
+
+test("trasiego con cambios descarga el provisional sin reservar ni procesar ingresos de extras", async () => {
+  const h = harness();
+  h.run(`equipmentPlannerInstance={async download(mode){window.actions.push('provisional-'+mode);return {ok:true};}};
+    resolveEquipmentPendingExtraChoices=()=>{throw new Error('No debe registrar ingresos al descargar el trasiego');};`);
+  await h.run("saveEquipmentPdf('transfer')");
+  assert.deepEqual(h.actions(), ["provisional-transfer"]);
+  assert.match(h.status.textContent, /Trasiego provisional descargado/);
+  assert.equal(h.run("equipmentSharedWorkspace.dirty"), true);
+  assert.equal(h.notes.value, "Borrador sintético conservado");
 });
 
 test("guardado en curso impide cualquier PDF y no inicia otra reserva", async () => {

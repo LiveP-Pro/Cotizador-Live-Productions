@@ -98,12 +98,16 @@
     function snapshot() { return analyze(bridge.events(),bridge.inventory()); }
     async function download(mode, button, selectedEvents = null) {
       if (busy) return { ok: false, message: 'Espere a que termine la descarga actual.' };
+      if (mode === 'transfer' && typeof window !== 'undefined' && window.LiveAccess?.can && !window.LiveAccess.can(window.LIVE_SESSION, 'equipment.reports')) {
+        const message = 'Su usuario no tiene permiso para generar reportes de equipo.'; status(message); return { ok: false, message };
+      }
       const events = selectedEvents || bridge.events();
       if (!events.length) { const message = 'Cargue al menos un evento con equipo.'; status(message); return { ok: false, message }; }
       busy = true; if(button)button.disabled=true;
       status('Generando el reporte provisional con el inventario actual de Contabilidad…');
       try {
-        const response = await fetch('/api/cuadros-equipo/reportes/provisional',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({events,mode,...bridge.range()})});
+        const routeEstimates = mode === 'transfer' ? bridge.transferOptions?.()?.routeEstimates : undefined;
+        const response = await fetch('/api/cuadros-equipo/reportes/provisional',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({events,mode,...bridge.range(),...(routeEstimates ? {routeEstimates} : {})})});
         if (!response.ok) { const error=await response.json().catch(()=>({}));throw new Error(error.error || 'No se pudo generar el reporte. Sus cuadros se conservan.'); }
         const blob=await response.blob(); if(!blob.size)throw new Error('El servidor devolvió un archivo vacío. Intente nuevamente.');
         const disposition=response.headers.get('Content-Disposition') || '';

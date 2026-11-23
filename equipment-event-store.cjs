@@ -355,7 +355,7 @@ function buildEquipmentLogisticsPlan(row, reservations, confirmedTransfers, opti
         routes.get(routeKey).quantity += owned;
       }
       if (rented > epsilon && !path.mustOwn && link.kind === "direct") {
-        if (!rentalRoutes.has(routeKey)) rentalRoutes.set(routeKey, { ...template, source: "rental", requiresRentalSupplierConfirmation: true,
+        if (!rentalRoutes.has(routeKey)) rentalRoutes.set(routeKey, { ...template, quantity: 0, source: "rental", requiresRentalSupplierConfirmation: true,
           reason: "La cantidad mínima de renta supone conservar y trasladar estas unidades rentadas entre ambos eventos; confirme esa operación con el proveedor." });
         rentalRoutes.get(routeKey).quantity += rented;
       }

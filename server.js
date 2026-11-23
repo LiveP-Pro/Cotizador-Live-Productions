@@ -12,7 +12,7 @@ const { parseServiceFile, verifyServiceImport } = require("./equipment-service-i
 const { applyStockIngress, prepareWarehouseSave, nextWarehouseTimestamp } = require("./warehouse-ledger.cjs");
 const { createEquipmentEventStore, calculateEquipmentAvailability, normalizeEvent, effectiveEquipmentProcurementChoice, resolveEquipmentPurchasedLine } = require("./equipment-event-store.cjs");
 const EquipmentIdentity = require("./equipment-identity.js");
-const { createEquipmentReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml } = require("./equipment-reporting.cjs");
+const { createEquipmentReportModel, createEquipmentTransferReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml } = require("./equipment-reporting.cjs");
 const { parseEventFile } = require("./equipment-event-import.cjs");
 const LiveAccess = require("./live-access.js");
 const { createLiveUserStore, isDeveloperIdentity } = require("./live-users.cjs");
@@ -57,7 +57,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261123-six-events-warning-01";
+const warehouseAssetVersion = "20261123-draft-transfer-report-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -729,15 +729,15 @@ async function previewEquipmentEventFile(request, response) {
 
 async function downloadProvisionalEquipmentReport(payload, response) {
   const mode = String(payload?.mode || "master");
-  if (!["master", "summary", "rent", "purchase"].includes(mode)) {
-    errorResponse(response, 400, "Seleccione resumen, renta, compra o Excel máster."); return;
+  if (!["master", "summary", "rent", "purchase", "transfer"].includes(mode)) {
+    errorResponse(response, 400, "Seleccione resumen, trasiego, renta, compra o Excel máster."); return;
   }
   // The browser submits current drafts only. Quantities, classifications and
   // stock movements ALWAYS come from the active server warehouse snapshot.
-  const model = createEquipmentReportModel(payload, readWarehouseInventory());
+  const model = mode === "transfer" ? createEquipmentTransferReportModel(payload, readWarehouseInventory()) : createEquipmentReportModel(payload, readWarehouseInventory());
   const localDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guatemala", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(model.createdAt));
   const period = [model.from, model.to].filter(Boolean).join("_a_") || localDate;
-  const labels = { master: "Resumen-master", summary: "Resumen-equipo", rent: "Resumen-renta", purchase: "Resumen-compra" };
+  const labels = { master: "Resumen-master", summary: "Resumen-equipo", rent: "Resumen-renta", purchase: "Resumen-compra", transfer: "Resumen-trasiego" };
   const fileName = `${labels[mode]}-PROVISIONAL-${period}.${mode === "master" ? "xlsx" : "pdf"}`;
   let buffer;
   if (mode === "master") buffer = Buffer.from(await (await createEquipmentMasterWorkbook(model)).xlsx.writeBuffer());

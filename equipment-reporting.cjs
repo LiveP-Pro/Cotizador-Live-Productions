@@ -3,11 +3,12 @@
 // Read-only report generation. This module never opens an event store or writes
 // to the warehouse: its only inputs are selected current events and the active
 // warehouse snapshot supplied by the authenticated server endpoint.
-const { calculateEquipmentAvailability, normalizeEvent, localTime, resolveEquipmentPurchasedLine, effectiveEquipmentProcurementChoice } = require("./equipment-event-store.cjs");
+const { calculateEquipmentAvailability, normalizeEvent, localTime, eventReservationStartAt, resolveEquipmentPurchasedLine, effectiveEquipmentProcurementChoice } = require("./equipment-event-store.cjs");
 const EquipmentIdentity = require("./equipment-identity.js");
 const EquipmentDocumentAudit = require("./equipment-document-audit.js");
 
 const DISCLAIMER = "PROVISIONAL · Sin reservas ni movimientos de inventario. No se supone ningún trasiego, retorno o reutilización entre eventos. Los pendientes no constituyen órdenes de compra o renta.";
+const TRANSFER_DISCLAIMER = "PROPUESTA PROVISIONAL DE TRASIEGO · Sin reservas ni movimientos de inventario. Las rutas no están confirmadas. Revise los horarios y los tiempos de transporte antes de organizar el traslado. Este reporte no reduce los resúmenes conservadores de renta o compra.";
 const MAX_CELL_TEXT = 30000;
 function invalid(message) { return Object.assign(new Error(message), { statusCode: 400 }); }
 function text(value) { return String(value ?? ""); }
@@ -247,6 +248,51 @@ function createEquipmentReportModel(payload, inventory, options = {}) {
     originalEvents, originalInventory: inventory, transfers: [], productionMutations: 0 };
 }
 
+function createEquipmentTransferReportModel(payload, inventory, options = {}) {
+  // Keep the full conservative report and its source ledger. Planning is an
+  // additional read-only proposal; it never changes the procurement quantities.
+  const model = createEquipmentReportModel(payload, inventory, options);
+  const eligible = [], excluded = [];
+  for (const event of model.events) {
+    const values = [eventReservationStartAt(event), event.startAt, event.endAt, event.equipmentInAt];
+    const times = values.map(localTime);
+    let reason = "";
+    if (!text(event.place)) reason = "Falta la ubicación. No se dedujo un lugar para proponer un traslado.";
+    else if (event.setupApplies === false && text(event.setupAt)) reason = "El montaje indica que no aplica y conserva una fecha. Confirme ese dato antes de proponer una ruta.";
+    else if (times.some(time => !Number.isFinite(time))) reason = "Faltan fechas u horas válidas de montaje o salida, inicio, finalización o regreso a bodega. El equipo del evento queda pendiente de logística.";
+    else if (times.some((time, index) => index && time < times[index - 1])) reason = "Las fechas de montaje, inicio, finalización y regreso a bodega se contradicen. No se propuso una ruta para este evento.";
+    if (reason) excluded.push({ eventId: event.id, event: event.place || event.name || event.id, reason });
+    else eligible.push(event);
+  }
+  const availability = calculateEquipmentAvailability(eligible, inventory, { from: model.from, to: model.to,
+    transfers: [], routeEstimates: payload.routeEstimates });
+  const eventsById = new Map(model.events.map(event => [event.id, event]));
+  const eventSummary = event => ({ id: event.id, client: event.client || event.name || "", name: event.name || "", place: event.place || "", date: event.date || "", type: event.type || "",
+    setupApplies: event.setupApplies, setupAt: event.setupAt || "", startAt: event.startAt || "", endAt: event.endAt || "", equipmentInAt: event.equipmentInAt || "" });
+  const routes = [], rentalRoutes = [];
+  for (const row of availability.rows) {
+    const add = (route, source, output) => {
+      const from = eventsById.get(route.fromEventId), to = eventsById.get(route.toEventId);
+      if (!from || !to || !(route.quantity > 0)) return;
+      const refs = model.details.filter(line => [from.id, to.id].includes(line.eventId) && line.resolvedInventoryId === row.warehouseInventoryId)
+        .map(line => line.sourceRefs).filter(Boolean);
+      output.push({ ...route, source, description: row.description, category: row.category || "Sin categoría", warehouseInventoryId: row.warehouseInventoryId,
+        from: eventSummary(from), to: eventSummary(to), sourceRefs: [...new Set(refs)].join("; "), provisional: true, requiresConfirmation: true });
+    };
+    for (const route of list(row.planning?.routes)) add(route, "warehouse", routes);
+    for (const route of list(row.planning?.rentalRoutes)) add(route, "rental", rentalRoutes);
+  }
+  const order = (a, b) => text(a.departureAt).localeCompare(text(b.departureAt)) || text(a.fromEventId).localeCompare(text(b.fromEventId))
+    || text(a.toEventId).localeCompare(text(b.toEventId)) || text(a.category).localeCompare(text(b.category), "es") || text(a.description).localeCompare(text(b.description), "es");
+  routes.sort(order); rentalRoutes.sort(order);
+  const warnings = [...new Set(list(availability.logistics?.warnings))];
+  if (excluded.length) warnings.push("Los eventos con datos de logística pendientes se conservan en el detalle, pero no participan en las propuestas de trasiego.");
+  if (!routes.length) warnings.push("No se identificaron tramos de equipo propio para proponer. Revise los pendientes y el detalle de cada evento; no se inventaron rutas.");
+  return { ...model, reportMode: "transfer", disclaimer: TRANSFER_DISCLAIMER, transferRoutes: routes, rentalTransferRoutes: rentalRoutes,
+    transferExcludedEvents: excluded, transferWarnings: [...new Set(warnings)], logistics: availability.logistics,
+    transferPlanningEventIds: eligible.map(event => event.id), productionMutations: 0 };
+}
+
 function addTableSheet(workbook, name, headers, values, options = {}) {
   const sheet = workbook.addWorksheet(name, { views: [{ state: "frozen", ySplit: 4, xSplit: options.freezeColumns || 0 }], pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
   sheet.getCell(1, 1).value = name.toLocaleUpperCase("es-GT") + " · PROVISIONAL";
@@ -317,10 +363,40 @@ async function createEquipmentMasterWorkbook(model) {
   return workbook;
 }
 
-function reportTable(headers, rows) {
-  return `<table${headers[0] === "Tipo" ? ' class="pending-table"' : ""}><thead><tr>${headers.map(value => `<th>${html(value)}</th>`).join("")}</tr></thead><tbody>${rows.length ? rows.map(row => `<tr>${row.map((value, index) => `<td${typeof value === "number" ? ' class="number"' : ""}>${html(value)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${headers.length}">No hay referencias en esta sección.</td></tr>`}</tbody></table>`;
+function reportTable(headers, rows, className = "") {
+  const classes = [headers[0] === "Tipo" ? "pending-table" : "", className].filter(Boolean).join(" ");
+  return `<table${classes ? ` class="${html(classes)}"` : ""}><thead><tr>${headers.map(value => `<th>${html(value)}</th>`).join("")}</tr></thead><tbody>${rows.length ? rows.map(row => `<tr>${row.map((value, index) => `<td${typeof value === "number" ? ' class="number"' : ""}>${html(value)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${headers.length}">No hay referencias en esta sección.</td></tr>`}</tbody></table>`;
+}
+function renderEquipmentTransferReportHtml(model) {
+  const schedule = event => reportTable(["Cliente / evento", "Fecha", "Ubicación", "Montaje", "Inicio", "Finalización", "Regreso a bodega"], [[
+    event.client || event.name || event.id, event.date || "Pendiente", event.place || "Pendiente", eventScheduleLabel(event, "setupAt"),
+    eventScheduleLabel(event, "startAt"), eventScheduleLabel(event, "endAt"), eventScheduleLabel(event, "equipmentInAt")]]);
+  const renderRoutes = (routes, rental = false) => {
+    const groups = new Map();
+    for (const route of routes) {
+      const id = JSON.stringify([route.fromEventId, route.toEventId]);
+      if (!groups.has(id)) groups.set(id, []);
+      groups.get(id).push(route);
+    }
+    if (!groups.size) return `<p>${rental ? "No se propusieron traslados de equipo rentado entre eventos." : "No hay tramos de equipo propio propuestos. El detalle de los eventos y los pendientes se conserva a continuación."}</p>`;
+    return [...groups.values()].map(entries => {
+      const route = entries[0];
+      const timeLabel = entry => entry.requiresTimeConfirmation
+        ? `${entry.travelMinutes} min de transporte + ${entry.handlingMinutes} min de desmontaje / preparación · ESTIMADOS; requieren confirmación`
+        : `${entry.travelMinutes} min de transporte + ${entry.handlingMinutes} min de desmontaje / preparación · tiempos indicados por el usuario; ruta pendiente de confirmar`;
+      return `<section class="route"><h3>${html(route.from.place)} → ${html(route.to.place)}</h3><p>${rental ? "COORDINAR CON PROVEEDOR · Propuesta de traslado de las mismas unidades rentadas. No representa equipo propio disponible." : "EQUIPO PROPIO · Propuesta sin confirmar. No registra una salida ni reduce la renta del reporte conservador."}</p><h4>Origen</h4>${schedule(route.from)}<h4>Destino</h4>${schedule(route.to)}${reportTable(["Categoría", "Equipo", "Cantidad propuesta", "Salida del origen", "Requerido en destino", "Tiempo por revisar", "Celdas de origen"], entries.map(entry => [entry.category, entry.description, entry.quantity, entry.departureAt || "Pendiente", entry.setupAt || "Pendiente", timeLabel(entry), entry.sourceRefs || "Ver archivo original"]))}</section>`;
+    }).join("");
+  };
+  const eventDetails = model.events.map(event => {
+    const lines = model.details.filter(line => line.eventId === event.id).sort((a, b) => text(a.category).localeCompare(text(b.category), "es") || a.sectionIndex - b.sectionIndex || a.itemIndex - b.itemIndex);
+    const notes = model.preservedRows.filter(row => row.eventId === event.id && !row.section.startsWith("Referencia del archivo") && row.type !== "item" && (row.description || row.notes));
+    return `<section class="event-detail"><h3>${html(event.client || event.name || event.place || event.id)}</h3>${schedule(event)}${reportTable(["Categoría", "Equipo solicitado", "Cantidad", "Observaciones", "Celdas"], lines.map(line => [line.category, line.description, line.quantity, line.notes, line.sourceRefs]), "transfer-item-table")}${notes.length ? `<h4>Encabezados y observaciones del archivo</h4>${reportTable(["Sección", "Tipo", "Contenido", "Observaciones", "Celdas"], notes.map(row => [row.section, row.type, row.description, row.notes, row.refs]), "transfer-note-table")}` : ""}</section>`;
+  }).join("");
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Resumen de trasiego provisional</title><style>
+  @page{size:letter landscape;margin:12mm;@bottom-center{content:"PROPUESTA PROVISIONAL - Sin reservas ni movimientos de inventario";font:8px Arial,sans-serif;color:#586777}}*{box-sizing:border-box}body{font:10px Arial,sans-serif;color:#182638;margin:0}.equipment-pdf-document{width:100%;min-height:140px}.brand{letter-spacing:2px;font-weight:700;color:#53677d}h1{font-size:25px;margin:4px 0}h2{font-size:17px;margin:22px 0 8px}h3{font-size:14px;margin:18px 0 6px}h4{font-size:11px;margin:12px 0 4px}.meta{color:#53677d}.banner{border:2px solid #bd8600;background:#fff6dc;padding:9px;font-size:11px;margin:10px 0}p,li{line-height:1.45}table{width:100%;border-collapse:collapse;margin:8px 0;table-layout:auto}thead{display:table-header-group}th{background:#152b46;color:#fff;text-align:left;padding:4px}td{padding:4px;border-bottom:1px solid #d7e0e8;vertical-align:top;overflow-wrap:anywhere}tr:nth-child(even) td{background:#f3f6fa}tr{break-inside:avoid}h2,h3,h4{break-after:avoid}.route,.event-detail{margin:18px 0}.number{text-align:right;white-space:nowrap}.pending-table{table-layout:fixed}.pending-table th:nth-child(1){width:8%}.pending-table th:nth-child(2){width:15%}.pending-table th:nth-child(3){width:18%}.pending-table th:nth-child(4){width:6%}.pending-table th:nth-child(5){width:32%}.pending-table th:nth-child(6){width:21%}.transfer-item-table,.transfer-note-table{table-layout:fixed}.transfer-item-table th:nth-child(1){width:15%}.transfer-item-table th:nth-child(2){width:45%}.transfer-item-table th:nth-child(3){width:7%}.transfer-item-table th:nth-child(4){width:20%}.transfer-item-table th:nth-child(5){width:13%}.transfer-note-table th:nth-child(1){width:18%}.transfer-note-table th:nth-child(2){width:8%}.transfer-note-table th:nth-child(3){width:35%}.transfer-note-table th:nth-child(4){width:20%}.transfer-note-table th:nth-child(5){width:19%}</style></head><body><main class="equipment-pdf-document"><div class="brand">LIVE PRODUCTIONS · REQUERIMIENTO DE EQUIPO</div><h1>Resumen de trasiego · PROVISIONAL</h1><p class="meta">Generado: ${html(displayTimestamp(model.createdAt))} · Inventario consultado: ${html(displayTimestamp(model.inventorySavedAt))} · ${model.counts.events} eventos · ${model.counts.equipmentRows} renglones de equipo (${model.counts.zeroQuantityRows} en cero) · ${model.counts.sourceCells} celdas originales conservadas</p><div class="banner">${html(model.disclaimer)}</div><h2>Advertencias y revisión de logística</h2><ul>${list(model.transferWarnings).map(warning => `<li>${html(warning)}</li>`).join("") || "<li>Las propuestas requieren revisión y confirmación antes del traslado.</li>"}</ul><h2>Propuestas entre eventos · equipo propio (${model.transferRoutes.length})</h2>${renderRoutes(model.transferRoutes)}<h2>Equipo rentado · coordinación con proveedor (${model.rentalTransferRoutes.length})</h2>${renderRoutes(model.rentalTransferRoutes, true)}<h2>Eventos pendientes de proponer una ruta (${model.transferExcludedEvents.length})</h2>${reportTable(["Evento", "Motivo"], model.transferExcludedEvents.map(event => [event.event, event.reason]))}<h2>Detalle del equipo por evento</h2><p>Las cantidades de esta sección son los requerimientos originales de cada evento, incluidas las cantidades en cero. No son cantidades confirmadas para trasegar. Las copias de referencia no añaden equipo.</p>${eventDetails}<h2>Pendientes por resolver (${model.pending.length})</h2>${reportTable(["Tipo", "Evento", "Descripción", "Cantidad", "Motivo / acción", "Celdas"], model.pending.map(row => [row.kind, row.event, row.description, row.quantity ?? "", row.reason, row.sourceRefs]))}</main></body></html>`;
 }
 function renderEquipmentReportHtml(model, mode = "summary") {
+  if (mode === "transfer") return renderEquipmentTransferReportHtml(model);
   const title = mode === "rent" ? "Resumen de renta" : mode === "purchase" ? "Resumen de compra de insumos" : "Resumen de equipo";
   const selected = mode === "rent" ? model.rental : mode === "purchase" ? model.purchase : model.rows;
   let category = "";
@@ -336,4 +412,4 @@ function renderEquipmentReportHtml(model, mode = "summary") {
   </main></body></html>`;
 }
 
-module.exports = { createEquipmentReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml, sourceCellsForEvent, warehouseRows, eventScheduleLabel, DISCLAIMER };
+module.exports = { createEquipmentReportModel, createEquipmentTransferReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml, renderEquipmentTransferReportHtml, sourceCellsForEvent, warehouseRows, eventScheduleLabel, DISCLAIMER, TRANSFER_DISCLAIMER };
