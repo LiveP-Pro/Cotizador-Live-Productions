@@ -1,14 +1,29 @@
 (function (root, factory) {
   const api = factory(typeof module === 'object' && module.exports ? require('./equipment-identity.js') : root.EquipmentIdentity,
-    typeof module === 'object' && module.exports ? () => require('./equipment-document-audit.js') : () => root.EquipmentDocumentAudit);
+    typeof module === 'object' && module.exports ? () => require('./equipment-document-audit.js') : () => root.EquipmentDocumentAudit,
+    typeof module === 'object' && module.exports ? () => require('./equipment-report-viewer.js') : () => root.EquipmentReportViewer);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.EquipmentPlanner = api;
-})(typeof globalThis === 'object' ? globalThis : this, function (Identity, getDocumentAudit) {
+})(typeof globalThis === 'object' ? globalThis : this, function (Identity, getDocumentAudit, getReportViewer) {
   'use strict';
   const copy = value => JSON.parse(JSON.stringify(value));
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const dateLabel = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value.split('-').reverse().join('/') : 'Fecha pendiente';
   const timeFields = ['setupAt', 'startAt', 'endAt', 'equipmentInAt'];
+  const printableModes = ['transfer', 'rent', 'purchase'];
+  const reportTitles = { transfer: 'Trasiego entre eventos', rent: 'Renta con y sin trasiego', purchase: 'Compra de consumibles' };
+  async function responseError(response) {
+    const code = Number(response.status) || 0;
+    let detail = '';
+    try { const body = await response.json(); if (typeof body?.error === 'string') detail = body.error.trim(); } catch (_) { /* A proxy can return HTML instead of an application error. */ }
+    if (!detail) detail = code === 401 ? 'Su sesión terminó. Inicie sesión y vuelva a abrir el reporte.'
+      : code === 403 ? 'Su usuario no tiene permiso para generar este reporte.'
+      : code === 413 ? 'El servidor rechazó el tamaño de la solicitud del reporte.'
+      : code === 429 ? 'El servidor está atendiendo otras solicitudes. Espere un momento y reintente.'
+      : [502, 503, 504].includes(code) ? 'El servicio de reportes no está disponible o tardó demasiado. Puede reintentar sin cargar el Excel otra vez.'
+      : 'El servidor no pudo preparar el reporte. Sus eventos se conservan.';
+    return `${detail}${code ? ` (HTTP ${code})` : ''}`;
+  }
   function referenceChoices(records, query = '', candidates = []) {
     const active = records.filter(record => record.item && !record.item.archived && !record.archived && String(record.id ?? '').trim());
     const terms = Identity.normalizeName(query).split(' ').filter(Boolean);
@@ -92,24 +107,57 @@
     return {events,rows,lineCount,zeroCount,eventPending,documentPending,documentAuditUnavailable,invalidRows,invalidLines:invalidRows,identityPending:rows.filter(r=>r.action==='IDENTIFICAR'||r.action==='INGRESO PENDIENTE'),classificationPending:rows.filter(r=>r.quantity>0&&r.classification.pending),rent:rows.filter(r=>r.action==='RENTA'&&r.missing>0),purchase:rows.filter(r=>r.action==='COMPRA'&&r.missing>0)};
   }
   function create(bridge) {
-    let model = null, busy = false;
+    let model = null, busy = false, reportViewer = null;
     const $ = selector => document.querySelector(selector);
     const status = message => { const target=$('#equipmentPlannerStatus'); if(target) target.textContent=message; };
     function snapshot() { return analyze(bridge.events(),bridge.inventory()); }
-    async function download(mode, button, selectedEvents = null) {
-      if (busy) return { ok: false, message: 'Espere a que termine la descarga actual.' };
-      if (mode === 'transfer' && typeof window !== 'undefined' && window.LiveAccess?.can && !window.LiveAccess.can(window.LIVE_SESSION, 'equipment.reports')) {
-        const message = 'Su usuario no tiene permiso para generar reportes de equipo.'; status(message); return { ok: false, message };
+    function viewer() {
+      if (!reportViewer) {
+        if (bridge.reportViewer) reportViewer = bridge.reportViewer;
+        else {
+          const component = getReportViewer();
+          if (typeof component?.create !== 'function') throw new Error('No se pudo abrir la vista del reporte. Actualice la página y vuelva a intentarlo; sus eventos se conservan.');
+          reportViewer = component.create({ document });
+        }
       }
-      const events = selectedEvents || bridge.events();
-      if (!events.length) { const message = 'Cargue al menos un evento con equipo.'; status(message); return { ok: false, message }; }
+      return reportViewer;
+    }
+    function reportAllowed() {
+      return typeof window === 'undefined' || !window.LiveAccess?.can || window.LiveAccess.can(window.LIVE_SESSION, 'equipment.reports');
+    }
+    async function requestReport(mode, button, request) {
+      if (busy) return { ok: false, message: 'Espere a que termine la descarga actual.' };
+      if (!reportAllowed()) {
+        const message = 'Su usuario no tiene permiso para generar reportes de equipo.'; status(message);
+        if (reportViewer?.isOpen?.()) reportViewer.fail(message);
+        return { ok: false, message };
+      }
+      const printable = printableModes.includes(mode);
+      let view = null, ticket;
       busy = true; if(button)button.disabled=true;
-      status('Generando el reporte provisional con el inventario actual de Contabilidad…');
+      status(printable ? 'Preparando el reporte con los eventos cargados…' : 'Generando el reporte con el inventario actual de Contabilidad…');
       try {
-        const routeEstimates = mode === 'transfer' ? bridge.transferOptions?.()?.routeEstimates : undefined;
-        const response = await fetch('/api/cuadros-equipo/reportes/provisional',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({events,mode,...bridge.range(),...(routeEstimates ? {routeEstimates} : {})})});
-        if (!response.ok) { const error=await response.json().catch(()=>({}));throw new Error(error.error || 'No se pudo generar el reporte. Sus cuadros se conservan.'); }
+        if (printable) {
+          view = viewer();
+          ticket = view.open({ title: reportTitles[mode], onRetry: () => requestReport(mode, button, copy(request)) });
+        }
+        const response = await fetch('/api/cuadros-equipo/reportes/provisional',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(request)});
+        if (!response.ok) throw new Error(await responseError(response));
+        if (!reportAllowed()) throw new Error('Su usuario ya no tiene permiso para generar este reporte.');
+        const contentType = response.headers.get('Content-Type') || '';
+        if (printable) {
+          if (!/^text\/html(?:;|$)/i.test(contentType) || response.headers.get('X-Equipment-Report-Status') !== 'provisional') {
+            throw new Error('El servidor no devolvió una vista válida del reporte. Actualice la página y reintente; sus eventos se conservan.');
+          }
+          const markup = await response.text();
+          if (!markup.trim()) throw new Error('El servidor devolvió un reporte vacío. Puede reintentarlo sin cargar el archivo otra vez.');
+          const shown = view.setContent(markup, ticket);
+          status(shown ? 'Reporte listo para revisar e imprimir. Sus eventos se conservan.' : 'El reporte se cerró. Puede volver a abrirlo con los mismos eventos.');
+          return { ok: true, reportOpened: shown, reportClosed: !shown, mode };
+        }
+        if (/text\/html|application\/json/i.test(contentType)) throw new Error('El servidor no devolvió el archivo esperado. Sus eventos se conservan; puede reintentar.');
         const blob=await response.blob(); if(!blob.size)throw new Error('El servidor devolvió un archivo vacío. Intente nuevamente.');
+        if (mode !== 'master' && !(await blob.slice(0, 5).text()).startsWith('%PDF-')) throw new Error('El servidor no devolvió un PDF válido. Sus eventos se conservan; puede reintentar.');
         const disposition=response.headers.get('Content-Disposition') || '';
         const encoded=/filename\*=UTF-8''([^;]+)/i.exec(disposition);
         const plain=/filename="?([^";]+)"?/i.exec(disposition);
@@ -117,8 +165,26 @@
         const url=URL.createObjectURL(blob), link=document.createElement('a'); link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
         status('Descarga lista. Reporte provisional; no se confirmaron reservas ni movimientos de inventario.');
         return { ok: true, fileName: name };
-      } catch(error) { status(error.message); return { ok: false, message: error.message }; }
+      } catch(error) {
+        const message = error?.message || 'No se pudo abrir el reporte. Sus eventos se conservan; puede reintentar.';
+        status(message); view?.fail(message, ticket); return { ok: false, message };
+      }
       finally { busy=false;if(button)button.disabled=false; }
+    }
+    async function download(mode, button, selectedEvents = null) {
+      if (busy) return { ok: false, message: 'Espere a que termine la descarga actual.' };
+      if (!reportAllowed()) return requestReport(mode, button, null);
+      try {
+        const events = copy(selectedEvents || bridge.events());
+        if (!events.length) { const message = 'Cargue al menos un evento con equipo.'; status(message); return { ok: false, message }; }
+        const routeEstimates = ['transfer', 'rent'].includes(mode) ? copy(bridge.transferOptions?.()?.routeEstimates || []) : undefined;
+        const request = { ...copy(bridge.range?.() || {}), events, mode,
+          ...(printableModes.includes(mode) ? { format: 'html' } : {}), ...(routeEstimates ? { routeEstimates } : {}) };
+        return requestReport(mode, button, request);
+      } catch (error) {
+        const message = error?.message || 'No se pudieron preparar los eventos para el reporte. Sus cuadros se conservan.';
+        status(message); return { ok: false, message };
+      }
     }
     function render() {
       const host=$('#equipmentPlannerOverview'); if(!host)return;
@@ -179,5 +245,5 @@
     }
     return {init,render,download,model:()=>model};
   }
-  return {analyze,create,referenceChoices};
+  return {analyze,create,referenceChoices,responseError};
 });

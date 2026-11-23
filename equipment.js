@@ -5614,12 +5614,9 @@ function renderEquipmentWindowState() {
   const purchasePdfPreview = equipmentQuery("#equipmentPurchasePdfPreview");
   const transferPdfPreview = equipmentQuery("#equipmentTransferPdfPreview");
   if (summaryTransferButton) {
-    const transferCount = equipmentSummaryTransferRoutesWithEvents(activeEquipmentEvents(), true).length;
-    summaryTransferButton.classList.toggle("is-active", equipmentState.summaryTransferEnabled);
-    summaryTransferButton.setAttribute("aria-pressed", String(equipmentState.summaryTransferEnabled));
-    summaryTransferButton.textContent = equipmentState.summaryTransferEnabled && transferCount
-      ? `Trasegar Equipo (${transferCount} ${transferCount === 1 ? "ruta" : "rutas"})`
-      : "Trasegar Equipo";
+    summaryTransferButton.classList.toggle("is-active", false);
+    summaryTransferButton.removeAttribute?.("aria-pressed");
+    summaryTransferButton.textContent = "Generar trasiego";
   }
   if (summarySearch && summarySearch.value !== equipmentState.summarySearchTerm) summarySearch.value = equipmentState.summarySearchTerm;
   if (mainPanel) mainPanel.classList.toggle("is-hidden", activeWindow !== "review");
@@ -5969,31 +5966,39 @@ function equipmentHasTransferDrafts() {
     || activeEquipmentEvents().some(event => event.status === "draft" || !event.updatedAt));
 }
 
-async function downloadEquipmentDraftTransfer(button = null) {
+async function openEquipmentPlanningReport(mode, button = null) {
   const status = equipmentQuery("#equipmentSaveStatus");
+  const label = { transfer: "trasiego", rent: "renta con y sin trasiego", purchase: "compra de consumibles" }[mode];
+  if (!label) return { ok: false, message: "Seleccione trasiego, renta o compra de consumibles." };
   if (window.LiveAccess?.can && !window.LiveAccess.can(window.LIVE_SESSION, "equipment.reports")) {
     const message = "Su usuario no tiene permiso para generar reportes de equipo.";
     if (status) status.textContent = message;
     return { ok: false, message };
   }
   if (equipmentSharedWorkspace.saving) {
-    const message = "Espere a que termine el guardado actual para descargar el trasiego.";
+    const message = "Espere a que termine el guardado actual para abrir el reporte.";
     if (status) status.textContent = message;
     return { ok: false, message };
   }
   if (!equipmentPlannerInstance?.download) {
-    const message = "No se pudo abrir el generador de trasiego. Sus cuadros se conservan; vuelva a intentarlo.";
+    const message = "No se pudo abrir el generador de reportes. Sus cuadros se conservan; vuelva a intentarlo.";
     if (status) status.textContent = message;
     return { ok: false, message };
   }
-  if (status) status.textContent = "Generando el trasiego provisional con los eventos cargados…";
+  if (status) status.textContent = `Preparando el reporte de ${label} con los eventos cargados…`;
   let result;
-  try { result = await equipmentPlannerInstance.download("transfer", button); }
-  catch (error) { result = { ok: false, message: error.message || "No se pudo descargar el trasiego. Sus eventos se conservan para reintentar." }; }
+  try { result = await equipmentPlannerInstance.download(mode, button); }
+  catch (error) { result = { ok: false, message: error.message || "No se pudo abrir el reporte. Sus eventos se conservan para reintentar." }; }
   if (status) status.textContent = result?.ok
-    ? "Trasiego provisional descargado. Incluye las propuestas y los datos pendientes de los eventos cargados."
-    : result?.message || "No se pudo descargar el trasiego. Sus eventos se conservan para reintentar.";
+    ? result.reportClosed ? "El reporte se cerró. Puede volver a abrirlo con los mismos eventos."
+      : result.reportOpened ? `Reporte de ${label} listo para revisar e imprimir.`
+      : mode === "transfer" ? "Trasiego provisional descargado. Incluye las propuestas y los datos pendientes de los eventos cargados." : `Reporte de ${label} listo.`
+    : result?.message || "No se pudo abrir el reporte. Sus eventos se conservan para reintentar.";
   return result;
+}
+
+async function downloadEquipmentDraftTransfer(button = null) {
+  return openEquipmentPlanningReport("transfer", button);
 }
 
 function requestEquipmentTransferDecision(target = "summary") {
@@ -7676,8 +7681,13 @@ function initEquipmentPlannerBridge() {
     afterImport: async (mode, context = {}) => {
       switchEquipmentWindow("summary");
       if (mode === "rent" || mode === "purchase" || mode === "transfer") {
-        const outcome = await equipmentPlannerInstance.download(mode, undefined, context.result?.events || context.events || null);
+        const importedEvents = context.result?.events || context.events || null;
+        const current = new Map(plannerEvents().map(event => [event.id, event]));
+        const events = importedEvents ? importedEvents.map(event => current.get(event.id)).filter(event => event && event.status !== "cancelled") : null;
+        if (events && !events.length) throw new Error("Los eventos de este archivo ya no están cargados. Abra el resumen o vuelva a cargar el archivo para generar sus reportes.");
+        const outcome = await equipmentPlannerInstance.download(mode, undefined, events);
         if (outcome?.ok === false) throw new Error(outcome.message);
+        return outcome;
       }
     },
     openEvent:id=>{ if(loadEquipmentEvent(id))equipmentQuery("#equipmentEventPlace")?.scrollIntoView?.({behavior:"smooth",block:"center"}); },
@@ -7800,8 +7810,8 @@ function initEquipmentModule() {
     }
   });
   equipmentQuery("#equipmentSavePdfButton")?.addEventListener("click", () => { if(window.confirm("Esta acción confirma el evento y registra la salida o consumo en Contabilidad. Para revisar sin movimientos use las descargas provisionales. ¿Enviar el equipo a bodega?")) saveEquipmentPdf("full"); });
-  equipmentQuery("#equipmentGenerateRentReportButton")?.addEventListener("click", event => equipmentPlannerInstance ? equipmentPlannerInstance.download("rent",event.currentTarget) : previewEquipmentRentReport());
-  equipmentQuery("#equipmentSummaryPurchaseReportButton")?.addEventListener("click", event => equipmentPlannerInstance ? equipmentPlannerInstance.download("purchase",event.currentTarget) : previewEquipmentPurchaseReport());
+  equipmentQuery("#equipmentGenerateRentReportButton")?.addEventListener("click", event => openEquipmentPlanningReport("rent", event.currentTarget));
+  equipmentQuery("#equipmentSummaryPurchaseReportButton")?.addEventListener("click", event => openEquipmentPlanningReport("purchase", event.currentTarget));
   equipmentQuery("#equipmentDownloadPurchasePdfButton")?.addEventListener("click", () => saveEquipmentPdf("purchase"));
   equipmentQuery("#equipmentDownloadRentPdfButton")?.addEventListener("click", () => saveEquipmentPdf("rent"));
   equipmentQuery("#equipmentSaveTransferPdfButton")?.addEventListener("click", () => saveEquipmentPdf("transfer"));
@@ -7817,7 +7827,7 @@ function initEquipmentModule() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && equipmentCatalogEditorState.open) closeEquipmentCatalogEditor();
   });
-  equipmentQuery("#equipmentSummaryTransferButton")?.addEventListener("click", () => requestEquipmentTransferDecision("summary"));
+  equipmentQuery("#equipmentSummaryTransferButton")?.addEventListener("click", event => openEquipmentPlanningReport("transfer", event.currentTarget));
   equipmentQuery("#equipmentSummarySearch")?.addEventListener("input", (event) => {
     equipmentState.summarySearchTerm = event.target.value || "";
     renderEquipmentModule();

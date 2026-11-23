@@ -12,7 +12,7 @@ const { parseServiceFile, verifyServiceImport } = require("./equipment-service-i
 const { applyStockIngress, prepareWarehouseSave, nextWarehouseTimestamp } = require("./warehouse-ledger.cjs");
 const { createEquipmentEventStore, calculateEquipmentAvailability, normalizeEvent, effectiveEquipmentProcurementChoice, resolveEquipmentPurchasedLine } = require("./equipment-event-store.cjs");
 const EquipmentIdentity = require("./equipment-identity.js");
-const { createEquipmentReportModel, createEquipmentTransferReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml } = require("./equipment-reporting.cjs");
+const { createEquipmentReportModel, createEquipmentTransferReportModel, createEquipmentPlanningReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml, renderEquipmentPlanningReportHtml } = require("./equipment-reporting.cjs");
 const { parseEventFile } = require("./equipment-event-import.cjs");
 const LiveAccess = require("./live-access.js");
 const { createLiveUserStore, isDeveloperIdentity } = require("./live-users.cjs");
@@ -57,7 +57,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261123-draft-transfer-report-01";
+const warehouseAssetVersion = "20261123-oneclick-reports-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -732,12 +732,36 @@ async function downloadProvisionalEquipmentReport(payload, response) {
   if (!["master", "summary", "rent", "purchase", "transfer"].includes(mode)) {
     errorResponse(response, 400, "Seleccione resumen, trasiego, renta, compra o Excel máster."); return;
   }
+  const format = payload?.format === undefined ? (mode === "master" ? "xlsx" : "pdf") : payload.format;
+  if (!["html", "pdf", "xlsx"].includes(format)
+      || format === "html" && !["transfer", "rent", "purchase"].includes(mode)
+      || format === "xlsx" && mode !== "master" || format === "pdf" && mode === "master") {
+    errorResponse(response, 400, "Seleccione un formato válido para este reporte: vista imprimible, PDF o Excel máster."); return;
+  }
   // The browser submits current drafts only. Quantities, classifications and
   // stock movements ALWAYS come from the active server warehouse snapshot.
-  const model = mode === "transfer" ? createEquipmentTransferReportModel(payload, readWarehouseInventory()) : createEquipmentReportModel(payload, readWarehouseInventory());
+  const inventory = readWarehouseInventory();
+  const model = format === "html" ? createEquipmentPlanningReportModel(payload, inventory)
+    : mode === "transfer" ? createEquipmentTransferReportModel(payload, inventory) : createEquipmentReportModel(payload, inventory);
   const localDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guatemala", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(model.createdAt));
   const period = [model.from, model.to].filter(Boolean).join("_a_") || localDate;
   const labels = { master: "Resumen-master", summary: "Resumen-equipo", rent: "Resumen-renta", purchase: "Resumen-compra", transfer: "Resumen-trasiego" };
+  if (format === "html") {
+    // Rendering a view never joins the Chromium/save queue. It is a snapshot
+    // for the user's browser to display and print, with no persistent writes.
+    const buffer = Buffer.from(renderEquipmentPlanningReportHtml(model, mode), "utf8");
+    response.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8", "Content-Length": buffer.length,
+      "Content-Disposition": `inline; filename="${labels[mode]}-PROVISIONAL-${period}.html"`,
+      "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
+      "X-Equipment-Report-Status": "provisional", "X-Equipment-Report-Format": "html",
+      "X-Equipment-Report-Events": String(model.counts.events), "X-Equipment-Report-Rows": String(model.counts.equipmentRows),
+      "X-Equipment-Report-Source-Cells": String(model.counts.sourceCells), "X-Equipment-Report-Pending": String(model.pending.length)
+    });
+    response.end(buffer);
+    return;
+  }
   const fileName = `${labels[mode]}-PROVISIONAL-${period}.${mode === "master" ? "xlsx" : "pdf"}`;
   let buffer;
   if (mode === "master") buffer = Buffer.from(await (await createEquipmentMasterWorkbook(model)).xlsx.writeBuffer());
@@ -4236,6 +4260,13 @@ async function handleRequest(request, response) {
     if (request.method === "POST" && url.pathname === "/api/cuadros-equipo/reportes/provisional") {
       if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
+      if (payload?.format !== undefined && !["html", "pdf", "xlsx"].includes(payload.format)) {
+        errorResponse(response, 400, "Seleccione un formato válido para el reporte."); return;
+      }
+      if (payload?.format === "html") {
+        await downloadProvisionalEquipmentReport(payload, response);
+        return;
+      }
       // Share the existing print queue so concurrent downloads cannot replace
       // the reusable Chromium document while another PDF is printing.
       await enqueueSave(() => downloadProvisionalEquipmentReport(payload, response));

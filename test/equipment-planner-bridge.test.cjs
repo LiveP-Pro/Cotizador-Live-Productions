@@ -224,3 +224,19 @@ test("file report actions use the imported event IDs and surface a failed downlo
   assert.equal(h.events().length, 2);
   assert.equal(h.requests.length, 0);
 });
+
+test("file report actions use current edits and do not resurrect removed imported drafts", async () => {
+  const h = harness(), result = h.importEvents(syntheticEvents(2));
+  h.context.window.syntheticReportResult = result;
+  h.context.window.changedEventId = result.events[1].id;
+  h.run("equipmentState.events.find(event=>event.id===window.changedEventId).sections[0].items[0].quantity=7;window.syntheticReportCalls=[];equipmentPlannerInstance={render(){},async download(mode,button,events){window.syntheticReportCalls.push({mode,events});return {ok:true,reportOpened:true};}};");
+  const outcome = await h.run("window.liveEquipmentPlanner.afterImport('rent',{result:window.syntheticReportResult})");
+  assert.equal(outcome.reportOpened, true);
+  const reported = plain(h.context.window.syntheticReportCalls[0].events);
+  assert.equal(reported.find(event=>event.id===result.events[1].id).sections[0].items[0].quantity, 7);
+  assert.deepEqual(reported.find(event=>event.id===result.events[1].id).sourceCells, result.events[1].sourceCells);
+  h.run("equipmentState.events=[];equipmentState.selectedEventId='';");
+  await assert.rejects(h.run("window.liveEquipmentPlanner.afterImport('rent',{result:window.syntheticReportResult})"), /ya no están cargados/);
+  assert.equal(h.context.window.syntheticReportCalls.length, 1);
+  assert.equal(h.requests.length, 0); assert.equal(h.saves.length, 0);
+});

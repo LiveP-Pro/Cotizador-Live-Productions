@@ -1,4 +1,33 @@
-# Descargas provisionales nativas de Requerimiento de Equipo
+# Reportes de Requerimiento de Equipo
+
+## Tres vistas con un clic
+
+Después de importar el archivo, `Generar trasiego`, `Renta con y sin trasiego` y
+`Compra de consumibles` abren una vista dentro de la página. La solicitud conserva
+los eventos cargados y añade `format: "html"` a su modo. El servidor construye
+el modelo con el inventario activo y devuelve HTML sin utilizar Chromium ni
+esperar la cola de guardado/impresión. La vista ofrece imprimir o guardar como
+PDF con el navegador; al cerrarla permanece disponible el lote.
+
+El modelo `createEquipmentPlanningReportModel` reúne los mismos eventos para
+comparar la renta sin traslado directo y con las rutas propuestas. Los retornos
+a bodega, su preparación y las existencias físicas se contemplan en ambos
+escenarios. Los tiempos estimados y las continuaciones de equipo rentado se
+señalan para confirmar. Las cantidades de referencias diferentes no se suman
+en un total general. La compra de consumibles acumula toda su demanda y
+descuenta la disponibilidad actual, sin reutilización entre eventos.
+
+Una identidad, clasificación u horario pendiente no se convierte en existencia
+cero ni en una ruta ficticia. Los pendientes, los originales y los ceros se
+conservan en el modelo. El documento principal presenta el reporte solicitado;
+el detalle del archivo se puede consultar sin añadirlo forzosamente a la impresión.
+
+El endpoint mantiene autenticación y el permiso `equipment.reports`. La respuesta
+HTML utiliza `no-store`, `nosniff` y una política de contenido restrictiva. El
+visor usa un marco sin permiso de ejecutar scripts, muestra errores HTTP útiles
+y permite reintentar sin volver a importar ni registrar reservas o movimientos.
+
+## Descargas de archivo
 
 `POST /api/cuadros-equipo/reportes/provisional` requiere la sesión habitual. Recibe:
 
@@ -11,7 +40,7 @@
 }
 ```
 
-`mode` admite `master` (XLSX), `summary`, `rent` y `purchase` (PDF). La respuesta es binaria y tiene `Content-Disposition: attachment`, `Cache-Control: no-store` y `X-Equipment-Report-Status: provisional`. Los otros encabezados `X-Equipment-Report-Events`, `X-Equipment-Report-Rows` y `X-Equipment-Report-Pending` permiten comprobar los conteos en la descarga.
+Sin `format`, `mode` admite `master` (XLSX), `summary`, `rent`, `purchase` y `transfer` (PDF). La respuesta de archivo es binaria y tiene `Content-Disposition: attachment`, `Cache-Control: no-store` y `X-Equipment-Report-Status: provisional`. Los otros encabezados `X-Equipment-Report-Events`, `X-Equipment-Report-Rows` y `X-Equipment-Report-Pending` permiten comprobar los conteos en la descarga. `format: "html"` admite `transfer`, `rent` y `purchase` para las nuevas vistas.
 
 La descarga lee **únicamente el inventario activo de Contabilidad en el servidor** mediante `readWarehouseInventory()`. No acepta un inventario del navegador ni carga respaldos, fuentes iniciales o catálogos para rellenar faltantes. Los eventos son los cuadros actuales seleccionados, incluidos sus borradores. No abre el almacén de eventos, no guarda reservas, no produce salidas/ingresos y no genera un JSON de despacho ni un archivo permanente en bodega. PDF utiliza una carpeta temporal eliminada incluso cuando la impresión falla. Se usa la cola de impresión existente para evitar que dos documentos sustituyan simultáneamente el contenido de Chromium.
 

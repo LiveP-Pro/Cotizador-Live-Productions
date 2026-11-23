@@ -198,8 +198,11 @@ test("each import report action loads exactly once and reports from the consumed
     assert.equal(imports, 1); assert.equal(after, 0);
     finish({ count: 1 }); await applying;
     assert.equal(after, 1); assert.equal(imports, 1);
-    assert.equal(harness.dialog.open, mode !== "transfer");
+    assert.equal(harness.dialog.open, true, "the loaded batch stays available behind every report viewer");
     assert.notEqual(harness.get("equipmentBatchStatus").dataset.error, "true");
+    await harness.action(`apply-${mode}`);
+    assert.equal(after, 2); assert.equal(imports, 1);
+    assert.equal(harness.dialog.open, true);
   }
 });
 test("a failed report callback retries only the report and retains imported events", async () => {

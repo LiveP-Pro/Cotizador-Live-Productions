@@ -110,20 +110,29 @@ sus valores originales y aparecen en los reportes; no se les inventa una
 cantidad. Un archivo ilegible, una verificación incompleta o líneas activas de
 equipo con cantidades o descripciones inválidas siguen requiriendo corrección.
 
-El período del resumen se ajusta a las fechas del
-archivo. La pantalla ofrece generar trasiego, renta o compra de
-consumibles sin repetir la importación si una descarga falla. Los eventos se
-cargan como borradores: los reportes provisionales permiten revisar los
-requerimientos antes de confirmar reservas y movimientos.
+El período del resumen se ajusta a las fechas del archivo. Después de cargarlo,
+los tres botones abren sus reportes con un clic y conservan el lote:
 
-`Trasegar equipo` también permite descargar el trasiego provisional cuando hay
-eventos cargados sin confirmar. Incluye los horarios, los equipos por evento,
-las propuestas de traslado entre eventos que pueden calcularse y los datos
-pendientes. Las propuestas usan el inventario activo de Contabilidad; los tiempos
-estimados quedan identificados para revisión. Un horario contradictorio o una
-identidad pendiente no impide descargar el reporte, pero esas líneas no generan
-una propuesta de ruta. Las rutas confirmadas de la agenda conservan su reporte
-operativo. Descargar el provisional no guarda reservas ni registra movimientos.
+- `Generar trasiego`: eventos de origen y destino, equipo y cantidades propuestas,
+  horarios, tiempos estimados y datos que falta confirmar.
+- `Renta con y sin trasiego`: compara las unidades requeridas en ambos escenarios
+  usando los mismos eventos y el inventario vigente. El escenario sin traslado
+  directo contempla los retornos a bodega que permiten los horarios; el escenario
+  con trasiego incluye las rutas propuestas y sus supuestos por revisar.
+- `Compra de consumibles`: suma la demanda de todos los eventos por consumible y
+  descuenta su existencia disponible. Los consumibles no se reutilizan entre eventos.
+
+Cada reporte se abre dentro de la página. `Imprimir / Guardar PDF` utiliza el
+navegador del usuario; esta vista no espera la impresión de Chromium en el
+servidor. Al cerrar el reporte siguen disponibles los eventos y los otros dos
+botones. Un error muestra su motivo o código HTTP y permite reintentar sin
+volver a importar el archivo.
+
+La vista consulta el inventario activo de Contabilidad. Una identidad,
+clasificación o fecha pendiente queda señalada; no se inventan existencias ni
+rutas. Se conservan las celdas originales, notas y cantidades en cero. Los eventos
+siguen como borradores hasta confirmar las reservas; abrir o imprimir un reporte
+no registra movimientos de inventario.
 
 ## Dominio
 
