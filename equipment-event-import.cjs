@@ -38,6 +38,32 @@ const labelField = (value) => Object.keys(metadataLabels).find((field) => metada
 const weekdays = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
 const schedulePrefixes = ["setup", "start", "end", "teardown", "equipmentIn"];
 
+function rejectGeneratedReport(data) {
+  if (data.source.format !== "pdf") return;
+  // A derived logistics report is not the original event requirements. Require
+  // several independent signatures; a customer, event or file named "Trasiego"
+  // must remain a valid source. Compact text also handles tracked PDF lettering.
+  const compact = (value) => key(value).replace(/[^a-z0-9]/g, "");
+  const lines = (data.documentLines || []).map((line) => compact(line.text));
+  const titles = new Set([
+    "Trasiego de equipo", "Resumen de trasiego · PROVISIONAL",
+    "Renta con y sin trasiego", "Resumen de renta · PROVISIONAL",
+    "Consumo y compra por evento", "Resumen de compra de insumos · PROVISIONAL",
+    "Resumen de equipo · PROVISIONAL"
+  ].map(compact));
+  if (!lines.includes("liveproductionsrequerimientodeequipo") || !lines.some((line) => titles.has(line))) return;
+  const document = lines.join("");
+  const hasDisclaimer = (document.includes("planprovisional") || document.includes("propuestaprovisional"))
+    && [
+      "Abrir o imprimir estos reportes no confirma reservas, movimientos, rentas ni compras",
+      "Abrir o imprimir este reporte no registra salidas de bodega, rentas ni compras"
+    ].some((disclaimer) => document.includes(compact(disclaimer)));
+  const hasOutputStructure = lines.includes("categoriaequipocantidadatrasladar") || lines.includes("eventosincluidos");
+  if (hasDisclaimer && hasOutputStructure) throw Object.assign(new Error(
+    "Seleccionó un reporte generado por el programa. Para cargar los eventos, seleccione el Excel original o un PDF con los cuadros completos de equipo y horarios de cada evento. El reporte de trasiego, renta o consumibles no sustituye el archivo original."
+  ), { code: "EQUIPMENT_EVENT_REPORT_NOT_SOURCE", statusCode: 400 });
+}
+
 function validDay(year, month, day) {
   if (year < 1900 || year > 2200 || month < 1 || month > 12 || day < 1 || day > 31) return "";
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -581,6 +607,7 @@ function buildEventPreview(data) {
 }
 async function parseEventFile(buffer, options = {}) {
   const data = await readSourceFile(buffer, { ...options, preserveCellNotes: true });
+  rejectGeneratedReport(data);
   return buildEventPreview(data);
 }
 module.exports = { parseEventFile, buildEventPreview, verifyEventImport, parseDate, parseTime };

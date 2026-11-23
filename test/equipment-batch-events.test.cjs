@@ -326,6 +326,46 @@ test("openFile devuelve null ante respuestas malformadas y errores sin objeto; c
   assert.ok(await h.api.openFile(fakeFile())); assert.equal(h.get("equipmentBatchApply").disabled, false);
 });
 
+test("el selector permite reintentar el mismo archivo después de un rechazo y continuar con los tres reportes una sola vez", async () => {
+  let requests = 0, imports = 0;
+  const reports = [], preview = clientPreview({ setupApplies: false, startAt: "2026-11-25T18:00", endAt: "2026-11-26T01:00", equipmentInAt: "2026-11-26T03:00" });
+  const h = browserHarness({ fetch: async () => {
+    if (++requests === 1) return { ok: false, json: async () => ({ error: "Este PDF contiene solo un reporte de trasiego. Seleccione el archivo original <equipo>." }) };
+    return deliverPreview(preview);
+  }, bridge: { importEvents(events) {
+    imports++; assert.equal(events.length, 1);
+    assert.equal(events[0].setupApplies, false); assert.equal(events[0].setupAt, "");
+    assert.equal(events[0].startAt, "2026-11-25T18:00"); assert.equal(events[0].equipmentInAt, "2026-11-26T03:00");
+    assert.equal(events[0].sections[0].items[0].quantity, 0);
+    return { count: 1, events };
+  }, afterImport(mode) { reports.push(mode); } } });
+  h.api.open();
+  const input = h.get("equipmentBatchFile"), file = fakeFile(); input.files = [file]; input.value = "same-file.xlsx";
+  await h.dialog.emit("change", { target: input });
+  assert.equal(input.value, ""); assert.equal(h.api.getPreview(), null); assert.equal(imports, 0);
+  assert.equal(h.get("equipmentBatchApply").disabled, true);
+  assert.match(h.get("equipmentBatchContent").innerHTML, /reporte de trasiego/);
+  assert.match(h.get("equipmentBatchContent").innerHTML, /Elegir Excel o PDF original/);
+  assert.doesNotMatch(h.get("equipmentBatchContent").innerHTML, /<equipo>/);
+  input.files = [file]; input.value = "same-file.xlsx";
+  await h.dialog.emit("change", { target: input });
+  assert.equal(input.value, ""); assert.equal(h.get("equipmentBatchApply").disabled, false);
+  await h.action("apply");
+  for (const mode of ["transfer", "rent", "purchase"]) await h.action(`apply-${mode}`);
+  assert.equal(requests, 2); assert.equal(imports, 1); assert.deepEqual(reports, ["transfer", "rent", "purchase"]);
+});
+
+test("una respuesta HTML o una sesión vencida muestra una acción de reintento comprensible", async () => {
+  for (const status of [401, 502]) {
+    const h = browserHarness({ fetch: async () => ({ status, ok: false, json: async () => { throw new SyntaxError("Unexpected token <, gateway HTML"); } }) });
+    assert.equal(await h.api.openFile(fakeFile()), null);
+    assert.match(h.get("equipmentBatchStatus").textContent, status === 401 ? /sesión terminó/ : /Vuelva a elegirlo para reintentar/);
+    assert.doesNotMatch(h.get("equipmentBatchContent").innerHTML, /Unexpected token|gateway HTML/);
+    assert.equal(h.get("equipmentBatchChoose").disabled, false); assert.equal(h.get("equipmentBatchApply").disabled, true);
+    assert.equal(h.api.getImported(), null);
+  }
+});
+
 test("una carga prepara todos los reportes, bloquea concurrencia y conserva el resultado al cerrar", async () => {
   let imports = 0, notified = 0, releaseNotification, releaseReport;
   const reports = [], result = { count: 1, events: [{ id: "actual-synthetic-id" }] };
