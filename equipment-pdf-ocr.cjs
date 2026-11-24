@@ -11,13 +11,18 @@ function parseTsv(tsv,{pageNumber=1,dpi=200,pageHeight=800}={}) {
   const rows = String(tsv).split(/\r?\n/), words = [], uncertain = [];
   const headings = rows.shift()?.split('\t') || [];
   const at = Object.fromEntries(headings.map((name,index)=>[name,index]));
-  if (!['level','left','top','width','height','conf','text'].every(name=>Number.isInteger(at[name]))) throw failure('La lectura OCR no devolvió posiciones verificables. Use un PDF digital o el Excel original.');
+  if (!['level','page_num','block_num','par_num','line_num','word_num','left','top','width','height','conf','text'].every(name=>Number.isInteger(at[name]))) throw failure('La lectura OCR no devolvió posiciones verificables. Use un PDF digital o el Excel original.');
   for (const row of rows) {
     const fields=row.split('\t'), value=fields.slice(at.text).join('\t').trim();
     if(Number(fields[at.level])!==5 || !value)continue;
     const [left,top,width,height,confidence]=['left','top','width','height','conf'].map(name=>Number(fields[at[name]]));
     if(![left,top,width,height,confidence].every(Number.isFinite)||left<0||top<0||width<0||height<=0)throw failure('Hay posiciones OCR incompletas. No se cargaron cantidades inferidas.');
-    const scale=72/dpi, item={str:value,transform:[1,0,0,height*scale,left*scale,pageHeight-(top+height)*scale],width:width*scale,height:height*scale,ocrConfidence:confidence};
+    const [page,block,paragraph,line,word]=['page_num','block_num','par_num','line_num','word_num'].map(name=>Number(fields[at[name]]));
+    if(![page,block,paragraph,line,word].every(value=>Number.isInteger(value)&&value>0))throw failure('La lectura OCR no devolvió líneas verificables. Use un PDF digital o el Excel original.');
+    // Tesseract identifies complete text lines. Glyph bottoms differ for accents,
+    // capitals and descenders; keep their exact geometry while retaining this key.
+    const scale=72/dpi, item={str:value,transform:[1,0,0,height*scale,left*scale,pageHeight-(top+height)*scale],width:width*scale,height:height*scale,ocrConfidence:confidence,
+      ocrLineId:`ocr:${pageNumber}:${page}:${block}:${paragraph}:${line}`,ocrPosition:{page,block,paragraph,line,word,left,top,width,height}};
     words.push(item);
     if(words.length>10000)throw failure('La página supera el límite de seguridad de 10,000 fragmentos OCR. Divida el documento sin eliminar información.');
     if(confidence<90)uncertain.push({page:pageNumber,text:value,confidence,left,top,width,height});

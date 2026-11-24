@@ -435,16 +435,24 @@ async function readExcel(buffer, { preserveCellNotes = false, selectedSheets, ex
 function pdfLines(items, pageNumber, prefix = 'pdf', fontMetadata = {}) {
   const pieces = items.map((item, index) => ({ ref: `${prefix}:${pageNumber}:${index + 1}`, page: pageNumber,
     value: item.str, x: item.transform?.[4] || 0, y: item.transform?.[5] || 0, width: item.width || 0,
-    height: Math.abs(item.height || item.transform?.[3] || 10),...(item.fontName?{fontName:item.fontName,...fontMetadata[item.fontName]}:{}),...(item.ocrConfidence!==undefined?{ocrConfidence:item.ocrConfidence}:{}) })).filter((item) => clean(item.value));
+    height: Math.abs(item.height || item.transform?.[3] || 10),...(item.fontName?{fontName:item.fontName,...fontMetadata[item.fontName]}:{}),...(item.ocrConfidence!==undefined?{ocrConfidence:item.ocrConfidence}:{}),
+    ...(typeof item.ocrLineId==='string'&&item.ocrLineId?{ocrLineId:item.ocrLineId}:{}),...(item.ocrPosition?{ocrPosition:clone(item.ocrPosition)}:{}) })).filter((item) => clean(item.value));
   pieces.sort((a, b) => b.y - a.y || a.x - b.x);
-  const lines = [];
+  const lines = [],ocrLines=new Map();
   for (const piece of pieces) {
-    let line = lines.at(-1);
-    if (!line || Math.abs(line.y - piece.y) > Math.max(2, Math.min(4, piece.height * 0.25))) {
-      line = { y: piece.y, cells: [] }; lines.push(line);
+    let line;
+    if(piece.ocrLineId){
+      line=ocrLines.get(piece.ocrLineId);
+      if(!line){line={y:piece.y,cells:[],ocrLineId:piece.ocrLineId};ocrLines.set(piece.ocrLineId,line);lines.push(line);}
+    }else{
+      line = lines.at(-1);
+      if (!line || line.ocrLineId || Math.abs(line.y - piece.y) > Math.max(2, Math.min(4, piece.height * 0.25))) {
+        line = { y: piece.y, cells: [] }; lines.push(line);
+      }
     }
     line.cells.push(piece);
   }
+  lines.sort((a,b)=>b.y-a.y);
   return lines.map((line, index) => {
     const columns = [],positions=new Map();
     const cells = line.cells.sort((a, b) => a.x - b.x).map((cell) => ({ ...cell, row: index + 1, column: cell.x }));
