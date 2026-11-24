@@ -212,6 +212,42 @@ test("Cargar todos entrega solo borradores; una falla conserva el archivo y evit
   await harness.action("apply"); assert.equal(calls, 2, "la vista lista no vuelve a importar");
 });
 
+test("despues de importar y reabrir se puede elegir otro archivo sin perder eventos ni ediciones", async () => {
+  const first = await parseEventFile(await syntheticWorkbook(), { fileName: "primero-sintetico.xlsx" });
+  const book = new ExcelJS.Workbook(), sheet = book.addWorksheet("Otro evento sintetico");
+  [["Fecha del evento", "24/11/2026"], ["Nombre del cliente", "Otro cliente sintetico"], ["Lugar", "Otro sitio sintetico"], ["Cantidad", "Descripcion"], [0, "Control sintetico"], [2, "Equipo segundo archivo"]].forEach(row => sheet.addRow(row));
+  const second = await parseEventFile(Buffer.from(await book.xlsx.writeBuffer()), { fileName: "segundo-sintetico.xlsx" });
+  const liveEvents = [], uploads = []; let imports = 0;
+  const harness = browserHarness({
+    fetch: async (_url, options) => { uploads.push(options.body.get("file").name); return { ok: true, json: async () => uploads.length === 1 ? first : second }; },
+    bridge: { events: () => liveEvents, importEvents(events) { imports++; const added = events.map((event, index) => ({ ...JSON.parse(JSON.stringify(event)), id: `draft-${imports}-${index}` })); liveEvents.push(...added); return { events: added, addedCount: added.length }; } }
+  });
+  await harness.api.openFile({ ...fakeFile(), name: "primero-sintetico.xlsx" }); await harness.action("apply");
+  const firstDraft = liveEvents[0], firstItem = firstDraft.sections.flatMap(section => section.items)[0]; firstDraft.name = "Edicion manual conservada"; firstItem.quantity = 7;
+  const retained = JSON.stringify(liveEvents);
+  await harness.action("close"); assert.equal(harness.dialog.open, false);
+  harness.api.open(); assert.equal(harness.dialog.open, true);
+  const next = harness.get("equipmentBatchChooseNext");
+  assert.ok(next, "la vista de eventos cargados debe ofrecer otro archivo al volver a abrirse");
+  assert.match(harness.get("equipmentBatchContent").innerHTML, /Importar otro Excel o PDF/);
+  assert.equal(next.disabled, false); assert.equal(next.dataset.batchAction, "choose-next");
+  let pickerCalls = 0;
+  harness.get("equipmentBatchFile").click = () => { pickerCalls++; assert.equal(harness.api.getImported(), null); assert.equal(harness.api.getPreview(), null); assert.equal(JSON.stringify(liveEvents), retained); };
+  await harness.action("choose-next");
+  assert.equal(pickerCalls, 1, "el selector se abre directamente dentro del click del usuario");
+  assert.equal(imports, 1); assert.equal(uploads.length, 1); assert.equal(JSON.stringify(liveEvents), retained);
+  const input = harness.get("equipmentBatchFile"); input.files = [{ ...fakeFile(), name: "segundo-sintetico.xlsx" }];
+  await harness.dialog.emit("change", { target: input });
+  assert.deepEqual(uploads, ["primero-sintetico.xlsx", "segundo-sintetico.xlsx"]);
+  assert.equal(liveEvents.length, 6, "leer otro archivo no vuelve a importar el anterior ni altera borradores");
+  await harness.action("apply");
+  assert.equal(imports, 2); assert.equal(liveEvents.length, 7); assert.equal(liveEvents[0], firstDraft);
+  assert.equal(liveEvents[0].name, "Edicion manual conservada"); assert.equal(liveEvents[0].sections.flatMap(section => section.items)[0].quantity, 7);
+  assert.equal(liveEvents[6].sections.flatMap(section => section.items).length, 2);
+  await harness.action("close"); harness.api.open();
+  assert.equal(harness.get("equipmentBatchChooseNext").disabled, false); assert.equal(liveEvents.length, 7);
+});
+
 test("pares numericos paralelos sin metadatos ni encabezados requieren revision, sin inferir eventos", async () => {
   const book = new ExcelJS.Workbook(), sheet = book.addWorksheet("Ambigua sintetica");
   sheet.addRow([2, "Equipo sintetico A", 3, "Dato adicional ambiguo"]);
@@ -486,6 +522,39 @@ test("una carga prepara todos los reportes, bloquea concurrencia y conserva el r
   await h.action("report-summary"); assert.equal(h.dialog.open, false);
   h.api.open(); assert.equal(h.dialog.open, true); await h.action("apply-purchase");
   assert.equal(imports, 1); assert.equal(notified, 1); assert.equal(h.api.getImported().events.length, 1);
+});
+
+test("Trasiego libera el dialogo nativo antes de abrir su selector y conserva los eventos al terminar", async () => {
+  let imports = 0, reportCalls = 0, finish;
+  const h = browserHarness({ fetch: async () => deliverPreview(clientPreview()), bridge: {
+    importEvents(events) { imports++; return { events }; },
+    afterImport(mode) { reportCalls++; assert.equal(mode, "transfer"); assert.equal(h.dialog.open, false, "el checklist no puede quedar detras del dialogo nativo"); return new Promise(resolve => { finish = resolve; }); }
+  } });
+  await h.api.openFile(fakeFile()); await h.action("apply");
+  const reporting = h.action("apply-transfer");
+  assert.equal(h.dialog.open, false); assert.equal(h.api.getImported().events.length, 1);
+  assert.equal(h.get("equipmentBatchChooseNext").disabled, true);
+  h.get("equipmentBatchFile").clicked = false;
+  await h.action("choose-next"); await h.action("apply-transfer");
+  assert.equal(h.get("equipmentBatchFile").clicked, false); assert.equal(reportCalls, 1); assert.equal(h.api.open(), false);
+  finish({ ok: true }); await reporting;
+  assert.equal(h.dialog.open, false, "el selector de trasiego debe seguir accesible");
+  h.api.open(); assert.equal(h.dialog.open, true); assert.equal(h.get("equipmentBatchChooseNext").disabled, false);
+  assert.equal(imports, 1); assert.equal(h.api.getImported().events.length, 1);
+});
+
+test("un fallo o cancelacion del selector de Trasiego reabre la vista lista y permite reintentar sin importar de nuevo", async () => {
+  let imports = 0, reportCalls = 0;
+  const h = browserHarness({ fetch: async () => deliverPreview(clientPreview()), bridge: {
+    importEvents(events) { imports++; return { events }; },
+    afterImport() { reportCalls++; assert.equal(h.dialog.open, false); if (reportCalls === 1) throw new Error("Fallo sintetico del selector"); return { reportClosed: true }; }
+  } });
+  await h.api.openFile(fakeFile()); await h.action("apply"); await h.action("apply-transfer");
+  assert.equal(h.dialog.open, true); assert.match(h.get("equipmentBatchStatus").textContent, /Fallo sintetico/);
+  assert.equal(h.get("equipmentBatchChooseNext").disabled, false); assert.equal(h.api.getPreview(), null);
+  await h.action("apply-transfer");
+  assert.equal(h.dialog.open, true); assert.match(h.get("equipmentBatchStatus").textContent, /reporte se cerró/);
+  assert.equal(reportCalls, 2); assert.equal(imports, 1); assert.equal(h.api.getImported().events.length, 1);
 });
 
 test("fallos del reporte o de onImported no vuelven a ofrecer importar el archivo", async () => {

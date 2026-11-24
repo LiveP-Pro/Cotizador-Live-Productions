@@ -245,6 +245,8 @@
       }
       get("equipmentBatchChoose").hidden = !!imported;
       get("equipmentBatchChoose").disabled = applying || reporting;
+      const chooseNext = get("equipmentBatchChooseNext");
+      if (chooseNext) chooseNext.disabled = locked;
       get("equipmentBatchInstructions").hidden = !!imported;
       get("equipmentBatchClose").textContent = imported ? "Cerrar" : "Cancelar";
       get("equipmentBatchClose").disabled = applying || reporting;
@@ -266,7 +268,7 @@
       generation++; confirmation = null; request?.abort(); request = null; busy = false;
       if (dialog.open) dialog.close();
       // Retain successful imports when the ready panel is dismissed. Reopening
-      // can generate another report without offering the same import again.
+      // can generate another report or explicitly choose a new source file.
       if (!imported) reset();
       opener.focus(); return true;
     }
@@ -346,7 +348,7 @@
       const source = imported.fileName || "Archivo", events = Array.isArray(imported.result?.events) ? imported.result.events : imported.events, count = events.length;
       const reused = Number.isInteger(imported.result?.addedCount) ? Math.max(0, count - imported.result.addedCount) : 0;
       get("equipmentBatchBody").scrollTop = 0;
-      get("equipmentBatchContent").innerHTML = `<section class="equipment-batch-ready"><strong>${count} eventos cargados y listos para preparar reportes</strong><p>${escape(source)}</p>${reused ? `<p>${reused} cuadros del mismo archivo ya estaban cargados; se conservaron sus ediciones.</p>` : ""}<p>Puede generar los reportes desde los botones de abajo. Los eventos se cargaron una sola vez; si un reporte falla puede volver a generarlo.</p><ul>${events.map((event) => `<li>${escape(event.place || event.name || "Evento")} · ${escape(event.date || "Fecha pendiente")}</li>`).join("")}</ul></section>`;
+      get("equipmentBatchContent").innerHTML = `<section class="equipment-batch-ready"><strong>${count} eventos cargados y listos para preparar reportes</strong><p>${escape(source)}</p>${reused ? `<p>${reused} cuadros del mismo archivo ya estaban cargados; se conservaron sus ediciones.</p>` : ""}<p>Puede generar los reportes desde los botones de abajo. Los eventos se cargaron una sola vez; si un reporte falla puede volver a generarlo.</p><ul>${events.map((event) => `<li>${escape(event.place || event.name || "Evento")} · ${escape(event.date || "Fecha pendiente")}</li>`).join("")}</ul><button type="button" id="equipmentBatchChooseNext" data-batch-action="choose-next">Importar otro Excel o PDF</button><p>Los eventos y sus cambios ya cargados se conservan al elegir otro archivo.</p></section>`;
     }
     function reportError(error) {
       status(`Los eventos ya se cargaron. ${error?.message || "No se pudo generar el reporte."} Puede reintentarlo.`, true);
@@ -356,15 +358,19 @@
       if (!imported || busy || applying || reporting) return false;
       if (!allowed(mode)) { status("Su usuario no tiene permiso para esta acción.", true); return false; }
       if (typeof imported.connection?.afterImport !== "function") { reportError(new Error("No está disponible la conexión con los reportes.")); return false; }
-      let completed = false;
+      let completed = false, reopen = false;
+      // A native dialog occupies the top layer and makes body overlays inert.
+      // Yield it before opening the transfer checklist, retaining the ready state.
+      const yieldedDialog = mode === "transfer" && dialog.open;
       reporting = true; update(); status(mode === "summary" ? "Abriendo el resumen general…" : "Preparando el reporte con los eventos cargados…");
+      if (yieldedDialog) dialog.close();
       try {
         const outcome = await imported.connection.afterImport(mode, { events: clone(imported.events), result: imported.result });
-        if (outcome?.reportClosed) { status("El reporte se cerró. Puede volver a abrirlo con los mismos eventos."); return false; }
+        if (outcome?.reportClosed) { reopen = yieldedDialog; status("El reporte se cerró. Puede volver a abrirlo con los mismos eventos."); return false; }
         completed = true;
         status(mode === "summary" ? "Resumen general disponible. Puede continuar con los reportes." : "Reporte abierto. Al cerrarlo, puede elegir otro reporte con los mismos eventos."); return true;
-      } catch (error) { reportError(error); return false; }
-      finally { reporting = false; update(); if (completed && mode === "summary") close(); }
+      } catch (error) { reopen = yieldedDialog; reportError(error); return false; }
+      finally { reporting = false; update(); if (reopen && !destroyed) open(); if (completed && mode === "summary") close(); }
     }
     async function apply(mode = "") {
       if (destroyed || busy || applying || reporting || confirmation) return false;
@@ -421,6 +427,10 @@
       const action = event.target?.closest?.("[data-batch-action]")?.dataset.batchAction;
       if (action === "close") close();
       else if (action === "choose" && !applying && !reporting) get("equipmentBatchFile").click();
+      else if (action === "choose-next" && imported && !busy && !applying && !reporting && !confirmation) {
+        // Reset only the importer's preview/result; bridge events and drafts stay.
+        reset(); get("equipmentBatchFile").click();
+      }
       else if (["apply", "apply-transfer", "apply-rent", "apply-purchase"].includes(action)) await apply(action === "apply" ? "" : action.slice(6));
       else if (action === "report-summary") await report("summary");
     }
