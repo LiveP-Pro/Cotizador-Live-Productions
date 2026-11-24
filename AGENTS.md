@@ -1,3 +1,13 @@
+# Acceso y publicación: reglas permanentes del proyecto
+
+Estas instrucciones aplican a los cambios de este proyecto en cualquier computadora.
+
+- Cada cambio solicitado o autorizado por el usuario debe incluir las pruebas pertinentes y su publicación directa en la web antes de darlo por terminado. No esperar una petición adicional para publicar ni volver a pedir una autorización que el usuario ya dio. Si existe un bloqueo real, informar el bloqueo sin afirmar que el cambio está publicado.
+- Mantener el inicio de sesión con usuarios y contraseñas. La instrucción de no tener un módulo de usuarios NO significa quitar la autenticación.
+- Configurar las cuentas y sus permisos únicamente desde el código del servidor y su configuración privada. No agregar pantallas, módulos ni rutas web para administrar cuentas o cambiar contraseñas.
+- Mantener las contraseñas protegidas mediante hashes en el servidor. No incluir contraseñas en texto plano en el repositorio ni en HTML o JavaScript enviados al navegador.
+- Conservar las cuentas existentes. No inventar, borrar, restablecer ni sustituir el listado de cuentas o sus contraseñas al publicar otros cambios.
+
 # Requerimiento de Equipo: reglas permanentes
 
 Estas reglas aplican exclusivamente al modulo **Requerimiento de Equipo** de
