@@ -553,7 +553,7 @@ function truckManifestRows(model) {
 }
 function renderTruckManifest(model) {
   const rows = truckManifestRows(model);
-  return rows.length ? `<section class="truck-manifest"><h2>Preparar el camión para el siguiente evento</h2><p>Estas sugerencias agrupan equipo compatible y comparan ubicaciones y horarios. La distancia de coordenadas es en línea recta; el tiempo de viaje debe revisarse por carretera. La carga adicional se comprueba desde la salida del primer evento y no modifica sus cuadros, reservas, renta ni compra. Confirme la carga con bodega antes de salir.</p>${reportTable(['Cargar / salir de', 'Para el evento', 'Acción', 'Equipo', 'Cantidad', 'Indicación', 'Cercanía'], rows)}</section>` : '';
+  return rows.length ? `<section class="truck-manifest"><h2>Preparar el camión para el siguiente evento</h2><p>Estas sugerencias agrupan equipo compatible y comparan ubicaciones y horarios. La distancia de coordenadas es en línea recta; el tiempo de viaje debe revisarse por carretera. La carga adicional se comprueba desde la salida del primer evento y no modifica sus cuadros, reservas, renta ni compra. Confirme la carga con bodega antes de salir.</p><div class="table-scroll">${reportTable(['Cargar / salir de', 'Para el evento', 'Acción', 'Equipo', 'Cantidad', 'Indicación', 'Cercanía'], rows)}</div></section>` : '';
 }
 function renderEquipmentTransferReportHtml(model) {
   const schedule = event => reportTable(["Cliente / evento", "Fecha", "Ubicación", "Montaje", "Inicio", "Finalización", "Regreso a bodega"], [[
