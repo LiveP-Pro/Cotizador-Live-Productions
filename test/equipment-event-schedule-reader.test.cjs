@@ -479,6 +479,7 @@ const completeIdentity = { date: "24/11/2026", client: "Cliente sintetico", plac
 test("one fully identified event retains an identical anonymous table as a complete reference without active double counting", async () => {
   const preview = await previewRows(identicalTableRows([null, completeIdentity]), (sheet) => {
     sheet.getCell("A5").note = "Nota sintetica de la copia con cero";
+    sheet.getCell("C5").note = "Nota sintetica de la copia con cero";
     sheet.getCell("A5").numFmt = '0 "unidades"';
   });
   assert.equal(preview.events.length, 1);

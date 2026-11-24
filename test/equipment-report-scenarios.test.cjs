@@ -24,7 +24,12 @@ function fixture(stockQuantity = 3) {
   ];
   return { name, inventory, events, makeEvent };
 }
-const build = (events, inventory, extra = {}) => reporting.createEquipmentPlanningReportModel({ events, ...extra }, inventory);
+const build = (events, inventory, extra = {}) => {
+  const routeEstimates = extra.routeEstimates || events.flatMap((event, index) => events.slice(index + 1).map(destination => ({ fromPlace: event.place, toPlace: destination.place, travelMinutes: 60, handlingMinutes: 120 })));
+  const preview = reporting.createEquipmentReportModel({ events, ...extra, routeEstimates }, inventory);
+  const selectedTransferIds = preview.draftLogistics.candidates.filter(candidate => candidate.status === "ready").map(candidate => candidate.id);
+  return reporting.createEquipmentPlanningReportModel({ events, ...extra, routeEstimates, selectedTransferIds }, inventory);
+};
 const audioRow = model => model.scenarioRows.find(row => row.warehouseInventoryId === "scenario-audio");
 
 test("renta compara ocupación sin trasiego contra el plan de traslado, con categoría física vigente", () => {
@@ -40,7 +45,7 @@ test("renta compara ocupación sin trasiego contra el plan de traslado, con cate
   assert.equal(model.transferRoutes[0].toEventId, events[1].id);
   assert.equal(model.transferRoutes[0].quantity, 2);
   assert.equal(model.transferRoutes[0].requiresConfirmation, true);
-  assert.equal(model.transferRoutes[0].requiresTimeConfirmation, true);
+  assert.equal(model.transferRoutes[0].requiresTimeConfirmation, false);
   assert.equal(model.rentalComparison.length, 1);
   assert.equal(model.productionMutations, 0);
   assert.equal(JSON.stringify({ events, inventory }), before);
@@ -71,14 +76,12 @@ test("un intervalo insuficiente no ahorra renta y una ruta de minutos revisados 
   assert.equal(overlapping.transferRoutes.length, 0);
 });
 
-test("la capacidad insuficiente separa equipo propio y la continuación de unidades rentadas", () => {
+test("la capacidad insuficiente solo descuenta el equipo propio seleccionado sin reutilizar renta invisiblemente", () => {
   const { events, inventory } = fixture(1), model = build(events, inventory), row = audioRow(model);
   assert.equal(row.requiredWithoutTransfer, 5); assert.equal(row.rentWithoutTransfer, 4);
-  assert.equal(row.requiredWithTransfer, 3); assert.equal(row.rentWithTransfer, 2);
+  assert.equal(row.requiredWithTransfer, 4); assert.equal(row.rentWithTransfer, 3);
   assert.equal(model.transferRoutes[0].quantity, 1);
-  assert.equal(model.rentalTransferRoutes[0].quantity, 1);
-  assert.equal(model.rentalTransferRoutes[0].requiresRentalSupplierConfirmation, true);
-  assert.equal(model.transferRoutes[0].quantity + model.rentalTransferRoutes[0].quantity, 2);
+  assert.equal(model.rentalTransferRoutes.length, 0);
 });
 
 test("el plan global conserva cadenas físicas sin asignar una unidad a destinos simultáneos", () => {
@@ -101,7 +104,8 @@ test("horarios incompletos o contradictorios conservan la demanda como pendiente
     const { events, inventory } = fixture(); change(events[0]);
     const original = JSON.stringify(events), model = build(events, inventory), row = audioRow(model);
     assert.equal(row.demand, 5);
-    assert.equal(row.rentWithoutTransfer, null); assert.equal(row.rentWithTransfer, null);
+    assert.equal(row.rentWithoutTransfer, 2); assert.equal(row.rentWithTransfer, 2);
+    assert.equal(row.rentalProvisional, true);
     assert.equal(row.pendingWithoutTransfer, true); assert.equal(row.pendingWithTransfer, true);
     assert.ok(row.reason);
     assert.equal(model.transferRoutes.length, 0);
@@ -148,7 +152,7 @@ test("taller y salidas físicas no vinculadas reducen la capacidad sin inventar 
   assert.equal(row.ownedCapacity, 2); assert.equal(row.rentWithoutTransfer, 3); assert.equal(row.rentWithTransfer, 1);
   inventory.state.movements.push({ itemId: "scenario-audio", type: "salida", quantity: 1, sourceEventId: "another-physical-event" });
   row = audioRow(build(events, inventory));
-  assert.equal(row.ownedCapacity, 1); assert.equal(row.rentWithoutTransfer, 4); assert.equal(row.rentWithTransfer, 2);
+  assert.equal(row.ownedCapacity, 1); assert.equal(row.rentWithoutTransfer, 4); assert.equal(row.rentWithTransfer, 3);
 });
 
 test("el conjunto seleccionado se compara completo aunque el filtro de la agenda sea distinto", () => {

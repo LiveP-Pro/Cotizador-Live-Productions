@@ -26,7 +26,7 @@ const names = [
   "saveEquipmentCatalogOverride", "equipmentImportSlug", "currentEquipmentBaseCatalog", "currentEquipmentImportCatalog",
   "equipmentImportBookKey", "equipmentImportBookServices", "equipmentImportOwner", "pruneEquipmentImportPreviews",
   "previewEquipmentServiceFile", "saveImportedEquipmentServices", "downloadEquipmentServiceSource",
-  "validateEquipmentEventConfirmation", "jsonResponse", "errorResponse", "requireAuth", "enqueueSave", "handleRequest"
+  "validateEquipmentOcrReview", "validateEquipmentEventConfirmation", "jsonResponse", "errorResponse", "requireAuth", "enqueueSave", "handleRequest"
 ];
 function functionSource(name) {
   const start = source.search(new RegExp(`^(?:async )?function ${name}\\(`, "m"));

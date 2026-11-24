@@ -38,7 +38,7 @@ test("the three reports open printable views with one click and do not download 
     const result = await h.planner.download(mode);
     assert.equal(result.ok, true); assert.equal(result.reportOpened, true);
   }
-  assert.deepEqual(h.opens, ["Trasiego entre eventos", "Renta con y sin trasiego", "Compra de consumibles"]);
+  assert.deepEqual(h.opens, ["Trasiegos seleccionados", "Reporte de renta", "Reporte de compra"]);
   assert.deepEqual(h.requests.map(request => request.body.format), ["html", "html", "html"]);
   assert.ok(h.requests.every(request => request.credentials === "same-origin"));
   assert.deepEqual(h.contents, [markup, markup, markup]); assert.deepEqual(h.downloads, []);
@@ -73,13 +73,14 @@ test("concurrent clicks send only one request and closing during a request never
   assert.equal(h.contents.length, 0); assert.equal(h.opens.length, 1); assert.equal(button.disabled, false);
 });
 
-test("route estimates are shared by trasiego and rental scenarios but never added to consumable purchase", async () => {
+test("all report formats receive the same selection context while consumable accounting stays in the common engine", async () => {
   const routeEstimates = [{ fromPlace: "A", toPlace: "B", travelMinutes: 15, handlingMinutes: 10 }];
   const h = harness(() => htmlResponse(), { transferOptions: { routeEstimates } });
   for (const mode of ["transfer", "rent", "purchase"]) assert.equal((await h.planner.download(mode)).ok, true);
   assert.deepEqual(h.requests[0].body.routeEstimates, routeEstimates);
   assert.deepEqual(h.requests[1].body.routeEstimates, routeEstimates);
-  assert.equal(Object.hasOwn(h.requests[2].body, "routeEstimates"), false);
+  assert.deepEqual(h.requests[2].body.routeEstimates, routeEstimates);
+  assert.ok(h.requests.every(request=>Array.isArray(request.body.selectedTransferIds)&&request.body.selectedTransferIds.length===0));
 });
 
 test("permission denial before a report or retry sends no request and never opens a new view", async () => {

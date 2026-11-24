@@ -432,10 +432,10 @@ async function readExcel(buffer, { preserveCellNotes = false, selectedSheets, ex
     worksheets, selectedSheets: selected, excludedSheets };
 }
 
-function pdfLines(items, pageNumber) {
-  const pieces = items.map((item, index) => ({ ref: `pdf:${pageNumber}:${index + 1}`, page: pageNumber,
+function pdfLines(items, pageNumber, prefix = 'pdf', fontMetadata = {}) {
+  const pieces = items.map((item, index) => ({ ref: `${prefix}:${pageNumber}:${index + 1}`, page: pageNumber,
     value: item.str, x: item.transform?.[4] || 0, y: item.transform?.[5] || 0, width: item.width || 0,
-    height: Math.abs(item.height || item.transform?.[3] || 10) })).filter((item) => clean(item.value));
+    height: Math.abs(item.height || item.transform?.[3] || 10),...(item.fontName?{fontName:item.fontName,...fontMetadata[item.fontName]}:{}),...(item.ocrConfidence!==undefined?{ocrConfidence:item.ocrConfidence}:{}) })).filter((item) => clean(item.value));
   pieces.sort((a, b) => b.y - a.y || a.x - b.x);
   const lines = [];
   for (const piece of pieces) {
@@ -446,15 +446,19 @@ function pdfLines(items, pageNumber) {
     line.cells.push(piece);
   }
   return lines.map((line, index) => {
-    const columns = [];
+    const columns = [],positions=new Map();
     const cells = line.cells.sort((a, b) => a.x - b.x).map((cell) => ({ ...cell, row: index + 1, column: cell.x }));
     for (const cell of cells) {
+      const position=JSON.stringify([cell.value,cell.x,cell.y,cell.width,cell.height]);
+      if(positions.has(position)){cell.duplicateOf=positions.get(position);continue;}
+      positions.set(position,cell.ref);
       const previous = columns.at(-1);
       if (previous && cell.x - previous.endX < Math.max(10, cell.height)) {
         previous.value = clean(`${previous.value} ${cell.value}`);
         previous.endX = Math.max(previous.endX, cell.x + cell.width);
         previous.refs.push(cell.ref);
-      } else columns.push({ column: cell.x, value: cell.value, endX: cell.x + cell.width, refs: [cell.ref] });
+        previous.isHeading=previous.isHeading===true&&cell.isHeading===true;
+      } else columns.push({ column: cell.x, value: cell.value, endX: cell.x + cell.width, refs: [cell.ref],...(cell.isHeading?{isHeading:true}:{}) });
     }
     return { ref: `pdf-line:${pageNumber}:${index + 1}`, page: pageNumber, line: index + 1, y: line.y,
       cells, columns, text: cells.map((cell) => cell.value).join(" ") };
@@ -536,7 +540,7 @@ function hasPdfTableImage(operators, ops, headers) {
   return false;
 }
 
-async function readPdf(buffer) {
+async function readPdf(buffer, {enableOcr = false, ocrPage} = {}) {
   let task;
   try {
     const { getDocument, OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -547,13 +551,25 @@ async function readPdf(buffer) {
     const sourceCells = [];
     const sourceRows = [];
     const blockers = [];
+    const duplicatePages = [], pageSignatures = new Map(), ocrPages = [];
+    const startedAt=Date.now();
     let headers = null;
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
       const page = await document.getPage(pageNumber);
       const content = await page.getTextContent();
       if (content.items.length > LIMITS.pageTextItems) throw invalid(`La página ${pageNumber} supera el límite de texto permitido.`);
-      const lines = pdfLines(content.items.filter((item) => typeof item.str === "string"), pageNumber);
       const operators = await page.getOperatorList();
+      const fontMetadata={};
+      for(const fontName of Object.keys(content.styles || {})){
+        const style=content.styles[fontName];let font;
+        // The operator list resolves the exact font descriptors in this pinned
+        // PDF.js version. Missing descriptors remain unknown, never guessed
+        // from equipment words or a catalog.
+        try{font=page.commonObjs?.get(fontName);}catch(_){/* Keep unknown typography as ordinary source text. */}
+        const weight=Number(font?.cssFontInfo?.fontWeight),bold=font?.bold===true||font?.black===true||Number.isFinite(weight)&&weight>=600;
+        fontMetadata[fontName]={fontFamily:style.fontFamily,fontBold:bold,fontItalic:font?.italic===true,...(bold?{isHeading:true}:{})};
+      }
+      let lines = pdfLines(content.items.filter((item) => typeof item.str === "string"), pageNumber,'pdf',fontMetadata);
       const viewport = page.getViewport({ scale: 1 });
       const pageHeaders = lines.flatMap((line) => {
         const table = detectHeader(line.columns);
@@ -561,7 +577,15 @@ async function readPdf(buffer) {
       });
       const imageTableContexts = pageHeaders.map((entry, index) => ({ ...entry, bottom: pageHeaders[index + 1]?.y ?? -Infinity }));
       if (headers) imageTableContexts.unshift({ table: headers, y: Infinity, bottom: pageHeaders[0]?.y ?? -Infinity });
-      if (hasLargePdfImage(operators, OPS, viewport.width * viewport.height)) {
+      const needsOcr=hasLargePdfImage(operators, OPS, viewport.width * viewport.height)||hasPdfTableImage(operators, OPS, imageTableContexts)||!lines.length&&operators.fnArray.length>0;
+      if(enableOcr&&needsOcr){
+        if(Date.now()-startedAt>90000)throw invalid('La lectura del escaneo excedió el tiempo de seguridad. Divida el PDF o use el Excel original.');
+        const recognized=await (ocrPage || require('./equipment-pdf-ocr.cjs').readPage)(buffer,{pageNumber,pageHeight:viewport.height,pageWidth:viewport.width,timeoutMs:Math.max(1,Math.min(20000,Math.floor((90000-(Date.now()-startedAt))/2)))});
+        const references=lines.map(line=>({...line,referenceOnly:true}));
+        lines=[...references,...pdfLines(recognized.items,pageNumber,'ocr')];
+        ocrPages.push({page:pageNumber,minimumConfidence:recognized.minimumConfidence,uncertain:recognized.uncertain||[],requiresReview:true});
+        if(recognized.uncertain?.length)blockers.push(`Página ${pageNumber}: el OCR encontró ${recognized.uncertain.length} fragmentos poco legibles. Corrija el escaneo o use el Excel original; no se permite aceptar cantidades inciertas.`);
+      } else if (hasLargePdfImage(operators, OPS, viewport.width * viewport.height)) {
         blockers.push(`Página ${pageNumber}: contiene una imagen grande cuyo contenido no puede compararse celda por celda. Si es un cuadro escaneado, use el Excel original o un PDF con toda la tabla como texto seleccionable.`);
       } else if (hasPdfTableImage(operators, OPS, imageTableContexts)) {
         blockers.push(`Página ${pageNumber}: contiene una imagen o mosaico en las columnas del cuadro cuyo contenido no es texto seleccionable. Use el Excel original o un PDF con toda la tabla como texto seleccionable.`);
@@ -576,12 +600,19 @@ async function readPdf(buffer) {
           blockers.push(`Página ${pageNumber}: contiene contenido dibujado sin texto seleccionable. No se puede verificar todo su contenido; use el Excel original o un PDF digital.`);
         }
       }
+      // Exact page operators AND selectable text at the same coordinates prove
+      // a repeated rendered page, not merely an equal equipment description.
+      const pageSignature=crypto.createHash('sha256').update(JSON.stringify({width:viewport.width,height:viewport.height,text:content.items.filter(item=>typeof item.str==='string').map(item=>[item.str,item.transform,item.width,item.height]),operators:[operators.fnArray,operators.argsArray]})).digest('hex');
+      if(!ocrPages.some(entry=>entry.page===pageNumber)&&lines.length){
+        if(pageSignatures.has(pageSignature))duplicatePages.push({page:pageNumber,duplicateOf:pageSignatures.get(pageSignature),signature:pageSignature});
+        else pageSignatures.set(pageSignature,pageNumber);
+      }
       for (const line of lines) {
         if (sourceRows.length >= LIMITS.rows || sourceCells.length + line.cells.length > LIMITS.cells) throw invalid("El PDF supera el límite de 10,000 filas o 100,000 fragmentos de texto.");
-        const header = detectHeader(line.columns);
+        const header = line.referenceOnly?null:detectHeader(line.columns);
         if (header) headers = header;
         let columns = line.columns;
-        if (!header && headers) {
+        if (!line.referenceOnly && !header && headers) {
           const anchors = Object.keys(headers.labels).map(Number).sort((a, b) => a - b);
           const values = new Map();
           columns = columns.map((cell) => {
@@ -591,20 +622,20 @@ async function readPdf(buffer) {
           });
           for (const cell of columns) {
             const previous = values.get(cell.column) || { value: "", refs: [] };
-            values.set(cell.column, { value: clean(`${previous.value} ${cell.value}`), refs: [...previous.refs, ...cell.refs] });
+            values.set(cell.column, { value: clean(`${previous.value} ${cell.value}`), refs: [...previous.refs, ...cell.refs],isHeading:previous.value?previous.isHeading===true&&cell.isHeading===true:cell.isHeading===true });
           }
           columns = [...values].map(([column, value]) => ({ column, ...value }));
         }
         line.cells.forEach((cell) => { cell.sourceOrder = sourceRows.length; });
         sourceCells.push(...line.cells);
         documentLines.push(line);
-        sourceRows.push({ location: "PDF importado", cells: line.cells, columns, order: sourceRows.length,
+        sourceRows.push({ location: "PDF importado", cells: line.cells, columns, order: sourceRows.length,...(line.referenceOnly?{referenceOnly:true}:{}),
           sourceLocation: `Página ${pageNumber}, fila ${line.line}` });
       }
       page.cleanup();
     }
     if (!sourceCells.length) throw invalid("El PDF no contiene texto seleccionable. Parece escaneado; use un PDF digital o el archivo Excel original.");
-    return { sourceCells, sourceRows, documentLines, blockers };
+    return { sourceCells, sourceRows, documentLines, blockers,duplicatePages,ocrPages };
   } catch (error) {
     if (error.code === "EQUIPMENT_SERVICE_IMPORT_INVALID") throw error;
     if (error.name === "PasswordException") throw invalid("El PDF está protegido con contraseña. Use una copia sin contraseña.");
@@ -692,17 +723,18 @@ function verifyServiceImport(preview) {
 }
 
 async function readSourceFile(buffer, { fileName = "servicios", mimeType = "", preserveCellNotes = false,
-  selectedSheets, excludeInventorySheets = false } = {}) {
+  selectedSheets, excludeInventorySheets = false,enableOcr = false,ocrPage } = {}) {
   if (!Buffer.isBuffer(buffer) && !(buffer instanceof Uint8Array)) throw invalid("No se recibió un archivo válido.");
   if (!buffer.length) throw invalid("El archivo está vacío.");
   if (buffer.length > LIMITS.fileBytes) throw invalid("El archivo supera el límite de 15 MB.");
   const format = /\.xlsx$/i.test(fileName) ? "xlsx" : /\.pdf$/i.test(fileName) ? "pdf"
     : mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ? "xlsx" : mimeType === "application/pdf" ? "pdf" : "";
   if (!format) throw invalid("Use Excel .xlsx o PDF digital. Los archivos .xls deben guardarse como .xlsx.");
-  const data = format === "xlsx" ? await readExcel(buffer, { preserveCellNotes, selectedSheets, excludeInventorySheets }) : await readPdf(buffer);
+  const data = format === "xlsx" ? await readExcel(buffer, { preserveCellNotes, selectedSheets, excludeInventorySheets }) : await readPdf(buffer,{enableOcr,ocrPage});
   if (!data.sourceCells.length) throw invalid("El archivo no contiene celdas o texto con información.");
   return { ...data, source: { fileName: String(fileName), format, mimeType: String(mimeType),
     sha256: crypto.createHash("sha256").update(buffer).digest("hex"), byteLength: buffer.length,
+    ...(data.ocrPages?.length?{ocrPages:data.ocrPages}:{}),
     ...(format === "xlsx" ? { worksheets: data.worksheets, selectedSheets: data.selectedSheets, excludedSheets: data.excludedSheets } : {}) } };
 }
 

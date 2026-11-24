@@ -345,6 +345,9 @@ const tableFields = {
   notes: ["nota", "notas", "observacion", "observaciones", "comentario", "comentarios", "notes"]
 };
 const tableField = (value) => Object.keys(tableFields).find((field) => tableFields[field].includes(key(value)));
+// Exact labels only. Longer equipment descriptions such as "Fuente con cable"
+// must still have a numeric quantity; these labels never infer an inventory item.
+const explicitNoteLabel = value => /^(?:nota(?:s|\(s\))?|observacion(?:es)?|importante|fuente|sitio|fuente de inventario|sitio fuente)\s*[:.\-]?$/.test(key(value));
 function excelLayouts(rows) {
   const headers = [], headerIssues = [];
   for (const row of rows) {
@@ -414,7 +417,7 @@ function eventForBlock(rows, { sheet, index, quantityColumn, descriptionColumn, 
   for (const row of rows) {
     const cells = row.cells, parsedCells = row.columns || cells;
     sourceCells.push(...cells);
-    const fields = metadataInRow(parsedCells);
+    const fields = row.referenceOnly ? [] : metadataInRow(parsedCells);
     for (const field of fields) {
       if (metadata[field.field] && metadata[field.field] !== field.value) issues.push({ code: "conflicting_metadata", field: field.field, message: `${field.field === "place" ? "Ubicación" : field.field === "date" ? "Fecha" : "Dato del evento"} tiene valores distintos. Separe los eventos o revise este cuadro.`, refs: field.refs });
       else { metadata[field.field] = field.value; metadataRefs[field.field] = field.refs; metadataParsed[field.field] = field.parts; if (field.field === "date") metadata.parsedDate = field.date; }
@@ -424,9 +427,11 @@ function eventForBlock(rows, { sheet, index, quantityColumn, descriptionColumn, 
     const categoryCell = parsedCells.find((cell) => cell.column === optionalColumns.category);
     const quantity = count(quantityCell?.value), description = text(descriptionCell?.value);
     let type = "note", heading = "";
-    if (fields.length) type = "metadata";
+    if (row.referenceOnly) type = "reference";
+    else if (fields.length) type = "metadata";
     else if (quantity !== null && clean(description)) { type = "item"; if (clean(categoryCell?.value)) ensure(text(categoryCell.value)); }
     else if (quantityCell && tableField(quantityCell.value) === "quantity" && clean(description)) { type = "header"; if (tableField(description) !== "description") ensure(description); }
+    else if (quantityCell && explicitNoteLabel(quantityCell.value) && clean(description)) type = "note";
     else if (quantity !== null && !clean(description)) {
       type = "unresolved";
       issues.push({ code: "missing_description", message: "Hay una cantidad sin descripción. Corrija la fuente antes de cargar este cuadro.", refs: cells.map((cell) => cell.ref) });
@@ -447,7 +452,7 @@ function eventForBlock(rows, { sheet, index, quantityColumn, descriptionColumn, 
     if (type === "item") {
       itemRows++; if (quantity === 0) zeroRows++;
       const primaryRefs = new Set([...(quantityCell.refs || [quantityCell.ref]), ...(descriptionCell.refs || [descriptionCell.ref]), ...(categoryCell ? categoryCell.refs || [categoryCell.ref] : [])]);
-      const extras = cells.filter((cell) => !primaryRefs.has(cell.ref) && clean(cell.value)).map((cell) => text(cell.value));
+      const extras = cells.filter((cell) => !cell.duplicateOf&&!primaryRefs.has(cell.ref) && clean(cell.value)).map((cell) => text(cell.value));
       const itemNotes = [...extras, ...notes];
       const item = { id: `file-item-${index}-${itemRows}`, sourceItemIndex: target.items.length, quantity, description, itemType: "equipo", inventoryCategory: target.title,
         sourceRefs: [...(quantityCell.refs || [quantityCell.ref]), ...(descriptionCell.refs || [descriptionCell.ref])], ...(itemNotes.length ? { notes: itemNotes } : {}) };
@@ -464,6 +469,8 @@ function eventForBlock(rows, { sheet, index, quantityColumn, descriptionColumn, 
   if (!metadata.parsedDate) warnings.push({ code: "missing_date", message: "Confirme la fecha del evento con año; no se dedujo del nombre de la pestaña." });
   if (!metadata.place) warnings.push({ code: "missing_place", message: "Indique la ubicación para planificar los trayectos." });
   warnings.push({ code: "pending_times", message: "Borrador sin reservas. Revise los horarios leídos y complete los datos pendientes antes de confirmar equipo." });
+  const repeatedFragments=sourceCells.filter(cell=>cell.duplicateOf);
+  if(repeatedFragments.length)warnings.push({code:'repeated_pdf_text',severity:'info',message:'El PDF dibuja fragmentos idénticos en exactamente la misma posición. Se conservaron todos los fragmentos y sus referencias; el texto superpuesto se interpreta una sola vez.',refs:repeatedFragments.map(cell=>cell.ref)});
   const id = `file-${source.sha256.slice(0, 16)}-${index}`;
   return { id, sourceSheet: sheet, sourceBlock: index, date: metadata.parsedDate || "", dateLiteral: metadata.date || metadata.startAt || metadata.startDate || "", place: metadata.place || "", name: metadata.client || "", type: metadata.type || "", client: metadata.client || "",
     ...schedule, ...(scheduleSuggestion ? { scheduleSuggestion } : {}), contracted: metadata.contracted || "", metadataRefs, scheduleRefs, scheduleDerivedFields, sections, documentSections: clone(sections), sourceCells,
@@ -497,7 +504,8 @@ function verifyEventImport(preview) {
   for (const event of preview.events || []) inspect(event);
   const missing = [...expected.keys()].filter((ref) => !represented.has(ref));
   return { algorithm: "event-source-cell-ledger-v1", complete: expected.size > 0 && expected.size === preview.sourceCells.length && !missing.length && !duplicates.length && !changed.length && !itemMismatches.length,
-    sourceCellCount: expected.size, representedCellCount: represented.size, missingRefs: missing, duplicateRefs: [...new Set(duplicates)], mismatchedRefs: [...new Set([...changed, ...itemMismatches])] };
+    sourceCellCount: expected.size, representedCellCount: represented.size, missingRefs: missing, duplicateRefs: [...new Set(duplicates)], mismatchedRefs: [...new Set([...changed, ...itemMismatches])],
+    ...(preview.source?.ocrPages?.length?{comparisonScope:'recognized_text_not_original_image',requiresVisualReview:true,uncertainOcrRefs:(preview.sourceCells || []).filter(cell=>cell.ocrConfidence!==undefined&&cell.ocrConfidence<90).map(cell=>cell.ref)}:{}) };
 }
 function buildEventPreview(data) {
   const sheets = new Map();
@@ -514,29 +522,46 @@ function buildEventPreview(data) {
     const blockers = (data.blockers || []).map((message) => ({ code: "unreadable_source", message, refs: [] }));
     if (data.source.format === "pdf") {
       rows = (data.sourceRows || []).map((row) => ({ ...row, row: row.cells[0]?.row || 0 }));
-      const groups = []; let current = [], currentFields = {}, hasItems = false;
+      const groups = []; let current = [], currentFields = {}, hasItems = false, metadataStart = null;
+      const duplicatePages=new Set((data.duplicatePages || []).map(page=>page.page));
       const pdfColumns = (row) => {
         const q = (row.columns || []).find((cell) => ["cantidad", "cant", "cant.", "qty", "quantity", "unidades"].includes(key(cell.value)));
         const d = (row.columns || []).find((cell) => ["descripcion", "equipo", "descripcion de equipo", "descripcion del equipo", "description"].includes(key(cell.value)));
         return q && d ? { quantity: q.column, description: d.column } : null;
       };
       let activeColumns = null;
-      const flush = () => { if (current.length) groups.push({ rows: current, columns: activeColumns }); current = []; currentFields = {}; hasItems = false; activeColumns = null; };
-      for (const row of rows) {
-        const fields = metadataInRow(row.columns || row.cells);
-        const starts = fields.some((entry) => ["client", "place", "type"].includes(entry.field)
+      const flush = () => { if (current.length) groups.push({ rows: current, columns: activeColumns }); current = []; currentFields = {}; hasItems = false; activeColumns = null; metadataStart=null; };
+      for (const row of rows.filter(row=>!duplicatePages.has(row.page || row.cells[0]?.page))) {
+        const fields = row.referenceOnly?[]:metadataInRow(row.columns || row.cells);
+        if(hasItems&&fields.length&&metadataStart===null)metadataStart=current.length;
+        const starts = fields.some((entry) => ["client", "place", "type", "date", "startDate", "startAt"].includes(entry.field)
           && currentFields[entry.field] && currentFields[entry.field] !== entry.value);
-        if (hasItems && starts) flush();
+        if (hasItems && starts) {
+          const carry=current.splice(metadataStart ?? current.length),previousColumns=activeColumns;
+          flush();current=carry;activeColumns=previousColumns;
+          for(const previous of carry)for(const entry of metadataInRow(previous.columns || previous.cells))currentFields[entry.field]=entry.value;
+        }
         for (const entry of fields) currentFields[entry.field] = entry.value;
         const detected = pdfColumns(row); if (detected) activeColumns = detected;
-        if (activeColumns && (row.columns || []).some((cell) => cell.column === activeColumns.quantity && count(cell.value) !== null)
-          && (row.columns || []).some((cell) => cell.column === activeColumns.description && clean(cell.value))) hasItems = true;
+        if (!row.referenceOnly&&activeColumns && (row.columns || []).some((cell) => cell.column === activeColumns.quantity && count(cell.value) !== null)
+          && (row.columns || []).some((cell) => cell.column === activeColumns.description && clean(cell.value))) {hasItems = true;metadataStart=null;}
         current.push({ ...row, ...(activeColumns ? { quantityColumn: activeColumns.quantity, descriptionColumn: activeColumns.description } : {}) });
       }
       flush();
       for (const group of groups) events.push(eventForBlock(group.rows, { sheet, index: ++block,
         quantityColumn: group.columns?.quantity ?? -1, descriptionColumn: group.columns?.description ?? -2, source: data.source,
-        blockers: [...blockers, ...(!group.columns ? [{ code: "pdf_columns", message: "Este cuadro PDF no tiene columnas Cantidad y Descripción inequívocas. Revise el contenido o use el Excel original.", refs: [] }] : [])] }));
+         blockers: [...blockers, ...(!group.columns ? [{ code: "pdf_columns", message: "Este cuadro PDF no tiene columnas Cantidad y Descripción inequívocas. Revise el contenido o use el Excel original.", refs: [] }] : [])] }));
+      for(const repeated of data.duplicatePages || []){
+        const owner=events.slice(first).find(event=>event.sourceCells.some(cell=>cell.page===repeated.duplicateOf));
+        if(!owner)continue;
+        const copyRows=rows.filter(row=>(row.page || row.cells[0]?.page)===repeated.page);
+        const copyColumns=copyRows.map(pdfColumns).find(Boolean);
+        const reference=eventForBlock(copyRows,{sheet,index:++block,quantityColumn:copyColumns?.quantity ?? -1,descriptionColumn:copyColumns?.description ?? -2,source:data.source});
+        reference.duplicatePageOf=repeated.duplicateOf;reference.pageSignature=repeated.signature;
+        (owner.sourceImport.referenceTables ||= []).push(reference);
+        (owner.sourceImport.duplicatePageDecisions ||= []).push({...repeated,action:'reference_only',reason:'identical_page_operators_text_and_coordinates'});
+        owner.warnings.push({code:'repeated_pdf_page',severity:'info',message:`La página ${repeated.page} repite exactamente el contenido dibujado y las posiciones de la página ${repeated.duplicateOf}. Se conserva íntegra como referencia y sus cantidades se cuentan una sola vez.`,refs:reference.sourceCells.map(cell=>cell.ref)});
+      }
     } else {
       const layout = excelLayouts(rows); columns = layout.columns;
       if (!columns.length) events.push(eventForBlock(rows, { sheet, index: ++block, quantityColumn: -1, descriptionColumn: -2, source: data.source, blockers: [...blockers, ...layout.issues] }));
@@ -557,7 +582,10 @@ function buildEventPreview(data) {
   for (const sheet of sheetList) {
     const matches = new Map();
     for (const event of events.filter((entry) => entry.sourceSheet === sheet.name && entry.itemCount)) {
-      const signature = JSON.stringify(event.sections.flatMap((section) => section.items.map((item) => [item.quantity, item.description])));
+      const signature = JSON.stringify(event.sections.map((section) => [section.title,section.items.map((item,index) => {
+        const row=section.rows.find(row=>row.type==='item'&&row.sourceItemIndex===index),primary=new Set([...(row?.quantityRefs || []),...(row?.descriptionRefs || [])]);
+        return [item.quantity,item.description,(row?.cells || []).filter(cell=>!primary.has(cell.ref)).map(cell=>cell.value),(row?.cells || []).filter(cell=>cell.note).map(cell=>cell.note)];
+      }),section.rows.filter(row=>row.type==='note').map(row=>[row.description,(row.cells || []).filter(cell=>cell.note).map(cell=>cell.note)])]));
       if (!matches.has(signature)) matches.set(signature, []);
       matches.get(signature).push(event);
     }
@@ -606,7 +634,7 @@ function buildEventPreview(data) {
   return preview;
 }
 async function parseEventFile(buffer, options = {}) {
-  const data = await readSourceFile(buffer, { ...options, preserveCellNotes: true });
+  const data = await readSourceFile(buffer, { ...options,enableOcr:options.enableOcr!==false,preserveCellNotes: true });
   rejectGeneratedReport(data);
   return buildEventPreview(data);
 }

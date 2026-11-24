@@ -1,17 +1,19 @@
 (function (root, factory) {
   const api = factory(typeof module === 'object' && module.exports ? require('./equipment-identity.js') : root.EquipmentIdentity,
     typeof module === 'object' && module.exports ? () => require('./equipment-document-audit.js') : () => root.EquipmentDocumentAudit,
-    typeof module === 'object' && module.exports ? () => require('./equipment-report-viewer.js') : () => root.EquipmentReportViewer);
+    typeof module === 'object' && module.exports ? () => require('./equipment-report-viewer.js') : () => root.EquipmentReportViewer,
+    typeof module === 'object' && module.exports ? () => require('./equipment-draft-transfers.js') : () => root.EquipmentDraftTransfers);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.EquipmentPlanner = api;
-})(typeof globalThis === 'object' ? globalThis : this, function (Identity, getDocumentAudit, getReportViewer) {
+})(typeof globalThis === 'object' ? globalThis : this, function (Identity, getDocumentAudit, getReportViewer, getDraftTransfers) {
   'use strict';
   const copy = value => JSON.parse(JSON.stringify(value));
+  const listLength = value => Array.isArray(value) ? value.length : 0;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const dateLabel = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value.split('-').reverse().join('/') : 'Fecha pendiente';
   const timeFields = ['setupAt', 'startAt', 'endAt', 'equipmentInAt'];
   const printableModes = ['transfer', 'rent', 'purchase'];
-  const reportTitles = { transfer: 'Trasiego entre eventos', rent: 'Renta con y sin trasiego', purchase: 'Compra de consumibles' };
+  const reportTitles = { transfer: 'Trasiegos seleccionados', rent: 'Reporte de renta', purchase: 'Reporte de compra' };
   async function responseError(response) {
     const code = Number(response.status) || 0;
     let detail = '';
@@ -87,7 +89,7 @@
         let row = groups.get(id);
         if (!row) {
           const classification = item ? Identity.classification(item) : {pending:false,warnings:[]};
-          row = {id, description:line.description, category, item, resolution, classification, invalidQuantity:false, quantity:0, sources:[], eventQuantities:{}, action:choice === 'rent' ? 'RENTA' : choice === 'purchase' ? 'COMPRA' : choice === 'save' ? 'INGRESO PENDIENTE' : !item ? 'IDENTIFICAR' : classification.pending ? 'REVISAR TIPO' : 'CUBIERTO'};
+          row = {id, description:line.description, category, item, resolution, classification, procurementChoice:choice, invalidQuantity:false, quantity:0, sources:[], eventQuantities:{}, action:choice === 'rent' ? 'RENTA' : choice === 'purchase' ? 'COMPRA' : choice === 'save' ? 'INGRESO PENDIENTE' : !item ? 'IDENTIFICAR' : classification.pending ? 'REVISAR TIPO' : 'CUBIERTO'};
           groups.set(id,row);
         }
         row.preferredPurchase ||= Boolean(receivedItem || line.procurementPreference === 'purchase');
@@ -107,10 +109,24 @@
     return {events,rows,lineCount,zeroCount,eventPending,documentPending,documentAuditUnavailable,invalidRows,invalidLines:invalidRows,identityPending:rows.filter(r=>r.action==='IDENTIFICAR'||r.action==='INGRESO PENDIENTE'),classificationPending:rows.filter(r=>r.quantity>0&&r.classification.pending),rent:rows.filter(r=>r.action==='RENTA'&&r.missing>0),purchase:rows.filter(r=>r.action==='COMPRA'&&r.missing>0)};
   }
   function create(bridge) {
-    let model = null, busy = false, reportViewer = null;
+    let model = null, busy = false, reportViewer = null, draftTransfers = null;
     const $ = selector => document.querySelector(selector);
     const status = message => { const target=$('#equipmentPlannerStatus'); if(target) target.textContent=message; };
     function snapshot() { return analyze(bridge.events(),bridge.inventory()); }
+    function transfers() {
+      if (!draftTransfers) {
+        const component = getDraftTransfers();
+        if (typeof component?.create === 'function') draftTransfers = component.create({bridge,document,onChange:()=>render(),onStatus:status});
+      }
+      return draftTransfers;
+    }
+    async function openTransfers() {
+      if(!reportAllowed()){const message='Su usuario no tiene permiso para generar reportes de equipo.';status(message);return {ok:false,message};}
+      if(bridge.isSaving?.()){const message='Espere a que termine el guardado actual.';status(message);return {ok:false,message};}
+      const controller=transfers();
+      if(!controller){const message='No se pudo cargar el selector de trasiegos. Actualice la página; sus cuadros se conservan.';status(message);return {ok:false,message};}
+      await controller.show();return {ok:true};
+    }
     function viewer() {
       if (!reportViewer) {
         if (bridge.reportViewer) reportViewer = bridge.reportViewer;
@@ -177,9 +193,9 @@
       try {
         const events = copy(selectedEvents || bridge.events());
         if (!events.length) { const message = 'Cargue al menos un evento con equipo.'; status(message); return { ok: false, message }; }
-        const routeEstimates = ['transfer', 'rent'].includes(mode) ? copy(bridge.transferOptions?.()?.routeEstimates || []) : undefined;
+        const selected=transfers()?.requestOptions(events) || {selectedTransferIds:[],routeEstimates:copy(bridge.transferOptions?.()?.routeEstimates || [])};
         const request = { ...copy(bridge.range?.() || {}), events, mode,
-          ...(printableModes.includes(mode) ? { format: 'html' } : {}), ...(routeEstimates ? { routeEstimates } : {}) };
+          ...(printableModes.includes(mode) ? { format: 'html' } : {}), ...selected };
         return requestReport(mode, button, request);
       } catch (error) {
         const message = error?.message || 'No se pudieron preparar los eventos para el reporte. Sus cuadros se conservan.';
@@ -189,8 +205,25 @@
     function render() {
       const host=$('#equipmentPlannerOverview'); if(!host)return;
       model=snapshot();
+      const controller=transfers(), plan=controller?.result(model.events);
+      if (plan) {
+        const physical=new Map();
+        const external=new Map(),byId=new Map(plan.rows.map(row=>[row.id,row]));
+        const externalKey=row=>JSON.stringify([Identity.normalizeName(row.category),Identity.normalizeName(row.description),row.procurementChoice||'']);
+        plan.rows.forEach(row=>{if(row.warehouseInventoryId)physical.set(String(row.warehouseInventoryId),row);});
+        plan.rows.filter(row=>!row.warehouseInventoryId).forEach(row=>{const k=externalKey(row);external.set(k,external.has(k)?null:row);});
+        model.rows=model.rows.map(row=>{
+          const result=row.item?physical.get(String(row.item.id)):byId.get(row.id)||external.get(externalKey(row));
+          if(!result)return {...row,missing:null,action:row.quantity===0?'SIN USO':row.action==='IDENTIFICAR'||row.classification.pending?row.action:'PENDIENTE'};
+          const action=row.invalidQuantity?'REVISAR CANTIDAD':row.quantity===0?'SIN USO':result.pending?result.rentalProvisional?'RENTA PROVISIONAL':'PENDIENTE':result.purchase>0?'COMPRA':result.rental>0?'RENTA':'CUBIERTO';
+          return {...row,available:result.available,missing:result.shortage,required:result.required,capacity:result.capacity,reusedUnits:result.reusedUnits,action,plan:result};
+        });
+        model.rent=model.rows.filter(row=>row.plan?.rental>0);model.purchase=model.rows.filter(row=>row.plan?.purchase>0);
+      }
       const totalPending=model.eventPending.length+model.documentPending.length+model.identityPending.length+model.classificationPending.length+model.invalidRows.length+(model.documentAuditUnavailable?1:0);
       host.innerHTML=`<div class="equipment-planner-counts"><span><strong>${model.events.length}</strong> eventos</span><span><strong>${model.lineCount}</strong> líneas · ${model.zeroCount} con cantidad 0</span><span><strong>${totalPending}</strong> pendientes para confirmar</span></div><p>Puede revisar y descargar el provisional ahora. Confirmar un evento reserva equipo; la descarga no registra salidas ni compras.</p>`;
+      if(controller && model.events.length)host.innerHTML+=`<div class="equipment-planner-plan-note"><strong>${plan?`${plan.selectedTransfers.length} trasiegos propios seleccionados · ${listLength(plan.rental||plan.rent)} referencias para renta · ${listLength(plan.purchase)} referencias para compra`:controller.error()?'Cálculo pendiente':'Calculando renta, compra y trasiegos con Contabilidad…'}</strong>${plan?'El resumen y todos los reportes usan la misma selección. Abra Generar trasiego para marcar o quitar equipos.':controller.error()?`${esc(controller.error())} <button type="button" data-planner-retry>Reintentar cálculo</button>`:'Complete los horarios que falten para validar trasiegos. Las cantidades pendientes no significan inventario cero.'}</div>`;
+      host.querySelector?.('[data-planner-retry]')?.addEventListener('click',()=>controller.refresh({force:true}));
       const pending=$('#equipmentPlannerPending'); if(!pending)return;
       const rows=[];
       if(model.documentAuditUnavailable)rows.push('<article><div><strong>Revisión del documento pendiente</strong><small>No se pudo cargar el verificador de documentos. Conserve sus cuadros y vuelva a abrir el módulo. El Excel y los PDF descargables sí realizan esta revisión en el servidor.</small></div></article>');
@@ -233,23 +266,24 @@
         const onlyPending=!!$('#equipmentPlannerOnlyPending')?.checked;
         const visible=model.rows.filter(row=>(!query || Identity.normalizeName(row.description+' '+row.category).includes(query))&&(!onlyPending || row.missing>0 || row.available===null || row.classification.pending));
         const cats=new Map();visible.forEach(row=>{if(!cats.has(row.category))cats.set(row.category,[]);cats.get(row.category).push(row);});
-        const body=[...cats].sort((a,b)=>a[0].localeCompare(b[0])).map(([cat,rows])=>`<tr class="equipment-planner-category"><th colspan="${model.events.length+5}">${esc(cat)}</th></tr>${rows.map(row=>{
+        const body=[...cats].sort((a,b)=>a[0].localeCompare(b[0])).map(([cat,rows])=>`<tr class="equipment-planner-category"><th colspan="${model.events.length+7}">${esc(cat)}</th></tr>${rows.map(row=>{
           const reusable = row.item && Identity.itemType(row.item) !== 'consumible' && row.quantity > 0 && !row.invalidQuantity && !row.classification.pending;
           const consumable = row.item && Identity.itemType(row.item) === 'consumible' && row.quantity > 0 && !row.invalidQuantity && !row.classification.pending;
-          const shortage = reusable ? 'Ver plan con trasiego' : consumable ? 'Ver consumo por evento' : row.missing===null?'Pendiente':row.missing;
-          const action = reusable && row.action === 'RENTA' ? 'Comparar renta con y sin trasiego' : consumable && row.action === 'COMPRA' ? 'Ver compra de consumibles' : row.action;
-          return `<tr><td>${esc(row.item?.name || row.description)}</td>${model.events.map(e=>`<td>${row.eventQuantities[e.id] ?? 0}</td>`).join('')}<td><strong>${row.quantity}</strong></td><td>${row.available===null?'Por identificar':row.available}</td><td>${esc(shortage)}</td><td>${esc(action)}</td></tr>`;
+          const shortage = row.plan ? row.plan.shortage===null?'Pendiente':row.plan.shortage : reusable||consumable?'Por calcular':row.missing===null?'Pendiente':row.missing;
+          return `<tr><td>${esc(row.item?.name || row.description)}</td>${model.events.map(e=>`<td>${row.eventQuantities[e.id] ?? 0}</td>`).join('')}<td><strong>${row.quantity}</strong></td><td>${row.available===null?'Por identificar':row.available}</td><td>${row.plan?.required===null?'Pendiente':row.plan?.required??'—'}</td><td>${row.plan?.reusedUnits??'—'}</td><td>${esc(shortage)}</td><td>${esc(row.action)}</td></tr>`;
         }).join('')}`).join('');
-        table.innerHTML=`<table><thead><tr><th>Descripción de equipo</th>${model.events.map(e=>`<th>${esc(e.place || e.name || 'Evento')}<small>${esc(dateLabel(e.date))}</small></th>`).join('')}<th>Total pedido entre eventos</th><th>Disponible en bodega</th><th>Preparación / compra</th><th>Acción / revisión</th></tr></thead><tbody>${body}</tbody></table><p>El total por eventos muestra dónde se pide cada equipo. Una misma unidad puede pasar de un evento al siguiente: el reporte de trasiego y renta indica las unidades físicas necesarias, sin volver a contarlas por cada uso. Los consumibles se suman por evento.</p>`;
+        table.innerHTML=`<table><thead><tr><th>Descripción de equipo</th>${model.events.map(e=>`<th>${esc(e.place || e.name || 'Evento')}<small>${esc(dateLabel(e.date))}</small></th>`).join('')}<th>Total pedido entre eventos</th><th>Disponible en bodega</th><th>Unidades físicas necesarias</th><th>Reutilizadas por trasiego elegido</th><th>Faltante: renta / compra</th><th>Acción / revisión</th></tr></thead><tbody>${body}</tbody></table><p>La renta usa las unidades físicas necesarias y la capacidad propia del plan. Sólo se descuentan trasiegos elegidos y verificados. Los consumibles se suman por evento y sus consumos registrados se descuentan una sola vez.</p>`;
       }
+      controller?.refresh({events:model.events});
     }
     function init(){
       document.querySelectorAll('[data-planner-download]').forEach(button=>button.addEventListener('click',()=>download(button.dataset.plannerDownload,button)));
       $('#equipmentPlannerSearch')?.addEventListener('input',render);$('#equipmentPlannerOnlyPending')?.addEventListener('change',render);
       $('#equipmentPlannerConfirmEvent')?.addEventListener('click',()=>bridge.confirmEvent());
-      render();return {render,download,model:()=>model};
+      $('#equipmentDraftTransferButton')?.addEventListener('click',openTransfers);
+      render();return {render,download,openTransfers,model:()=>model};
     }
-    return {init,render,download,model:()=>model};
+    return {init,render,download,openTransfers,model:()=>model};
   }
   return {analyze,create,referenceChoices,responseError};
 });

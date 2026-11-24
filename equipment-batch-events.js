@@ -1,9 +1,9 @@
 (function (root, factory) {
   "use strict";
-  const api = factory();
+  const api = factory(typeof module === 'object' && module.exports ? () => require('./equipment-import-identity.js') : () => root?.EquipmentImportIdentity);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.EquipmentBatchEvents = api;
-})(typeof window === "undefined" ? null : window, function () {
+})(typeof window === "undefined" ? null : window, function (getImportIdentity) {
   "use strict";
   const MAX_FILE_BYTES = 15 * 1024 * 1024, instances = new WeakMap();
   const text = (value) => String(value ?? "");
@@ -25,6 +25,25 @@
   };
   const editableEvent = (event) => !!event && itemsFor(event).length > 0 && itemsFor(event).every(validItem);
   const duplicateGroups = (preview) => (preview?.duplicateCandidates || []).filter((group) => group.requiresReview && group.eventIds?.length > 1);
+  function importConflicts(preview, existingEvents) {
+    const identity=getImportIdentity();
+    if(!identity?.match)return [];
+    return (preview?.events || []).flatMap(event=>{
+      const match=identity.match(event,existingEvents);
+      return ['revision','similar','ambiguous'].includes(match.kind)?[{eventId:event.id,kind:match.kind,matches:match.matches.map(existing=>({id:existing.id,name:existing.name,place:existing.place,date:existing.date,status:existing.status}))}]:[];
+    });
+  }
+  function decisionsFor(preview,selections){
+    return (preview.events || []).filter(event=>selections.some(selection=>selection.id===event.id&&selection.selected)).flatMap((event,index)=>{
+      const conflict=(preview.reimportConflicts || []).find(entry=>entry.eventId===event.id);
+      if(!conflict)return [];
+      const value=selections.find(entry=>entry.id===event.id)?.importResolution || '';
+      if(value==='separate')return [{index,action:'separate'}];
+      const [action,...id]=value.split(':');
+      if(['reuse','replace'].includes(action)&&conflict.matches.some(match=>match.id===id.join(':')))return [{index,action,existingEventId:id.join(':')}];
+      throw new Error('Decida si desea usar el evento actual, reemplazarlo completo o crear uno independiente.');
+    });
+  }
   function duplicateChoice(group, selections) {
     const entries = group.eventIds.map((id) => selections.find((entry) => entry.id === id));
     const choice = entries[0]?.duplicateReviews?.[group.id];
@@ -39,7 +58,7 @@
   function selectionsFor(preview) {
     return (preview?.events || []).map((event) => {
       const suggestion = event.scheduleSuggestion, reviewed = suggestion ? { ...event, ...suggestion.schedule, date: suggestion.date || event.date } : event;
-      return { ...scheduleFor(reviewed), id: event.id, selected: editableEvent(event), duplicateReviews: {}, suggestionApplied: !!suggestion,
+      return { ...scheduleFor(reviewed), id: event.id, selected: editableEvent(event), duplicateReviews: {},importResolution:'',ocrReviewed:false,suggestionApplied: !!suggestion,
         date: text(reviewed.date || reviewed.startDate || text(reviewed.startAt).slice(0, 10)), place: text(event.place), type: text(event.type), name: text(event.client || event.name) };
     });
   }
@@ -54,6 +73,13 @@
       const event = preview.events.find((entry) => entry.id === selection.id);
       if (!event || !itemsFor(event).length) return "Cada evento seleccionado debe contener al menos una línea de equipo legible.";
       if (!itemsFor(event).every(validItem)) return "Hay una cantidad o descripción inválida en las líneas de equipo. No se convirtió ningún dato en cero; corrija esa línea antes de cargar.";
+      if((event.sourceCells || []).some(cell=>cell.ocrConfidence!==undefined&&cell.ocrConfidence<90))return 'El OCR contiene texto o cantidades poco legibles. Corrija el escaneo o use el Excel original antes de cargar; aceptar advertencias no habilita esta lectura.';
+      if((event.sourceCells || []).some(cell=>cell.ocrConfidence!==undefined)&&selection.ocrReviewed!==true)return 'Compare cada cantidad y descripción reconocida con el PDF original y marque su revisión OCR antes de cargar.';
+      const conflict=(preview.reimportConflicts || []).find(entry=>entry.eventId===event.id);
+      if(conflict){
+        const value=selection.importResolution || '',[action,...id]=value.split(':');
+        if(value!=='separate'&&(!['reuse','replace'].includes(action)||!conflict.matches.some(match=>match.id===id.join(':'))))return 'Decida si desea usar el evento actual, reemplazarlo completo o crear uno independiente; no se duplicó ningún evento.';
+      }
     }
     return "";
   }
@@ -63,6 +89,7 @@
     const events = preview.events.filter((event) => ids.has(event.id)), warnings = [];
     const add = (code, message, eventIds) => { if (eventIds.length) warnings.push({ code, message, eventIds: [...new Set(eventIds)] }); };
     add("missing_metadata", "Hay eventos con fecha, ubicación o referencia pendientes. Se cargarán como borradores.", chosen.filter((entry) => !entry.date || !entry.place).map((entry) => entry.id));
+    add('replace_import','Se reemplazarán COMPLETAMENTE los cuadros existentes elegidos. El archivo nuevo será la fuente completa; no se mezclarán filas, notas ni cantidades de la versión anterior.',chosen.filter(entry=>entry.importResolution?.startsWith('replace:')).map(entry=>entry.id));
     add("source_observations", "Algunos datos originales necesitan interpretación. Sus filas y celdas se conservarán completas como pendientes, sin inventar cantidades.", events.filter((event) => (event.issues || []).some((issue) => !/schedule|setup/.test(issue.code || "") && issue.code !== "conflicting_metadata")).map((event) => event.id));
     const schedulePending = chosen.filter((entry) => {
       const event = events.find((source) => source.id === entry.id);
@@ -122,6 +149,7 @@
         output.sourceImport.scheduleSuggestionAccepted = reviewedInput.suggestionApplied === true && output.date === event.scheduleSuggestion.date && Object.entries(suggested).every(([field, value]) => text(fields[field]) === text(value));
       }
       output.sourceImport.reviewedInput = clone(reviewedInput);
+      if(reviewedInput.ocrReviewed===true)output.sourceImport.ocrReview={reviewed:true,pages:[...new Set((event.sourceCells || []).filter(cell=>cell.ocrConfidence!==undefined).map(cell=>cell.page))]};
       output.sourceImport.reviewedMetadata = { date: output.date, place: output.place, name: output.name, type: output.type,
         ...(typeof output.setupApplies === "boolean" ? { setupApplies: output.setupApplies } : {}),
         setupDate: output.setupDate, setupTime: output.setupTime, startDate: output.startDate, startTime: output.startTime,
@@ -161,20 +189,22 @@
   function renderSource(cells) {
     return `<details class="equipment-batch-source"><summary>Ver todas las celdas originales (${cells.length})</summary><div class="equipment-batch-table-scroll"><table><thead><tr><th>Celda</th><th>Contenido original</th><th>Nota</th></tr></thead><tbody>${cells.map((cell) => `<tr><td>${escape(cell.sheet ? `${cell.sheet}!${cell.address}` : cell.ref)}</td><td>${escape(cell.value)}</td><td>${escape(typeof cell.note === "object" ? JSON.stringify(cell.note) : cell.note || "")}</td></tr>`).join("")}</tbody></table></div></details>`;
   }
-  function renderEvent(event, selection, index) {
+  function renderEvent(event, selection, index, conflict = null) {
     const editable = editableEvent(event);
+    const importMarkup=conflict ? '<section class="equipment-batch-correction"><strong>Este cuadro coincide con un evento cargado</strong><p>Elija qué hacer. Reemplazar usa el cuadro nuevo completo y requiere confirmación.</p><label>Acción de importación<select data-batch-reimport="'+index+'"><option value="">Pendiente: elegir acción</option>'+conflict.matches.map(match=>'<optgroup label="'+escape((match.place || match.name || 'Evento')+' · '+(match.date || 'Fecha pendiente'))+'"><option value="reuse:'+escape(match.id)+'"'+(selection.importResolution==='reuse:'+match.id?' selected':'')+'>Usar el actual y conservar sus ediciones</option><option value="replace:'+escape(match.id)+'"'+(selection.importResolution==='replace:'+match.id?' selected':'')+'>Reemplazar completamente con este cuadro</option></optgroup>').join('')+'<option value="separate"'+(selection.importResolution==='separate'?' selected':'')+'>Es otro evento: crear independiente</option></select></label></section>' : '';
+    const ocrMarkup=(event.sourceCells || []).some(cell=>cell.ocrConfidence!==undefined)?'<section class="equipment-batch-correction"><strong>Texto reconocido desde un escaneo</strong><p>El OCR puede equivocarse. Abra el PDF original y compare cada fila, cantidad, categoría y observación. Los fragmentos poco legibles bloquean la carga.</p><label><input type="checkbox" data-batch-ocr-review="'+index+'"'+(selection.ocrReviewed?' checked':'')+'> Revisé todas las cantidades y descripciones contra el PDF original</label></section>':'';
     const fields = [["date", "Fecha del evento", "date"], ["place", "Ubicación", "text"], ["type", "Tipo de evento", "text"], ["name", "Cliente / referencia", "text"]];
     const schedule = [["setupDate", "Fecha del montaje", "date"], ["setupTime", "Hora del montaje", "time"], ["startTime", "Hora de inicio del evento", "time"], ["endDate", "Fecha de finalización", "date"], ["endTime", "Hora de finalización del evento", "time"], ["teardownDate", "Fecha del desmontaje", "date"], ["teardownTime", "Hora del desmontaje", "time"], ["equipmentInDate", "Fecha de regreso a bodega", "date"], ["equipmentInTime", "Hora de regreso a bodega", "time"]];
     const scheduleMarkup = `<fieldset class="equipment-batch-schedule"><legend>Fechas y horarios para la logística</legend><div class="equipment-batch-fields"><label>¿Aplica montaje?<select data-batch-field="setupApplies" data-batch-index="${index}"${!editable ? " disabled" : ""}><option value=""${!selection.setupApplies ? " selected" : ""}>Pendiente de confirmar</option><option value="yes"${selection.setupApplies === "yes" ? " selected" : ""}>Sí, requiere montaje</option><option value="no"${selection.setupApplies === "no" ? " selected" : ""}>No aplica</option></select></label>${schedule.map(([field, label, type]) => `<label>${label}<input type="${type}" data-batch-field="${field}" data-batch-index="${index}" value="${escape(selection[field])}"${field.startsWith("setup") ? ` data-batch-mount="${index}"` : ""}${!editable || field.startsWith("setup") && selection.setupApplies === "no" ? " disabled" : ""}></label>`).join("")}</div><p>Solo se completan los horarios identificados en el archivo. Revise las fechas; si finaliza después de medianoche, indique el día correcto. El regreso a bodega permite comprobar cuándo vuelve a estar disponible el equipo.</p></fieldset>`;
-    return `<article class="equipment-batch-card" data-batch-card="${index}"><header><label class="equipment-batch-choice"><input type="checkbox" data-batch-select="${index}"${selection.selected ? " checked" : ""}${!editable ? " disabled" : ""}><strong>${escape(event.place || event.client || `Cuadro ${index + 1}`)}</strong></label><span>${escape(event.sourceSheet)} · Cuadro ${index + 1}</span></header><p>${event.itemCount} líneas de equipo · ${event.zeroCount} cantidades en 0 · ${sourceCellsFor(event).length} celdas conservadas</p><div class="equipment-batch-fields">${fields.map(([field, label, type]) => `<label>${label}<input type="${type}" data-batch-field="${field}" data-batch-index="${index}" value="${escape(selection[field])}"${!editable ? " disabled" : ""}></label>`).join("")}</div>${scheduleMarkup}${event.contracted ? `<p class="equipment-batch-contract"><strong>Equipo contratado:</strong> ${escape(event.contracted)}</p>` : ""}<details class="equipment-batch-source"><summary>Revisar cuadro completo y sus categorías</summary><div class="equipment-batch-table-scroll"><table><thead><tr><th>Cantidad</th><th>Descripción, encabezado u observación</th><th>Origen</th></tr></thead><tbody>${(event.sections || []).flatMap((section) => section.rows || []).map((row) => `<tr data-batch-row-type="${escape(row.type)}"><td>${row.quantity === null || row.quantity === undefined ? "" : escape(row.quantity)}</td><td>${escape(row.description)}${row.notes?.length ? `<small>${escape(row.notes.join(" · "))}</small>` : ""}</td><td>${escape((row.cells || []).map((cell) => cell.address || cell.ref).join(", "))}</td></tr>`).join("")}</tbody></table></div></details>${renderSource(event.sourceCells || [])}${(event.sourceImport?.referenceTables || []).map((reference) => `<details class="equipment-batch-source"><summary>Cuadro original de referencia (${sourceCellsFor(reference).length} celdas conservadas)</summary>${renderSource(sourceCellsFor(reference))}</details>`).join("")}</article>`;
+    return `<article class="equipment-batch-card" data-batch-card="${index}"><header><label class="equipment-batch-choice"><input type="checkbox" data-batch-select="${index}"${selection.selected ? " checked" : ""}${!editable ? " disabled" : ""}><strong>${escape(event.place || event.client || `Cuadro ${index + 1}`)}</strong></label><span>${escape(event.sourceSheet)} · Cuadro ${index + 1}</span></header><p>${event.itemCount} líneas de equipo · ${event.zeroCount} cantidades en 0 · ${sourceCellsFor(event).length} celdas conservadas</p><div class="equipment-batch-fields">${fields.map(([field, label, type]) => `<label>${label}<input type="${type}" data-batch-field="${field}" data-batch-index="${index}" value="${escape(selection[field])}"${!editable ? " disabled" : ""}></label>`).join("")}</div>${importMarkup}${ocrMarkup}${scheduleMarkup}${event.contracted ? `<p class="equipment-batch-contract"><strong>Equipo contratado:</strong> ${escape(event.contracted)}</p>` : ""}<details class="equipment-batch-source"><summary>Revisar cuadro completo y sus categorías</summary><div class="equipment-batch-table-scroll"><table><thead><tr><th>Cantidad</th><th>Descripción, encabezado u observación</th><th>Origen</th></tr></thead><tbody>${(event.sections || []).flatMap((section) => section.rows || []).map((row) => `<tr data-batch-row-type="${escape(row.type)}"><td>${row.quantity === null || row.quantity === undefined ? "" : escape(row.quantity)}</td><td>${escape(row.description)}${row.notes?.length ? `<small>${escape(row.notes.join(" · "))}</small>` : ""}</td><td>${escape((row.cells || []).map((cell) => cell.address || cell.ref).join(", "))}</td></tr>`).join("")}</tbody></table></div></details>${renderSource(event.sourceCells || [])}${(event.sourceImport?.referenceTables || []).map((reference) => `<details class="equipment-batch-source"><summary>Cuadro original de referencia (${sourceCellsFor(reference).length} celdas conservadas)</summary>${renderSource(sourceCellsFor(reference))}</details>`).join("")}</article>`;
   }
   function renderPreview(preview, selections) {
     const sheets = preview.sheets || [];
     const duplicateMarkup = duplicateGroups(preview).map((group, index) => `<details class="equipment-batch-duplicate-options"><summary>Opcional: elegir cuáles cuadros idénticos cargar</summary><label for="equipmentBatchDuplicate${index}"><strong>Hay cuadros con el mismo equipo</strong></label><p>Si conserva la selección actual, se cargarán como eventos independientes al aceptar la advertencia. Todos los cuadros originales se conservarán completos.</p><select id="equipmentBatchDuplicate${index}" data-batch-duplicate="${index}"><option value="">Conservar los cuadros seleccionados</option>${group.eventIds.map((id) => { const position = preview.events.findIndex((event) => event.id === id), event = preview.events[position]; return `<option value="${escape(id)}">Solo cuadro ${position + 1} · ${escape(event?.sourceSheet || "")}</option>`; }).join("")}<option value="all">Son eventos distintos: incluir todos</option></select></details>`).join("");
-    return `<p class="equipment-batch-summary"><strong>${escape(preview.source?.fileName || "Archivo")}</strong><br>${preview.events.length} eventos · ${sheets.length} hojas${preview.referenceTableCount ? ` · ${preview.referenceTableCount} cuadro${preview.referenceTableCount === 1 ? "" : "s"} de referencia` : ""} · ${preview.verification.representedCellCount} de ${preview.verification.sourceCellCount} celdas conservadas</p><p class="equipment-batch-notice">Archivo leído. Los cuadros con equipo legible están seleccionados. Pulse <strong>Continuar y preparar reportes</strong> para cargar los eventos y elegir Trasiego, Renta con y sin trasiego o Compra de consumibles. Puede revisar y corregir los datos de abajo antes de continuar. Se cargarán como borradores, sin reservar equipo ni modificar el inventario.</p>${duplicateMarkup}<fieldset class="equipment-batch-sheets"><legend>Pestañas del archivo</legend>${sheets.map((sheet, index) => {
+    return `<p class="equipment-batch-summary"><strong>${escape(preview.source?.fileName || "Archivo")}</strong><br>${preview.events.length} eventos · ${sheets.length} hojas${preview.referenceTableCount ? ` · ${preview.referenceTableCount} cuadro${preview.referenceTableCount === 1 ? "" : "s"} de referencia` : ""} · ${preview.verification.representedCellCount} de ${preview.verification.sourceCellCount} celdas conservadas</p>${preview.verification.requiresVisualReview?'<p class="equipment-batch-validation">OCR: se conservaron los fragmentos reconocidos. La comparación contra la imagen original requiere su revisión visual; el conteo de celdas no certifica la exactitud del escaneo.</p>':''}<p class="equipment-batch-notice">Archivo leído. Los cuadros con equipo legible están seleccionados. Pulse <strong>Continuar y preparar reportes</strong> para cargar los eventos y elegir Trasiego, Renta con y sin trasiego o Compra de consumibles. Puede revisar y corregir los datos de abajo antes de continuar. Se cargarán como borradores, sin reservar equipo ni modificar el inventario.</p>${duplicateMarkup}<fieldset class="equipment-batch-sheets"><legend>Pestañas del archivo</legend>${sheets.map((sheet, index) => {
       const available = preview.events.map((event, eventIndex) => ({ event, selection: selections[eventIndex] })).filter((entry) => sheet.eventIds.includes(entry.event.id) && editableEvent(entry.event));
       return `<label><input type="checkbox" data-batch-sheet="${index}"${available.length && available.every((entry) => entry.selection.selected) ? " checked" : ""}${!available.length ? " disabled" : ""}>${escape(sheet.name)} <small>${sheet.sourceCellCount} celdas</small></label>`;
-    }).join("")}</fieldset><div id="equipmentBatchWarnings" class="equipment-batch-warning-summary" role="status"></div><p id="equipmentBatchTotals" class="equipment-batch-summary" role="status"></p><p id="equipmentBatchValidation" class="equipment-batch-validation" role="status"></p>${preview.events.map((event, index) => renderEvent(event, selections[index], index)).join("")}`;
+    }).join("")}</fieldset><div id="equipmentBatchWarnings" class="equipment-batch-warning-summary" role="status"></div><p id="equipmentBatchTotals" class="equipment-batch-summary" role="status"></p><p id="equipmentBatchValidation" class="equipment-batch-validation" role="status"></p>${preview.events.map((event, index) => renderEvent(event, selections[index], index,(preview.reimportConflicts || []).find(conflict=>conflict.eventId===event.id))).join("")}`;
   }
   function markup() {
     return `<header class="equipment-batch-header"><div><p id="equipmentBatchStep">1. Cargar eventos</p><h2 id="equipmentBatchTitle">Importar varios eventos</h2></div><button type="button" data-batch-action="close" aria-label="Cerrar">×</button></header><div id="equipmentBatchBody" class="equipment-batch-body"><p id="equipmentBatchInstructions" class="equipment-batch-notice">Elija el Excel o PDF original que contiene los cuadros completos de equipo de los eventos. Se leerán los equipos, cantidades, categorías, lugar, día y fecha del evento, montaje cuando aplique, inicio, finalización y regreso a bodega. Después pulse Continuar para preparar los tres reportes. Los datos ausentes quedan pendientes para su revisión.</p><input id="equipmentBatchFile" type="file" accept=".xlsx,.pdf" hidden><button type="button" id="equipmentBatchChoose" data-batch-action="choose">Elegir Excel o PDF</button><div id="equipmentBatchContent"></div></div><footer class="equipment-batch-footer"><p id="equipmentBatchStatus" role="status" aria-live="polite"></p><div><button type="button" id="equipmentBatchClose" data-batch-action="close">Cancelar</button><button type="button" id="equipmentBatchApply" data-batch-action="apply" disabled>Continuar y preparar reportes</button><button type="button" id="equipmentBatchTransfer" data-batch-action="apply-transfer" data-live-permission="equipment.reports" hidden disabled>Generar trasiego</button><button type="button" id="equipmentBatchRent" data-batch-action="apply-rent" data-live-permission="equipment.reports" hidden disabled>Renta con y sin trasiego</button><button type="button" id="equipmentBatchPurchase" data-batch-action="apply-purchase" data-live-permission="equipment.reports" hidden disabled>Generar compra de consumibles</button><button type="button" id="equipmentBatchSummary" data-batch-action="report-summary" hidden disabled>Ver resumen general</button></div><small id="equipmentBatchReportNotice">Los eventos se cargan como borradores. Trasiego, renta y compra son reportes provisionales; las reservas y los movimientos se confirman por separado.</small></footer>`;
@@ -295,11 +325,11 @@
         if (!/\.(xlsx|pdf)$/i.test(file.name)) throw new Error("Use un archivo Excel .xlsx o PDF digital. Guarde primero los archivos .xls como .xlsx.");
         if (file.size > MAX_FILE_BYTES) throw new Error("El archivo supera el límite de 15 MB. Divídalo sin eliminar datos.");
         const bytes = await file.arrayBuffer(); if (token !== generation) return null;
-        timer = setTimeout(() => { timedOut = true; controller.abort(); }, options.requestTimeoutMs ?? 45000);
+        timer = setTimeout(() => { timedOut = true; controller.abort(); }, options.requestTimeoutMs ?? 120000);
         const result = await requestPreview(file, bytes, controller.signal);
         if (token !== generation) return null;
         if (!Array.isArray(result?.events) || !result.verification || result.events.some((event) => !event || typeof event.id !== "string") || new Set(result.events.map((event) => event.id)).size !== result.events.length) throw new Error("El servidor no devolvió una revisión válida. No se cargó ningún evento.");
-        preview = result; selections = selectionsFor(result); get("equipmentBatchContent").innerHTML = renderPreview(preview, selections); get("equipmentBatchBody").scrollTop = 0;
+        preview = {...result,reimportConflicts:importConflicts(result,bridge()?.events?.() || [])}; selections = selectionsFor(preview); get("equipmentBatchContent").innerHTML = renderPreview(preview, selections); get("equipmentBatchBody").scrollTop = 0;
         const error = selectionError(preview, selections);
         status(error ? "Revise los cuadros señalados antes de continuar." : "Archivo listo. Pulse Continuar para preparar trasiego, renta y compra de consumibles.");
         return clone(preview);
@@ -343,9 +373,16 @@
       let events, connection, importStarted = false;
       const sourcePreview = preview, revision = selectionRevision, token = generation, selected = clone(selections);
       try {
+        connection = bridge();
+        if(sourcePreview&&typeof connection?.events==='function'){
+          const conflicts=importConflicts(sourcePreview,connection.events());
+          if(JSON.stringify(conflicts)!==JSON.stringify(sourcePreview.reimportConflicts || [])){
+            sourcePreview.reimportConflicts=conflicts;
+            get('equipmentBatchContent').innerHTML=renderPreview(sourcePreview,selections);
+          }
+        }
         const error = selectionError(sourcePreview, selected);
         if (error) throw new Error(error);
-        connection = bridge();
         if (typeof connection?.importEvents !== "function") throw new Error("No está disponible la conexión con los borradores. El archivo se conserva para reintentar.");
         if (mode && typeof connection.afterImport !== "function") throw new Error("No está disponible la conexión para continuar con el reporte. Puede cargar los borradores y generarlo desde el resumen.");
         const warnings = selectionWarnings(sourcePreview, selected);
@@ -363,7 +400,7 @@
         if (!allowed(mode)) throw new Error("Su usuario ya no tiene permiso para cargar estos eventos.");
         events = prepareEvents(sourcePreview, selected, { acknowledgeWarnings: true });
         applying = true; importStarted = true; update(); status("Cargando los borradores completos…");
-        const result = await connection.importEvents(events);
+        const result = await connection.importEvents(events,{decisions:decisionsFor(sourcePreview,selected)});
         // Record success before any callback/report can fail. The original
         // preview is consumed once; later report attempts reuse this result.
         imported = { events: clone(events), result, connection, fileName: sourcePreview?.source?.fileName };
@@ -392,6 +429,8 @@
       if (element.id === "equipmentBatchFile") { const file = element.files?.[0]; element.value = ""; return read(file); }
       if (busy || applying || reporting || !preview) return;
       selectionRevision++;
+      if (element.dataset.batchReimport !== undefined) selections[Number(element.dataset.batchReimport)].importResolution=element.value;
+      if (element.dataset.batchOcrReview !== undefined) selections[Number(element.dataset.batchOcrReview)].ocrReviewed=element.checked;
       if (element.dataset.batchSelect !== undefined) selections[Number(element.dataset.batchSelect)].selected = element.checked;
       if (element.dataset.batchDuplicate !== undefined) {
         const group = duplicateGroups(preview)[Number(element.dataset.batchDuplicate)];
@@ -435,5 +474,5 @@
     const api = { open, openFile, close, read, getPreview: () => preview ? clone(preview) : null, getImported: () => imported ? { events: clone(imported.events), result: imported.result } : null, destroy() { if (applying || reporting) return false; close(); destroyed = true; imported = null; opener.removeEventListener("click", open); doc.removeEventListener?.("live:session-updated", update); dialog.remove(); instances.delete(doc); return true; } };
     instances.set(doc, api); return api;
   }
-  return { selectionsFor, selectionError, selectionWarnings, prepareEvents, totals, renderPreview, renderEvent, markup, init };
+  return { importConflicts,decisionsFor,selectionsFor, selectionError, selectionWarnings, prepareEvents, totals, renderPreview, renderEvent, markup, init };
 });

@@ -31,12 +31,12 @@ function fixture() {
 
 function modelFixture() { const { events, inventory } = fixture(); return reporting.createEquipmentReportModel({ events, from: "2026-11-02", to: "2026-11-08", inventory: { quantity: 99999 } }, inventory, { createdAt: "2026-11-04T12:00:00.000Z" }); }
 
-test("provisional conserva todos los eventos, ceros, celdas, encabezados y notas sin suponer reutilización", () => {
+test("provisional conserva todos los eventos, ceros, celdas y notas y respeta el regreso indicado a bodega", () => {
   const { events, inventory } = fixture(); const before = JSON.stringify({ events, inventory });
   const model = modelFixture();
   assert.equal(model.counts.events, 2); assert.equal(model.counts.equipmentRows, 10); assert.equal(model.counts.zeroQuantityRows, 2); assert.equal(model.sourceCells.length, 6);
   const consoleRow = model.rows.find(row => row.warehouseInventoryId === "console");
-  assert.equal(consoleRow.demand, 8); assert.equal(consoleRow.available, 3); assert.equal(consoleRow.shortage, 5); assert.equal(consoleRow.action, "RENTA");
+  assert.equal(consoleRow.demand, 8); assert.equal(consoleRow.available, 3); assert.equal(consoleRow.shortage, 1); assert.equal(consoleRow.action, "RENTA");
   assert.equal(model.rows.find(row => row.warehouseInventoryId === "tape").shortage, 5);
   assert.equal(model.transfers.length, 0); assert.equal(model.productionMutations, 0);
   assert.ok(model.preservedRows.some(row => row.type === "header")); assert.ok(model.preservedRows.some(row => row.description === "No perder esta observación"));
@@ -79,7 +79,7 @@ test("Excel máster reabre con fórmulas, ceros tipados y fuente JSON completa s
   const summary = reopened.getWorksheet("Resumen de equipo");
   const row = summary.getRows(5, summary.rowCount - 4).find(row => row.getCell(3).value === "console");
   assert.equal(row.getCell(6).value.formula, `SUM(D${row.number}:E${row.number})`); assert.equal(row.getCell(6).value.result, 8);
-  assert.equal(row.getCell(8).value.result, 5); assert.match(row.getCell(8).value.formula, /^MAX\(0,/);
+  assert.equal(row.getCell(8).value.result, 1); assert.match(row.getCell(8).value.formula, /^MAX\(0,/);
   const details = reopened.getWorksheet("Detalle por evento");
   assert.equal(details.getRows(5, details.rowCount - 4).filter(row => row.getCell(4).value === 0).length, 2);
   const raw = reopened.getWorksheet("Datos completos");
@@ -106,7 +106,7 @@ test("endpoint autenticado descarga los cuatro formatos con inventario servidor 
   const before = fs.readFileSync(h.paths.warehouseInventoryPath); let printed = 0; const tempPaths = [];
   Object.assign(h.api, reporting, { os,
     async generatePdf(markup, target) { printed += 1; assert.match(markup, /PROVISIONAL/); tempPaths.push(path.dirname(target)); await fs.promises.writeFile(target, "%PDF-synthetic-report"); },
-    equipmentEventStore: new Proxy({}, { get() { throw new Error("A download must never open or mutate event reservations"); } }),
+    equipmentEventStore: new Proxy({}, { get(_target, key) { if (key === "readEvents") return () => ({ events: [], transfers: [], revision: 0 }); throw new Error("A download must never mutate event reservations"); } }),
     async receiveEquipmentBoardInWarehouse() { throw new Error("No warehouse dispatch"); }
   });
   vm.runInContext(serverFunctionSource("downloadProvisionalEquipmentReport"), h.api);

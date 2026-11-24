@@ -43,7 +43,7 @@ function htmlHarness(t) {
     },
     enqueueSave() { throw new Error("An HTML report must bypass the print/save queue"); },
     generatePdf() { throw new Error("An HTML report must not launch Chromium"); },
-    equipmentEventStore: new Proxy({}, { get() { throw new Error("An HTML report must not open the event store"); } }),
+    equipmentEventStore: new Proxy({}, { get(_target, key) { if (key === "readEvents") return () => ({ events: [], transfers: [], revision: 0 }); throw new Error("An HTML report must not mutate the event store"); } }),
     receiveEquipmentBoardInWarehouse() { throw new Error("An HTML report must not dispatch stock"); }
   });
   vm.runInContext(serverFunctionSource("downloadProvisionalEquipmentReport"), h.api);

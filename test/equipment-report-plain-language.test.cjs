@@ -16,7 +16,14 @@ function fixture(quantities = [2, 2], own = 2, consumable = false) {
   });
   return { name, events, inventory };
 }
-function model(input) { return reporting.createEquipmentPlanningReportModel({ events: input.events }, input.inventory); }
+function model(input) {
+  // These report-layout cases explicitly choose the current reviewed routes.
+  // They must not rely on an invisible automatic selection in production.
+  const routeEstimates = input.events.slice(0, -1).map((event, index) => ({ fromPlace: event.place, toPlace: input.events[index + 1].place, travelMinutes: 60, handlingMinutes: 120 }));
+  const preview = reporting.createEquipmentReportModel({ events: input.events, routeEstimates }, input.inventory);
+  const selectedTransferIds = preview.draftLogistics.candidates.filter(candidate => candidate.status === 'ready').map(candidate => candidate.id);
+  return reporting.createEquipmentPlanningReportModel({ events: input.events, routeEstimates, selectedTransferIds }, input.inventory);
+}
 
 test('the same physical units at A and B count once, with additional need rented only when stock is insufficient', () => {
   for (const [quantities, own, unique, ownUsed, rented] of [[[2, 2], 2, 2, 2, 0], [[3, 2], 3, 3, 3, 0], [[2, 5], 2, 5, 2, 3]]) {

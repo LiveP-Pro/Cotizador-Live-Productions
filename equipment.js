@@ -6001,7 +6001,19 @@ async function downloadEquipmentDraftTransfer(button = null) {
   return openEquipmentPlanningReport("transfer", button);
 }
 
+async function openEquipmentDraftTransferSelector() {
+  const status=equipmentQuery("#equipmentSaveStatus");
+  let message='';
+  if(window.LiveAccess?.can&&!window.LiveAccess.can(window.LIVE_SESSION,"equipment.reports"))message="Su usuario no tiene permiso para generar reportes de equipo.";
+  else if(equipmentSharedWorkspace.saving)message="Espere a que termine el guardado actual.";
+  else if(!equipmentPlannerInstance?.openTransfers)message="No se pudo abrir el generador de trasiegos. Actualice la página; sus cuadros se conservan.";
+  if(message){if(status)status.textContent=message;return {ok:false,message};}
+  try{return await equipmentPlannerInstance.openTransfers();}
+  catch(error){const result={ok:false,message:error.message||"No se pudo calcular el trasiego. Sus cuadros se conservan."};if(status)status.textContent=result.message;return result;}
+}
+
 function requestEquipmentTransferDecision(target = "summary") {
+  if(equipmentPlannerInstance) return openEquipmentDraftTransferSelector();
   if (equipmentHasTransferDrafts()) return downloadEquipmentDraftTransfer(equipmentQuery(target === "preview" ? "#equipmentTransferWindowButton" : "#equipmentSummaryTransferButton"));
   const status = equipmentQuery("#equipmentSaveStatus");
   if (equipmentSharedWorkspace.enabled) {
@@ -7631,35 +7643,60 @@ function initEquipmentPlannerBridge() {
       if (!Array.isArray(item) && item.procurementChoice === "save" && !equipmentPendingProcurementChoice(item)) {const next={...item};delete next.procurementChoice;return next;}return item;
     })})) }));
   }
-  function importEvents(rawEvents) {
+  function importEvents(rawEvents, options = {}) {
     if (equipmentSharedWorkspace.saving) throw new Error("Espere a que termine el guardado actual.");
     if (!Array.isArray(rawEvents) || !rawEvents.length) throw new Error("No hay eventos para cargar.");
-    const events = rawEvents.map(raw => {
+    const pool = [...equipmentState.events];
+    const changes = [];
+    const decisions = Array.isArray(options.decisions) ? options.decisions : [];
+    const events = rawEvents.map((raw, index) => {
       const rawSections = raw.sections || raw.documentSections || [];
       if (!Array.isArray(rawSections)) throw new Error("Las secciones del evento no son válidas.");
       rawSections.forEach(section => (section.items || []).forEach(rawItem => {
         const quantity = Array.isArray(rawItem) ? rawItem[0] : rawItem.quantity;
         const description = Array.isArray(rawItem) ? rawItem[1] : rawItem.description;
-        if (quantity === null || quantity === undefined || String(quantity).trim() === "" || !Number.isFinite(Number(quantity)) || Number(quantity)<0 || !String(description || "").trim()) throw new Error("Hay una cantidad o descripción pendiente. Corrija el archivo antes de cargarlo; no se omitió ninguna línea.");
+        if (!["string","number"].includes(typeof quantity) || String(quantity).trim() === "" || !Number.isFinite(Number(quantity)) || Number(quantity)<0 || !String(description || "").trim()) throw new Error("Hay una cantidad o descripción pendiente. Corrija el archivo antes de cargarlo; no se omitió ninguna línea.");
       }));
       const sections = cloneEquipmentSnapshotSections(rawSections);
       if (!sections.some(section => section.items.length)) throw new Error("Cada evento debe contener al menos una línea de equipo.");
       sections.forEach(section => section.items.forEach(item => {
         if (item.quantity === null || item.quantity === undefined || String(item.quantity).trim() === "" || !Number.isFinite(Number(item.quantity)) || Number(item.quantity)<0 || !String(item.description || "").trim()) throw new Error("Hay una cantidad o descripción pendiente. Corrija el archivo antes de cargarlo; no se omitió ninguna línea.");
       }));
+      const identity = window.EquipmentImportIdentity;
       const source = raw.sourceImport;
-      const existing = source?.sha256 && equipmentState.events.find(event => event.status !== "cancelled"
-        && event.sourceImport?.sha256 === source.sha256 && event.sourceImport?.sheet === source.sheet && event.sourceImport?.block === source.block);
-      if (existing) return existing;
-      const event = { ...clone(raw), id:createEquipmentWarehouseDispatchId(), warehouseDispatchId:createEquipmentWarehouseDispatchId(), status:"draft",
+      const match = identity?.match ? identity.match(raw, pool) : (() => {
+        const exact = source?.sha256 && pool.find(event => event.status !== "cancelled" && event.sourceImport?.sha256 === source.sha256 && event.sourceImport?.sheet === source.sheet && event.sourceImport?.block === source.block);
+        return {kind:exact?"exact":"none",matches:exact?[exact]:[]};
+      })();
+      if (match.kind === "exact") return match.matches[0];
+      const decision = decisions.find(entry => entry.index === index);
+      let replaced = null;
+      if (match.kind !== "none") {
+        if (!decision || !["reuse", "replace", "separate"].includes(decision.action)) throw new Error("Este cuadro coincide con un evento cargado. Elija conservarlo, reemplazarlo o crear uno independiente antes de continuar.");
+        const existing = match.matches.find(event => event.id === decision.existingEventId);
+        if (!existing) throw new Error("El evento elegido cambió. Revise nuevamente las coincidencias antes de importar.");
+        if (decision.action === "reuse") return existing;
+        if (decision.action === "replace") replaced = existing;
+      }
+      const event = { ...clone(raw), id:replaced?.id || createEquipmentWarehouseDispatchId(), warehouseDispatchId:replaced?.warehouseDispatchId || createEquipmentWarehouseDispatchId(), status:"draft",
         snapshotLocked:true, sections, documentSections:cloneEquipmentSnapshotSections(sections),
         serviceIds:[],serviceId:"",serviceName:raw.type || raw.name || "Evento personalizado",documentServiceName:raw.type || raw.name || "Evento personalizado",
         selectedExtraIds:[],manualMainItems:[],manualMainSections:[],manualExtras:[],itemOverrides:[],sectionAddedItems:[],removedItemIds:[] };
-      delete event.updatedAt; delete event.createdAt; return event;
+      delete event.updatedAt; delete event.createdAt;
+      if (replaced?.updatedAt) event.updatedAt=replaced.updatedAt;
+      if (replaced?.createdAt) event.createdAt=replaced.createdAt;
+      changes.push({event,replaced});
+      if (replaced) pool[pool.indexOf(replaced)] = event; else pool.push(event);
+      return event;
     });
     if (equipmentState.selectedEventId) { if(equipmentSharedWorkspace.dirty)equipmentPlannerDirtyIds.add(equipmentState.selectedEventId); syncActiveEquipmentEvent(); }
     let addedCount = 0;
-    events.forEach(event => { if (!equipmentState.events.some(existing => existing.id === event.id)) { equipmentState.events.push(event); equipmentPlannerDirtyIds.add(event.id); addedCount++; } });
+    let replacedCount = 0;
+    changes.forEach(({event,replaced}) => {
+      if(replaced){equipmentState.events[equipmentState.events.findIndex(existing=>existing.id===replaced.id)]=event;replacedCount++;}
+      else {equipmentState.events.push(event);addedCount++;}
+      equipmentPlannerDirtyIds.add(event.id);
+    });
     const dates = events.flatMap(event => [event.setupAt, event.startAt, event.endAt, event.equipmentInAt, event.date])
       .map(value => String(value || "").slice(0, 10)).filter(value => /^\d{4}-\d{2}-\d{2}$/.test(value)).sort();
     if (dates.length) {
@@ -7669,17 +7706,47 @@ function initEquipmentPlannerBridge() {
     }
     invalidateEquipmentRentalPreview(); equipmentState.summaryTransferEnabled=false;equipmentState.summaryTransferAutomatic=false;
     loadEquipmentEvent(events[0].id,"summary");equipmentSharedWorkspace.dirty=true;
-    const status=equipmentQuery("#equipmentSaveStatus");if(status)status.textContent=`${events.length} eventos cargados como borradores. Puede descargar el provisional o completar los datos para confirmar reservas.`;
-    return {count:events.length, addedCount, events:clone(events)};
+    const uniqueEvents=[...new Map(events.map(event=>[event.id,event])).values()];
+    const status=equipmentQuery("#equipmentSaveStatus");if(status)status.textContent=`${addedCount} eventos nuevos · ${replacedCount} reemplazados · ${uniqueEvents.length-addedCount-replacedCount} ya estaban cargados. Los cuadros se conservan sin duplicar filas; no se registraron reservas.`;
+    return {count:uniqueEvents.length, addedCount, replacedCount, reusedCount:uniqueEvents.length-addedCount-replacedCount, events:clone(uniqueEvents)};
   }
   const bridge = {
     events:plannerEvents,
     inventory:()=>equipmentWarehouseInventoryState.records,
     range:()=>({from:equipmentQuery("#equipmentAgendaFrom")?.value || "",to:equipmentQuery("#equipmentAgendaTo")?.value || ""}),
     transferOptions:()=>({routeEstimates:clone(equipmentSharedWorkspace.state?.routeEstimates || [])}),
+    isSaving:()=>equipmentSharedWorkspace.saving,
+    updateEventDetails:patches=>{
+      if(equipmentSharedWorkspace.saving)throw new Error("Espere a que termine el guardado actual.");
+      if(!Array.isArray(patches))throw new Error("Los horarios del plan no son válidos.");
+      const checked=patches.map(patch=>{
+        const event=equipmentState.events.find(entry=>entry.id===patch.id);
+        if(!event)throw new Error("Un evento del plan ya no está cargado. Vuelva a generar el listado.");
+        const fields={place:String(patch.place||'').trim(),setupApplies:patch.setupApplies!==false};
+        if(patch.date){if(!/^\d{4}-\d{2}-\d{2}$/.test(patch.date))throw new Error("La fecha del evento no es válida.");fields.date=patch.date;}
+        for(const field of ['setupAt','startAt','endAt','equipmentInAt']){
+          const value=String(patch[field]||'');
+          if(value&&!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?$/.test(value))throw new Error("Hay un horario no válido. Revise el evento antes de aplicar.");
+          fields[field]=value;
+        }
+        return {event,fields};
+      });
+      if(equipmentState.selectedEventId)syncActiveEquipmentEvent();
+      checked.forEach(({event,fields})=>{Object.assign(event,fields);equipmentPlannerDirtyIds.add(event.id);});
+      const selected=selectedEquipmentEvent();if(selected){restoreEquipmentEventSnapshot(selected);populateEquipmentEventFields(selected);}
+      equipmentSharedWorkspace.dirty=true;
+      const dates=equipmentState.events.flatMap(event=>[event.setupAt,event.startAt,event.endAt,event.equipmentInAt,event.date]).map(value=>String(value||'').slice(0,10)).filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value)).sort();
+      if(dates.length){const range={from:dates[0],to:dates.at(-1)};for(const [id,value]of [["#equipmentAgendaFrom",range.from],["#equipmentAgendaTo",range.to]]){const input=equipmentQuery(id);if(input)input.value=value;}equipmentSharedWorkspace.client?.setRange?.(range);}
+      invalidateEquipmentRentalPreview();renderEquipmentModule();
+    },
     importEvents,
     afterImport: async (mode, context = {}) => {
       switchEquipmentWindow("summary");
+      if (mode === "transfer") {
+        const outcome=await openEquipmentDraftTransferSelector();
+        if(outcome?.ok===false)throw new Error(outcome.message);
+        return outcome;
+      }
       if (mode === "rent" || mode === "purchase" || mode === "transfer") {
         const importedEvents = context.result?.events || context.events || null;
         const current = new Map(plannerEvents().map(event => [event.id, event]));
@@ -7827,7 +7894,7 @@ function initEquipmentModule() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && equipmentCatalogEditorState.open) closeEquipmentCatalogEditor();
   });
-  equipmentQuery("#equipmentSummaryTransferButton")?.addEventListener("click", event => openEquipmentPlanningReport("transfer", event.currentTarget));
+  equipmentQuery("#equipmentSummaryTransferButton")?.addEventListener("click", openEquipmentDraftTransferSelector);
   equipmentQuery("#equipmentSummarySearch")?.addEventListener("input", (event) => {
     equipmentState.summarySearchTerm = event.target.value || "";
     renderEquipmentModule();

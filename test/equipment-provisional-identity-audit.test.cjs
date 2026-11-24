@@ -46,8 +46,10 @@ test('received purchase proof survives a renamed physical description without lo
   assert.equal(model.details[0].resolvedInventoryId, 'one'); assert.equal(model.sourceCells.length, 2);
 });
 
-test('provisional native rental does not subtract a plausible route or client-supplied transfer from demand', () => {
-  const shared = { setupAt: '2026-11-05T08:00', startAt: '2026-11-05T09:00', endAt: '2026-11-05T10:00', equipmentInAt: '2026-11-05T11:00' };
+test('provisional native rental does not subtract an unselected route or client-supplied transfer', () => {
+  // Keep the units assigned to A past B so ordinary warehouse reuse cannot
+  // legitimately cover B; only an explicit reviewed selection could do so.
+  const shared = { setupAt: '2026-11-05T08:00', startAt: '2026-11-05T09:00', endAt: '2026-11-05T10:00', equipmentInAt: '2026-11-07T11:00' };
   const events = [event([sourceLine('Unidad sintética', 2)], shared), event([sourceLine('Unidad sintética', 2)], {
     id: 'synthetic-report-b', date: '2026-11-06', place: 'Otro lugar',
     setupAt: '2026-11-06T08:00', startAt: '2026-11-06T09:00', endAt: '2026-11-06T10:00', equipmentInAt: '2026-11-06T11:00'

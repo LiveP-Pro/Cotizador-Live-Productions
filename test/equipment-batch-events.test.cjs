@@ -297,6 +297,35 @@ function clientPreview(fields = {}) {
 }
 const deliverPreview = (preview) => ({ ok: true, json: async () => structuredClone(preview) });
 
+test('revised file conflicts remain blocked until a per-event choice; complete replacement requires confirmation and forwards selected-array indices',async()=>{
+  const buffer=await syntheticWorkbook(),old=await parseEventFile(buffer,{fileName:'revision-sintetica.xlsx'});
+  const book=new ExcelJS.Workbook();await book.xlsx.load(buffer);book.worksheets[0].getCell('A9').value=7;
+  const revised=await parseEventFile(Buffer.from(await book.xlsx.writeBuffer()),{fileName:'revision-sintetica.xlsx'});
+  const existing={...structuredClone(old.events[0]),id:'existing-synthetic',status:'draft',place:'Edición conservada'};
+  let accepted=false,imports=0,received,confirmation='';
+  const h=browserHarness({fetch:async()=>deliverPreview(revised),confirmWarnings:message=>{confirmation=message;return accepted;},bridge:{events:()=>[existing],importEvents(events,options){imports++;received={events,options};return {count:events.length,events};}}});
+  await h.api.openFile(fakeFile());assert.equal(h.get('equipmentBatchApply').disabled,true);assert.match(h.get('equipmentBatchValidation').textContent,/no se duplicó/);
+  assert.match(h.get('equipmentBatchContent').innerHTML,/Reemplazar completamente/);
+  const select=h.dialog.querySelectorAll('[data-batch-reimport]')[0];select.value='replace:existing-synthetic';await h.dialog.emit('change',{target:select});
+  assert.equal(h.get('equipmentBatchApply').disabled,false);
+  await h.action('apply');assert.equal(imports,0);assert.match(confirmation,/COMPLETAMENTE/);
+  accepted=true;await h.action('apply');assert.equal(imports,1);
+  assert.deepEqual(received.options.decisions,[{index:0,action:'replace',existingEventId:'existing-synthetic'}]);
+  assert.equal(received.events[0].sections.flatMap(section=>section.items)[1].quantity,7);
+  assert.equal(existing.sections.flatMap(section=>section.items)[1].quantity,2);assert.equal(existing.place,'Edición conservada');
+});
+
+test('an explicit independent-event choice does not merge similar sources or drop legitimate repeated rows and zeros',async()=>{
+  const preview=await parseEventFile(await syntheticWorkbook(),{fileName:'otro-origen-sintetico.xlsx'});
+  const current=structuredClone(preview.events[0]);current.id='existing-synthetic';current.sourceImport.fileName='origen-independiente.xlsx';current.sourceImport.sha256='other-bytes';
+  const conflicts=ui.importConflicts(preview,[current]);assert.equal(conflicts[0].kind,'similar');
+  preview.reimportConflicts=conflicts;const selections=ui.selectionsFor(preview);assert.match(ui.selectionError(preview,selections),/Decida/);
+  selections[0].importResolution='separate';assert.equal(ui.selectionError(preview,selections),'');
+  assert.deepEqual(ui.decisionsFor(preview,selections),[{index:0,action:'separate'}]);
+  const prepared=ui.prepareEvents(preview,selections,{acknowledgeWarnings:true});
+  assert.equal(prepared.length,6);assert.equal(prepared.flatMap(event=>event.sections.flatMap(section=>section.items)).filter(item=>item.quantity===0).length,6);
+});
+
 // These tests exercise the browser client with synthetic data only.
 test("openFile abre directamente y descarta lecturas reemplazadas, canceladas o inválidas", async () => {
   const pending = [], first = clientPreview(), second = clientPreview({ id: "client-synthetic-2", place: "Segundo lugar sintético" });

@@ -7,7 +7,7 @@ ENV COTIZADOR_DATA_DIR=/data
 ENV CHROME_PATH=/usr/bin/chromium
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends chromium ca-certificates fonts-liberation \
+  && apt-get install -y --no-install-recommends chromium ca-certificates fonts-liberation poppler-utils tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -26,6 +26,7 @@ COPY equipment-name-picker.js equipment-name-picker.css ./
 COPY equipment-identity.js equipment-document-audit.js equipment-planner.js equipment-planner.css equipment-batch-events.js equipment-batch-events.css equipment-event-import.cjs equipment-reporting.cjs ./
 COPY equipment-report-viewer.js equipment-report-viewer.css ./
 COPY equipment-handoffs.js ./
+COPY equipment-import-identity.js equipment-pdf-ocr.cjs equipment-draft-logistics.js equipment-draft-transfers.js equipment-draft-transfers.css ./
 COPY assets ./assets
 COPY luxury/package.json luxury/server.js ./luxury/
 COPY luxury/lib ./luxury/lib

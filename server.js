@@ -58,7 +58,7 @@ const equipmentCatalogOverridesBackupPath = path.join(dataDir, "catalogo-requeri
 const equipmentServiceSourcesDir = path.join(dataDir, "fuentes-requerimiento-equipo");
 const maxBodyBytes = 100 * 1024 * 1024;
 const quoteSequenceStart = 10760n;
-const warehouseAssetVersion = "20261123-simple-transfer-summary-01";
+const warehouseAssetVersion = "20261123-selected-transfers-01";
 const maxWarehouseImportBytes = 15 * 1024 * 1024;
 let activeWarehouseImports = 0;
 const equipmentServiceImportPreviews = new Map();
@@ -759,11 +759,14 @@ async function previewEquipmentEventFile(request, response) {
 
 async function downloadProvisionalEquipmentReport(payload, response) {
   const mode = String(payload?.mode || "master");
-  if (!["master", "summary", "rent", "purchase", "transfer"].includes(mode)) {
+  if (!["master", "summary", "rent", "purchase", "transfer", "plan"].includes(mode)) {
     errorResponse(response, 400, "Seleccione resumen, trasiego, renta, compra o Excel máster."); return;
   }
   const format = payload?.format === undefined ? (mode === "master" ? "xlsx" : "pdf") : payload.format;
-  if (!["html", "pdf", "xlsx"].includes(format)
+  if (mode === "plan" && format !== "json" || format === "json" && mode !== "plan") {
+    errorResponse(response, 400, "La revisión del plan usa el formato JSON."); return;
+  }
+  if (!["html", "pdf", "xlsx", "json"].includes(format)
       || format === "html" && !["transfer", "rent", "purchase"].includes(mode)
       || format === "xlsx" && mode !== "master" || format === "pdf" && mode === "master") {
     errorResponse(response, 400, "Seleccione un formato válido para este reporte: vista imprimible, PDF o Excel máster."); return;
@@ -771,8 +774,19 @@ async function downloadProvisionalEquipmentReport(payload, response) {
   // The browser submits current drafts only. Quantities, classifications and
   // stock movements ALWAYS come from the active server warehouse snapshot.
   const inventory = readWarehouseInventory();
-  const model = format === "html" ? createEquipmentPlanningReportModel(payload, inventory)
-    : mode === "transfer" ? createEquipmentTransferReportModel(payload, inventory) : createEquipmentReportModel(payload, inventory);
+  // Persisted transfer decisions are read from the current agenda, never from
+  // the posted draft. The shared engine validates them and selected draft IDs
+  // again against these events and this inventory without saving either one.
+  const current = equipmentEventStore.readEvents();
+  const reportOptions = { transfers: current.transfers || [], storedEvents: current.events || [] };
+  const model = format === "html" ? createEquipmentPlanningReportModel(payload, inventory, reportOptions)
+    : mode === "transfer" ? createEquipmentTransferReportModel(payload, inventory, reportOptions) : createEquipmentReportModel(payload, inventory, reportOptions);
+  if (mode === "plan") {
+    jsonResponse(response, 200, { ...model.draftLogistics, reportMeta: {
+      counts: model.counts, pending: model.pending, inventorySavedAt: model.inventorySavedAt
+    }, revision: current.revision, inventorySavedAt: model.inventorySavedAt, productionMutations: 0 });
+    return;
+  }
   const localDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guatemala", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(model.createdAt));
   const period = [model.from, model.to].filter(Boolean).join("_a_") || localDate;
   const labels = { master: "Resumen-master", summary: "Resumen-equipo", rent: "Resumen-renta", purchase: "Resumen-compra", transfer: "Resumen-trasiego" };
@@ -819,8 +833,28 @@ async function downloadProvisionalEquipmentReport(payload, response) {
   response.end(buffer);
 }
 
+function validateEquipmentOcrReview(event) {
+  const seen = new Set(), cells = [], stack = [event];
+  let hasOcrPages = false;
+  while (stack.length) {
+    const value = stack.pop();
+    if (!value || typeof value !== "object" || seen.has(value)) continue;
+    seen.add(value);
+    if (Object.hasOwn(value, "ocrConfidence")) cells.push(value);
+    if (Array.isArray(value.ocrPages) && value.ocrPages.length) hasOcrPages = true;
+    for (const child of Object.values(value)) if (child && typeof child === "object") stack.push(child);
+  }
+  if (cells.some(cell => typeof cell.ocrConfidence !== "number" || !Number.isFinite(cell.ocrConfidence) || cell.ocrConfidence < 90 || cell.ocrConfidence > 100)) {
+    throw Object.assign(new Error("El OCR contiene celdas poco legibles o una confianza no verificable. Use el Excel original o corrija el escaneo antes de confirmar. Aceptar advertencias o marcar la revisión no habilita estas celdas. No se registró ninguna reserva ni salida."), { statusCode: 422 });
+  }
+  if ((cells.length || hasOcrPages) && event?.sourceImport?.ocrReview?.reviewed !== true) {
+    throw Object.assign(new Error("Compare las cantidades y descripciones reconocidas con el PDF original y registre su revisión OCR antes de confirmar. No se registró ninguna reserva ni salida."), { statusCode: 422 });
+  }
+}
+
 function validateEquipmentEventConfirmation(id, payload, inventory) {
   const event = normalizeEvent(id, payload?.event);
+  validateEquipmentOcrReview(event);
   const state = inventory?.state || inventory || {};
   const activeItems = (state.items || []).filter(item => item && !item.archived);
   for (const section of event.sections) for (const raw of section.items) {
@@ -3984,6 +4018,11 @@ async function saveEquipmentBoard(payload, request, response) {
     return;
   }
   if (pendingDispatch?.id) {
+    const documents = [payload?.editableData?.event, ...(Array.isArray(payload?.editableData?.events) ? payload.editableData.events : [])];
+    const stored = equipmentEventStore.readEvents();
+    const original = (stored.events || []).find(event => event.id === pendingDispatch.eventId);
+    if (original) documents.push(original);
+    for (const event of documents.filter(Boolean)) validateEquipmentOcrReview(event);
     const inventory = readWarehouseInventory();
     validateWarehouseDispatchIdentities(pendingDispatch, inventory.state);
     warehouseDispatchHandoffPlan(pendingDispatch, inventory);
@@ -4097,14 +4136,14 @@ function serveStatic(request, response, pathname) {
           data
             .toString("utf8")
             .replace(
-              /(app\.js|live-access\.(?:js|css)|equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import|handoffs|report-viewer)\.(?:js|css)|equipment\.js|inventory\.js|warehouse-import-(?:review|corrections)\.js)\?v=[^"'&<>\s]+/g,
+              /(app\.js|live-access\.(?:js|css)|equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|import-identity|draft-transfers|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import|handoffs|report-viewer)\.(?:js|css)|equipment\.js|inventory\.js|warehouse-import-(?:review|corrections)\.js)\?v=[^"'&<>\s]+/g,
               `$1?v=${warehouseAssetVersion}`
             ),
           "utf8"
         )
       : data;
     const headers = { "Content-Type": contentType };
-    if (requestedPath === "/index.html" || ["app.js", "live-access.js", "equipment-identity.js", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "equipment-handoffs.js", "equipment-report-viewer.js", "equipment-report-viewer.css", "warehouse-import-review.js", "warehouse-import-corrections.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
+    if (requestedPath === "/index.html" || ["app.js", "live-access.js", "equipment-identity.js", "equipment-import-identity.js", "equipment-draft-transfers.js", "equipment-draft-transfers.css", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "equipment-handoffs.js", "equipment-report-viewer.js", "equipment-report-viewer.css", "warehouse-import-review.js", "warehouse-import-corrections.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
       (asset) => requestedPath === `/${asset}`
     )) {
       headers["Cache-Control"] = "no-store";
@@ -4418,10 +4457,10 @@ async function handleRequest(request, response) {
     if (request.method === "POST" && url.pathname === "/api/cuadros-equipo/reportes/provisional") {
       if (!requireAuth(request, response)) return;
       const payload = await readJsonBody(request);
-      if (payload?.format !== undefined && !["html", "pdf", "xlsx"].includes(payload.format)) {
+      if (payload?.format !== undefined && !["html", "pdf", "xlsx", "json"].includes(payload.format)) {
         errorResponse(response, 400, "Seleccione un formato válido para el reporte."); return;
       }
-      if (payload?.format === "html") {
+      if (["html", "json"].includes(payload?.format)) {
         await downloadProvisionalEquipmentReport(payload, response);
         return;
       }

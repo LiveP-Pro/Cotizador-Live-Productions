@@ -8,8 +8,8 @@ const EquipmentIdentity = require("./equipment-identity.js");
 const EquipmentDocumentAudit = require("./equipment-document-audit.js");
 const EquipmentHandoffs = require("./equipment-handoffs.js");
 
-const DISCLAIMER = "PROVISIONAL · Sin reservas ni movimientos de inventario. No se supone ningún trasiego, retorno o reutilización entre eventos. Los pendientes no constituyen órdenes de compra o renta.";
-const TRANSFER_DISCLAIMER = "PROPUESTA PROVISIONAL DE TRASIEGO · Sin reservas ni movimientos de inventario. Las rutas no están confirmadas. Revise los horarios y los tiempos de transporte antes de organizar el traslado. Este reporte no reduce los resúmenes conservadores de renta o compra.";
+const DISCLAIMER = "PROVISIONAL · Sin reservas ni movimientos de inventario. Solo se aplican los horarios indicados y los trasiegos propios seleccionados que siguen siendo válidos. Los consumibles se cuentan por evento y el consumo ya registrado no se solicita otra vez. Los pendientes no constituyen órdenes de compra o renta.";
+const TRANSFER_DISCLAIMER = "PLAN PROVISIONAL DE TRASIEGO · Sin reservas ni movimientos de inventario. Incluye únicamente los trasiegos propios seleccionados y válidos y las decisiones vigentes de la agenda. La renta usa esta misma selección. Revise los horarios y los tiempos de transporte antes de ejecutar el traslado.";
 const MAX_CELL_TEXT = 30000;
 function invalid(message) { return Object.assign(new Error(message), { statusCode: 400 }); }
 function text(value) { return String(value ?? ""); }
@@ -170,13 +170,14 @@ function createEquipmentReportModel(payload, inventory, options = {}) {
     for (const name of ["setupAt", "startAt", "endAt", "equipmentInAt", "equipmentOutAt"]) {
       if (Object.hasOwn(event, name)) validated[name] = event[name]; else delete validated[name];
     }
+    // Validation must not turn an unsaved draft into a confirmed reservation.
+    validated.status = event.status || "draft";
     return validated;
   }).filter(event => event.status !== "cancelled");
   if (!events.length) throw invalid("No hay eventos activos para descargar.");
-  // All times are retained in the master, but NO route, return or interval is
-  // used to reduce procurement in a report explicitly requested as provisional.
-  const calculationEvents = events.map(event => ({ ...event, setupAt: "", startAt: "", endAt: "", equipmentInAt: "", equipmentOutAt: "" }));
-  const availability = calculateEquipmentAvailability(calculationEvents, inventory, { transfers: [], routeEstimates: [] });
+  // UI review, HTML, PDF and Excel use the same calculation. Only IDs are
+  // accepted from the browser: route quantities, identity and current stock are
+  // recalculated by the shared engine. Actual agenda decisions are server-only.
   const stocks = warehouseRows(inventory), byId = new Map(stocks.map(item => [item.id, item]));
   const pending = [], details = [], sourceCells = [], preservedRows = [];
   const metadataNames = { setupAt: "Fecha y hora de montaje", startAt: "Fecha y hora de inicio", endAt: "Fecha y hora de finalización", equipmentInAt: "Regreso a bodega" };
@@ -225,15 +226,70 @@ function createEquipmentReportModel(payload, inventory, options = {}) {
     }
     for (const row of list(event.nonEquipmentRows)) preservedRows.push({ eventId: event.id, event: event.place || event.name || event.id, sectionIndex: "", section: "Fuente del evento", rowIndex: row.row ?? "", type: row.type || "fuente", quantity: row.quantity ?? "", description: row.description || "", notes: list(row.notes).join("\n") || "", refs: list(row.sourceCells).map(cell => cell.ref || cell.address).filter(Boolean).join("; "), original: row });
   }
-  const rows = availability.rows.map(row => {
+  const physicalHistory = planningPerformedHandoffs({ events, stocks, details }, inventory);
+  // A document pointer posted by a draft is not ownership proof. In particular,
+  // another event's consumption must not fulfill this event's demand. Custody
+  // proofs retain their original root movement, so check the verified holder
+  // before rejecting a legitimately received reusable unit.
+  let verifiedCustody;
+  const invalidDocumentEvents = new Set();
+  for (const event of events) {
+    if (!event.warehouseDispatchId) continue;
+    const itemIds = new Set(details.filter(line => line.eventId === event.id && line.quantity > 0).map(line => line.resolvedInventoryId).filter(Boolean));
+    const claimed = list((inventory.state || inventory).movements).filter(movement => !movement.sourceUnmatched && !movement.procurementChoice
+      && ["salida", "ingreso_evento", "consumo"].includes(movement.type) && finite(movement.quantity) > 0
+      && text(movement.sourceDocumentId) === event.warehouseDispatchId && itemIds.has(text(movement.itemId)));
+    for (const movement of claimed) {
+      if (text(movement.sourceEventId) === event.id) continue;
+      const canonicalOwner = !text(movement.sourceEventId) && list(options.storedEvents).some(stored => stored.id === event.id && stored.warehouseDispatchId === event.warehouseDispatchId);
+      if (canonicalOwner) continue;
+      let receivedByThisEvent = false;
+      if (movement.type !== "consumo" && list((inventory.state || inventory).equipmentHandoffs).length) {
+        try { verifiedCustody ||= EquipmentHandoffs.getCustodyRecords(inventory.state || inventory); }
+        catch (_) { verifiedCustody = []; }
+        receivedByThisEvent = verifiedCustody.some(record => record.handoffId && record.holderEventId === event.id
+          && record.holderDocumentId === event.warehouseDispatchId && text(record.rootMovement.itemId) === text(movement.itemId)
+          && record.rootMovementId === text(movement.type === "salida" ? movement.id : movement.relatedMovementId));
+      }
+      if (!receivedByThisEvent) {
+        invalidDocumentEvents.add(event.id);
+        physicalHistory.reasons.set(text(movement.itemId), "La salida de bodega indicada pertenece a otro evento o no tiene un propietario verificable. Revise su vínculo antes de descontar consumo o acreditar equipo propio; no se usó ese crédito para cerrar la renta o compra.");
+      }
+    }
+  }
+  // A receipt is physical evidence even if its original planned route was
+  // later cancelled. Count that quantity once, not again as an agenda decision.
+  const actualReceipts = list((inventory.state || inventory).equipmentHandoffs);
+  const agendaTransfers = list(options.transfers).map(transfer => ({ ...transfer, items: list(transfer.items).map(item => {
+    const delivered = actualReceipts.filter(receipt => receipt.transferId === transfer.id && receipt.itemId === item.warehouseInventoryId
+      && receipt.fromEventId === transfer.fromEventId && receipt.toEventId === transfer.toEventId).reduce((sum, receipt) => sum + finite(receipt.quantity), 0);
+    return { ...item, quantity: Math.max(0, finite(item.quantity) - delivered) };
+  }).filter(item => item.quantity > 0) })).filter(transfer => transfer.items.length);
+  const calculationEvents = events.map(event => invalidDocumentEvents.has(event.id) ? { ...event, warehouseDispatchId: "" } : event);
+  const draftLogistics = require("./equipment-draft-logistics.js").analyze(calculationEvents, inventory, {
+    selectedTransferIds: payload.selectedTransferIds === undefined ? [] : payload.selectedTransferIds,
+    expectedSnapshotId: payload.expectedSnapshotId, routeEstimates: payload.routeEstimates,
+    transfers: [...agendaTransfers, ...physicalHistory.transfers],
+    inventoryBlockReasons: [...physicalHistory.reasons].map(([warehouseInventoryId, reason]) => ({ warehouseInventoryId, reason })),
+    globalInventoryBlockReason: physicalHistory.globalReason,
+    ...(options.now === undefined ? {} : { now: options.now })
+  });
+  // Preserve the submitted pointer for review; only its unverified credit was
+  // removed from the calculation copy above.
+  draftLogistics.events = JSON.parse(JSON.stringify(events));
+  for (const selection of list(draftLogistics.invalidSelections)) pending.push({ kind: "TRASIEGO", eventId: selection.eventId || "", event: selection.event || "",
+    description: selection.id || selection.transferId || "Selección de trasiego por revisar", quantity: null,
+    reason: selection.reason || selection.message || "El trasiego seleccionado ya no es válido. No se utilizó para reducir la renta.", sourceRefs: selection.sourceRefs || "" });
+  const rows = draftLogistics.rows.map(row => {
     const stock = byId.get(row.warehouseInventoryId), explicit = row.procurementChoice;
-    const demand = Number(row.quantity);
+    const demand = Number(row.demand ?? row.quantity);
     const pendingIdentity = demand > 0 && Boolean(row.pendingIdentification || (!stock && !["rent", "purchase"].includes(explicit)));
     const pendingClassification = demand > 0 && Boolean(row.pendingClassification);
     const available = stock ? stock.available : null;
+    // Diagnostic only: unresolved classification must never create an order.
     const potential = stock ? Math.max(0, demand - available) : null;
-    const action = demand === 0 ? "SIN USO (0)" : pendingIdentity ? "IDENTIFICAR EQUIPO" : pendingClassification ? "REVISAR CLASIFICACIÓN" : explicit === "rent" ? "RENTA" : explicit === "purchase" ? "COMPRA" : potential > 0 ? row.itemType === "consumible" || row.preferredPurchase ? "COMPRA" : "RENTA" : "CUBIERTO";
-    const shortage = demand === 0 ? 0 : pendingIdentity || pendingClassification ? null : explicit === "rent" || explicit === "purchase" ? demand : potential;
+    const action = demand === 0 ? "SIN USO (0)" : pendingIdentity ? "IDENTIFICAR EQUIPO" : pendingClassification ? "REVISAR CLASIFICACIÓN" : row.purchase > 0 ? "COMPRA" : row.rental > 0 ? "RENTA" : row.shortage === null ? "POR REVISAR" : "CUBIERTO";
+    const shortage = demand === 0 ? 0 : pendingIdentity || pendingClassification ? null : row.shortage;
     const matchingDetails = details.filter(line => stock ? line.resolvedInventoryId === stock.id : line.description === row.description && line.category === row.category);
     const refs = matchingDetails.map(line => line.sourceRefs).filter(Boolean);
     const result = { ...row, demand, available, shortage, potential, action, pendingIdentification: pendingIdentity, pendingClassification, sourceRefs: [...new Set(refs)].join("; "),
@@ -242,56 +298,53 @@ function createEquipmentReportModel(payload, inventory, options = {}) {
       quantity: demand, reason: pendingIdentity ? "No hay una referencia física inequívoca. Existencia y faltante quedan pendientes; no se supone existencia cero." : list(row.classificationWarnings).map(warning => warning.message || warning).join(" ") || "Revise la clasificación en Contabilidad antes de emitir una orden.", sourceRefs: result.sourceRefs });
     return result;
   }).sort((a, b) => text(a.category).localeCompare(text(b.category), "es") || text(a.description).localeCompare(text(b.description), "es"));
+  for (const item of list(draftLogistics.pending)) {
+    const row = rows.find(entry => entry.id === item.rowId);
+    if (!row || row.pendingIdentification || row.pendingClassification) continue;
+    pending.push({ kind: "PLAN", eventId: "", event: list(row.events).map(event => event.place || event.name || event.eventId).join("; "),
+      description: row.description, quantity: row.demand, reason: list(item.reasons).join(" ") || item.reason || "Revise los datos del plan antes de cerrar este pedido.", sourceRefs: row.sourceRefs });
+  }
   return { provisional: true, disclaimer: DISCLAIMER, createdAt: options.createdAt || new Date().toISOString(), from: payload.from || "", to: payload.to || "",
     inventorySavedAt: inventory.savedAt || "", events, rows, stocks, details, sourceCells, preservedRows, pending,
     rental: rows.filter(row => row.action === "RENTA" && row.shortage > 0), purchase: rows.filter(row => row.action === "COMPRA" && row.shortage > 0),
     counts: { events: events.length, equipmentRows: details.length, zeroQuantityRows: details.filter(row => row.quantity === 0).length, sourceCells: sourceCells.length, references: rows.length },
-    originalEvents, originalInventory: inventory, transfers: [], productionMutations: 0 };
+    originalEvents, originalInventory: inventory, transfers: list(draftLogistics.selectedTransfers), draftLogistics, physicalHistory, productionMutations: 0 };
 }
 
 function createEquipmentTransferReportModel(payload, inventory, options = {}) {
-  // Keep the full conservative report and its source ledger. Planning is an
-  // additional read-only proposal; it never changes the procurement quantities.
   const model = createEquipmentReportModel(payload, inventory, options);
-  const eligible = [], excluded = [];
-  for (const event of model.events) {
-    const values = [eventReservationStartAt(event), event.startAt, event.endAt, event.equipmentInAt];
-    const times = values.map(localTime);
-    let reason = "";
-    if (!text(event.place)) reason = "Falta la ubicación. No se dedujo un lugar para proponer un traslado.";
-    else if (event.setupApplies === false && text(event.setupAt)) reason = "El montaje indica que no aplica y conserva una fecha. Confirme ese dato antes de proponer una ruta.";
-    else if (times.some(time => !Number.isFinite(time))) reason = "Faltan fechas u horas válidas de montaje o salida, inicio, finalización o regreso a bodega. El equipo del evento queda pendiente de logística.";
-    else if (times.some((time, index) => index && time < times[index - 1])) reason = "Las fechas de montaje, inicio, finalización y regreso a bodega se contradicen. No se propuso una ruta para este evento.";
-    if (reason) excluded.push({ eventId: event.id, event: event.place || event.name || event.id, reason });
-    else eligible.push(event);
-  }
-  const availability = calculateEquipmentAvailability(eligible, inventory, { from: model.from, to: model.to,
-    transfers: [], routeEstimates: payload.routeEstimates });
+  return transferReportFromBase(model);
+}
+
+function transferReportFromBase(model) {
+  const draft = model.draftLogistics;
   const eventsById = new Map(model.events.map(event => [event.id, event]));
   const eventSummary = event => ({ id: event.id, client: event.client || event.name || "", name: event.name || "", place: event.place || "", date: event.date || "", type: event.type || "",
     setupApplies: event.setupApplies, setupAt: event.setupAt || "", startAt: event.startAt || "", endAt: event.endAt || "", equipmentInAt: event.equipmentInAt || "" });
-  const routes = [], rentalRoutes = [];
-  for (const row of availability.rows) {
-    const add = (route, source, output) => {
-      const from = eventsById.get(route.fromEventId), to = eventsById.get(route.toEventId);
-      if (!from || !to || !(route.quantity > 0)) return;
-      const refs = model.details.filter(line => [from.id, to.id].includes(line.eventId) && line.resolvedInventoryId === row.warehouseInventoryId)
-        .map(line => line.sourceRefs).filter(Boolean);
-      output.push({ ...route, source, description: row.description, category: row.category || "Sin categoría", warehouseInventoryId: row.warehouseInventoryId,
-        from: eventSummary(from), to: eventSummary(to), sourceRefs: [...new Set(refs)].join("; "), provisional: true, requiresConfirmation: true });
-    };
-    for (const route of list(row.planning?.routes)) add(route, "warehouse", routes);
-    for (const route of list(row.planning?.rentalRoutes)) add(route, "rental", rentalRoutes);
+  const routes = [];
+  const proposed = list(draft.selectedTransfers);
+  const receiptIds = new Set(list(model.physicalHistory?.performed).map(receipt => receipt.id));
+  const actual = list(draft.actualTransfers).filter(transfer => !receiptIds.has(transfer.id)).flatMap(transfer => list(transfer.items).map(item => ({ ...transfer, ...item, agendaDecision: true })));
+  for (const route of [...proposed, ...actual]) {
+    const from = eventsById.get(route.fromEventId), to = eventsById.get(route.toEventId);
+    const row = model.rows.find(entry => entry.warehouseInventoryId === route.warehouseInventoryId && entry.itemType !== "consumible" && !entry.external);
+    if (!from || !to || !row || row.pending || !(route.quantity > 0)) continue;
+    const refs = model.details.filter(line => [from.id, to.id].includes(line.eventId) && line.resolvedInventoryId === row.warehouseInventoryId).map(line => line.sourceRefs).filter(Boolean);
+    routes.push({ ...route, source: "warehouse", description: row.description, category: row.category || "Sin categoría", warehouseInventoryId: row.warehouseInventoryId,
+      departureAt: route.departureAt || from.endAt, setupAt: route.setupAt || eventReservationStartAt(to), from: eventSummary(from), to: eventSummary(to),
+      sourceRefs: [...new Set(refs)].join("; "), provisional: true, requiresConfirmation: !route.agendaDecision });
   }
   const order = (a, b) => text(a.departureAt).localeCompare(text(b.departureAt)) || text(a.fromEventId).localeCompare(text(b.fromEventId))
     || text(a.toEventId).localeCompare(text(b.toEventId)) || text(a.category).localeCompare(text(b.category), "es") || text(a.description).localeCompare(text(b.description), "es");
-  routes.sort(order); rentalRoutes.sort(order);
-  const warnings = [...new Set(list(availability.logistics?.warnings))];
+  routes.sort(order);
+  const excluded = model.events.filter(event => planningEventIssue(event) || !text(event.place).trim()).map(event => ({ eventId: event.id,
+    event: event.place || event.name || event.id, reason: planningEventIssue(event) || "Falta la ubicación del evento." }));
+  const warnings = [...new Set(list(draft.warnings))];
   if (excluded.length) warnings.push("Los eventos con datos de logística pendientes se conservan en el detalle, pero no participan en las propuestas de trasiego.");
-  if (!routes.length) warnings.push("No se identificaron tramos de equipo propio para proponer. Revise los pendientes y el detalle de cada evento; no se inventaron rutas.");
-  return { ...model, reportMode: "transfer", disclaimer: TRANSFER_DISCLAIMER, transferRoutes: routes, rentalTransferRoutes: rentalRoutes,
-    transferExcludedEvents: excluded, transferWarnings: [...new Set(warnings)], logistics: availability.logistics,
-    transferPlanningEventIds: eligible.map(event => event.id), productionMutations: 0 };
+  if (!routes.length) warnings.push("No hay trasiegos propios seleccionados y válidos. Abra el listado de Generar trasiego y marque únicamente las rutas que realizará.");
+  return { ...model, reportMode: "transfer", disclaimer: TRANSFER_DISCLAIMER, transferRoutes: routes, rentalTransferRoutes: [],
+    transferExcludedEvents: excluded, transferWarnings: [...new Set(warnings)], logistics: { routePairs: draft.routePairs, warnings: draft.warnings },
+    transferPlanningEventIds: model.events.filter(event => !excluded.some(entry => entry.eventId === event.id)).map(event => event.id), productionMutations: 0 };
 }
 
 function planningEventIssue(event) {
@@ -350,104 +403,41 @@ function planningPerformedHandoffs(base, inventory) {
 
 function createEquipmentPlanningReportModel(payload, inventory, options = {}) {
   const base = createEquipmentReportModel(payload, inventory, options);
-  const eventIssues = new Map(base.events.map(event => [event.id, planningEventIssue(event)]));
+  const transfer = transferReportFromBase(base);
   const eventById = new Map(base.events.map(event => [event.id, event]));
-  // A malformed schedule stays in the ledger and demand, but cannot acquire a
-  // fabricated interval. The engine's pending rows are explicitly null below.
-  const calculationEvents = base.events.map(event => eventIssues.get(event.id)
-    ? { ...event, setupAt: "", startAt: "", endAt: "", equipmentInAt: "", equipmentOutAt: "" }
-    : event);
-  // The posted event selection is the report scope. Agenda filters may differ
-  // from an uploaded workbook; both scenarios must still compare these events.
-  const physicalHistory = planningPerformedHandoffs(base, inventory);
-  const availability = calculateEquipmentAvailability(calculationEvents, inventory, { transfers: physicalHistory.transfers, routeEstimates: payload.routeEstimates,
-    ...(options.now === undefined ? {} : { now: options.now }) });
-  const invalidActualIds = new Set(list(availability.invalidTransfers).map(transfer => transfer.id));
-  for (const transfer of physicalHistory.transfers.filter(transfer => invalidActualIds.has(transfer.id))) {
-    for (const item of transfer.items) physicalHistory.reasons.set(item.warehouseInventoryId, "El historial de trasiego no coincide con las cantidades u horarios actuales. Revise esos datos antes de calcular nuevas unidades.");
-  }
-  const sourceRows = new Map(base.rows.map(row => [row.id, row]));
-  const stockById = new Map(base.stocks.map(stock => [stock.id, stock]));
-  const summary = event => ({ id: event.id, client: event.client || event.name || "", name: event.name || "", place: event.place || "", date: event.date || "", type: event.type || "",
-    setupApplies: event.setupApplies, setupAt: event.setupAt || "", startAt: event.startAt || "", endAt: event.endAt || "", equipmentInAt: event.equipmentInAt || "" });
-  const scenarioRows = availability.rows.map(row => {
-    const source = sourceRows.get(row.id), stock = stockById.get(row.warehouseInventoryId);
-    const demand = Number(row.quantity), empty = demand === 0;
-    const identityPending = Boolean(row.pendingIdentification || row.pendingClassification || row.procurementBlocked || row.procurementChoice === "save");
-    const relatedEvents = row.events.map(entry => eventById.get(entry.eventId)).filter(Boolean);
-    const timingPending = relatedEvents.some(event => eventIssues.get(event.id));
-    const placePending = relatedEvents.some(event => !text(event.place).trim());
-    const isConsumable = row.itemType === "consumible";
-    const equipmentPurchase = !isConsumable && (row.procurementChoice === "purchase" || row.preferredPurchase);
-    const custodyIssue = physicalHistory.globalReason || physicalHistory.reasons.get(row.warehouseInventoryId) || "";
-    const alreadyPerformed = !custodyIssue && physicalHistory.performed.some(receipt => receipt.itemId === row.warehouseInventoryId);
-    const reasons = [];
-    if (!empty && row.pendingIdentification) reasons.push("Identifique esta referencia en el inventario vigente; no se supone existencia cero.");
-    if (!empty && row.pendingClassification) reasons.push("Confirme si la referencia es equipo reutilizable o consumible en Contabilidad.");
-    if (!empty && row.procurementChoice === "save") reasons.push("El ingreso de este equipo a Contabilidad está pendiente.");
-    if (timingPending && !isConsumable) reasons.push("Complete o corrija los horarios de los eventos que usan este equipo antes de cerrar la comparación.");
-    if (placePending && !isConsumable) reasons.push("Falta la ubicación de un evento para evaluar su trasiego.");
+  const physicalHistory = base.physicalHistory;
+  const scenarioRows = base.rows.map(row => {
+    const consumable = row.itemType === "consumible", empty = row.demand === 0;
+    const equipmentPurchase = !consumable && (row.procurementChoice === "purchase" || row.preferredPurchase);
+    const alreadyPerformed = !physicalHistory.globalReason && !physicalHistory.reasons.has(row.warehouseInventoryId)
+      && physicalHistory.performed.some(receipt => receipt.itemId === row.warehouseInventoryId);
+    const relatedEvents = list(row.events).map(entry => eventById.get(entry.eventId)).filter(Boolean);
+    const routes = transfer.transferRoutes.filter(route => route.warehouseInventoryId === row.warehouseInventoryId);
+    const reasons = [...list(row.reasons)];
     if (equipmentPurchase) reasons.push("Este equipo tiene una decisión de compra; no se convirtió en una renta ni en un consumible.");
-    if (!empty && !isConsumable && row.planning?.optimal === false && !identityPending && !timingPending) reasons.push("El plan requiere revisar las restricciones o movimientos físicos antes de cerrar el escenario con trasiego.");
-    if (!empty && custodyIssue) reasons.push(custodyIssue);
-    if (!empty && alreadyPerformed) reasons.push("El equipo ya fue trasladado físicamente. El escenario sin trasiego no aplica a estas unidades; el resumen cuenta sus unidades físicas una sola vez.");
-    const pendingWithoutTransfer = !empty && !isConsumable && (identityPending || timingPending || equipmentPurchase || Boolean(custodyIssue));
-    const pendingWithTransfer = !empty && !isConsumable && (pendingWithoutTransfer || placePending || row.planning?.optimal === false);
-    const requiredWithoutTransfer = empty ? 0 : isConsumable ? demand : pendingWithoutTransfer || alreadyPerformed ? null : Number(row.required);
-    const rentWithoutTransfer = empty ? 0 : isConsumable ? null : pendingWithoutTransfer || alreadyPerformed ? null : Number(row.missing);
-    const requiredWithTransfer = empty ? 0 : isConsumable ? demand : pendingWithTransfer ? null : Number(row.planning.requiredFleet);
-    const rentWithTransfer = empty ? 0 : isConsumable ? null : pendingWithTransfer ? null : Number(row.planning.rentalPotential);
-    const remainingConsumption = !isConsumable ? null : identityPending ? null : Math.max(0, Number(row.planning?.requiredFleet ?? demand));
-    const alreadyConsumed = remainingConsumption === null ? null : Math.max(0, demand - remainingConsumption);
-    const purchaseQuantity = !isConsumable ? null : empty ? 0 : identityPending || custodyIssue || row.procurementChoice === "rent" ? null
-      : row.procurementChoice === "purchase" ? remainingConsumption : stock ? Math.max(0, remainingConsumption - stock.available) : null;
-    if (isConsumable && row.procurementChoice === "rent") reasons.push("El artículo está clasificado como consumible y marcado para renta; revise esa decisión.");
-    const mapRoute = (route, routeSource) => {
-      const from = eventById.get(route.fromEventId), to = eventById.get(route.toEventId);
-      const refs = base.details.filter(line => [from?.id, to?.id].includes(line.eventId) && line.resolvedInventoryId === row.warehouseInventoryId).map(line => line.sourceRefs).filter(Boolean);
-      return { ...route, source: routeSource, description: row.description, category: row.category || "Sin categoría", warehouseInventoryId: row.warehouseInventoryId,
-        from: from ? summary(from) : null, to: to ? summary(to) : null, sourceRefs: [...new Set(refs)].join("; "), provisional: true, requiresConfirmation: true };
-    };
-    const routes = pendingWithTransfer || isConsumable || equipmentPurchase ? [] : list(row.planning?.routes).map(route => mapRoute(route, "warehouse"));
-    const rentalRoutes = pendingWithTransfer || isConsumable || equipmentPurchase ? [] : list(row.planning?.rentalRoutes).map(route => mapRoute(route, "rental"));
-    const warnings = list(row.planning?.warnings);
-    return { id: row.id, warehouseInventoryId: row.warehouseInventoryId || "", description: row.description, category: row.category || "Sin categoría", itemType: row.itemType,
-      demand, available: stock ? stock.available : null, ownedCapacity: identityPending ? null : Number(row.capacity),
-      requiredWithoutTransfer, rentWithoutTransfer, requiredWithTransfer, rentWithTransfer, purchaseQuantity,
-      alreadyConsumed, remainingConsumption,
-      withoutTransferAlreadyPerformed: alreadyPerformed,
-      pending: !empty && (isConsumable ? purchaseQuantity === null : pendingWithoutTransfer || pendingWithTransfer),
-      pendingWithoutTransfer, pendingWithTransfer, pendingIdentification: !empty && row.pendingIdentification, pendingClassification: !empty && row.pendingClassification,
-      equipmentPurchase, reason: [...new Set(reasons)].join(" "), eventQuantities: { ...row.eventQuantities },
-      events: relatedEvents.map(summary), sourceRefs: source?.sourceRefs || "", routes, rentalRoutes, warnings,
-      allocations: pendingWithTransfer || isConsumable || equipmentPurchase ? [] : list(row.planning?.allocations),
-      assumptions: list(row.planning?.assumptions), requiresRentalSupplierConfirmation: rentalRoutes.length > 0,
-      requiresTimeConfirmation: [...routes, ...rentalRoutes].some(route => route.requiresTimeConfirmation) };
-  }).sort((a, b) => text(a.category).localeCompare(text(b.category), "es") || text(a.description).localeCompare(text(b.description), "es"));
-  const transferRoutes = scenarioRows.flatMap(row => row.routes), rentalTransferRoutes = scenarioRows.flatMap(row => row.rentalRoutes);
-  const routeOrder = (a, b) => text(a.departureAt).localeCompare(text(b.departureAt)) || text(a.fromEventId).localeCompare(text(b.fromEventId))
-    || text(a.toEventId).localeCompare(text(b.toEventId)) || text(a.category).localeCompare(text(b.category), "es") || text(a.description).localeCompare(text(b.description), "es");
-  transferRoutes.sort(routeOrder); rentalTransferRoutes.sort(routeOrder);
-  const scenarioExcludedEvents = base.events.filter(event => eventIssues.get(event.id) || !text(event.place).trim()).map(event => ({ eventId: event.id,
-    event: event.client || event.name || event.place || event.id, reason: eventIssues.get(event.id) || "Falta la ubicación del evento." }));
-  const scenarioWarnings = [...new Set([...list(availability.logistics?.warnings), ...scenarioRows.flatMap(row => row.reason ? [row.reason] : [])])];
-  if (scenarioRows.some(row => row.pendingIdentification || row.pendingClassification)) scenarioWarnings.push("Las referencias pendientes de identidad o clasificación pueden cambiar los reportes. Sus existencias y faltantes no se interpretan como cero.");
-  // An allocation is one physical chain of units. Adding the quantities of its
-  // route legs would count the same units again at every following event.
+    if (alreadyPerformed) reasons.push("Estas unidades ya fueron trasladadas físicamente; no se simula deshacer su entrega ni otra salida de bodega.");
+    const pending = !empty && Boolean(row.pending || row.shortage === null);
+    return { ...row, ownedCapacity: row.capacity, equipmentPurchase, events: relatedEvents,
+      requiredWithoutTransfer: consumable ? row.remainingConsumption : alreadyPerformed ? null : row.baselineRequired,
+      rentWithoutTransfer: consumable || equipmentPurchase || row.hardBlocked || alreadyPerformed ? null : Math.max(0, row.baselineRequired - row.capacity),
+      requiredWithTransfer: row.required, rentWithTransfer: consumable || equipmentPurchase ? null : row.rental,
+      purchaseQuantity: consumable ? row.purchase : null,
+      withoutTransferAlreadyPerformed: alreadyPerformed, pending, pendingWithoutTransfer: pending, pendingWithTransfer: pending,
+      reason: [...new Set(reasons)].join(" "), routes, rentalRoutes: [], requiresRentalSupplierConfirmation: false, requiresTimeConfirmation: false };
+  });
   const physicalSummary = scenarioRows.filter(row => row.itemType !== "consumible" && !row.equipmentPurchase).map(row => ({
     id: row.id, warehouseInventoryId: row.warehouseInventoryId, category: row.category, description: row.description,
-    totalRequested: row.demand, uniquePhysicalNeeded: row.requiredWithTransfer,
-    ownUnitsPlanned: row.requiredWithTransfer === null ? null : row.allocations.filter(allocation => allocation.source === "warehouse").reduce((sum, allocation) => sum + Number(allocation.quantity), 0),
-    rentalUnitsNeeded: row.rentWithTransfer,
-    transferMovements: row.requiredWithTransfer === null ? null : row.routes.reduce((sum, route) => sum + Number(route.quantity), 0),
-    rentalTransferMovements: row.requiredWithTransfer === null ? null : row.rentalRoutes.reduce((sum, route) => sum + Number(route.quantity), 0),
-    pending: row.pending, reason: row.reason, eventQuantities: { ...row.eventQuantities }
+    totalRequested: row.demand, uniquePhysicalNeeded: row.required,
+    ownUnitsPlanned: row.required === null || row.capacity === null ? null : Math.min(row.required, row.capacity),
+    rentalUnitsNeeded: row.rental, transferMovements: row.required === null ? null : row.routes.reduce((sum, route) => sum + Number(route.quantity), 0),
+    rentalTransferMovements: row.required === null ? null : 0, pending: row.pending, reason: row.reason, eventQuantities: { ...row.eventQuantities }
   }));
-  return { ...base, reportMode: "planning", disclaimer: "PLAN PROVISIONAL · Compara los mismos eventos con el inventario vigente. Las rutas y sus tiempos estimados requieren revisión. Abrir o imprimir estos reportes no confirma reservas, movimientos, rentas ni compras.",
-    scenarioRows, physicalSummary, performedHandoffs: physicalHistory.performed.filter(receipt => !physicalHistory.reasons.has(receipt.itemId) && !physicalHistory.globalReason), rentalComparison: scenarioRows.filter(row => row.itemType !== "consumible" && !row.equipmentPurchase),
+  return { ...base, reportMode: "planning", disclaimer: DISCLAIMER,
+    scenarioRows, physicalSummary, performedHandoffs: physicalHistory.performed.filter(receipt => !physicalHistory.reasons.has(receipt.itemId) && !physicalHistory.globalReason),
+    rentalComparison: scenarioRows.filter(row => row.itemType !== "consumible" && !row.equipmentPurchase),
     consumablePurchases: scenarioRows.filter(row => row.itemType === "consumible"), otherEquipmentPurchases: scenarioRows.filter(row => row.equipmentPurchase),
-    transferRoutes, rentalTransferRoutes, scenarioWarnings: [...new Set(scenarioWarnings)], scenarioExcludedEvents,
-    logistics: availability.logistics, productionMutations: 0 };
+    transferRoutes: transfer.transferRoutes, rentalTransferRoutes: [], scenarioWarnings: [...new Set([...transfer.transferWarnings, ...scenarioRows.flatMap(row => row.reason ? [row.reason] : [])])],
+    scenarioExcludedEvents: transfer.transferExcludedEvents, logistics: transfer.logistics, productionMutations: 0 };
 }
 
 function addTableSheet(workbook, name, headers, values, options = {}) {
@@ -488,23 +478,37 @@ async function createEquipmentMasterWorkbook(model) {
     ["Referencias del resumen", model.counts.references], ["Referencias para renta provisional", model.rental.length], ["Referencias para compra provisional", model.purchase.length],
     ["Pendientes", model.pending.length], ["Reservas confirmadas por esta descarga", 0], ["Movimientos de inventario por esta descarga", 0],
     ["Fuente de inventario", "Inventario activo del servidor de Contabilidad de Equipo; no se acepta existencia enviada por el navegador."],
-    ["Importante", "Los consumibles se suman para todos los eventos. Los reutilizables también se suman en este escenario conservador, sin reducción por retornos o trasiegos. No se suman cantidades de unidades distintas en un total general."],
+    ["Trasiegos seleccionados válidos", list(model.draftLogistics?.selectedTransfers).length], ["Selecciones de trasiego rechazadas", list(model.draftLogistics?.invalidSelections).length],
+    ["Importante", "Los consumibles se suman por evento y se descuenta solo su consumo ya registrado. Los reutilizables respetan los horarios indicados, las decisiones vigentes y únicamente los trasiegos seleccionados y válidos. No se suman cantidades de unidades distintas en un total general."],
     ["Datos originales", "Las hojas Celdas fuente, Filas originales y Datos completos conservan la información recibida. Datos completos contiene JSON dividido en partes, sin truncar celdas largas."]
   ];
   addTableSheet(workbook, "Control", ["Concepto", "Detalle"], info, { widths: [42, 110] });
   addTableSheet(workbook, "Eventos", ["ID", "Ubicación", "Nombre", "Tipo", "Fecha", "Montaje", "Inicio", "Finalización", "Regreso a bodega", "Observaciones"], model.events.map(event => [event.id, event.place || "", event.name || "", event.type || "", event.date || "", eventScheduleLabel(event, "setupAt", "PENDIENTE"), eventScheduleLabel(event, "startAt", "PENDIENTE"), eventScheduleLabel(event, "endAt", "PENDIENTE"), eventScheduleLabel(event, "equipmentInAt", "PENDIENTE"), event.notes || ""]));
-  const headers = ["Categoría", "Descripción del equipo", "ID físico", ...model.events.map(event => `${event.date || "Sin fecha"}\n${event.place || event.name || event.id}`), "Total solicitado", "Inventario disponible", "Faltante provisional", "Acción", "Observaciones", "Descripciones originales", "Celdas de origen"];
-  const totalColumn = 4 + model.events.length, availableColumn = totalColumn + 1;
+  const headers = ["Categoría", "Descripción del equipo", "ID físico", ...model.events.map(event => `${event.date || "Sin fecha"}\n${event.place || event.name || event.id}`), "Total solicitado", "Inventario disponible", "Faltante provisional", "Acción", "Observaciones", "Descripciones originales", "Celdas de origen",
+    "Consumo ya registrado", "Demanda pendiente", "Unidades físicas sin trasiego", "Cubierto por trasiego seleccionado", "Retención adicional por trasiego", "Capacidad propia para estos eventos"];
+  const totalColumn = 4 + model.events.length;
+  const consumedColumn = totalColumn + 7, remainingColumn = consumedColumn + 1, baselineColumn = consumedColumn + 2,
+    reusedColumn = consumedColumn + 3, additionalColumn = consumedColumn + 4, capacityColumn = consumedColumn + 5;
   addTableSheet(workbook, "Resumen de equipo", headers, model.rows.map((row, index) => {
     const spreadsheetRow = index + 5;
     const sum = `SUM(D${spreadsheetRow}:${columnName(totalColumn - 1)}${spreadsheetRow})`;
     const total = { formula: sum, result: row.demand };
-    const shortage = row.shortage === null ? "POR REVISAR" : row.external ? { formula: `${columnName(totalColumn)}${spreadsheetRow}`, result: row.shortage } : { formula: `MAX(0,${columnName(totalColumn)}${spreadsheetRow}-${columnName(availableColumn)}${spreadsheetRow})`, result: row.shortage };
+    const reference = column => `${columnName(column)}${spreadsheetRow}`;
+    const shortageFormula = row.demand === 0 ? `MAX(0,${reference(totalColumn)})`
+      : row.itemType === "consumible" ? `MAX(0,${reference(remainingColumn)}-${reference(capacityColumn)})`
+      : `MAX(0,${reference(baselineColumn)}-${reference(reusedColumn)}+${reference(additionalColumn)}-${reference(capacityColumn)})`;
+    const shortage = row.shortage === null ? "POR REVISAR" : { formula: shortageFormula, result: row.shortage };
+    const delta = row.selectedTransferReduction;
+    const notes = row.pendingClassification ? list(row.classificationWarnings).map(warning => warning.message || warning).join(" ")
+      : row.pendingIdentification ? "No se supone existencia cero." : list(row.reasons).join(" ") || "Solo se aplican los trasiegos seleccionados y válidos.";
     return [row.category || "Sin categoría", row.description, row.warehouseInventoryId || "PENDIENTE / EXTERNO", ...model.events.map(event => finite(row.eventQuantities?.[event.id])), total, row.available === null ? "POR IDENTIFICAR" : row.available,
-      shortage, row.action, row.pendingClassification ? list(row.classificationWarnings).map(warning => warning.message || warning).join(" ") : row.pendingIdentification ? "No se supone existencia cero." : "Sin reutilización ni trasiego supuesto.", row.originalDescriptions, row.sourceRefs];
+      shortage, row.action, notes, row.originalDescriptions, row.sourceRefs,
+      row.alreadyConsumed ?? 0, row.remainingDemand ?? Math.max(0, row.demand - (row.alreadyConsumed || 0)), row.baselineRequired ?? "POR REVISAR",
+      delta === null || delta === undefined ? "POR REVISAR" : Math.max(0, delta), delta === null || delta === undefined ? "POR REVISAR" : Math.max(0, -delta), row.capacity ?? "POR REVISAR"];
   }), { freezeColumns: 2 });
-  const procurementHeaders = ["Categoría", "Descripción", "ID físico", "Total solicitado", "Inventario disponible", "Cantidad provisional", "Acción", "Celdas de origen"];
-  const procurementValues = rows => rows.map(row => [row.category || "", row.description, row.warehouseInventoryId || "EXTERNO", row.demand, row.available === null ? "NO IDENTIFICADO / EXTERNO" : row.available, row.shortage, row.action, row.sourceRefs]);
+  const procurementHeaders = ["Categoría", "Descripción", "ID físico", "Total solicitado", "Inventario disponible", "Cantidad provisional", "Acción", "Celdas de origen", "Consumo ya registrado", "Demanda pendiente", "Unidades físicas necesarias", "Capacidad propia para estos eventos", "Trasiegos seleccionados"];
+  const procurementValues = rows => rows.map(row => [row.category || "", row.description, row.warehouseInventoryId || "EXTERNO", row.demand, row.available === null ? "NO IDENTIFICADO / EXTERNO" : row.available, row.shortage, row.action, row.sourceRefs,
+    row.alreadyConsumed ?? 0, row.remainingDemand ?? row.demand, row.required, row.capacity, list(row.selectedTransferIds).join("; ")]);
   addTableSheet(workbook, "Renta provisional", procurementHeaders, procurementValues(model.rental));
   addTableSheet(workbook, "Compra provisional", procurementHeaders, procurementValues(model.purchase));
   addTableSheet(workbook, "Pendientes", ["Tipo", "Evento", "Descripción", "Cantidad solicitada", "Motivo / acción", "Celdas de origen"], model.pending.map(row => [row.kind, row.event, row.description, row.quantity ?? "", row.reason, row.sourceRefs]));
@@ -515,7 +519,9 @@ async function createEquipmentMasterWorkbook(model) {
     return parts.map((part, index) => [cell.event, cell.sheet, cell.ref, part, index + 1, parts.length]);
   }));
   addTableSheet(workbook, "Filas originales", ["Evento", "Sección", "Orden de sección", "Orden de fila", "Tipo", "Cantidad", "Descripción original", "Observaciones", "Celdas de origen"], model.preservedRows.map(row => [row.event, row.section, row.sectionIndex, row.rowIndex, row.type, row.quantity, row.description, primitive(row.notes), row.refs]));
-  const raw = [...model.originalEvents.map((event, index) => ({ kind: "Evento", id: event.id || model.events[index]?.id || "", data: event })), { kind: "Inventario activo", id: model.inventorySavedAt, data: model.originalInventory }];
+  const raw = [...model.originalEvents.map((event, index) => ({ kind: "Evento", id: event.id || model.events[index]?.id || "", data: event })),
+    { kind: "Inventario activo", id: model.inventorySavedAt, data: model.originalInventory },
+    { kind: "Plan validado", id: model.draftLogistics?.snapshotId || "", data: model.draftLogistics }];
   addTableSheet(workbook, "Datos completos", ["Tipo", "ID / versión", "Parte", "Total de partes", "JSON original · unir partes en orden"], raw.flatMap(entry => { const parts = chunks(losslessJson(entry.data)); return parts.map((part, index) => [entry.kind, entry.id, index + 1, parts.length, part]); }), { widths: [20, 32, 12, 18, 120] });
   return workbook;
 }
@@ -541,7 +547,7 @@ function renderEquipmentTransferReportHtml(model) {
       const timeLabel = entry => entry.requiresTimeConfirmation
         ? `${entry.travelMinutes} min de transporte + ${entry.handlingMinutes} min de desmontaje / preparación · ESTIMADOS; requieren confirmación`
         : `${entry.travelMinutes} min de transporte + ${entry.handlingMinutes} min de desmontaje / preparación · tiempos indicados por el usuario; ruta pendiente de confirmar`;
-      return `<section class="route"><h3>${html(route.from.place)} → ${html(route.to.place)}</h3><p>${rental ? "COORDINAR CON PROVEEDOR · Propuesta de traslado de las mismas unidades rentadas. No representa equipo propio disponible." : "EQUIPO PROPIO · Propuesta sin confirmar. No registra una salida ni reduce la renta del reporte conservador."}</p><h4>Origen</h4>${schedule(route.from)}<h4>Destino</h4>${schedule(route.to)}${reportTable(["Categoría", "Equipo", "Cantidad propuesta", "Salida del origen", "Requerido en destino", "Tiempo por revisar", "Celdas de origen"], entries.map(entry => [entry.category, entry.description, entry.quantity, entry.departureAt || "Pendiente", entry.setupAt || "Pendiente", timeLabel(entry), entry.sourceRefs || "Ver archivo original"]))}</section>`;
+      return `<section class="route"><h3>${html(route.from.place)} → ${html(route.to.place)}</h3><p>${rental ? "COORDINAR CON PROVEEDOR · No representa equipo propio disponible." : "EQUIPO PROPIO · Selección validada para este plan. Estas mismas unidades ya están consideradas en su cálculo de renta; el reporte no registra otra salida de bodega."}</p><h4>Origen</h4>${schedule(route.from)}<h4>Destino</h4>${schedule(route.to)}${reportTable(["Categoría", "Equipo", "Cantidad a trasladar", "Salida del origen", "Requerido en destino", "Tiempo por revisar", "Celdas de origen"], entries.map(entry => [entry.category, entry.description, entry.quantity, entry.departureAt || "Pendiente", entry.setupAt || "Pendiente", timeLabel(entry), entry.sourceRefs || "Ver archivo original"]))}</section>`;
     }).join("");
   };
   const eventDetails = model.events.map(event => {
@@ -628,7 +634,7 @@ function renderEquipmentPlanningReportHtml(model, mode = "transfer") {
       + (model.scenarioExcludedEvents.length ? `<h2>Eventos con datos pendientes</h2>${table(["Evento", "Qué falta revisar"], model.scenarioExcludedEvents.map(event => [event.event, event.reason]))}` : "")
       + physicalSummary;
   } else if (mode === "rent") {
-    const relevant = model.rentalComparison.filter(row => !row.pending && (row.rentWithoutTransfer > 0 || row.rentWithTransfer > 0));
+    const relevant = model.rentalComparison.filter(row => !row.hardBlocked && row.rentWithTransfer !== null && (row.rentWithoutTransfer > 0 || row.rentWithTransfer > 0));
     const covered = model.rentalComparison.filter(row => !row.pending && !relevant.includes(row));
     const headers = ["Categoría", "Equipo", "Propio disponible para el plan", "Rentar sin trasiego", "Rentar con trasiego", "Renta que se evita", "Uso por evento", "Qué hacer"];
     content = `<p class="lead">Cuánto rentar para los mismos ${model.events.length} eventos.</p><p><strong>Sin trasiego:</strong> el equipo vuelve a bodega y cumple su preparación antes de salir otra vez. <strong>Con trasiego:</strong> las mismas unidades pasan directamente de un evento al siguiente.</p>${pendingBanner}<section class="rental-results"><h2>Equipo por rentar calculado</h2>${!relevant.length ? `<p>${pendingRows.length ? "La renta todavía tiene datos pendientes; no se debe interpretar la tabla vacía como renta cero." : "No hay renta adicional para las referencias calculadas."}</p>` : ""}${table(headers, rentalValues(relevant), "rental-table")}</section>${physicalSummary}${overview}`
