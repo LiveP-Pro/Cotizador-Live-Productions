@@ -7723,16 +7723,25 @@ function initEquipmentPlannerBridge() {
         const event=equipmentState.events.find(entry=>entry.id===patch.id);
         if(!event)throw new Error("Un evento del plan ya no está cargado. Vuelva a generar el listado.");
         const fields={place:String(patch.place||'').trim(),setupApplies:patch.setupApplies!==false};
+        const clearLocation=Object.hasOwn(patch,'mapUrl')&&String(patch.mapUrl||'').trim()!==String(event.mapUrl||'').trim();
+        if(Object.hasOwn(patch,'mapUrl')){
+          const location=window.EquipmentLocation;
+          if(typeof location?.normalizeEventLocation!=='function')throw new Error('No se pudo revisar la ubicación de Maps. Actualice la página y reintente.');
+          const normalized=location.normalizeEventLocation({...(clearLocation?{}:{location:event.location,coordinates:event.coordinates}),mapUrl:patch.mapUrl});
+          fields.mapUrl=normalized.mapUrl;
+          if(normalized.location)fields.location=normalized.location;
+        }
         if(patch.date){if(!/^\d{4}-\d{2}-\d{2}$/.test(patch.date))throw new Error("La fecha del evento no es válida.");fields.date=patch.date;}
-        for(const field of ['setupAt','startAt','endAt','equipmentInAt']){
+        for(const field of ['setupAt','startAt','endAt','teardownAt','equipmentInAt']){
+          if(field==='teardownAt'&&!Object.hasOwn(patch,field))continue;
           const value=String(patch[field]||'');
           if(value&&!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?$/.test(value))throw new Error("Hay un horario no válido. Revise el evento antes de aplicar.");
           fields[field]=value;
         }
-        return {event,fields};
+        return {event,fields,clearLocation};
       });
       if(equipmentState.selectedEventId)syncActiveEquipmentEvent();
-      checked.forEach(({event,fields})=>{Object.assign(event,fields);equipmentPlannerDirtyIds.add(event.id);});
+      checked.forEach(({event,fields,clearLocation})=>{if(clearLocation){delete event.location;delete event.coordinates;}Object.assign(event,fields);equipmentPlannerDirtyIds.add(event.id);});
       const selected=selectedEquipmentEvent();if(selected){restoreEquipmentEventSnapshot(selected);populateEquipmentEventFields(selected);}
       equipmentSharedWorkspace.dirty=true;
       const dates=equipmentState.events.flatMap(event=>[event.setupAt,event.startAt,event.endAt,event.equipmentInAt,event.date]).map(value=>String(value||'').slice(0,10)).filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value)).sort();

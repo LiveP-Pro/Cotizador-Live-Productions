@@ -544,6 +544,8 @@ test("event and extras APIs require authentication and expose consistent persist
   });
   // Use an explicit closure rather than VM global `this` for the auth helper.
   context.requireAuth = (request, response) => { if (request.user) return true; context.errorResponse(response, 401, "Inicie sesión"); return false; };
+  const ocrStart=source.indexOf('function validateEquipmentOcrReview('),ocrEnd=source.indexOf('\n}\n',ocrStart)+2;
+  vm.runInContext(source.slice(ocrStart,ocrEnd),context);
   const confirmationStart = source.indexOf("function validateEquipmentEventConfirmation(");
   const confirmationEnd = source.indexOf("\n}\n", confirmationStart) + 2;
   vm.runInContext(source.slice(confirmationStart, confirmationEnd), context);

@@ -34,7 +34,13 @@
   function routeId(route) { return `draft-transfer-${fingerprint(routeIdentity(route))}`; }
   function scheduleIssue(event, engine) {
     if (event.setupApplies === false && text(event.setupAt)) return "El evento indica que no aplica montaje y conserva un horario de montaje. Revise ambos datos.";
-    const fields = [event.setupApplies === false ? "startAt" : "setupAt", "startAt", "endAt", "equipmentInAt"];
+    if (text(event.equipmentOutAt) && !Number.isFinite(engine.localTime(event.equipmentOutAt))) return "Corrija la fecha y hora de salida de bodega antes de calcular la carga o el trasiego.";
+    if (text(event.teardownAt)) {
+      const teardown = engine.localTime(event.teardownAt), end = engine.localTime(event.endAt), returned = engine.localTime(event.equipmentInAt);
+      if (!Number.isFinite(teardown)) return "Corrija la fecha y hora de desmontaje programado antes de calcular el trasiego.";
+      if (Number.isFinite(end) && teardown < end || Number.isFinite(returned) && teardown > returned) return "El desmontaje programado debe quedar después de la finalización y antes del regreso a bodega.";
+    }
+    const fields = [event.setupApplies === false ? "startAt" : "setupAt", "startAt", "endAt", ...(text(event.teardownAt) ? ["teardownAt"] : []), "equipmentInAt"];
     const values = [...new Set(fields)].map((field) => engine.localTime(event[field]));
     if (values.some((value) => !Number.isFinite(value))) return "Complete o corrija montaje, inicio, finalización y regreso a bodega antes de calcular reutilización. No se inventó ningún horario.";
     if (values.some((value, index) => index && value < values[index - 1])) return "Revise el orden de montaje, inicio, finalización y regreso a bodega.";
@@ -54,7 +60,7 @@
       if (dispatchId) documents.add(dispatchId);
       // Validate source lines independently from incomplete schedules. Every
       // literal field remains in active; only the calculation copy is altered.
-      engine.normalizeEvent(raw.id, { ...copy(raw), setupAt: "", startAt: "", endAt: "", equipmentInAt: "", equipmentOutAt: "" });
+      engine.normalizeEvent(raw.id, { ...copy(raw), setupAt: "", startAt: "", endAt: "", teardownAt: "", equipmentInAt: "", equipmentOutAt: "" });
       active.push(copy(raw));
     }
     const inventoryIds = new Set();
@@ -75,7 +81,7 @@
   function routeTransfer(candidate) {
     return { id: candidate.id, fromEventId: candidate.fromEventId, toEventId: candidate.toEventId,
       items: [{ warehouseInventoryId: candidate.warehouseInventoryId, quantity: candidate.quantity }],
-      travelMinutes: candidate.travelMinutes, handlingMinutes: candidate.handlingMinutes, status: "confirmed", provisional: true };
+      ...(candidate.note ? { note: candidate.note } : {}), travelMinutes: candidate.travelMinutes, handlingMinutes: candidate.handlingMinutes, status: "confirmed", provisional: true };
   }
   function create(dependencies = {}) {
     function engineForCall() {
@@ -89,7 +95,17 @@
       const engine = engineForCall();
       if (!rawOptions || typeof rawOptions !== "object" || Array.isArray(rawOptions)) throw invalid("Las opciones del plan no son válidas.");
       const options = engine.normalizeEquipmentLogisticsOptions ? engine.normalizeEquipmentLogisticsOptions(rawOptions) : { ...rawOptions };
-      const requestedIds = selectedIds(options.selectedTransferIds);
+      let requestedIds = selectedIds(options.selectedTransferIds);
+      if (options.transferEdits !== undefined && !Array.isArray(options.transferEdits)) throw invalid("Las cantidades editadas de trasiego deben ser una lista.");
+      const transferEdits = new Map();
+      for (const edit of options.transferEdits || []) {
+        if (!edit || typeof edit.id !== "string" || !/^draft-transfer-[a-f0-9]{32}$/.test(edit.id) || transferEdits.has(edit.id)
+            || edit.quantity === "" || edit.quantity === null || !["number", "string"].includes(typeof edit.quantity)
+            || !Number.isFinite(Number(edit.quantity)) || Number(edit.quantity) < 0 || typeof edit.note !== "undefined" && typeof edit.note !== "string"
+            || text(edit.note).length > 2000) throw invalid("Revise la cantidad y la nota del trasiego editado. No se aplicó ningún cambio.");
+        transferEdits.set(edit.id, { id: edit.id, quantity: Number(edit.quantity), note: text(edit.note) });
+      }
+      requestedIds = requestedIds.filter((id) => transferEdits.get(id)?.quantity !== 0);
       if (options.transfers !== undefined && !Array.isArray(options.transfers)) throw invalid("El historial de trasiegos no es válido.");
       const actualTransfers = copy(options.transfers || []);
       if (options.inventoryBlockReasons !== undefined && !Array.isArray(options.inventoryBlockReasons)) throw invalid("Las advertencias del inventario no son válidas.");
@@ -102,7 +118,7 @@
       const originalEvents = normalizeInput(events, inventory, engine);
       const timingIssues = new Map(originalEvents.map((event) => [event.id, scheduleIssue(event, engine)]));
       const calculationEvents = originalEvents.map((event) => timingIssues.get(event.id)
-        ? { ...event, setupAt: "", startAt: "", endAt: "", equipmentInAt: "", equipmentOutAt: "" } : event);
+        ? { ...event, setupAt: "", startAt: "", endAt: "", teardownAt: "", equipmentInAt: "", equipmentOutAt: "" } : event);
       const calculationOptions = { transfers: actualTransfers, routeEstimates: options.routeEstimates || [],
         ...(options.now === undefined ? {} : { now: options.now }) };
       const baseline = engine.calculateAvailability(calculationEvents, inventory, calculationOptions);
@@ -124,7 +140,8 @@
           candidates.push({ ...proposal, id, rowId: row.id, description: row.description, category: row.category,
             releaseAt: route.departureAt || "", arriveAt: route.arrivalAt || "", requiresManualReview,
             status: requiresManualReview ? "review" : "ready", reasons: requiresManualReview ? ["Revise y guarde los minutos de transporte, desmontaje y preparación para este origen y destino antes de aplicar el trasiego."] : [],
-            requested: requestedIds.includes(id), selected: false, provisional: true });
+            maxQuantity: proposal.quantity, selectedQuantity: 0, requestedQuantity: transferEdits.get(id)?.quantity ?? proposal.quantity,
+            note: transferEdits.get(id)?.note || "", requested: requestedIds.includes(id), selected: false, provisional: true });
         }
       }
       candidates.sort((a, b) => text(a.departureAt).localeCompare(text(b.departureAt)) || text(a.fromEventId).localeCompare(text(b.fromEventId))
@@ -135,14 +152,21 @@
       const staleSelection = Boolean(requestedIds.length && options.expectedSnapshotId && options.expectedSnapshotId !== snapshotId);
       const byCandidateId = new Map(candidates.map((candidate) => [candidate.id, candidate]));
       const invalidSelections = [];
+      for (const [id, edit] of transferEdits) {
+        const candidate = byCandidateId.get(id);
+        if (candidate && edit.quantity > candidate.maxQuantity) throw invalid(`La cantidad editada supera el máximo comprobado (${candidate.maxQuantity}) para ${candidate.description}. No se aplicó ningún cambio.`, 409);
+        if (!candidate && edit.quantity > 0 && !requestedIds.includes(id)) invalidSelections.push({ id, rowId: "", warehouseInventoryId: "", code: "proposal_unavailable", message: "Una edición ya no corresponde a las propuestas actuales. Revise la lista antes de aplicar los cambios." });
+      }
       let selected = [];
       for (const id of requestedIds) {
         const candidate = byCandidateId.get(id);
+        if (candidate && transferEdits.get(id)?.quantity === 0) continue;
         const code = staleSelection ? "stale_snapshot" : !candidate ? "proposal_unavailable" : candidate.requiresManualReview ? "time_review_required" : "";
         if (code) invalidSelections.push({ id, rowId: candidate?.rowId || "", warehouseInventoryId: candidate?.warehouseInventoryId || "", code,
           message: code === "stale_snapshot" ? "El inventario o los eventos cambiaron. Revise la lista actual y vuelva a aplicar la selección."
             : code === "time_review_required" ? candidate.reasons[0] : "Esta propuesta ya no corresponde al inventario, cantidades u horarios actuales. Vuelva a generar el listado." });
-        else selected.push(candidate);
+        else if ((transferEdits.get(id)?.quantity ?? candidate.quantity) > 0) selected.push({ ...candidate,
+          quantity: transferEdits.get(id)?.quantity ?? candidate.quantity, note: transferEdits.get(id)?.note || "" });
       }
       function calculateSelection() {
         return selected.length ? engine.calculateAvailability(calculationEvents, inventory, { ...calculationOptions,
@@ -159,7 +183,10 @@
         scenario = calculateSelection();
       }
       const appliedIds = new Set(selected.map((candidate) => candidate.id));
-      for (const candidate of candidates) candidate.selected = appliedIds.has(candidate.id);
+      for (const candidate of candidates) {
+        candidate.selected = appliedIds.has(candidate.id);
+        candidate.selectedQuantity = selected.find((entry) => entry.id === candidate.id)?.quantity || 0;
+      }
       const unresolvedSelection = invalidSelections.some((entry) => !entry.rowId);
       const selectionProblemsByRow = new Map();
       for (const entry of invalidSelections) if (entry.rowId) {
@@ -235,7 +262,14 @@
         return result;
       });
       const rental = rows.filter((row) => row.rental > 0); const purchase = rows.filter((row) => row.purchase > 0);
+      const bundles = typeof engine.buildEquipmentRouteBundles === "function" ? engine.buildEquipmentRouteBundles({
+        events: originalEvents, rows, candidates, options: calculationOptions, timingIssues, routeTiming: engine.logisticsRouteTiming,
+        localTime: engine.localTime, reservationStartAt: engine.eventReservationStartAt, fingerprint
+      }) : [];
+
       return { events: originalEvents, rows, candidates, selectedTransfers: selected.map((candidate) => ({ ...candidate, selected: true, transfer: routeTransfer(candidate) })),
+        routeBundles: bundles, preloadsApplied: false,
+        transferEdits: [...transferEdits.values()].filter((edit) => byCandidateId.has(edit.id)).map(copy),
         selectedTransferIds: selected.map((candidate) => candidate.id), invalidSelections, staleSelection, snapshotId, pending, rental, rent: rental, purchase,
         routeEstimates: copy(calculationOptions.routeEstimates), routePairs: copy(baseline.logistics?.routePairs || []),
         baseline: { rows: baseline.rows.map((row) => ({ id: row.id, required: row.required, missing: row.missing, available: row.available, capacity: row.capacity })),

@@ -4,6 +4,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const equipmentIdentity = require("./equipment-identity.js");
+const routeBundles = require("./equipment-route-bundles.cjs");
+const equipmentLocation = require("./equipment-location.js");
 
 function invalid(message, statusCode = 400) { return Object.assign(new Error(message), { statusCode }); }
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
@@ -47,10 +49,11 @@ function eventTiming(event) {
   const start = localTime(event.startAt);
   const end = localTime(event.endAt);
   const returned = localTime(event.equipmentInAt);
+  const teardown = localTime(event.teardownAt);
   // Legacy windows already reserve from setup until return. Their missing
   // event start/end never makes their equipment available to another event.
   const complete = [setup, returned].every(Number.isFinite);
-  const supplied = [setup, start, end, returned].filter(Number.isFinite);
+  const supplied = [setup, start, end, teardown, returned].filter(Number.isFinite);
   if (supplied.some((value, index) => index && value < supplied[index - 1])) throw invalid("Revise las fechas: montaje, inicio, finalización y regreso a bodega deben seguir ese orden.");
   return { setup, start, end, returned, complete };
 }
@@ -72,11 +75,11 @@ function normalizeEvent(id, raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalid("El evento no es válido.");
   if (raw.id && raw.id !== id) throw invalid("El identificador del evento no coincide.");
   if (!Array.isArray(raw.sections)) throw invalid("El evento debe incluir sus secciones de equipo.");
-  const event = clone({ ...raw, id, status: raw.status === "cancelled" ? "cancelled" : "confirmed" });
+  const event = clone({ ...raw, ...equipmentLocation.normalizeEventLocation(raw), id, status: raw.status === "cancelled" ? "cancelled" : "confirmed" });
   if (event.setupApplies !== undefined && typeof event.setupApplies !== "boolean") throw invalid("Indique si el montaje aplica con un valor válido.");
   if (event.setupApplies === false && text(event.setupAt)) throw invalid("El evento indica que no aplica montaje y contiene una fecha de montaje. Revise ese dato antes de confirmar.");
   if (event.warehouseDispatchId && !validId(event.warehouseDispatchId)) throw invalid("El identificador de salida no es válido.");
-  for (const name of ["setupAt", "startAt", "endAt", "equipmentInAt"]) {
+  for (const name of ["setupAt", "startAt", "endAt", "teardownAt", "equipmentInAt", "equipmentOutAt"]) {
     if (text(event[name]) && !Number.isFinite(localTime(event[name]))) throw invalid(`La fecha ${name} no es válida.`);
   }
   for (const section of event.sections) {
@@ -145,7 +148,8 @@ function normalizeEquipmentLogisticsOptions(raw = {}) {
     pairs.add(pairKey);
     return { fromPlace: text(estimate.fromPlace), toPlace: text(estimate.toPlace),
       travelMinutes: quantity(estimate.travelMinutes, "El tiempo de transporte"),
-      handlingMinutes: quantity(estimate.handlingMinutes, "El tiempo de desmontaje y preparación") };
+      handlingMinutes: quantity(estimate.handlingMinutes, "El tiempo de desmontaje y preparación"),
+      ...(estimate.distanceKm === undefined || estimate.distanceKm === "" || estimate.distanceKm === null ? {} : { distanceKm: quantity(estimate.distanceKm, "La distancia de la ruta") }) };
   });
   return normalized;
 }
@@ -156,13 +160,17 @@ function logisticsRouteTiming(from, to, options) {
   const manual = options.routeEstimates.find((entry) => key(entry.fromPlace) === key(fromPlace) && key(entry.toPlace) === key(toPlace));
   const travelMinutes = manual ? manual.travelMinutes : samePlace ? 0 : options.travelMinutes ?? 60;
   const handlingMinutes = manual ? manual.handlingMinutes : options.handlingMinutes ?? 120;
-  const departure = localTime(from.endAt);
+  const ended = localTime(from.endAt);
+  const teardown = localTime(from.teardownAt);
+  const departure = Number.isFinite(ended) ? Number.isFinite(teardown) ? Math.max(ended, teardown) : ended : NaN;
+  const departureAt = Number.isFinite(teardown) && teardown > ended ? from.teardownAt : from.endAt || "";
   const setup = localTime(eventReservationStartAt(to));
   const availableMinutes = Number.isFinite(departure) && Number.isFinite(setup) ? (setup - departure) / 60000 : null;
   const requiredMinutes = travelMinutes + handlingMinutes;
   return { fromPlace, toPlace, samePlace, travelMinutes, handlingMinutes, requiredMinutes,
+    ...(manual?.distanceKm === undefined ? {} : { distanceKm: manual.distanceKm }),
     availableMinutes, slackMinutes: availableMinutes === null ? null : availableMinutes - requiredMinutes,
-    departureAt: from.endAt || "", arrivalAt: Number.isFinite(departure) ? new Date(departure + requiredMinutes * 60000).toISOString() : "",
+    departureAt, arrivalAt: Number.isFinite(departure) ? new Date(departure + requiredMinutes * 60000).toISOString() : "",
     setupAt: eventReservationStartAt(to), travelSource: manual ? "user" : samePlace ? "same-place" : "estimate",
     handlingSource: manual ? "user" : "estimate", requiresTimeConfirmation: !manual,
     missingPlace: !fromPlace || !toPlace,
@@ -306,7 +314,7 @@ function buildEquipmentLogisticsPlan(row, reservations, confirmedTransfers, opti
     const direct = !row.external && !previous.awaitingPhysicalReturn && !previous.overdueDispatch && route.feasible;
     if (!warehouse && !direct) continue;
     candidates.push({ from, to, kind: warehouse ? "warehouse" : "direct", route: direct ? route : null,
-      cost: warehouse ? 0 : 1 + route.requiredMinutes });
+      cost: (warehouse ? 0 : 1 + route.requiredMinutes) + routeBundles.routePreferenceCost(options.kitPairProfiles?.get(`${previous.eventId}\u0000${next.eventId}`), route) });
   }
   const matched = matchEquipmentReuse(nodes, candidates, fixed);
   const incoming = Array(nodes.length).fill(0); const outgoing = Array.from({ length: nodes.length }, () => []);
@@ -389,7 +397,9 @@ function validateTransfer(transfer, events, inventory, others = []) {
     visited.add(id);
     others.filter((entry) => entry.id !== transfer.id && entry.status !== "cancelled" && entry.fromEventId === id).forEach((entry) => pending.push(entry.toEventId));
   }
-  const endAt = localTime(from.endAt);
+  const endedAt = localTime(from.endAt);
+  const teardownAt = localTime(from.teardownAt);
+  const endAt = Number.isFinite(endedAt) ? Number.isFinite(teardownAt) ? Math.max(endedAt, teardownAt) : endedAt : NaN;
   const setupAt = localTime(eventReservationStartAt(to));
   if (!eventTiming(from).complete || !eventTiming(to).complete || !Number.isFinite(endAt) || !Number.isFinite(setupAt) || endAt + (transfer.travelMinutes + transfer.handlingMinutes) * 60000 > setupAt) {
     throw invalid("El trasiego no tiene tiempo suficiente para desmontaje, transporte y preparación antes del siguiente montaje.");
@@ -708,7 +718,8 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
       const chunks = [{ quantity: Math.max(0, reserved - outgoing.reduce((sum, line) => sum + line.quantity, 0)), end: occupiedEnd }, ...outgoing];
       const intersects = Number.isFinite(occupiedStart) && occupiedStart <= to && chunks.some((chunk) => chunk.end >= from);
       const reservation = { eventId: event.id, name: event.name || "Evento", place: event.place || "", type: event.type || "", quantity: amount,
-        remainingQuantity: reserved, setupAt: eventReservationStartAt(event), setupApplies: event.setupApplies, startAt: event.startAt || "", endAt: event.endAt || "", equipmentInAt: event.equipmentInAt || "",
+        remainingQuantity: reserved, setupAt: eventReservationStartAt(event), setupApplies: event.setupApplies, startAt: event.startAt || "", endAt: event.endAt || "", teardownAt: event.teardownAt || "", equipmentInAt: event.equipmentInAt || "",
+        mapUrl: event.mapUrl || "", location: event.location || event.coordinates || null,
         notes: event.notes || "", pendingLogistics: !timing.complete, alreadyDispatched: outstanding, alreadyConsumed: sent.consumed,
         preparationMinutes: consumable ? 0 : preparationMinutes,
         logisticsMinutes: Math.max(60, Number(event.logisticsMinutes || event.transferMinutes) || 60),
@@ -727,6 +738,7 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
       }
     }
   }
+  options.kitPairProfiles = routeBundles.buildPairProfiles(activeEvents, [...rows.values()]);
   for (const row of rows.values()) {
     for (const hold of physicalHolds.get(row.warehouseInventoryId) || []) {
       if (hold.start > to) continue;
@@ -787,4 +799,4 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
       proposedRoutesRequireConfirmation: true }, inventorySavedAt: inventory?.savedAt || "", from: options.from || "", to: options.to || "" };
 }
 
-module.exports = { createEquipmentEventStore, calculateEquipmentAvailability, normalizeEquipmentLogisticsOptions, normalizeEvent, effectiveEquipmentProcurementChoice, resolveEquipmentPurchasedLine, localTime, eventReservationStartAt };
+module.exports = { createEquipmentEventStore, calculateEquipmentAvailability, normalizeEquipmentLogisticsOptions, normalizeEvent, effectiveEquipmentProcurementChoice, resolveEquipmentPurchasedLine, localTime, eventReservationStartAt, logisticsRouteTiming, buildEquipmentRouteBundles: routeBundles.buildRouteBundles };

@@ -27,7 +27,7 @@ function documentHarness() {
       for (const token of this._html.matchAll(/<\/?[A-Za-z][^>]*>|[^<]+/g)) {
         const raw = token[0];
         if (raw.startsWith("</")) { const tag = raw.match(/^<\/([A-Za-z0-9-]+)/)[1].toLowerCase(); while (stack.length > 1) { if (stack.pop().tagName === tag) break; } continue; }
-        if (!raw.startsWith("<")) { stack.at(-1)._text += decode(raw); continue; }
+        if (!raw.startsWith("<")) { const literal=decode(raw),current=stack.at(-1);current._text+=literal;if(current.tagName==='textarea')current.value+=literal;continue; }
         const tag = raw.match(/^<([A-Za-z0-9-]+)/)[1].toLowerCase(); const attributes = {};
         const attrText = raw.slice(tag.length + 1, -1);
         for (const match of attrText.matchAll(/([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g)) attributes[match[1]] = decode(match[2] ?? match[3] ?? match[4] ?? "");
@@ -93,20 +93,21 @@ function integration({ source = [] } = {}) {
     nodes.set(`#equipment${name}`,element); document.body.append(element);
   }
   let inventory = stock(); let reportTicket = 0;
-  const context = vm.createContext({ console, URL: { createObjectURL:()=>"blob:synthetic",revokeObjectURL(){} }, Blob, Date, Intl, Map, Set, Math, JSON, Number, String, Object, Array, RegExp, Promise,
+  class TestURL extends URL { static createObjectURL(){return 'blob:synthetic';} static revokeObjectURL(){} }
+  const context = vm.createContext({ console, URL: TestURL, Blob, Date, Intl, Map, Set, Math, JSON, Number, String, Object, Array, RegExp, Promise,
     setTimeout(){return 1;},clearTimeout(){},setInterval(){return 1;},clearInterval(){},document });
   context.window = context; Object.assign(context, { requerimientoEquipoCatalog: { version:"current-test-only",services:{},groups:[] }, requerimientoEquipoInventory:{categories:[]},
     location:{protocol:"https:",hash:"#requerimiento-equipo"},addEventListener(){},requestAnimationFrame(fn){fn();},confirm(){return false;},LiveAccess:{can(){return true;}},LIVE_SESSION:{} });
   context.fetch = async (url, init={}) => {
     if(url!=="/api/cuadros-equipo/reportes/provisional"||init.method!=="POST"){writes.push({url,init});throw new Error("No stock or event writes allowed");}
     const body=JSON.parse(init.body);calls.push({url,init,body});
-    const plan=Draft.analyze(body.events,inventory,{now:Date.parse("2026-11-23T12:00:00Z"),selectedTransferIds:body.selectedTransferIds,routeEstimates:body.routeEstimates});
+    const plan=Draft.analyze(body.events,inventory,{now:Date.parse("2026-11-23T12:00:00Z"),selectedTransferIds:body.selectedTransferIds,transferEdits:body.transferEdits,routeEstimates:body.routeEstimates});
     if(body.mode==="plan")return {ok:true,status:200,json:async()=>copy(plan)};
     if(["transfer","rent","purchase"].includes(body.mode))return {ok:true,status:200,headers:{get(name){return {"Content-Type":"text/html; charset=utf-8","X-Equipment-Report-Status":"provisional"}[name]||null;}},text:async()=>`<html><body>${JSON.stringify(plan.rows.map(row=>({rental:row.rental,purchase:row.purchase})))}</body></html>`};
     return {ok:true,status:200,headers:{get(name){return name==="Content-Type"?"application/octet-stream":name==="Content-Disposition"?`attachment; filename="current.${body.mode==="master"?"xlsx":"pdf"}"`:null;}},blob:async()=>new Blob([body.mode==="master"?"PKsynthetic":"%PDF-synthetic"])};
   };
   const run = code => vm.runInContext(code,context);
-  for(const file of ["equipment-identity.js","equipment-import-identity.js","equipment-document-audit.js","equipment-draft-transfers.js","equipment-planner.js","equipment.js"])run(fs.readFileSync(require.resolve(`../${file}`),"utf8"));
+  for(const file of ["equipment-location.js","equipment-identity.js","equipment-import-identity.js","equipment-document-audit.js","equipment-draft-transfers.js","equipment-planner.js","equipment.js"])run(fs.readFileSync(require.resolve(`../${file}`),"utf8"));
   run(`renderEquipmentModule=()=>{if(window.testPlanner)window.testPlanner.render();};
     loadEquipmentEvent=id=>{equipmentState.selectedEventId=id;const event=selectedEquipmentEvent();if(event){restoreEquipmentEventSnapshot(event);populateEquipmentEventFields(event);}equipmentState.activeWindow='summary';renderEquipmentModule();return !!event;};
     equipmentSharedWorkspace.state={events:[],transfers:[],routeEstimates:[],loaded:true};
@@ -165,7 +166,7 @@ test("actualizar horarios valida todas las referencias antes de cambiar un event
 test("aplicar trasiegos actualiza horarios, resumen y todas las solicitudes de reporte con la misma selección", async () => {
   const h=integration({source:[sourceEvent(0),sourceEvent(1),sourceEvent(2)]});await flush();await h.planner.openTransfers();
   h.modal().querySelector('[data-draft-event="0"][data-draft-field="endAt"]').value="2026-11-25T09:30";
-  await h.click("[data-draft-recalculate]");await h.click("[data-draft-select-all]");await h.click("[data-draft-apply]");await flush();
+  await h.click("[data-draft-recalculate]");await h.click("[data-draft-select-all]");await h.click("[data-draft-apply]");await h.click("[data-draft-confirm-accept]");await flush();
   assert.equal(h.events()[0].endAt,"2026-11-25T09:30");assert.equal(h.planner.model().rows[0].plan.rental,0);assert.equal(h.planner.model().rows[0].required,3);
   const applied=h.calls.filter(call=>call.body.mode==="plan").at(-1).body.selectedTransferIds;assert.equal(applied.length,2);
   for(const mode of ["transfer","rent","purchase","summary","master"]){const result=await h.planner.download(mode);assert.equal(result.ok,true,JSON.stringify(result));}
@@ -175,7 +176,7 @@ test("aplicar trasiegos actualiza horarios, resumen y todas las solicitudes de r
 });
 
 test("actualizar inventario borra la cifra reducida anterior antes de publicar otro resultado", async () => {
-  const h=integration({source:[sourceEvent(0),sourceEvent(1),sourceEvent(2)]});await flush();await h.planner.openTransfers();await h.click("[data-draft-apply]");await flush();
+  const h=integration({source:[sourceEvent(0),sourceEvent(1),sourceEvent(2)]});await flush();await h.planner.openTransfers();await h.click("[data-draft-apply]");await h.click("[data-draft-confirm-accept]");await flush();
   assert.equal(h.planner.model().rows[0].plan.rental,0);h.applyStock(stock(1));h.planner.render();
   assert.equal(h.planner.model().rows[0].plan,undefined);assert.match(h.nodes.get("#equipmentPlannerSummary").innerHTML,/Por calcular/);
   await flush();assert.equal(h.planner.model().rows[0].plan.rental,null);assert.equal(h.planner.model().rows[0].missing,null);assert.equal(h.writes.length,0);
@@ -186,4 +187,31 @@ test("el resumen también usa el resultado servidor para rentas externas explíc
   for(const event of [a,b]){delete event.sections[0].items[0].warehouseInventoryId;event.sections[0].items[0].procurementChoice="rent";}
   const h=integration({source:[a,b]});await flush();const result=h.planner.model().rows[0];
   assert.ok(result,JSON.stringify({events:h.events(),model:h.planner.model()}));assert.equal(result.quantity,2);assert.ok(result.plan);assert.equal(result.plan.required,1);assert.equal(result.missing,1);assert.equal(result.action,"RENTA");assert.equal(h.writes.length,0);
+});
+
+test('Maps se valida de forma atómica y reemplaza coordenadas anteriores sin tocar las celdas ni ceros',()=>{
+  const source=sourceEvent(0,0);source.mapUrl='https://www.google.com/maps?q=14,-90';source.location={lat:14,lng:-90};
+  const h=integration({source:[source,sourceEvent(1)]}),event=h.events()[0],before=h.snapshot();
+  const patch={...event,mapUrl:'https://www.google.com/maps?q=14.1,-90.1'};
+  assert.throws(()=>h.bridge.updateEventDetails([patch,{...h.events()[1],mapUrl:'https://evil.invalid/maps'}]),/Google Maps/);
+  assert.equal(h.snapshot(),before);
+  h.bridge.updateEventDetails([patch]);const updated=h.events()[0];
+  assert.equal(updated.mapUrl,patch.mapUrl);assert.deepEqual(updated.location,{lat:14.1,lng:-90.1});
+  assert.deepEqual(updated.sourceCells,event.sourceCells);assert.deepEqual(updated.sourceImport,event.sourceImport);assert.deepEqual(updated.sections,event.sections);
+  h.bridge.updateEventDetails([{...updated,mapUrl:''}]);assert.equal(h.events()[0].location,undefined);assert.equal(h.events()[0].mapUrl,'');assert.equal(h.writes.length,0);
+});
+
+test('cantidades y notas editadas requieren aceptar y llegan iguales a los cinco reportes',async()=>{
+  const h=integration({source:[sourceEvent(0),sourceEvent(1)]});await flush();await h.planner.openTransfers();
+  const quantity=h.modal().querySelector('[data-draft-quantity="0"]'),note=h.modal().querySelector('[data-draft-note="0"]');
+  quantity.value='2';note.value='Camión de prueba: dos unidades, nota literal';
+  await h.click('[data-draft-save-edit="0"]');await h.click('[data-draft-apply]');
+  assert.ok(h.modal().querySelector('[data-draft-confirm-accept]'));assert.equal(h.planner.model().rows[0].plan.rental,3,'antes de aceptar no modifica la selección comprometida');
+  await h.click('[data-draft-confirm-cancel]');assert.ok(h.modal());assert.equal(h.planner.model().rows[0].plan.rental,3);
+  await h.click('[data-draft-apply]');await h.click('[data-draft-confirm-accept]');await flush();
+  assert.equal(h.planner.model().rows[0].plan.rental,1);assert.equal(h.events()[0].sections[0].items[0].quantity,3);
+  for(const mode of ['transfer','rent','purchase','summary','master'])assert.equal((await h.planner.download(mode)).ok,true);
+  const calls=h.calls.filter(call=>call.body.mode!=='plan');assert.equal(calls.length,5);
+  for(const call of calls){assert.equal(call.body.transferEdits.length,1);assert.equal(call.body.transferEdits[0].quantity,2);assert.match(call.body.transferEdits[0].note,/dos unidades/);assert.equal(call.body.selectedTransferIds.length,1);}
+  assert.equal(h.writes.length,0);
 });
