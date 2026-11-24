@@ -581,17 +581,18 @@ test("conflictos de fecha se corrigen sin alterar la fuente ni mover fechas escr
   const h = browserHarness({ fetch: async () => deliverPreview(preview), bridge: { importEvents(events) {
     assert.equal(events[0].date, "2026-11-26"); assert.equal(events[0].endDate, "2026-11-26");
     assert.equal(events[0].setupAt, "2026-11-26T10:00"); assert.equal(events[0].equipmentInAt, "2026-11-27T10:00");
-    assert.equal(events[0].sourceImport.metadata.date, "25/11/2026"); assert.equal(events[0].sourceImport.warningsAccepted, true); return { count: 1 };
+    assert.equal(events[0].sourceImport.metadata.date, "25/11/2026"); assert.notEqual(events[0].sourceImport.warningsAccepted, true); return { count: 1 };
   } } });
   await h.api.openFile(fakeFile());
   await h.dialog.emit("input", { target: { dataset: { batchField: "date", batchIndex: "0" }, value: "2026-11-26" } });
   assert.equal(h.get("equipmentBatchApply").disabled, false); await h.action("apply");
+  assert.equal(h.api.getImported()?.events[0].date, "2026-11-26", "el conflicto corregido carga sin una confirmación obsoleta");
   assert.equal(JSON.stringify(preview), original);
   const manual = browserHarness({ fetch: async () => deliverPreview(preview) }); await manual.api.openFile(fakeFile());
   await manual.dialog.emit("input", { target: { dataset: { batchField: "endDate", batchIndex: "0" }, value: "2026-11-27" } });
   await manual.dialog.emit("input", { target: { dataset: { batchField: "date", batchIndex: "0" }, value: "2026-11-26" } });
   assert.equal(manual.get("equipmentBatchApply").disabled, false);
-  assert.match(manual.get("equipmentBatchWarnings").innerHTML, /contradictorios/, "la fecha final editada se conserva y queda pendiente de revisión");
+  assert.match(manual.get("equipmentBatchWarnings").innerHTML, /finalización.*27\/11\/2026.*después.*desmontaje.*26\/11\/2026/, "la fecha final editada se conserva y el aviso explica qué horarios no coinciden");
 });
 
 test("cuadros idénticos pueden cargarse con una advertencia y el cuadro excluido permanece íntegro como referencia", async () => {
@@ -679,18 +680,43 @@ test("datos activos inválidos y pérdida de celdas siguen bloqueados aunque se 
   assert.throws(() => ui.prepareEvents(source, selections, { acknowledgeWarnings: true }), /todas las celdas/);
 });
 
-test("una propuesta corroborada completa los horarios revisados y conserva la fecha original", () => {
+test("una propuesta corroborada requiere elección explícita y conserva la fecha original", () => {
   const preview = clientPreview({ date: "2026-11-06", startAt: "2026-11-06T16:00", endAt: "2026-11-06T23:00", setupAt: "2026-11-07T10:00", setupApplies: true,
     sourceImport: { metadata: { date: "06/11/2026" }, schedule: { startAt: "2026-11-06T16:00" } },
     scheduleSuggestion: { code: "corroborated_event_date", date: "2026-11-07", originalDate: "2026-11-06", schedule: { startDate: "2026-11-07", startAt: "2026-11-07T16:00", endDate: "2026-11-07", endAt: "2026-11-07T23:00", setupAt: "2026-11-07T10:00", setupApplies: true, equipmentInAt: "2026-11-08T10:00" } } });
   const original = JSON.stringify(preview), selections = ui.selectionsFor(preview);
-  assert.equal(selections[0].date, "2026-11-07"); assert.equal(selections[0].endDate, "2026-11-07"); assert.equal(selections[0].equipmentInDate, "2026-11-08");
+  assert.equal(selections[0].date, "2026-11-06"); assert.equal(selections[0].suggestionApplied, false);
   assert.throws(() => ui.prepareEvents(preview, selections), /Confirme las advertencias/);
-  const draft = ui.prepareEvents(preview, selections, { acknowledgeWarnings: true })[0];
+  selections[0] = ui.reviewScheduleSuggestion(preview.events[0], selections[0], true);
+  assert.equal(selections[0].date, "2026-11-07"); assert.equal(selections[0].endDate, "2026-11-07"); assert.equal(selections[0].equipmentInDate, "2026-11-08");
+  const draft = ui.prepareEvents(preview, selections)[0];
   assert.equal(draft.sourceImport.sourceEventId, preview.events[0].id);
   assert.equal(draft.sourceImport.scheduleSuggestionAccepted, true); assert.equal(draft.sourceImport.metadata.date, "06/11/2026"); assert.equal(draft.sourceImport.schedule.startAt, "2026-11-06T16:00");
   selections[0].date = "2026-11-08";
   assert.equal(ui.prepareEvents(preview, selections, { acknowledgeWarnings: true })[0].sourceImport.scheduleSuggestionAccepted, false);
+  assert.equal(JSON.stringify(preview), original);
+});
+
+test("la casilla de fecha propuesta sincroniza los campos, revierte y carga sin avisos resueltos", async () => {
+  const preview = clientPreview({ date: "2026-11-06", startAt: "2026-11-06T16:00", endAt: "2026-11-06T23:00", setupAt: "2026-11-07T09:00", setupApplies: true,
+    teardownAt: "2026-11-07T23:00", equipmentInAt: "2026-11-08T03:00", issues: [{ code: 'conflicting_schedule_order', message: 'Montaje posterior al inicio' }],
+    scheduleSuggestion: { originalDate: "2026-11-06", date: "2026-11-07", schedule: { setupApplies: true, setupAt: "2026-11-07T09:00", startAt: "2026-11-07T16:00", endAt: "2026-11-07T23:00", teardownAt: "2026-11-07T23:00", equipmentInAt: "2026-11-08T03:00" } } });
+  const original = JSON.stringify(preview); let confirmations = 0, imported;
+  const h = browserHarness({ fetch: async () => deliverPreview(preview), confirmWarnings() { confirmations++; return false; }, bridge: { importEvents(events) { imported = events; return { count: 1 }; } } });
+  await h.api.openFile(fakeFile());
+  const checkbox = h.dialog.querySelectorAll('[data-batch-suggestion]')[0];
+  const field = (name) => h.dialog.querySelectorAll('[data-batch-field]').find((input) => input.dataset.batchField === name);
+  assert.equal(checkbox.checked, false); assert.match(h.get('equipmentBatchWarnings').innerHTML, /06\/11\/2026.*07\/11\/2026/);
+  checkbox.checked = true; await h.dialog.emit('change', { target: checkbox });
+  assert.equal(field('date').value, '2026-11-07'); assert.equal(field('endDate').value, '2026-11-07');
+  assert.equal(h.get('equipmentBatchWarnings').hidden, true);
+  checkbox.checked = false; await h.dialog.emit('change', { target: checkbox });
+  assert.equal(field('date').value, '2026-11-06'); assert.equal(field('endDate').value, '2026-11-06');
+  assert.equal(h.get('equipmentBatchWarnings').hidden, false);
+  checkbox.checked = true; await h.dialog.emit('change', { target: checkbox });
+  await h.action('apply');
+  assert.equal(confirmations, 0); assert.equal(imported[0].date, '2026-11-07');
+  assert.equal(imported[0].sourceImport.scheduleSuggestionAccepted, true);
   assert.equal(JSON.stringify(preview), original);
 });
 

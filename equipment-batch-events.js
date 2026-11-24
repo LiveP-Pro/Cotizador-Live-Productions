@@ -57,10 +57,64 @@
   }
   function selectionsFor(preview) {
     return (preview?.events || []).map((event) => {
-      const suggestion = event.scheduleSuggestion, reviewed = suggestion ? { ...event, ...suggestion.schedule, date: suggestion.date || event.date } : event;
-      return { ...scheduleFor(reviewed), id: event.id, selected: editableEvent(event), duplicateReviews: {},importResolution:'',ocrReviewed:false,suggestionApplied: !!suggestion,
-        date: text(reviewed.date || reviewed.startDate || text(reviewed.startAt).slice(0, 10)), place: text(event.place), type: text(event.type), name: text(event.client || event.name) };
+      return { ...scheduleFor(event), id: event.id, selected: editableEvent(event), duplicateReviews: {},importResolution:'',ocrReviewed:false,suggestionApplied: false,
+        date: text(event.date || event.startDate || text(event.startAt).slice(0, 10)), place: text(event.place), type: text(event.type), name: text(event.client || event.name) };
     });
+  }
+  function reviewScheduleSuggestion(event, selection, useSuggested) {
+    if (!event?.scheduleSuggestion) return { ...selection };
+    const suggestion = event.scheduleSuggestion;
+    const reviewed = useSuggested ? { ...event, ...suggestion.schedule, date: suggestion.date || event.date } : event;
+    return { ...selection, ...scheduleFor(reviewed), date: text(reviewed.date || reviewed.startDate || text(reviewed.startAt).slice(0, 10)), suggestionApplied: !!useSuggested, endDateEdited: false };
+  }
+  const displayDate = (value) => validDate(value) ? text(value).split('-').reverse().join('/') : text(value);
+  const eventLabel = (event) => event.sourceSheet || event.place || event.client || event.name || 'Evento';
+  function sourceAddresses(event, refs) {
+    const cells = event.sourceCells || event.sourceImport?.sourceCells || [];
+    return [...new Set((refs || []).map((ref) => cells.find((cell) => cell.ref === ref)?.address || text(ref).split(':').pop()))].filter(Boolean).join(', ');
+  }
+  function suggestionMessage(event) {
+    const suggestion = event.scheduleSuggestion;
+    const evidence = (suggestion.evidence || []).filter((entry) => ['date', 'setupTime', 'teardownTime'].includes(entry.field)).map((entry) => `${sourceAddresses(event, entry.refs) || entry.field}: «${text(entry.value)}»`).join('; ');
+    return `${eventLabel(event)}: la fecha escrita es ${displayDate(suggestion.originalDate || event.date)}, pero el montaje y desmontaje apuntan al ${displayDate(suggestion.date)}.${evidence ? ` Fuente: ${evidence}.` : ''} Revise este evento; la fecha propuesta solo se aplica si la elige.`;
+  }
+  function scheduleDiagnostics(event, entry) {
+    const details = [];
+    const refsFor = (prefix) => {
+      const refs = event.scheduleRefs || event.sourceImport?.scheduleRefs || {};
+      const metadata = event.metadataRefs || event.sourceImport?.metadataRefs || {};
+      return [...new Set([...(refs[prefix + 'Date'] || []), ...(refs[prefix + 'Time'] || []), ...(refs[prefix + 'At'] || []), ...(metadata[prefix === 'start' || prefix === 'end' ? 'eventTimeRange' : prefix + 'Time'] || [])])];
+    };
+    const withRefs = (message, refs) => `${message}${sourceAddresses(event, refs) ? ` (${sourceAddresses(event, refs)})` : ''}`;
+    const pairs = [
+      ...(entry.setupApplies !== 'no' ? [{ prefix: 'setup', label: 'montaje', date: entry.setupDate, time: entry.setupTime }] : []),
+      { prefix: 'start', label: 'inicio del evento', date: entry.date, time: entry.startTime },
+      { prefix: 'end', label: 'finalización del evento', date: entry.endDate, time: entry.endTime },
+      { prefix: 'teardown', label: 'desmontaje', date: entry.teardownDate, time: entry.teardownTime },
+      { prefix: 'equipmentIn', label: 'regreso a bodega', date: entry.equipmentInDate, time: entry.equipmentInTime }
+    ];
+    const hasScheduleData = pairs.some((pair) => pair.time || pair.prefix !== 'start' && pair.date);
+    for (const pair of pairs) {
+      const refs = refsFor(pair.prefix);
+      if (pair.date && !validDate(pair.date)) details.push(withRefs(`Fecha inválida de ${pair.label}: «${pair.date}»`, refs));
+      if (pair.time && !validTime(pair.time)) details.push(withRefs(`Hora inválida de ${pair.label}: «${pair.time}»`, refs));
+      if (!!pair.date !== !!pair.time && (pair.prefix !== 'start' || hasScheduleData)) details.push(withRefs(`Falta la ${pair.date ? 'hora' : 'fecha'} de ${pair.label}`, refs));
+    }
+    if (!['', 'yes', 'no'].includes(entry.setupApplies || '')) details.push('Indique si aplica montaje');
+    const sequence = pairs.filter((pair) => (pair.prefix !== 'setup' || entry.setupApplies === 'yes') && validDate(pair.date) && validTime(pair.time));
+    for (let index = 1; index < sequence.length; index++) {
+      const before = sequence[index - 1], after = sequence[index];
+      if (joinDateTime(before.date, before.time) > joinDateTime(after.date, after.time)) details.push(withRefs(`${before.prefix === 'end' ? 'La' : 'El'} ${before.label} (${displayDate(before.date)} ${before.time}) queda después ${after.prefix === 'end' ? 'de la' : 'del'} ${after.label} (${displayDate(after.date)} ${after.time})`, [...refsFor(before.prefix), ...refsFor(after.prefix)]));
+    }
+    // Routine derivations and original order issues are provenance, not new
+    // errors. Validate the current fields so a corrected conflict disappears.
+    for (const issue of [...(event.issues || []), ...(event.warnings || [])]) {
+      if (!['conflicting_schedule', 'conflicting_schedule_weekday', 'conflicting_setup', 'unreadable_schedule', 'conflicting_metadata'].includes(issue.code)) continue;
+      // Conflicting source values remain ambiguous even if an unrelated UI
+      // field is edited. In particular start/end can share one range cell.
+      details.push(withRefs(issue.message || 'Revise el dato original no reconocido', issue.refs));
+    }
+    return [...new Set(details)];
   }
   function selectionError(preview, selections) {
     if (!preview || !Array.isArray(preview.events)) return "Lea un archivo antes de cargar eventos.";
@@ -88,20 +142,22 @@
     const chosen = (selections || []).filter((entry) => entry.selected), ids = new Set(chosen.map((entry) => entry.id));
     const events = preview.events.filter((event) => ids.has(event.id)), warnings = [];
     const add = (code, message, eventIds) => { if (eventIds.length) warnings.push({ code, message, eventIds: [...new Set(eventIds)] }); };
-    add("missing_metadata", "Hay eventos con fecha, ubicación o referencia pendientes. Se cargarán como borradores.", chosen.filter((entry) => !entry.date || !entry.place).map((entry) => entry.id));
+    for (const entry of chosen) {
+      const missing = [...(!entry.date ? ['fecha del evento'] : []), ...(!entry.place ? ['ubicación'] : [])];
+      if (missing.length) add('missing_metadata', `${eventLabel(events.find((event) => event.id === entry.id))}: falta ${missing.join(' y ')}. Se cargará como borrador.`, [entry.id]);
+    }
     add('replace_import','Se reemplazarán COMPLETAMENTE los cuadros existentes elegidos. El archivo nuevo será la fuente completa; no se mezclarán filas, notas ni cantidades de la versión anterior.',chosen.filter(entry=>entry.importResolution?.startsWith('replace:')).map(entry=>entry.id));
     add("source_observations", "Algunos datos originales necesitan interpretación. Sus filas y celdas se conservarán completas como pendientes, sin inventar cantidades.", events.filter((event) => (event.issues || []).some((issue) => !/schedule|setup/.test(issue.code || "") && issue.code !== "conflicting_metadata")).map((event) => event.id));
-    const schedulePending = chosen.filter((entry) => {
+    for (const entry of chosen) {
       const event = events.find((source) => source.id === entry.id);
-      const hasScheduleData = [entry.setupDate, entry.setupTime, entry.startTime, entry.endDate, entry.endTime, entry.teardownDate, entry.teardownTime, entry.equipmentInDate, entry.equipmentInTime].some(Boolean);
-      const sourceWarning = [...(event.issues || []), ...(event.warnings || [])].some((issue) => (issue.code !== "incomplete_schedule" || hasScheduleData) && (/schedule|setup/.test(issue.code || "") || issue.code === "conflicting_metadata"));
-      const dates = [entry.date, entry.endDate, entry.teardownDate, entry.equipmentInDate, ...(entry.setupApplies !== "no" ? [entry.setupDate] : [])], times = [entry.startTime, entry.endTime, entry.teardownTime, entry.equipmentInTime, ...(entry.setupApplies !== "no" ? [entry.setupTime] : [])];
-      const sequence = [entry.setupApplies === "yes" ? joinDateTime(entry.setupDate, entry.setupTime) : "", joinDateTime(entry.date, entry.startTime), joinDateTime(entry.endDate, entry.endTime), joinDateTime(entry.teardownDate, entry.teardownTime), joinDateTime(entry.equipmentInDate, entry.equipmentInTime)].filter(Boolean);
-      const partial = ["end", "teardown", "equipmentIn", ...(entry.setupApplies !== "no" ? ["setup"] : [])].some((prefix) => !!entry[prefix + "Date"] !== !!entry[prefix + "Time"]) || !!entry.startTime && !entry.date;
-      return sourceWarning || partial || !["", "yes", "no"].includes(entry.setupApplies || "") || dates.some((value) => value && !validDate(value)) || times.some((value) => value && !validTime(value)) || sequence.some((value, index) => index && value < sequence[index - 1]);
-    });
-    add("schedule_pending", "Hay datos del evento, fechas u horarios pendientes, calculados o contradictorios. Podrá corregirlos en los borradores antes de confirmar reservas.", schedulePending.map((entry) => entry.id));
-    add("schedule_suggestion", "Se propone una fecha de evento coherente con los días y horarios escritos en el archivo. La fecha original también se conservará.", events.filter((event) => event.scheduleSuggestion && chosen.find((entry) => entry.id === event.id)?.suggestionApplied).map((event) => event.id));
+      const original = { ...scheduleFor(event), date: text(event.date) };
+      const unchanged = Object.entries(original).every(([field, value]) => text(entry[field]) === text(value));
+      if (event.scheduleSuggestion && unchanged) add('schedule_suggestion', suggestionMessage(event), [entry.id]);
+      else {
+        const details = scheduleDiagnostics(event, entry);
+        if (details.length) add('schedule_pending', `${eventLabel(event)}: ${details.join('; ')}.`, [entry.id]);
+      }
+    }
     const duplicates = duplicateGroups(preview).filter((group) => group.eventIds.some((id) => ids.has(id)) && !duplicateChoice(group, selections));
     add("unresolved_duplicates", "Los cuadros idénticos seleccionados se cargarán como eventos independientes. No se eliminará ninguno automáticamente.", duplicates.flatMap((group) => group.eventIds.filter((id) => ids.has(id))));
     const references = preview.events.filter((event) => !ids.has(event.id) && !editableEvent(event));
@@ -193,10 +249,11 @@
     const editable = editableEvent(event);
     const importMarkup=conflict ? '<section class="equipment-batch-correction"><strong>Este cuadro coincide con un evento cargado</strong><p>Elija qué hacer. Reemplazar usa el cuadro nuevo completo y requiere confirmación.</p><label>Acción de importación<select data-batch-reimport="'+index+'"><option value="">Pendiente: elegir acción</option>'+conflict.matches.map(match=>'<optgroup label="'+escape((match.place || match.name || 'Evento')+' · '+(match.date || 'Fecha pendiente'))+'"><option value="reuse:'+escape(match.id)+'"'+(selection.importResolution==='reuse:'+match.id?' selected':'')+'>Usar el actual y conservar sus ediciones</option><option value="replace:'+escape(match.id)+'"'+(selection.importResolution==='replace:'+match.id?' selected':'')+'>Reemplazar completamente con este cuadro</option></optgroup>').join('')+'<option value="separate"'+(selection.importResolution==='separate'?' selected':'')+'>Es otro evento: crear independiente</option></select></label></section>' : '';
     const ocrMarkup=(event.sourceCells || []).some(cell=>cell.ocrConfidence!==undefined)?'<section class="equipment-batch-correction"><strong>Texto reconocido desde un escaneo</strong><p>El OCR puede equivocarse. Abra el PDF original y compare cada fila, cantidad, categoría y observación. Los fragmentos poco legibles bloquean la carga.</p><label><input type="checkbox" data-batch-ocr-review="'+index+'"'+(selection.ocrReviewed?' checked':'')+'> Revisé todas las cantidades y descripciones contra el PDF original</label></section>':'';
-    const fields = [["date", "Fecha del evento", "date"], ["place", "Ubicación", "text"], ["type", "Tipo de evento", "text"], ["name", "Cliente / referencia", "text"]];
+    const fields = [["date", "Fecha del evento", "date"], ["place", "Ubicación", "text"], ["type", "Tipo de evento (opcional)", "text"], ["name", "Cliente / referencia", "text"]];
+    const suggestionMarkup = event.scheduleSuggestion ? `<section class="equipment-batch-correction"><strong>Revisar la fecha de este evento</strong><p>${escape(suggestionMessage(event))}</p><label><input type="checkbox" data-batch-suggestion="${index}"${selection.suggestionApplied ? ' checked' : ''}${!editable ? ' disabled' : ''}> Usar fecha propuesta: ${escape(displayDate(event.scheduleSuggestion.date))}</label><small>Al desmarcar se restauran las fechas y horas originales. Las celdas del archivo siempre se conservan.</small></section>` : '';
     const schedule = [["setupDate", "Fecha del montaje", "date"], ["setupTime", "Hora del montaje", "time"], ["startTime", "Hora de inicio del evento", "time"], ["endDate", "Fecha de finalización", "date"], ["endTime", "Hora de finalización del evento", "time"], ["teardownDate", "Fecha del desmontaje", "date"], ["teardownTime", "Hora del desmontaje", "time"], ["equipmentInDate", "Fecha de regreso a bodega", "date"], ["equipmentInTime", "Hora de regreso a bodega", "time"]];
     const scheduleMarkup = `<fieldset class="equipment-batch-schedule"><legend>Fechas y horarios para la logística</legend><div class="equipment-batch-fields"><label>¿Aplica montaje?<select data-batch-field="setupApplies" data-batch-index="${index}"${!editable ? " disabled" : ""}><option value=""${!selection.setupApplies ? " selected" : ""}>Pendiente de confirmar</option><option value="yes"${selection.setupApplies === "yes" ? " selected" : ""}>Sí, requiere montaje</option><option value="no"${selection.setupApplies === "no" ? " selected" : ""}>No aplica</option></select></label>${schedule.map(([field, label, type]) => `<label>${label}<input type="${type}" data-batch-field="${field}" data-batch-index="${index}" value="${escape(selection[field])}"${field.startsWith("setup") ? ` data-batch-mount="${index}"` : ""}${!editable || field.startsWith("setup") && selection.setupApplies === "no" ? " disabled" : ""}></label>`).join("")}</div><p>Solo se completan los horarios identificados en el archivo. Revise las fechas; si finaliza después de medianoche, indique el día correcto. El regreso a bodega permite comprobar cuándo vuelve a estar disponible el equipo.</p></fieldset>`;
-    return `<article class="equipment-batch-card" data-batch-card="${index}"><header><label class="equipment-batch-choice"><input type="checkbox" data-batch-select="${index}"${selection.selected ? " checked" : ""}${!editable ? " disabled" : ""}><strong>${escape(event.place || event.client || `Cuadro ${index + 1}`)}</strong></label><span>${escape(event.sourceSheet)} · Cuadro ${index + 1}</span></header><p>${event.itemCount} líneas de equipo · ${event.zeroCount} cantidades en 0 · ${sourceCellsFor(event).length} celdas conservadas</p><div class="equipment-batch-fields">${fields.map(([field, label, type]) => `<label>${label}<input type="${type}" data-batch-field="${field}" data-batch-index="${index}" value="${escape(selection[field])}"${!editable ? " disabled" : ""}></label>`).join("")}</div>${importMarkup}${ocrMarkup}${scheduleMarkup}${event.contracted ? `<p class="equipment-batch-contract"><strong>Equipo contratado:</strong> ${escape(event.contracted)}</p>` : ""}<details class="equipment-batch-source"><summary>Revisar cuadro completo y sus categorías</summary><div class="equipment-batch-table-scroll"><table><thead><tr><th>Cantidad</th><th>Descripción, encabezado u observación</th><th>Origen</th></tr></thead><tbody>${(event.sections || []).flatMap((section) => section.rows || []).map((row) => `<tr data-batch-row-type="${escape(row.type)}"><td>${row.quantity === null || row.quantity === undefined ? "" : escape(row.quantity)}</td><td>${escape(row.description)}${row.notes?.length ? `<small>${escape(row.notes.join(" · "))}</small>` : ""}</td><td>${escape((row.cells || []).map((cell) => cell.address || cell.ref).join(", "))}</td></tr>`).join("")}</tbody></table></div></details>${renderSource(event.sourceCells || [])}${(event.sourceImport?.referenceTables || []).map((reference) => `<details class="equipment-batch-source"><summary>Cuadro original de referencia (${sourceCellsFor(reference).length} celdas conservadas)</summary>${renderSource(sourceCellsFor(reference))}</details>`).join("")}</article>`;
+    return `<article class="equipment-batch-card" data-batch-card="${index}"><header><label class="equipment-batch-choice"><input type="checkbox" data-batch-select="${index}"${selection.selected ? " checked" : ""}${!editable ? " disabled" : ""}><strong>${escape(event.place || event.client || `Cuadro ${index + 1}`)}</strong></label><span>${escape(event.sourceSheet)} · Cuadro ${index + 1}</span></header><p>${event.itemCount} líneas de equipo · ${event.zeroCount} cantidades en 0 · ${sourceCellsFor(event).length} celdas conservadas</p><div class="equipment-batch-fields">${fields.map(([field, label, type]) => `<label>${label}<input type="${type}" data-batch-field="${field}" data-batch-index="${index}" value="${escape(selection[field])}"${!editable ? " disabled" : ""}></label>`).join("")}</div>${importMarkup}${ocrMarkup}${suggestionMarkup}${scheduleMarkup}${event.contracted ? `<p class="equipment-batch-contract"><strong>Equipo contratado:</strong> ${escape(event.contracted)}</p>` : ""}<details class="equipment-batch-source"><summary>Revisar cuadro completo y sus categorías</summary><div class="equipment-batch-table-scroll"><table><thead><tr><th>Cantidad</th><th>Descripción, encabezado u observación</th><th>Origen</th></tr></thead><tbody>${(event.sections || []).flatMap((section) => section.rows || []).map((row) => `<tr data-batch-row-type="${escape(row.type)}"><td>${row.quantity === null || row.quantity === undefined ? "" : escape(row.quantity)}</td><td>${escape(row.description)}${row.notes?.length ? `<small>${escape(row.notes.join(" · "))}</small>` : ""}</td><td>${escape((row.cells || []).map((cell) => cell.address || cell.ref).join(", "))}</td></tr>`).join("")}</tbody></table></div></details>${renderSource(event.sourceCells || [])}${(event.sourceImport?.referenceTables || []).map((reference) => `<details class="equipment-batch-source"><summary>Cuadro original de referencia (${sourceCellsFor(reference).length} celdas conservadas)</summary>${renderSource(sourceCellsFor(reference))}</details>`).join("")}</article>`;
   }
   function renderPreview(preview, selections) {
     const sheets = preview.sheets || [];
@@ -442,6 +499,16 @@
       if (element.dataset.batchReimport !== undefined) selections[Number(element.dataset.batchReimport)].importResolution=element.value;
       if (element.dataset.batchOcrReview !== undefined) selections[Number(element.dataset.batchOcrReview)].ocrReviewed=element.checked;
       if (element.dataset.batchSelect !== undefined) selections[Number(element.dataset.batchSelect)].selected = element.checked;
+      if (element.dataset.batchSuggestion !== undefined) {
+        const index = Number(element.dataset.batchSuggestion);
+        if (preview.events[index] && selections[index]) {
+          selections[index] = reviewScheduleSuggestion(preview.events[index], selections[index], element.checked);
+          dialog.querySelectorAll('[data-batch-field]').forEach((input) => {
+            if (Number(input.dataset.batchIndex) === index) input.value = selections[index][input.dataset.batchField] || '';
+          });
+          dialog.querySelectorAll('[data-batch-mount]').forEach((input) => { if (Number(input.dataset.batchMount) === index) input.disabled = selections[index].setupApplies === 'no'; });
+        }
+      }
       if (element.dataset.batchDuplicate !== undefined) {
         const group = duplicateGroups(preview)[Number(element.dataset.batchDuplicate)];
         if (group) selections.forEach((selection) => {
@@ -475,6 +542,11 @@
         }
         if (field === "endDate") selection.endDateEdited = true;
         selection[field] = element.value;
+        if (source?.scheduleSuggestion && !['type', 'place', 'name'].includes(field)) {
+          const suggested = reviewScheduleSuggestion(source, selection, true);
+          selection.suggestionApplied = selection.suggestionApplied && ['date', ...Object.keys(scheduleFor(source))].every((key) => text(selection[key]) === text(suggested[key]));
+          dialog.querySelectorAll('[data-batch-suggestion]').forEach((input) => { if (Number(input.dataset.batchSuggestion) === index) input.checked = selection.suggestionApplied; });
+        }
       }
       update();
     }
@@ -484,5 +556,5 @@
     const api = { open, openFile, close, read, getPreview: () => preview ? clone(preview) : null, getImported: () => imported ? { events: clone(imported.events), result: imported.result } : null, destroy() { if (applying || reporting) return false; close(); destroyed = true; imported = null; opener.removeEventListener("click", open); doc.removeEventListener?.("live:session-updated", update); dialog.remove(); instances.delete(doc); return true; } };
     instances.set(doc, api); return api;
   }
-  return { importConflicts,decisionsFor,selectionsFor, selectionError, selectionWarnings, prepareEvents, totals, renderPreview, renderEvent, markup, init };
+  return { importConflicts,decisionsFor,selectionsFor, reviewScheduleSuggestion, selectionError, selectionWarnings, prepareEvents, totals, renderPreview, renderEvent, markup, init };
 });
