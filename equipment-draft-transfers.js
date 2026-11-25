@@ -49,7 +49,7 @@
     const bridge = options.bridge, doc = options.document || document;
     const fetcher = options.fetch || ((...args)=>fetch(...args));
     const location = () => root.EquipmentLocation || root.window?.EquipmentLocation;
-    let committedIds = [], committedEstimates = [], committedEdits = [], committedSplitOrigins = [], committedExplicit = false, cached = null, cachedKey = '', requestVersion = 0, lastError='';
+    let committedIds = [], committedEstimates = [], committedEdits = [], committedSplitOrigins = [], committedExplicit = false, cached = null, cachedKey = '', requestVersion = 0, resetVersion = 0, lastError='';
     let overlay = null, confirmation = null, workEvents = null, workIds = [], workEstimates = [], workEdits = [], workSplitOrigins = [], workPlan = null, workBusy = false, modalVersion = 0, lastFocus = null, openedSourceKey = '', initialDraftKey = '';
     const currentEvents = () => copy(bridge.events());
     const estimates = edits => mergeEstimates(bridge.transferOptions?.()?.routeEstimates || [],edits);
@@ -296,20 +296,32 @@
     }
     function confirmAction(title,message,onAccept) {
       if(!overlay||confirmation)return;
+      const version=modalVersion;
       confirmation=doc.createElement('div');confirmation.className='equipment-draft-confirm-overlay';
       confirmation.innerHTML=`<section class="equipment-draft-confirm" role="alertdialog" aria-modal="true" aria-labelledby="equipmentDraftConfirmTitle"><button type="button" data-draft-confirm-close aria-label="Cerrar confirmación sin aplicar">×</button><h3 id="equipmentDraftConfirmTitle">${esc(title)}</h3><p>${esc(message)}</p><div><button type="button" data-draft-confirm-cancel>Cancelar</button><button type="button" data-draft-confirm-accept>Aceptar</button></div></section>`;
       overlay.querySelector('.equipment-draft-dialog').inert=true;overlay.append(confirmation);
-      confirmation.querySelector('[data-draft-confirm-accept]').addEventListener('click',()=>{dismissConfirmation();return onAccept();});
-      confirmation.querySelectorAll('[data-draft-confirm-cancel],[data-draft-confirm-close]').forEach(button=>button.addEventListener('click',dismissConfirmation));
+      const activeConfirmation=confirmation;
+      const isCurrent=()=>!!overlay&&modalVersion===version&&confirmation===activeConfirmation;
+      confirmation.querySelector('[data-draft-confirm-accept]').addEventListener('click',()=>{if(!isCurrent())return;dismissConfirmation();return onAccept();});
+      confirmation.querySelectorAll('[data-draft-confirm-cancel],[data-draft-confirm-close]').forEach(button=>button.addEventListener('click',()=>{if(isCurrent())dismissConfirmation();}));
       confirmation.querySelector('[data-draft-confirm-cancel]').focus?.();
     }
     function close() {
       modalVersion++;confirmation?.remove();confirmation=null;overlay?.remove();overlay=null;workEvents=null;workIds=[];workEdits=[];workEstimates=[];workSplitOrigins=[];workPlan=null;workBusy=false;lastFocus?.focus?.();
     }
+    function reset() {
+      // A new plan must not inherit a pending response or an accepted choice
+      // from the discarded one. Closing alone intentionally keeps selections.
+      resetVersion++;requestVersion++;close();
+      committedIds=[];committedEstimates=[];committedEdits=[];committedSplitOrigins=[];committedExplicit=false;
+      cached=null;cachedKey='';lastError='';openedSourceKey='';initialDraftKey='';lastFocus=null;
+      notify();
+    }
     async function commit(snapshot,version) {
       if(!overlay||version!==modalVersion||workBusy)return;
       if(!allowed()){status('Su usuario ya no tiene permiso para aplicar estos cambios.',true);return;}
       if(sourceKey()!==openedSourceKey){status('Los eventos o el inventario cambiaron mientras editaba. Cierre y vuelva a abrir el trasiego para revisar los datos actuales. No se aplicó ningún cambio.',true);return;}
+      const generation=resetVersion;
       setBusy(true);status('Validando cambios con el inventario actual antes de aplicarlos…');
       try{
         let plan=await calculate(snapshot.events,snapshot.ids,estimates(snapshot.estimates),snapshot.edits,snapshot.splitOrigins);
@@ -330,7 +342,7 @@
         if(updated===false)throw new Error('No se pudieron guardar los cambios del evento. Su selección anterior se conserva.');
         if(updated&&typeof updated.then==='function')throw new Error('La actualización del evento debe aplicarse de forma inmediata. Recargue la página.');
         committedIds=plan.selectedTransfers.map(route=>route.id);committedEstimates=copy(snapshot.estimates);committedEdits=copy(snapshot.edits);committedSplitOrigins=[...snapshot.splitOrigins];committedExplicit=true;cached=null;cachedKey='';
-        close();await refresh({force:true});options.onStatus?.('Cambios aplicados al plan. Renta y compra usan esta selección; las cargas adicionales siguen siendo recomendaciones. No se registraron salidas físicas.');
+        close();await refresh({force:true});if(generation===resetVersion)options.onStatus?.('Cambios aplicados al plan. Renta y compra usan esta selección; las cargas adicionales siguen siendo recomendaciones. No se registraron salidas físicas.');
       }catch(error){if(overlay&&version===modalVersion)status(error.message,true);}
       finally{if(overlay&&version===modalVersion){setBusy(false);renderPlan();}}
     }
@@ -367,7 +379,7 @@
       overlay.querySelector('[data-draft-close]').focus?.();await recalculate(!committedExplicit);
     }
     const dateLabelForModal=value=>/^\d{4}-\d{2}-\d{2}$/.test(value||'')?value.split('-').reverse().join('/'):'Fecha pendiente';
-    return {show,close,refresh,result,requestOptions,error:()=>lastError,selection:()=>({selectedTransferIds:[...committedIds],transferEdits:copy(committedEdits),routeEstimates:copy(committedEstimates),splitAuthorizedOrigins:[...committedSplitOrigins]}),isOpen:()=>!!overlay};
+    return {show,close,reset,refresh,result,requestOptions,error:()=>lastError,selection:()=>({selectedTransferIds:[...committedIds],transferEdits:copy(committedEdits),routeEstimates:copy(committedEstimates),splitAuthorizedOrigins:[...committedSplitOrigins]}),isOpen:()=>!!overlay};
   }
   return {create,mergeEstimates,localTime,eventPatches,recommendedIds,recommendedEdits,originDestinations};
 });

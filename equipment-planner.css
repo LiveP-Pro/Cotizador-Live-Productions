@@ -1,4 +1,5 @@
 #equipmentPlannerHub{margin:20px 0;border:1px solid #d9e1e9;border-radius:12px;background:#fff;padding:20px;color:#172a3b}
+.equipment-planner-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}.equipment-planner-heading h2{margin:0!important}.equipment-planner-heading button{padding:10px 14px;border:1px solid #b6c3cf;border-radius:8px;background:#f5f7fa;color:#223b4d;font-weight:700;cursor:pointer;min-height:44px}.equipment-planner-heading button:disabled{opacity:.55;cursor:wait}
 #equipmentPlannerHub h2{margin:0 0 8px;font-size:23px}#equipmentPlannerHub p{line-height:1.5;color:#495e70}
 .equipment-planner-counts,.equipment-planner-downloads{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}.equipment-planner-counts span{background:#edf3f7;padding:12px;border-radius:8px}.equipment-planner-counts strong{font-size:21px}
 .equipment-planner-downloads button,#equipmentPlannerPending button,#equipmentPlannerConfirmEvent{min-height:42px;padding:10px 14px;border:1px solid #b7c5d2;border-radius:7px;background:#172a3b;color:white;font-weight:700;cursor:pointer}

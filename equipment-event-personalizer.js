@@ -393,7 +393,7 @@
     const session = createSession(options);
     const inventory = () => typeof options.inventory === "function" ? options.inventory() : options.inventory || [];
     const groups = () => serviceGroups(typeof options.serviceGroups === "function" ? options.serviceGroups() : options.serviceGroups || []);
-    let page = 0, busyOpening = false, destroyed = false, clipboardDirty = false, previewBusy = false, previewGeneration = 0, importBusy = false, importGeneration = 0, completed = null;
+    let page = 0, busyOpening = false, openingGeneration = 0, destroyed = false, clipboardDirty = false, previewBusy = false, previewGeneration = 0, importBusy = false, importGeneration = 0, completed = null;
     const status = (value) => { get("equipmentPersonalizerStatus").textContent = value; };
     function errors(entries) {
       const panel = get("equipmentPersonalizerErrors");
@@ -480,6 +480,7 @@
     }
     function close() {
       if (!session.discard()) return false;
+      openingGeneration += 1; busyOpening = false;
       stopImport();
       stopPreview();
       if (dialog.open) dialog.close();
@@ -489,18 +490,19 @@
     async function open() {
       if (session.busy || busyOpening || destroyed) return false;
       if (dialog.open) return true;
-      busyOpening = true;
+      const generation = ++openingGeneration; busyOpening = true;
       try {
         if (typeof options.beforeOpen === "function") await options.beforeOpen();
-        if (destroyed) return false;
+        if (destroyed || generation !== openingGeneration) return false;
         session.open(); clearForm();
         dialog.showModal(); get("equipmentPersonalizer-place").focus();
         return true;
       } catch (error) {
+        if (destroyed || generation !== openingGeneration) return false;
         if (typeof options.onError === "function") options.onError(error);
         else if (typeof console !== "undefined") console.error("No se pudo abrir el cuadro personalizado:", error);
         return false;
-      } finally { busyOpening = false; }
+      } finally { if (generation === openingGeneration) busyOpening = false; }
     }
     function readRowField(target) {
       const element = target?.closest?.("[data-personalizer-row]");

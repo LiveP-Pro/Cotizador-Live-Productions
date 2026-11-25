@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
   <head>
-  <meta name="equipment-release" content="20261125-plan-scope-01">
+  <meta name="equipment-release" content="20261125-reset-plan-01">
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cotizador Live Productions</title>
@@ -20,10 +20,10 @@
     <link rel="stylesheet" href="equipment-event-personalizer.css?v=20261123-simple-transfer-summary-01" />
     <link rel="stylesheet" href="equipment-extras-library.css?v=20261020-extras-compactos-01" />
     <link rel="stylesheet" href="equipment-workspace.css?v=20261122-event-times-users-01" />
-    <script src="equipment-event-personalizer.js?v=20261123-simple-transfer-summary-01" defer></script>
+    <script src="equipment-event-personalizer.js?v=20261125-reset-plan-01" defer></script>
     <script src="equipment-extras-library.js?v=20261122-event-times-users-01" defer></script>
     <script src="equipment-workspace.js?v=20261122-event-times-users-01" defer></script>
-    <link rel="stylesheet" href="equipment-planner.css?v=20261123-selected-transfers-01" />
+    <link rel="stylesheet" href="equipment-planner.css?v=20261125-reset-plan-01" />
     <link rel="stylesheet" href="equipment-batch-events.css?v=20261123-selected-transfers-01" />
     <script src="equipment-identity.js?v=20261123-simple-transfer-summary-01" defer></script>
     <script src="equipment-document-audit.js?v=20261122-event-times-users-01"></script>
@@ -33,10 +33,10 @@
     <script src="equipment-import-identity.js?v=20261123-selected-transfers-01" defer></script>
     <script src="equipment-location.js?v=20261124-route-bundles-editor-01" defer></script>
     <script src="equipment-draft-substitutions.js?v=20261125-plan-scope-01" defer></script>
-    <script src="equipment-draft-transfers.js?v=20261125-plan-scope-01" defer></script>
-    <script src="equipment-planner.js?v=20261123-selected-transfers-01" defer></script>
-    <script src="equipment-batch-events.js?v=20261123-selected-transfers-02" defer></script>
-    <script src="equipment.js?v=20261125-plan-scope-01" defer></script>
+    <script src="equipment-draft-transfers.js?v=20261125-reset-plan-01" defer></script>
+    <script src="equipment-planner.js?v=20261125-reset-plan-01" defer></script>
+    <script src="equipment-batch-events.js?v=20261125-reset-plan-01" defer></script>
+    <script src="equipment.js?v=20261125-reset-plan-01" defer></script>
     <script src="warehouse-import-review.js?v=20261117-import-review-01" defer></script>
     <script src="warehouse-import-corrections.js?v=20261117-import-review-01" defer></script>
     <script src="equipment-handoffs.js?v=20261123-simple-transfer-summary-01" defer></script>
@@ -275,7 +275,7 @@
             <p>Agregue los eventos personalizados que necesite, uno tras otro. El resumen reúne sus equipos y consulta las existencias de Contabilidad de Equipo.</p>
           </div>
           <section id="equipmentPlannerHub" aria-labelledby="equipmentPlannerTitle">
-            <h2 id="equipmentPlannerTitle">Plan de la semana</h2>
+            <div class="equipment-planner-heading"><h2 id="equipmentPlannerTitle">Plan de la semana</h2><button id="equipmentPlannerResetButton" type="button">Limpiar todo y empezar de cero</button></div>
             <div id="equipmentPlannerOverview" aria-live="polite"></div>
             <div class="equipment-planner-downloads" aria-label="Descargas provisionales sin reservas">
               <button type="button" id="equipmentDraftTransferButton" data-live-permission="equipment.reports">Generar trasiego</button>
@@ -372,7 +372,7 @@
             <button id="equipmentReviewWindowButton" type="button" class="is-active">Revisión de equipo</button>
             <button id="equipmentSummaryWindowButton" type="button">Resumen de Equipo</button>
             <button id="equipmentTransferWindowButton" type="button" data-live-permission="equipment.reports">Trasegar equipo</button>
-            <button id="equipmentClearAllButton" type="button">Limpiar vista</button>
+            <button id="equipmentClearAllButton" type="button">Limpiar todo y empezar de cero</button>
           </div>
 
           <div class="equipment-window-shell">
@@ -738,6 +738,13 @@
               </footer>
             </div>
           </div>
+          <dialog id="equipmentPlanResetDialog" class="equipment-logistics-dialog no-print" aria-labelledby="equipmentPlanResetTitle" aria-describedby="equipmentPlanResetDescription">
+            <section class="equipment-logistics-modal">
+              <header><h2 id="equipmentPlanResetTitle">¿Limpiar todo y empezar de cero?</h2><button id="equipmentPlanResetClose" type="button" aria-label="Cerrar sin limpiar">×</button></header>
+              <div class="equipment-logistics-content"><p id="equipmentPlanResetDescription">Se quitarán los eventos cargados, las selecciones y ediciones de trasiego y los reportes del plan actual.</p><p>El inventario, los servicios y las reservas guardadas se conservarán. Después podrás elegir un archivo y comenzar un plan nuevo.</p></div>
+              <footer><button id="equipmentPlanResetCancel" type="button">Cancelar</button><button id="equipmentPlanResetAccept" type="button">Limpiar y cargar archivo</button></footer>
+            </section>
+          </dialog>
           <dialog id="equipmentCatalogConfirmDialog" class="equipment-logistics-dialog no-print" aria-labelledby="equipmentCatalogConfirmTitle">
             <section class="equipment-logistics-modal">
               <header><h2 id="equipmentCatalogConfirmTitle">Guardar cambios permanentes</h2><button id="equipmentCatalogConfirmClose" type="button" aria-label="Cerrar y descartar cambios">X</button></header>

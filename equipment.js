@@ -86,6 +86,7 @@ const equipmentPlannerDirtyIds = new Set();
 // a background agenda refresh must never add another booking to that plan.
 let equipmentPlanEventIds = null;
 let equipmentPlannerInstance = null;
+let equipmentPlanResetPending = false;
 const EQUIPMENT_TRANSFER_BUFFER_MINUTES = 120;
 
 function createEquipmentWarehouseDispatchId() {
@@ -6212,19 +6213,79 @@ function removeEquipmentActiveWindow() {
   removeEquipmentEventById(equipmentState.selectedEventId);
 }
 
-function clearEquipmentWorkingArea() {
-  if (!window.confirm(equipmentSharedWorkspace.enabled ? "¿Limpiar esta vista? Los eventos y sus reservas se conservarán en la agenda compartida." : "¿Está seguro que desea limpiar todo a 0?")) return;
-  equipmentState.events = [];
-  equipmentPlanEventIds = new Set();
-  resetEquipmentWindowDraft();
-  equipmentState.summaryTransferRoutes = [];
-  equipmentState.activeSummaryTransferRouteId = "";
-  equipmentState.summaryTransferEnabled = false;
-  equipmentState.summaryTransferAutomatic = true;
-  invalidateEquipmentRentalPreview();
-  equipmentState.inventory.clear();
-  equipmentState.observations.clear();
-  renderEquipmentModule();
+function equipmentPlanResetBlocked() {
+  return equipmentSharedWorkspace.saving || equipmentState.stockIngressSaving || !!equipmentState.pendingStockIngressRequest
+    || equipmentExtraEntryBusy || equipmentDjServiceSelectionBusy
+    || !!equipmentSharedWorkspace.purchaseSyncPromise || Number(equipmentSharedWorkspace.state?.pending) > 0
+    || equipmentSharedWorkspace.batchImport?.isBusy?.() || equipmentSharedWorkspace.extras?.getState?.()?.pending;
+}
+
+function requestEquipmentPlanResetConfirmation() {
+  const dialog = equipmentQuery("#equipmentPlanResetDialog");
+  if (!dialog || typeof dialog.showModal !== "function") {
+    return Promise.resolve(typeof window.confirm === "function" && window.confirm("¿Limpiar todo y empezar de cero? Se quitarán los eventos y trasiegos del plan actual. El inventario, los servicios y las reservas guardadas se conservarán."));
+  }
+  if (dialog.open) return Promise.resolve(false);
+  return new Promise(resolve => {
+    const accept = equipmentQuery("#equipmentPlanResetAccept"), cancel = equipmentQuery("#equipmentPlanResetCancel"), close = equipmentQuery("#equipmentPlanResetClose");
+    let finished = false;
+    const finish = accepted => {
+      if (finished) return;
+      finished = true;
+      accept.removeEventListener("click", onAccept); cancel.removeEventListener("click", onCancel); close.removeEventListener("click", onCancel);
+      dialog.removeEventListener("cancel", onEscape); dialog.removeEventListener("close", onCancel);
+      if (dialog.open) dialog.close();
+      resolve(accepted);
+    };
+    const onAccept = () => finish(true), onCancel = () => finish(false), onEscape = event => { event.preventDefault(); finish(false); };
+    accept.addEventListener("click", onAccept); cancel.addEventListener("click", onCancel); close.addEventListener("click", onCancel);
+    dialog.addEventListener("cancel", onEscape); dialog.addEventListener("close", onCancel);
+    dialog.showModal(); cancel.focus?.();
+  });
+}
+
+async function clearEquipmentWorkingArea() {
+  if (equipmentPlanResetPending) return false;
+  const waiting = equipmentState.pendingStockIngressRequest
+    ? "Hay un ingreso a Contabilidad pendiente de confirmar. Reintente esa operación antes de limpiar el plan para evitar duplicar el ingreso."
+    : "Espere a que termine la operación actual antes de limpiar el plan.";
+  if (equipmentPlanResetBlocked()) { equipmentSharedStatus(waiting, true); return false; }
+  equipmentPlanResetPending = true;
+  try {
+    if (!await requestEquipmentPlanResetConfirmation()) return false;
+    if (equipmentPlanResetBlocked()) { equipmentSharedStatus(waiting, true); return false; }
+    if (equipmentSharedWorkspace.personalizer?.close?.() === false) { equipmentSharedStatus(waiting, true); return false; }
+    if (equipmentSharedWorkspace.batchImport?.clear?.() === false) { equipmentSharedStatus(waiting, true); return false; }
+    equipmentSharedWorkspace.extras?.close?.();
+    closeEquipmentLogisticsDecision(); resolveEquipmentUnknownDecision(); resolveEquipmentDjAudioDecision();
+    equipmentState.events = [];
+    equipmentPlanEventIds = new Set();
+    equipmentPlannerDirtyIds.clear();
+    resetEquipmentWindowDraft();
+    equipmentState.summaryTransferRoutes = [];
+    equipmentState.activeSummaryTransferRouteId = "";
+    equipmentState.summaryTransferEnabled = false;
+    equipmentState.summaryTransferAutomatic = true;
+    equipmentState.summarySearchTerm = "";
+    invalidateEquipmentRentalPreview();
+    equipmentState.inventory.clear(); equipmentState.observations.clear();
+    for (const selector of ["#equipmentSummarySearch", "#equipmentPlannerSearch", "#equipmentEditableFileInput"]) {
+      const input = equipmentQuery(selector); if (input) input.value = "";
+    }
+    for (const selector of ["#equipmentPlannerOnlyPending", "#equipmentShowPendingOnly"]) {
+      const input = equipmentQuery(selector); if (input) input.checked = false;
+    }
+    equipmentSharedWorkspace.renderFingerprint = null;
+    equipmentPlannerInstance?.reset?.();
+    renderEquipmentModule();
+    const message = "Plan limpio: 0 eventos y 0 trasiegos. Elija un archivo para empezar de cero.";
+    for (const selector of ["#equipmentSaveStatus", "#equipmentPlannerStatus"]) {
+      const status = equipmentQuery(selector); if (status) status.textContent = message;
+    }
+    equipmentSharedStatus(message);
+    equipmentSharedWorkspace.batchImport?.open?.();
+    return true;
+  } finally { equipmentPlanResetPending = false; }
 }
 
 function renderEquipmentPdfPreview() {
@@ -7465,7 +7526,7 @@ function equipmentEventWithReceivedPurchases(event) {
 
 function awaitEquipmentSharedPurchaseLinks() {
   const shared = equipmentSharedWorkspace;
-  if (!shared.enabled || !shared.client || !shared.state?.loaded || shared.dirty || shared.saving || shared.purchaseSyncPromise) return shared.purchaseSyncPromise;
+  if (!shared.enabled || !shared.client || !shared.state?.loaded || shared.dirty || shared.saving || shared.purchaseSyncPromise || equipmentPlanEventIds?.size === 0) return shared.purchaseSyncPromise;
   shared.purchaseSyncPromise = Promise.resolve().then(async () => {
     let changed = false;
     for (const event of [...shared.state.events]) {
@@ -7948,6 +8009,7 @@ function initEquipmentModule() {
   equipmentQuery("#equipmentSummaryWindowButton")?.addEventListener("click", () => switchEquipmentWindow("summary"));
   equipmentQuery("#equipmentTransferWindowButton")?.addEventListener("click", () => requestEquipmentTransferDecision("preview"));
   equipmentQuery("#equipmentClearAllButton")?.addEventListener("click", clearEquipmentWorkingArea);
+  equipmentQuery("#equipmentPlannerResetButton")?.addEventListener("click", clearEquipmentWorkingArea);
   equipmentQuery("#equipmentLogisticsCloseButton")?.addEventListener("click", closeEquipmentLogisticsDecision);
   equipmentQuery("#equipmentLogisticsCancelButton")?.addEventListener("click", closeEquipmentLogisticsDecision);
   equipmentQuery("#equipmentLogisticsRentButton")?.addEventListener("click", () => runEquipmentLogisticsDecision("rent"));

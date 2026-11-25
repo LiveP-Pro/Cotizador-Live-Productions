@@ -329,6 +329,15 @@
       if (!imported) reset();
       opener.focus(); return true;
     }
+    function clear() {
+      if (destroyed || applying || reporting) return false;
+      // A fresh plan must also forget successful imports. Invalidating both
+      // tokens prevents an old read or warning approval from restoring it.
+      generation++; selectionRevision++; confirmation = null;
+      request?.abort(); request = null; busy = false;
+      if (dialog.open) dialog.close();
+      reset(); opener.focus(); return true;
+    }
     function open() {
       if (destroyed || applying || reporting) return false;
       if (!dialog.open) { if (!imported) reset(); dialog.showModal(); (get(imported ? "equipmentBatchSummary" : "equipmentBatchChoose"))?.focus(); }
@@ -553,7 +562,7 @@
     function onCancel(event) { event.preventDefault(); close(); }
     dialog.addEventListener("click", onClick); dialog.addEventListener("change", onChange); dialog.addEventListener("input", onInput); dialog.addEventListener("cancel", onCancel); opener.addEventListener("click", open);
     doc.addEventListener?.("live:session-updated", update);
-    const api = { open, openFile, close, read, getPreview: () => preview ? clone(preview) : null, getImported: () => imported ? { events: clone(imported.events), result: imported.result } : null, destroy() { if (applying || reporting) return false; close(); destroyed = true; imported = null; opener.removeEventListener("click", open); doc.removeEventListener?.("live:session-updated", update); dialog.remove(); instances.delete(doc); return true; } };
+    const api = { open, openFile, close, clear, read, isBusy: () => !destroyed && (applying || reporting), getPreview: () => preview ? clone(preview) : null, getImported: () => imported ? { events: clone(imported.events), result: imported.result } : null, destroy() { if (destroyed) return true; if (!clear()) return false; destroyed = true; opener.removeEventListener("click", open); doc.removeEventListener?.("live:session-updated", update); dialog.remove(); instances.delete(doc); return true; } };
     instances.set(doc, api); return api;
   }
   return { importConflicts,decisionsFor,selectionsFor, reviewScheduleSuggestion, selectionError, selectionWarnings, prepareEvents, totals, renderPreview, renderEvent, markup, init };

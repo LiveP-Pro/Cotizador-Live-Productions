@@ -110,6 +110,7 @@
   }
   function create(bridge) {
     let model = null, busy = false, reportViewer = null, draftTransfers = null;
+    let reportGeneration = 0, reportRequest = null, reportButton = null;
     const $ = selector => document.querySelector(selector);
     const status = message => { const target=$('#equipmentPlannerStatus'); if(target) target.textContent=message; };
     function snapshot() { return analyze(bridge.events(),bridge.inventory()); }
@@ -141,6 +142,16 @@
     function reportAllowed() {
       return typeof window === 'undefined' || !window.LiveAccess?.can || window.LiveAccess.can(window.LIVE_SESSION, 'equipment.reports');
     }
+    function reset() {
+      reportGeneration++;
+      reportRequest?.abort(); reportRequest = null;
+      if (reportButton) reportButton.disabled = false;
+      reportButton = null; busy = false;
+      reportViewer?.close?.();
+      draftTransfers?.reset?.();
+      status('');
+      render();
+    }
     async function requestReport(mode, button, request) {
       if (busy) return { ok: false, message: 'Espere a que termine la descarga actual.' };
       if (!reportAllowed()) {
@@ -149,15 +160,20 @@
         return { ok: false, message };
       }
       const printable = printableModes.includes(mode);
+      const version = reportGeneration;
+      const cancelled = () => ({ ok: false, cancelled: true, message: 'El plan se reinició. Cargue un archivo para generar otro reporte.' });
       let view = null, ticket;
+      const controller = typeof globalThis.AbortController === 'function' ? new globalThis.AbortController() : null;
+      reportRequest = controller; reportButton = button || null;
       busy = true; if(button)button.disabled=true;
       status(printable ? 'Preparando el reporte con los eventos cargados…' : 'Generando el reporte con el inventario actual de Contabilidad…');
       try {
         if (printable) {
           view = viewer();
-          ticket = view.open({ title: reportTitles[mode], onRetry: () => requestReport(mode, button, copy(request)) });
+          ticket = view.open({ title: reportTitles[mode], onRetry: () => version === reportGeneration ? requestReport(mode, button, copy(request)) : cancelled() });
         }
-        const response = await fetch('/api/cuadros-equipo/reportes/provisional',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(request)});
+        const response = await fetch('/api/cuadros-equipo/reportes/provisional',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(request),...(controller?{signal:controller.signal}:{})});
+        if (version !== reportGeneration) return cancelled();
         if (!response.ok) throw new Error(await responseError(response));
         if (!reportAllowed()) throw new Error('Su usuario ya no tiene permiso para generar este reporte.');
         const contentType = response.headers.get('Content-Type') || '';
@@ -166,6 +182,7 @@
             throw new Error('El servidor no devolvió una vista válida del reporte. Actualice la página y reintente; sus eventos se conservan.');
           }
           const markup = await response.text();
+          if (version !== reportGeneration) return cancelled();
           if (!markup.trim()) throw new Error('El servidor devolvió un reporte vacío. Puede reintentarlo sin cargar el archivo otra vez.');
           const shown = view.setContent(markup, ticket);
           status(shown ? 'Reporte listo para revisar e imprimir. Sus eventos se conservan.' : 'El reporte se cerró. Puede volver a abrirlo con los mismos eventos.');
@@ -173,7 +190,9 @@
         }
         if (/text\/html|application\/json/i.test(contentType)) throw new Error('El servidor no devolvió el archivo esperado. Sus eventos se conservan; puede reintentar.');
         const blob=await response.blob(); if(!blob.size)throw new Error('El servidor devolvió un archivo vacío. Intente nuevamente.');
+        if (version !== reportGeneration) return cancelled();
         if (mode !== 'master' && !(await blob.slice(0, 5).text()).startsWith('%PDF-')) throw new Error('El servidor no devolvió un PDF válido. Sus eventos se conservan; puede reintentar.');
+        if (version !== reportGeneration) return cancelled();
         const disposition=response.headers.get('Content-Disposition') || '';
         const encoded=/filename\*=UTF-8''([^;]+)/i.exec(disposition);
         const plain=/filename="?([^";]+)"?/i.exec(disposition);
@@ -182,10 +201,11 @@
         status('Descarga lista. Reporte provisional; no se confirmaron reservas ni movimientos de inventario.');
         return { ok: true, fileName: name };
       } catch(error) {
+        if (version !== reportGeneration) return cancelled();
         const message = error?.message || 'No se pudo abrir el reporte. Sus eventos se conservan; puede reintentar.';
         status(message); view?.fail(message, ticket); return { ok: false, message };
       }
-      finally { busy=false;if(button)button.disabled=false; }
+      finally { if (version === reportGeneration) { busy=false;reportRequest=null;reportButton=null;if(button)button.disabled=false; } }
     }
     async function download(mode, button, selectedEvents = null) {
       if (busy) return { ok: false, message: 'Espere a que termine la descarga actual.' };
@@ -281,9 +301,9 @@
       $('#equipmentPlannerSearch')?.addEventListener('input',render);$('#equipmentPlannerOnlyPending')?.addEventListener('change',render);
       $('#equipmentPlannerConfirmEvent')?.addEventListener('click',()=>bridge.confirmEvent());
       $('#equipmentDraftTransferButton')?.addEventListener('click',openTransfers);
-      render();return {render,download,openTransfers,model:()=>model};
+      render();return {render,download,openTransfers,reset,model:()=>model};
     }
-    return {init,render,download,openTransfers,model:()=>model};
+    return {init,render,download,openTransfers,reset,model:()=>model};
   }
   return {analyze,create,referenceChoices,responseError};
 });
