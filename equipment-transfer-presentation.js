@@ -18,13 +18,6 @@
     }
     return strict;
   }
-  function sameVector(a = {}, b = {}) {
-    return [...new Set([...Object.keys(a), ...Object.keys(b)])].every(id => Math.abs(positive(a[id]) - positive(b[id])) < 1e-9);
-  }
-  function betterConditional(a, b) {
-    const av = a.transferableVector || {}, bv = b.transferableVector || {};
-    return dominates(av, bv) || sameVector(av, bv) && dominates(a.additionalVector, b.additionalVector, true);
-  }
   function localDate(value) {
     const raw = text(value);
     if (!raw) return "";
@@ -64,8 +57,14 @@
       && Object.values(pair.transferableVector || {}).some(quantity => positive(quantity)) && !selectedOrigins.has(text(pair.fromEventId)));
     const conditionalDestinations = [];
     for (const origin of new Set(conditionalPairs.map(pair => pair.fromEventId))) {
-      const options = conditionalPairs.filter(pair => pair.fromEventId === origin);
-      const frontier = options.filter(candidate => !options.some(other => other !== candidate && betterConditional(other, candidate)));
+      const options = conditionalPairs.filter(pair => pair.fromEventId === origin && pair.sourceCoverage !== null && pair.sourceCoverage !== undefined
+        && Number.isFinite(Number(pair.sourceCoverage)) && Number(pair.sourceCoverage) >= 0 && Number(pair.sourceCoverage) <= 1);
+      const highest = Math.max(...options.map(pair => Number(pair.sourceCoverage)));
+      // This is a conditional recommendation by the server's measured source
+      // coverage, not a new automatic route policy or an inventory credit.
+      // Different physical references may make vectors incomparable; a unique
+      // highest percentage still gives the user a useful comparison to review.
+      const frontier = options.filter(candidate => Math.abs(Number(candidate.sourceCoverage) - highest) < 1e-9);
       if (frontier.length === 1) conditionalDestinations.push(frontier[0]);
     }
     const conditionalKeys = new Set();
@@ -93,8 +92,8 @@
       const bundle = bundles[bundleIndex], key = pairKey(bundle.fromEventId, bundle.toEventId);
       if (selected.length || selectedOrigins.has(text(bundle.fromEventId)) || bundle.status === "blocked") continue;
       const recommended = bundle.recommended === true;
-      // A conditional card uses the server's physical reference vectors and
-      // conservative dominance only. It is not a selection or rental credit.
+      // A conditional card uses the server's unique highest source coverage
+      // and physical quantity caps. It is not a selection or rental credit.
       const conditional = !recommended && bundle.timing?.feasible === true && conditionalKeys.has(key);
       if (!recommended && !conditional) continue;
       const routes = list(bundle.commonItems).map(item => ({ ...item, quantity: recommended ? positive(item.ownTransferQuantity)

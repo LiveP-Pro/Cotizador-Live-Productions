@@ -56,7 +56,7 @@ test("la vista nunca convierte una ruta día uno a tres ni un solapamiento en re
   assert.match(Presentation.build(blocked).pendingMessage, /No hay un trasiego recomendado verificable/);
 });
 
-test("una condición de viaje usa los vectores físicos sin inventar prioridad ante un empate", () => {
+test("una condición de viaje respeta el límite físico y no inventa prioridad ante un empate de coincidencia", () => {
   const input = fixture(), plan = analyze(input), bundle = plan.routeBundles.find(bundle => bundle.recommended);
   bundle.recommended = false; bundle.status = "review"; bundle.timing.requiresTimeConfirmation = true;
   const before = clone(plan), view = Presentation.build(plan);
@@ -69,7 +69,30 @@ test("una condición de viaje usa los vectores físicos sin inventar prioridad a
   const alternativePair = plan.routePolicy.pairs.find(entry => entry.fromEventId === "origen" && entry.toEventId === "parcial-a");
   alternativePair.transferableVector = clone(bundle.comparison.transferableVector);
   alternativePair.additionalVector = clone(bundle.comparison.additionalVector);
+  alternativePair.sourceCoverage = bundle.comparison.sourceCoverage;
   assert.equal(Presentation.build(plan).cards.length, 0, "no se inventa prioridad entre alternativas ambiguas");
+});
+
+test("una coincidencia única del 90% se muestra para revisar aunque los vectores sean incomparables; el empate queda pendiente", () => {
+  const inventory = { savedAt: "fuente-sintética-actual", state: { movements: [], items: Array.from({ length: 10 }, (_, index) => ({ id: `q${index}`, name: `Referencia física ${index}`, quantity: 2, itemType: "equipo" })) } };
+  const event = (id, day, ids) => ({ id, name: `Evento ${id}`, place: `Sede ${id}`, date: `2026-11-${day}`, setupAt: `2026-11-${day}T08:00`,
+    startAt: `2026-11-${day}T12:00`, endAt: `2026-11-${day}T20:00`, equipmentInAt: "2026-11-30T12:00",
+    sections: [{ title: "Referencias diferentes", items: ids.map(index => ({ warehouseInventoryId: `q${index}`, description: `Referencia física ${index}`, quantity: 1 })) }] });
+  const events = [event("origen", 26, Array.from({ length: 10 }, (_, index) => index)), event("coincide90", 27, Array.from({ length: 9 }, (_, index) => index)), event("otra-referencia", 27, [9])];
+  const plan = Draft.analyze(events, inventory, { now: Date.parse("2026-11-25T12:00Z") }), before = clone(plan), input = clone({ events, inventory });
+  assert.equal(plan.selectedTransfers.length, 0);
+  const view = Presentation.build(plan);
+  assert.equal(view.cards.length, 1); assert.equal(view.cards[0].toEventId, "coincide90");
+  assert.equal(view.cards[0].percentage, 90); assert.equal(view.cards[0].status, "verify");
+  assert.equal(view.cards[0].needsVerification, true); assert.match(view.cards[0].recommendation, /verificar traslado/);
+  assert.equal(view.cards[0].usedItems.length, 9);
+  const pair = plan.routePolicy.pairs.find(pair => pair.fromEventId === "origen" && pair.toEventId === "coincide90");
+  for (const item of view.cards[0].usedItems) assert.ok(item.quantity <= pair.transferableVector[item.warehouseInventoryId]);
+  assert.deepEqual(clone(plan), before); assert.deepEqual({ events, inventory }, input);
+  const tiedEvents = [...events.slice(0, 2), event("empate90", 27, [...Array.from({ length: 8 }, (_, index) => index), 9])];
+  const tied = Draft.analyze(tiedEvents, inventory, { now: Date.parse("2026-11-25T12:00Z") });
+  assert.equal(Presentation.build(tied).cards.length, 0); assert.equal(tied.selectedTransfers.length, 0);
+  assert.match(Presentation.build(tied).pendingMessage, /No hay un trasiego recomendado verificable/);
 });
 
 test("sin viaje confirmado se puede leer la propuesta única pero no se elige ni descuenta renta", () => {
