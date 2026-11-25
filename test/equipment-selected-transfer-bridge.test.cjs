@@ -148,6 +148,9 @@ test("igual contexto en otra fuente sólo propone decisión y nunca combina equi
   assert.throws(()=>h.importEvents([separate]),/Elija|coincide/);assert.equal(h.snapshot(),before);
   h.importEvents([separate],{decisions:[{index:0,action:"separate",existingEventId:id}]});assert.equal(h.events().length,2);
   assert.ok(h.events().some(event=>event.sections[0].items[0].description==="Unidad sintética variante 2"));
+  const independent=h.events().find(event=>event.id!==id);
+  assert.deepEqual(independent.sourceImport.independentEventDecision,{action:"separate",existingEventId:id});
+  assert.doesNotThrow(()=>Draft.analyze(h.events(),stock(),{routeEstimates}));
 });
 
 test("una cantidad booleana no puede convertirse silenciosamente en una fila numérica cero", () => {

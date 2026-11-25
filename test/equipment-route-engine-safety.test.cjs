@@ -82,7 +82,13 @@ test("una salida de bodega anterior al montaje adelanta el bloqueo de la carga a
   const b = event("B", 10, 12, [item("console", 2)], { equipmentOutAt: at(8) });
   const e = event("E", 16, 18, [item("console", 2), item("lamp", 1)]);
   const previous = event("C", 4, 5, [item("lamp", 1)], { equipmentInAt: at(7) });
-  const plan = analyze([b, e, previous], inventory({ console: 2, lamp: 1 }));
+  const events = [b, e, previous];
+  // Isolate the warehouse preload window: C cannot carry the lamp directly
+  // to E (720 travel minutes exceed its 660-minute window). Its warehouse
+  // return at 07:00 plus preparation leaves it unavailable for B's 08:00
+  // departure, although it would be ready for B's 10:00 montage.
+  const routeEstimates = estimates(events).map(route => route.fromPlace === previous.place && route.toPlace === e.place ? { ...route, travelMinutes: 720 } : route);
+  const plan = analyze(events, inventory({ console: 2, lamp: 1 }), { routeEstimates });
   const route = plan.routeBundles.find(bundle => bundle.fromEventId === "B" && bundle.toEventId === "E");
   assert.equal(route.recommended, true); assert.equal(route.preloadItems[0].holdFrom, at(8)); assert.equal(route.preloadItems[0].quantity, 0);
   assert.equal(route.missingItems[0].quantity, 1);

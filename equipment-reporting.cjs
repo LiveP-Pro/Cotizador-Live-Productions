@@ -11,6 +11,7 @@ const EquipmentHandoffs = require("./equipment-handoffs.js");
 const DISCLAIMER = "PROVISIONAL · Sin reservas ni movimientos de inventario. Solo se aplican los horarios indicados y los trasiegos propios seleccionados que siguen siendo válidos. Los consumibles se cuentan por evento y el consumo ya registrado no se solicita otra vez. Los pendientes no constituyen órdenes de compra o renta.";
 const TRANSFER_DISCLAIMER = "PLAN PROVISIONAL DE TRASIEGO · Sin reservas ni movimientos de inventario. Incluye únicamente los trasiegos propios seleccionados y válidos y las decisiones vigentes de la agenda. La renta usa esta misma selección. Revise los horarios y los tiempos de transporte antes de ejecutar el traslado.";
 const MAX_CELL_TEXT = 30000;
+const ORIGIN_COMPARISON_HEADERS = ["Destino operativo", "Día requerido", "Origen comparado", "Día del evento de origen", "Liberación real del origen", "Coincidencia del origen", "Cobertura del destino", "Prioridad", "Aporte útil comparado por referencia", "Motivo y revisión"];
 function invalid(message) { return Object.assign(new Error(message), { statusCode: 400 }); }
 function text(value) { return String(value ?? ""); }
 function html(value) { return text(value).replace(/[&<>\"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character])); }
@@ -229,6 +230,7 @@ function createEquipmentReportModel(payload, inventory, options = {}) {
     return validated;
   }).filter(event => event.status !== "cancelled");
   if (!events.length) throw invalid("No hay eventos activos para descargar.");
+  require("./equipment-draft-logistics.js").assertUniquePlanEvents(events);
   // UI review, HTML, PDF and Excel use the same calculation. Only IDs are
   // accepted from the browser with optional quantity/note edits. Their upper
   // bounds, identity and stock are recalculated against the server warehouse.
@@ -549,6 +551,12 @@ async function createEquipmentMasterWorkbook(model) {
   addTableSheet(workbook, "Eventos", ["ID", "Ubicación", "Nombre", "Tipo", "Fecha", "Montaje", "Inicio", "Finalización", "Regreso a bodega", "Observaciones", "Ubicación Google Maps"], model.events.map(event => [event.id, event.place || "", event.name || "", event.type || "", event.date || "", eventScheduleLabel(event, "setupAt", "PENDIENTE"), eventScheduleLabel(event, "startAt", "PENDIENTE"), eventScheduleLabel(event, "endAt", "PENDIENTE"), eventScheduleLabel(event, "equipmentInAt", "PENDIENTE"), event.notes || "", event.mapUrl || ""]));
   addTableSheet(workbook, "Calendario operativo", ["Fecha operativa", "Operación", "ID del evento vinculado", "Evento", "Ubicación", "Fecha y hora", "Ocupación"], operationalCalendarRows(model));
   addTableSheet(workbook, "Comparativa de destinos", ["Origen", "Destino operativo", "Estado", "Coincidencia del cuadro de origen", "Referencias compartidas", "Unidades compartidas", "Cobertura del destino", "Explicación"], routingComparisonRows(model));
+  const originsSheet = addTableSheet(workbook, "Comparativa de orígenes", ORIGIN_COMPARISON_HEADERS, originComparisonRows(model), { widths: [30, 25, 30, 25, 29, 18, 18, 35, 45, 65] });
+  originsSheet.getCell(3, 1).value = "El día del evento de origen y su liberación física son datos distintos. El aporte comparado organiza prioridades; solo las unidades elegidas y validadas en Trasiegos elegidos reducen la renta. Montaje y celebración mantienen una sola demanda.";
+  originsSheet.mergeCells(3, 1, 3, ORIGIN_COMPARISON_HEADERS.length);
+  originsSheet.getRow(3).height = 30;
+  originsSheet.getCell(3, 1).alignment = { wrapText: true, vertical: "top" };
+  originsSheet.getCell(3, 1).font = { name: "Arial", size: 10, color: { argb: "FF52647A" } };
   if (equipmentChangeRows(model).length) addTableSheet(workbook, "Sustituciones aceptadas", ["Evento", "Confirmación", "Equipo original", "ID original", "Cantidad original", "Reemplazo", "ID del reemplazo", "Cantidad del reemplazo", "Motivo", "Validación"], equipmentChangeRows(model));
   const headers = ["Categoría", "Descripción del equipo", "ID físico", ...model.events.map(event => `${event.date || "Sin fecha"}\n${event.place || event.name || event.id}`), "Total solicitado", "Inventario disponible", "Faltante provisional", "Acción", "Observaciones", "Descripciones originales", "Celdas de origen",
     "Consumo ya registrado", "Demanda pendiente", "Unidades físicas sin trasiego", "Cubierto por trasiego seleccionado", "Retención adicional por trasiego", "Capacidad propia para estos eventos"];
@@ -656,10 +664,38 @@ function routingComparisonRows(model) {
       percentage(bundle.destinationCoverage), [explanation, ...list(bundle.reasons)].filter(Boolean).join(" ")];
   });
 }
+function originComparisonRows(model) {
+  const draft = model.draftLogistics || {}, events = new Map(model.events.map(event => [event.id, event]));
+  const descriptions = new Map(list(model.rows).map(row => [row.warehouseInventoryId, row.description]));
+  const selected = list(draft.selectedTransfers);
+  const percentage = value => Number.isFinite(Number(value)) ? `${Math.round(Number(value) * 1000) / 10}%` : "Pendiente";
+  return list(draft.routePolicy?.originComparisons).flatMap(group => list(group.comparisons).map(comparison => {
+    const from = events.get(comparison.fromEventId) || {}, to = events.get(comparison.toEventId || group.toEventId) || {};
+    const fromName = from.place || from.name || comparison.fromEventId;
+    const toName = to.place || to.name || comparison.toEventId || group.toEventId;
+    const setup = to.setupApplies !== false;
+    const fromDate = comparison.fromDate || text(comparison.fromOperationalAt || from.startAt || from.date).slice(0, 10);
+    const toDate = comparison.toDate || group.toDate || text(setup ? to.setupAt : to.startAt).slice(0, 10);
+    const teardown = localTime(from.teardownAt), end = localTime(from.endAt);
+    const release = comparison.fromAt || (Number.isFinite(teardown) && (!Number.isFinite(end) || teardown > end) ? from.teardownAt : from.endAt);
+    const chosen = selected.some(route => route.fromEventId === comparison.fromEventId && route.toEventId === (comparison.toEventId || group.toEventId));
+    const priority = chosen ? "Elegido y validado" : comparison.preferred ? "Origen prioritario recomendado"
+      : Number.isInteger(comparison.priorityLayer) && comparison.priorityLayer > 0 ? "Complementario: solo el saldo útil"
+        : comparison.ready === false ? "Pendiente de verificar" : "Alternativa; sin carga automática";
+    const quantities = Object.entries(comparison.quantityByReference || {}).filter(([, quantity]) => Number.isFinite(Number(quantity)) && Number(quantity) >= 0)
+      .map(([id, quantity]) => `${quantity} × ${descriptions.get(id) || id}`).join("; ") || "Sin cantidad automática asignada";
+    const timing = comparison.timing || {};
+    const reason = [comparison.reason, timing.requiresTimeConfirmation ? "Verifique viaje y preparación antes de elegir esta ruta." : "",
+      timing.feasible === false ? "La liberación real no permite llegar a tiempo al destino." : ""].filter(Boolean).join(" ");
+    return [`${setup ? "Montaje" : "Evento"} · ${toName}`, displayOperationalTimestamp(toDate, true), fromName,
+      displayOperationalTimestamp(fromDate, true), displayOperationalTimestamp(release), percentage(comparison.sourceCoverage),
+      percentage(comparison.destinationCoverage), priority, quantities, reason];
+  }));
+}
 function renderRoutingAnalysis(model) {
-  const calendar = operationalCalendarRows(model), comparisons = routingComparisonRows(model);
-  if (!calendar.length && !comparisons.length) return "";
-  return `<section class="routing-analysis"><h2>Calendario y comparación entre días consecutivos</h2><p>Se compara cada origen con los destinos del día siguiente, incluidos sus montajes. Un montaje y su celebración pertenecen al mismo evento y no duplican equipo. Las propuestas pendientes no reducen la renta.</p>${calendar.length ? `<div class="table-scroll">${reportTable(["Día", "Operación", "ID vinculado", "Evento", "Lugar", "Hora", "Ocupación"], calendar)}</div>` : ""}${comparisons.length ? `<h3>Destinos comparados para cada cuadro</h3><div class="table-scroll">${reportTable(["Origen", "Destino", "Decisión", "Coincidencia", "Referencias", "Unidades", "Cobertura destino", "Criterio y revisión"], comparisons)}</div>` : ""}</section>`;
+  const calendar = operationalCalendarRows(model), comparisons = routingComparisonRows(model), origins = originComparisonRows(model);
+  if (!calendar.length && !comparisons.length && !origins.length) return "";
+  return `<section class="routing-analysis"><h2>Calendario y comparación entre días consecutivos</h2><p>Se compara cada origen con los destinos del día siguiente, incluidos sus montajes. Un montaje y su celebración pertenecen al mismo evento y no duplican equipo. Las propuestas pendientes no reducen la renta.</p>${calendar.length ? `<div class="table-scroll">${reportTable(["Día", "Operación", "ID vinculado", "Evento", "Lugar", "Hora", "Ocupación"], calendar)}</div>` : ""}${origins.length ? `<h3>Orígenes comparados para cada montaje o evento</h3><p>Se concentra primero el cuadro que cubre las referencias y cantidades de las alternativas comparables; los demás aportan solo el saldo útil. El día del evento de origen y su liberación real se muestran por separado: terminar después de medianoche no cambia el día operativo del evento. Las cantidades comparadas sirven para organizar prioridades; solo las unidades elegidas y validadas en el manifiesto reducen la renta.</p><div class="table-scroll">${reportTable(ORIGIN_COMPARISON_HEADERS, origins)}</div>` : ""}${comparisons.length ? `<h3>Destinos comparados para cada cuadro</h3><div class="table-scroll">${reportTable(["Origen", "Destino", "Decisión", "Coincidencia", "Referencias", "Unidades", "Cobertura destino", "Criterio y revisión"], comparisons)}</div>` : ""}</section>`;
 }
 function renderTruckManifest(model) {
   const rows = truckManifestRows(model);

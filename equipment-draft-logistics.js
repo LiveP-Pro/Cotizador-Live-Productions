@@ -1,9 +1,10 @@
 (function (root, factory) {
   "use strict";
-  const api = factory(typeof module === "object" && module.exports ? () => require("./equipment-event-store.cjs") : null);
+  const api = factory(typeof module === "object" && module.exports ? () => require("./equipment-event-store.cjs") : null,
+    typeof module === "object" && module.exports ? () => require("./equipment-import-identity.js") : () => root.EquipmentImportIdentity);
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.EquipmentDraftLogistics = api;
-})(typeof globalThis === "object" ? globalThis : this, function (getEngine) {
+})(typeof globalThis === "object" ? globalThis : this, function (getEngine, getImportIdentity) {
   "use strict";
 
   const list = (value) => Array.isArray(value) ? value : [];
@@ -32,6 +33,47 @@
       departureAt: text(route.departureAt), setupAt: text(route.setupAt), travelMinutes: Number(route.travelMinutes), handlingMinutes: Number(route.handlingMinutes) };
   }
   function routeId(route) { return `draft-transfer-${fingerprint(routeIdentity(route))}`; }
+  function independentSourceInstances(a, b) {
+    const decision = (event) => event?.sourceImport?.independentEventDecision;
+    const lineage = (event) => [text(event.id), ...(decision(event)?.action === "separate" ? [text(decision(event).existingEventId)] : [])].filter(Boolean);
+    if ([a, b].some((event) => decision(event)?.action === "separate" && text(decision(event).existingEventId))
+        && lineage(a).some((id) => lineage(b).includes(id))) return true;
+    const sourceIds = (event) => [...new Set([text(event.id), text(event.sourceImport?.sourceEventId)].filter(Boolean))];
+    return [...list(a.sourceImport?.duplicateDecisions), ...list(b.sourceImport?.duplicateDecisions)].some((entry) => {
+      if (!["all", "selected_as_independent"].includes(entry?.choice)) return false;
+      const ids = list(entry.selectedEventIds).map(text);
+      return sourceIds(a).some((left) => sourceIds(b).some((right) => left !== right && ids.includes(left) && ids.includes(right)));
+    });
+  }
+  // A changed runtime ID does not make another demand out of the same source
+  // block. Refuse an unresolved duplicate instead of silently deleting its
+  // cells or doubling its equipment. Names/venues alone never prove identity.
+  function assertUniquePlanEvents(events) {
+    const identities = new Map(), ids = new Set();
+    const identity = typeof getImportIdentity === "function" ? getImportIdentity() : null;
+    for (const event of list(events)) {
+      if (!event || typeof event !== "object" || event.status === "cancelled") continue;
+      const id = text(event.id);
+      if (id && ids.has(id)) throw invalid("El mismo evento aparece dos veces en el plan. Revise los cuadros repetidos antes de generar trasiego o renta; no se duplicó el equipo.");
+      if (id) ids.add(id);
+      const source = event.sourceImport || {}, sheet = text(source.sheet || event.sourceSheet);
+      const block = source.block ?? event.sourceBlock ?? (text(source.sourceEventId) ? `event:${text(source.sourceEventId)}` : undefined);
+      const description = identity?.describe ? identity.describe(event) : {};
+      const byteKey = text(source.sha256) && sheet && block !== undefined && block !== null && text(block) !== ""
+        ? stable([text(source.sha256), sheet, text(block)]) : description.byteKey;
+      const keys = [byteKey ? `bytes:${byteKey}` : "", description.originKey && description.contentKey ? `origin:${stable([description.originKey, description.contentKey])}` : ""].filter(Boolean);
+      const compared = new Set();
+      for (const key of keys) for (const previous of identities.get(key) || []) {
+        if (compared.has(previous)) continue;
+        compared.add(previous);
+        if (!independentSourceInstances(previous, event)) throw invalid(`El mismo cuadro de origen aparece dos veces en el plan (${text(event.place || event.name || id) || "evento"}). Conserve una sola instancia o confirme expresamente que son eventos independientes antes de generar trasiego o renta. No se eliminó ninguna celda ni se duplicó el equipo.`);
+      }
+      for (const key of keys) {
+        if (!identities.has(key)) identities.set(key, []);
+        identities.get(key).push(event);
+      }
+    }
+  }
   function scheduleIssue(event, engine) {
     if (event.setupApplies === false && text(event.setupAt)) return "El evento indica que no aplica montaje y conserva un horario de montaje. Revise ambos datos.";
     if (text(event.equipmentOutAt) && !Number.isFinite(engine.localTime(event.equipmentOutAt))) return "Corrija la fecha y hora de salida de bodega antes de calcular la carga o el trasiego.";
@@ -49,6 +91,7 @@
   function normalizeInput(events, inventory, engine) {
     if (!Array.isArray(events)) throw invalid("Los eventos del plan deben ser una lista.");
     if (!inventory || typeof inventory !== "object" || !Array.isArray((inventory.state || inventory).items)) throw invalid("No se pudo consultar el inventario vigente de Contabilidad de Equipo.", 503);
+    assertUniquePlanEvents(events);
     const ids = new Set(); const documents = new Set(); const active = [];
     for (const raw of events) {
       if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalid("Hay un evento que no se puede leer.");
@@ -324,5 +367,5 @@
     return Object.freeze({ analyze });
   }
   const defaultEngine = create();
-  return Object.freeze({ create, analyze: (...args) => defaultEngine.analyze(...args), fingerprint, routeId, routeIdentity });
+  return Object.freeze({ create, analyze: (...args) => defaultEngine.analyze(...args), fingerprint, routeId, routeIdentity, assertUniquePlanEvents });
 });

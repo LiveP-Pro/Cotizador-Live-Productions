@@ -30,11 +30,14 @@ function buildPairProfiles(events, rows) {
   for (const from of events) for (const to of events) {
     if (from.id === to.id) continue;
     let shared = 0; let union = 0; let sharedReferences = 0;
-    const sharedVector = {}, transferableVector = {}, additionalVector = {}, sourceCoverageByReference = [];
+    const sharedVector = {}, transferableVector = {}, additionalVector = {}, sourceVector = {}, destinationVector = {}, unusedSourceVector = {}, sourceCoverageByReference = [], capacityVector = {}, physicalReservationsByReference = {}, reservationSpansByReference = {};
     let sourceReferences = 0, sourceCoverageSum = 0;
     for (const [id, quantity] of vectors.get(from.id)) {
       const next = vectors.get(to.id).get(id) || 0;
       const common = Math.min(quantity, next);
+      if (quantity > 0) sourceVector[id] = quantity;
+      if (next > 0) destinationVector[id] = next;
+      if (quantity > next) unusedSourceVector[id] = quantity - next;
       shared += common; union += Math.max(quantity, next);
       if (quantity > 0) {
         sourceReferences += 1; sourceCoverageSum += common / quantity;
@@ -44,6 +47,13 @@ function buildPairProfiles(events, rows) {
         sharedReferences += 1; sharedVector[id] = common;
         const row = relevant.find(entry => entry.warehouseInventoryId === id);
         const capacity = row?.capacity ?? row?.available;
+        if (capacity !== undefined) capacityVector[id] = Math.max(0, Number(capacity) || 0);
+        reservationSpansByReference[id] = list(row?.reservations).map(entry => ({ eventId: entry.eventId, planningStart: entry.planningStart, planningEnd: entry.planningEnd }));
+        physicalReservationsByReference[id] = list(row?.reservations).filter(entry => Number(entry.alreadyDispatched) > 0 || entry.awaitingPhysicalReturn).map(entry => ({
+          eventId: entry.eventId, quantity: Number(entry.alreadyDispatched) || Number(entry.remainingQuantity) || 0,
+          setupAt: entry.setupAt, endAt: entry.endAt, teardownAt: entry.teardownAt,
+          planningStart: entry.planningStart, planningEnd: entry.planningEnd, awaitingPhysicalReturn: entry.awaitingPhysicalReturn, overdueDispatch: entry.overdueDispatch
+        }));
         const own = capacity === undefined ? common : Math.min(common, Math.max(0, Number(capacity) || 0));
         if (own > 0) transferableVector[id] = own;
       }
@@ -51,7 +61,7 @@ function buildPairProfiles(events, rows) {
     }
     if (!shared) continue;
     result.set(pairId(from.id, to.id), { from, to, sharedQuantity: shared, sharedReferences, sourceReferences,
-      sharedVector, transferableVector, additionalVector, sourceCoverageByReference,
+      sharedVector, transferableVector, additionalVector, sourceVector, destinationVector, unusedSourceVector, sourceCoverageByReference, capacityVector, physicalReservationsByReference, reservationSpansByReference,
       sourceCoverage: sourceReferences ? sourceCoverageSum / sourceReferences : 0,
       sourceReferenceCoverage: sourceReferences ? sharedReferences / sourceReferences : 0,
       similarity: union ? shared / union : 0, destinationCoverage: totals.get(to.id) ? shared / totals.get(to.id) : 0,
@@ -97,6 +107,7 @@ function buildRouteBundles({ events, rows, candidates, options, routePolicy, tim
   routePolicy ||= Policy.buildRoutePolicy(events, profiles, options, { localTime, reservationStartAt, routeTiming });
   const primary = new Map(routePolicy.primaryDestinations.map(pair => [pair.fromEventId, pair.toEventId]));
   const comparisons = new Map(routePolicy.pairs.map(pair => [pairId(pair.fromEventId, pair.toEventId), pair]));
+  const originComparisons = new Map((routePolicy.originComparisons || []).map(entry => [entry.toEventId, entry]));
   for (const profile of profiles.values()) {
     const { from, to } = profile;
     const fromSetup = localTime(reservationStartAt(from)); const toSetup = localTime(reservationStartAt(to));
@@ -125,12 +136,15 @@ function buildRouteBundles({ events, rows, candidates, options, routePolicy, tim
     if (!routeCandidates.length) reasons.push("El plan actual no asigna unidades propias a esta ruta; puede competir con otro evento, una salida o el inventario disponible.");
     const score = Math.round(profile.sourceCoverage * 1000);
     if (routePolicy.ambiguousOrigins.some(entry => entry.fromEventId === from.id)) reasons.push("Hay destinos incomparables o empatados: elija manualmente el destino principal con las referencias y cantidades a la vista.");
+    const destinationOrigins = originComparisons.get(to.id);
+    const originComparison = destinationOrigins?.comparisons.find(entry => entry.fromEventId === from.id);
+    if (originComparison?.reason) reasons.push(originComparison.reason);
     result.push({ id: `draft-bundle-${fingerprint({ from: from.id, to: to.id })}`, fromEventId: from.id, toEventId: to.id,
       fromName: from.name || from.place || from.id, toName: to.name || to.place || to.id, fromPlace: from.place || "", toPlace: to.place || "",
       fromMapUrl: from.mapUrl || "", toMapUrl: to.mapUrl || "", status, recommended: false, score,
       similarity: profile.similarity, sourceCoverage: profile.sourceCoverage, destinationCoverage: profile.destinationCoverage,
       similarityExplanation: "Promedio del porcentaje aprovechable de cada referencia del origen; cada referencia tiene el mismo peso. Las cantidades por equipo se muestran por separado.",
-      comparison, fromDate: comparison.fromDate, toDate: comparison.toDate, fromOperation: comparison.fromOperation, toOperation: comparison.toOperation,
+      comparison, originComparison, destinationOrigins, fromDate: comparison.fromDate, toDate: comparison.toDate, fromOperation: comparison.fromOperation, toOperation: comparison.toOperation,
       selectionPolicy: "Un destino principal por origen; una división adicional requiere aceptación expresa.",
       sharedEquipmentQuantity: profile.sharedQuantity, sharedReferences: profile.sharedReferences,
       proximity: near, timing, commonItems, preloadItems: [], missingItems: [], reasons,
@@ -144,6 +158,23 @@ function buildRouteBundles({ events, rows, candidates, options, routePolicy, tim
   for (const bundle of result) {
     if (bundle.status === "ready" && bundle.recommendedTransferIds.length && primary.get(bundle.fromEventId) === bundle.toEventId) bundle.recommended = true;
     bundle.selected = candidates.some(entry => entry.selected && entry.fromEventId === bundle.fromEventId && entry.toEventId === bundle.toEventId);
+  }
+  const incomingByDestination = new Map();
+  for (const bundle of result.filter(bundle => hasSelection ? bundle.selected : bundle.recommended)) {
+    if (!incomingByDestination.has(bundle.toEventId)) incomingByDestination.set(bundle.toEventId, []);
+    incomingByDestination.get(bundle.toEventId).push(bundle);
+  }
+  const preloadOwners = new Map();
+  for (const [toEventId, incoming] of incomingByDestination) {
+    const preferred = incoming.filter(bundle => bundle.originComparison?.preferred);
+    const owner = incoming.length === 1 ? incoming[0] : preferred.length === 1 ? preferred[0] : null;
+    if (owner) preloadOwners.set(toEventId, owner.id);
+    else for (const bundle of incoming) {
+      bundle.preloadAssignmentPending = true;
+      bundle.reasons.push("Llegan varios cuadros complementarios. Elija qué camión lleva el saldo adicional; no se duplicó una precarga automática por cada origen.");
+    }
+  }
+  for (const bundle of result) {
     const from = events.find((event) => event.id === bundle.fromEventId); const to = events.find((event) => event.id === bundle.toEventId);
     const reservedStartAt = reservationStartAt(from);
     const plannedOut = localTime(from.equipmentOutAt), setupStart = localTime(reservedStartAt);
@@ -151,10 +182,16 @@ function buildRouteBundles({ events, rows, candidates, options, routePolicy, tim
     const holdStart = localTime(holdFrom); const holdEnd = localTime(reservationStartAt(to));
     for (const row of rows.filter(reusable)) {
       const common = bundle.commonItems.find(item => item.warehouseInventoryId === row.warehouseInventoryId);
-      const carried = hasSelection && bundle.selected ? Number(common?.selectedQuantity) || 0 : bundle.recommended
-        ? Number(common?.ownTransferQuantity) || 0 : Math.min(Number(row.eventQuantities?.[to.id]) || 0, Number(row.eventQuantities?.[from.id]) || 0);
+      const activeIncoming = incomingByDestination.get(to.id) || [];
+      const carried = activeIncoming.length ? activeIncoming.reduce((sum, incoming) => {
+        const line = incoming.commonItems.find(item => item.warehouseInventoryId === row.warehouseInventoryId);
+        return sum + (hasSelection ? Number(line?.selectedQuantity) || 0 : Number(line?.ownTransferQuantity) || 0);
+      }, 0) : Math.min(Number(row.eventQuantities?.[to.id]) || 0, Number(row.eventQuantities?.[from.id]) || 0);
       const requested = Math.max(0, (Number(row.eventQuantities?.[to.id]) || 0) - carried);
       if (!requested) continue;
+      // A destination receives each remaining reference once. A single clear
+      // principal truck carries it; incomparable trucks need a manual choice.
+      if (activeIncoming.length && preloadOwners.get(to.id) !== bundle.id && (hasSelection ? bundle.selected : bundle.recommended)) continue;
       const allowed = (hasSelection ? bundle.selected : bundle.recommended) && bundle.status === "ready" && !row.pending && !row.hardBlocked && !row.planning?.physicalConflict
         && Number.isFinite(holdStart) && Number.isFinite(holdEnd) && holdEnd > holdStart;
       const reservations = list(row.reservations).filter((entry) => entry.eventId !== to.id);

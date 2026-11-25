@@ -7758,17 +7758,21 @@ function initEquipmentPlannerBridge() {
       if (match.kind === "exact") return match.matches[0];
       const decision = decisions.find(entry => entry.index === index);
       let replaced = null;
+      let independentFromEventId = "";
       if (match.kind !== "none") {
         if (!decision || !["reuse", "replace", "separate"].includes(decision.action)) throw new Error("Este cuadro coincide con un evento cargado. Elija conservarlo, reemplazarlo o crear uno independiente antes de continuar.");
         const existing = match.matches.find(event => event.id === decision.existingEventId);
         if (!existing) throw new Error("El evento elegido cambió. Revise nuevamente las coincidencias antes de importar.");
         if (decision.action === "reuse") return existing;
         if (decision.action === "replace") replaced = existing;
+        if (decision.action === "separate") independentFromEventId = existing.id;
       }
       const event = { ...clone(raw), id:replaced?.id || createEquipmentWarehouseDispatchId(), warehouseDispatchId:replaced?.warehouseDispatchId || createEquipmentWarehouseDispatchId(), status:"draft",
         snapshotLocked:true, sections, documentSections:cloneEquipmentSnapshotSections(sections),
         serviceIds:[],serviceId:"",serviceName:raw.type || raw.name || "Evento personalizado",documentServiceName:raw.type || raw.name || "Evento personalizado",
         selectedExtraIds:[],manualMainItems:[],manualMainSections:[],manualExtras:[],itemOverrides:[],sectionAddedItems:[],removedItemIds:[] };
+      if (independentFromEventId) event.sourceImport = { ...event.sourceImport,
+        independentEventDecision: { action: "separate", existingEventId: independentFromEventId } };
       delete event.updatedAt; delete event.createdAt;
       if (replaced?.updatedAt) event.updatedAt=replaced.updatedAt;
       if (replaced?.createdAt) event.createdAt=replaced.createdAt;

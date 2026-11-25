@@ -69,7 +69,9 @@ test("la precarga no usa una unidad ocupada durante B aunque vuelva a bodega ant
   assert.ok(route); assert.equal(row(plan, "lamp").rental, 0, "la unidad puede servir E tras volver y prepararse");
   const extra = route.preloadItems.find(item => item.warehouseInventoryId === "lamp");
   assert.equal(extra?.quantity || 0, 0, "no puede salir con B a las 08:00 mientras sigue fuera en C");
-  assert.ok(route.missingItems.some(item => item.warehouseInventoryId === "lamp" && item.quantity >= 1));
+  const otherTruck = bundle(plan, "C", "E");
+  assert.ok(otherTruck?.recommended && otherTruck.commonItems.some(item => item.warehouseInventoryId === "lamp" && item.ownTransferQuantity === 1), "la lámpara se cubre desde C, donde sí está físicamente disponible para salir");
+  assert.ok(!route.missingItems.some(item => item.warehouseInventoryId === "lamp"), "no se duplica la preparación de una referencia cubierta por otro origen recomendado");
 });
 
 test("cantidades de trasiego editadas conservan el ID y renta sólo lo que realmente falta", () => {

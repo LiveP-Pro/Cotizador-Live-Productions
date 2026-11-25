@@ -202,7 +202,7 @@ function matchEquipmentReuse(nodes, candidates, fixed) {
     edge(count + index, sink, Math.max(0, nodes[index].quantity - (incoming.get(index) || 0)), 0);
   }
   const refs = candidates.map((candidate) => edge(candidate.from, count + candidate.to,
-    Math.min(nodes[candidate.from].quantity, nodes[candidate.to].quantity), candidate.cost, candidate));
+    Math.min(nodes[candidate.from].quantity, nodes[candidate.to].quantity, candidate.quantityLimit ?? Infinity), candidate.cost, candidate));
   const epsilon = 1e-9;
   for (;;) {
     const distance = Array(graph.length).fill(Infinity); const previous = Array(graph.length);
@@ -305,6 +305,7 @@ function buildEquipmentLogisticsPlan(row, reservations, confirmedTransfers, opti
   }
   const candidates = []; const alternativeRoutes = [];
   const primaryDestinations = new Map((options.routePolicy?.primaryDestinations || []).map(pair => [pair.fromEventId, pair.toEventId]));
+  const incomingKitAllocations = new Map((options.routePolicy?.incomingAllocations || []).map(pair => [routePolicy.pairId(pair.fromEventId, pair.toEventId), pair]));
   for (let from = 0; from < nodes.length; from += 1) for (let to = from + 1; to < nodes.length; to += 1) {
     const previous = nodes[from]; const next = nodes[to];
     if (previous.pendingLogistics || next.pendingLogistics || !Number.isFinite(previous.setup) || !Number.isFinite(next.setup)) continue;
@@ -326,10 +327,16 @@ function buildEquipmentLogisticsPlan(row, reservations, confirmedTransfers, opti
       ...route, ...calendar, warehouseInventoryId: row.warehouseInventoryId, quantity: maxAlternative,
       requiresConfirmation: true, recommended: primaryDestinations.get(previous.eventId) === next.eventId,
       reason: "Alternativa del día permitido. Su combinación y cantidad se revalidan contra la custodia física antes de reducir renta." });
-    const chosenDirect = direct && primaryDestinations.get(previous.eventId) === next.eventId;
+    const incomingKit = incomingKitAllocations.get(routePolicy.pairId(previous.eventId, next.eventId));
+    const kitQuantity = incomingKit?.quantityByReference?.[row.warehouseInventoryId] || 0;
+    const chosenDirect = direct && primaryDestinations.get(previous.eventId) === next.eventId && kitQuantity > epsilon;
     if (!warehouse && !chosenDirect) continue;
     candidates.push({ from, to, kind: warehouse ? "warehouse" : "direct", route: chosenDirect ? route : null,
-      cost: warehouse ? 0 : 1 + route.requiredMinutes });
+      quantityLimit: warehouse ? Infinity : kitQuantity, wholeKitPriority: chosenDirect ? incomingKit.priorityLayer : null,
+      // For the same maximum physical reuse, keep an approved whole kit on
+      // its direct route before introducing a separate warehouse preparation.
+      // Verified travel already participates in the whole-kit policy.
+      cost: chosenDirect ? 0 : 1 });
   }
   const matched = matchEquipmentReuse(nodes, candidates, fixed);
   const incoming = Array(nodes.length).fill(0); const outgoing = Array.from({ length: nodes.length }, () => []);
@@ -355,6 +362,8 @@ function buildEquipmentLogisticsPlan(row, reservations, confirmedTransfers, opti
   // event, their confirmed continuation must stay on the same physical path.
   for (const root of roots) walk(root.index, root.amount, [root.index], []);
   paths.sort((a, b) => Number(b.mustOwn) - Number(a.mustOwn) || Number(b.hasPhysicalDispatch) - Number(a.hasPhysicalDispatch)
+    || Math.min(...a.links.filter(link => link.wholeKitPriority !== null && link.wholeKitPriority !== undefined).map(link => link.wholeKitPriority), Infinity)
+      - Math.min(...b.links.filter(link => link.wholeKitPriority !== null && link.wholeKitPriority !== undefined).map(link => link.wholeKitPriority), Infinity)
     || nodes[a.eventIndexes[0]].setup - nodes[b.eventIndexes[0]].setup || nodes[a.eventIndexes[0]].eventId.localeCompare(nodes[b.eventIndexes[0]].eventId));
   const requiredFleet = nodes.reduce((sum, entry) => sum + entry.quantity, 0) - matched.reduce((sum, link) => sum + link.quantity, 0);
   let available = ownedCapacity; const allocations = []; const routes = new Map(); const rentalRoutes = new Map();
@@ -628,6 +637,11 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
   if (Number.isNaN(from) || Number.isNaN(to) || from > to) throw invalid("El período de disponibilidad no es válido.");
   options.planningFrom = from; options.planningTo = to;
   const activeEvents = (events || []).filter((event) => event.status !== "cancelled");
+  const activeEventIds = new Set();
+  for (const event of activeEvents) {
+    if (activeEventIds.has(event.id)) throw invalid("El plan contiene el mismo evento más de una vez. Revise el archivo o la agenda antes de calcular equipo duplicado.", 409);
+    activeEventIds.add(event.id);
+  }
   const inventoryById = new Map((state.items || []).filter((item) => item && !item.archived).map((item) => [String(item.id), item]));
   const currentInventoryItems = [...inventoryById.values()];
   const movements = state.movements || [];
@@ -770,7 +784,7 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
       }
     }
   }
-  const profileRows = [...rows.values()].map(row => ({ ...row, capacity: row.warehouseInventoryId ? Math.max(0, Math.min(stock.get(row.warehouseInventoryId).maximum, stock.get(row.warehouseInventoryId).available + stock.get(row.warehouseInventoryId).credited)) : 0, eventQuantities: Object.fromEntries((globalReservations.get(row.id) || []).map(reservation => [reservation.eventId, reservation.quantity])) }));
+  const profileRows = [...rows.values()].map(row => ({ ...row, reservations: globalReservations.get(row.id) || [], capacity: row.warehouseInventoryId ? Math.max(0, Math.min(stock.get(row.warehouseInventoryId).maximum, stock.get(row.warehouseInventoryId).available + stock.get(row.warehouseInventoryId).credited)) : 0, eventQuantities: Object.fromEntries((globalReservations.get(row.id) || []).map(reservation => [reservation.eventId, reservation.quantity])) }));
   options.kitPairProfiles = routeBundles.buildPairProfiles(activeEvents, profileRows);
   options.routePolicy = routePolicy.buildRoutePolicy(activeEvents, options.kitPairProfiles, options, {
     localTime, reservationStartAt: eventReservationStartAt, routeTiming: logisticsRouteTiming });
