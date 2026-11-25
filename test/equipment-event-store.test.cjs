@@ -24,7 +24,14 @@ function setup(t) {
   const store = createEquipmentEventStore({ directory, now: () => current });
   return { directory, store, nextClient: () => createEquipmentEventStore({ directory, now: () => current }) };
 }
-function plan(events, inventory = stock(), options = {}) { return calculateEquipmentAvailability(events, inventory, { now: current, ...options }); }
+function plan(events, inventory = stock(), options = {}) {
+  const seen = new Set();
+  const routeEstimates = events.flatMap(from => events.filter(to => to.id !== from.id).flatMap(to => {
+    const pair = `${from.place}\0${to.place}`; if (seen.has(pair)) return []; seen.add(pair);
+    return [{ fromPlace: from.place, toPlace: to.place, travelMinutes: 60, handlingMinutes: 120 }];
+  }));
+  return calculateEquipmentAvailability(events, inventory, { now: current, routeEstimates, ...options });
+}
 function mainRow(result) { return result.rows.find((row) => row.warehouseInventoryId === "unit-a"); }
 
 test("two clients share private extras without creating inventory or duplicate retries", (t) => {

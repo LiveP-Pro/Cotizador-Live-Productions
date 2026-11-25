@@ -43,6 +43,12 @@ function displayTimestamp(value) {
   if (!Number.isFinite(date.getTime())) return text(value);
   return new Intl.DateTimeFormat("es-GT", { timeZone: "America/Guatemala", dateStyle: "short", timeStyle: "short" }).format(date) + " (Guatemala)";
 }
+function displayOperationalTimestamp(value, dateOnly = false) {
+  const at = localTime(dateOnly ? `${text(value).slice(0, 10)}T12:00` : value);
+  if (!Number.isFinite(at)) return value ? "Fecha por revisar" : "Pendiente";
+  return new Intl.DateTimeFormat("es-GT", { timeZone: "America/Guatemala", day: "numeric", month: "long", year: "numeric",
+    ...(dateOnly ? {} : { hour: "numeric", minute: "2-digit", hour12: true }) }).format(new Date(at));
+}
 function chunks(value) {
   const source = text(value); const result = [];
   // Keep UTF-16 surrogate pairs together, so rejoining the JSON is lossless.
@@ -148,6 +154,54 @@ function warehouseRows(inventory) {
       registered: Math.max(0, finite(item.quantity)), ...buckets,
       available: Math.max(0, finite(item.quantity) - Object.values(buckets).reduce((sum, value) => sum + value, 0)), original: item };
   });
+}
+
+// Other current server reservations are context, never extra imported events
+// or a source catalog. Until they are included in the reviewed plan, do not
+// claim that their simultaneously reserved physical references are free.
+function outsideReservationConflicts(events, details, inventory, storedEvents) {
+  const included = new Set(events.map(event => event.id));
+  const byId = new Map((inventory.state || inventory).items.filter(item => item && !item.archived).map(item => [String(item.id), item]));
+  const window = event => {
+    const start = localTime(eventReservationStartAt(event));
+    const returned = localTime(event.equipmentInAt);
+    const preparation = Math.max(120, Number(event.preparationMinutes) || 120) * 60000;
+    const end = Number.isFinite(returned) ? returned + preparation : NaN;
+    return Number.isFinite(start) && Number.isFinite(end) && end < start ? { start: NaN, end: NaN } : { start, end };
+  };
+  const overlaps = (left, right) => !(Number.isFinite(left.end) && Number.isFinite(right.start) && left.end <= right.start
+    || Number.isFinite(right.end) && Number.isFinite(left.start) && right.end <= left.start);
+  const selectedByReference = new Map();
+  for (const detail of details) {
+    if (!detail.resolvedInventoryId || !(detail.quantity > 0)) continue;
+    if (!selectedByReference.has(detail.resolvedInventoryId)) selectedByReference.set(detail.resolvedInventoryId, new Set());
+    selectedByReference.get(detail.resolvedInventoryId).add(detail.eventId);
+  }
+  const result = [];
+  for (const outside of list(storedEvents)) {
+    if (!outside || outside.status !== "confirmed" || included.has(outside.id)) continue;
+    const quantities = new Map();
+    for (const section of list(outside.sections)) for (const raw of list(section.items)) {
+      const line = Array.isArray(raw) ? { quantity: raw[0], description: raw[1] } : raw;
+      if (!line || !(Number(line.quantity) > 0) || !Number.isFinite(Number(line.quantity))) continue;
+      const purchased = resolveEquipmentPurchasedLine(outside, line, inventory);
+      if (effectiveEquipmentProcurementChoice(purchased, inventory)) continue;
+      const resolved = purchased !== line ? byId.get(String(purchased.warehouseInventoryId))
+        : EquipmentIdentity.resolve(line, [...byId.values()]).item;
+      if (!resolved || !selectedByReference.has(String(resolved.id))) continue;
+      const id = String(resolved.id);
+      quantities.set(id, (quantities.get(id) || 0) + Number(line.quantity));
+    }
+    for (const [id, quantity] of quantities) {
+      const selectedEventIds = [...selectedByReference.get(id)].filter(eventId => overlaps(window(events.find(event => event.id === eventId)), window(outside)));
+      if (!selectedEventIds.length) continue;
+      result.push({ warehouseInventoryId: id, description: byId.get(id).name || id, eventId: outside.id,
+        eventName: outside.name || outside.place || outside.id, place: outside.place || "", quantity, selectedEventIds,
+        setupAt: eventReservationStartAt(outside), equipmentInAt: outside.equipmentInAt || "", source: "current-server-agenda",
+        reason: "Hay reservas vigentes fuera de este plan; incluya/revise esos eventos antes de cerrar disponibilidad." });
+    }
+  }
+  return result;
 }
 
 function createEquipmentReportModel(payload, inventory, options = {}) {
@@ -267,18 +321,25 @@ function createEquipmentReportModel(payload, inventory, options = {}) {
     return { ...item, quantity: Math.max(0, finite(item.quantity) - delivered) };
   }).filter(item => item.quantity > 0) })).filter(transfer => transfer.items.length);
   const calculationEvents = events.map(event => invalidDocumentEvents.has(event.id) ? { ...event, warehouseDispatchId: "" } : event);
+  const externalReservationConflicts = outsideReservationConflicts(events, details, inventory, options.storedEvents);
+  const inventoryBlocks = new Map(physicalHistory.reasons);
+  for (const conflict of externalReservationConflicts) {
+    const reason = `${conflict.reason} Reserva: ${conflict.eventName}${conflict.place && conflict.place !== conflict.eventName ? ` (${conflict.place})` : ""}.`;
+    inventoryBlocks.set(conflict.warehouseInventoryId, [inventoryBlocks.get(conflict.warehouseInventoryId), reason].filter(Boolean).join(" "));
+  }
   const draftLogistics = require("./equipment-draft-logistics.js").analyze(calculationEvents, inventory, {
     selectedTransferIds: payload.selectedTransferIds === undefined ? [] : payload.selectedTransferIds,
-    transferEdits: payload.transferEdits,
+    transferEdits: payload.transferEdits, splitAuthorizedOrigins: payload.splitAuthorizedOrigins,
     expectedSnapshotId: payload.expectedSnapshotId, routeEstimates: payload.routeEstimates,
     transfers: [...agendaTransfers, ...physicalHistory.transfers],
-    inventoryBlockReasons: [...physicalHistory.reasons].map(([warehouseInventoryId, reason]) => ({ warehouseInventoryId, reason })),
+    inventoryBlockReasons: [...inventoryBlocks].map(([warehouseInventoryId, reason]) => ({ warehouseInventoryId, reason })),
     globalInventoryBlockReason: physicalHistory.globalReason,
     ...(options.now === undefined ? {} : { now: options.now })
   });
   // Preserve the submitted pointer for review; only its unverified credit was
   // removed from the calculation copy above.
   draftLogistics.events = JSON.parse(JSON.stringify(events));
+  draftLogistics.externalReservationConflicts = externalReservationConflicts;
   for (const selection of list(draftLogistics.invalidSelections)) pending.push({ kind: "TRASIEGO", eventId: selection.eventId || "", event: selection.event || "",
     description: selection.id || selection.transferId || "Selección de trasiego por revisar", quantity: null,
     reason: selection.reason || selection.message || "El trasiego seleccionado ya no es válido. No se utilizó para reducir la renta.", sourceRefs: selection.sourceRefs || "" });
@@ -307,7 +368,7 @@ function createEquipmentReportModel(payload, inventory, options = {}) {
       description: row.description, quantity: row.demand, reason: list(item.reasons).join(" ") || item.reason || "Revise los datos del plan antes de cerrar este pedido.", sourceRefs: row.sourceRefs });
   }
   return { provisional: true, disclaimer: DISCLAIMER, createdAt: options.createdAt || new Date().toISOString(), from: payload.from || "", to: payload.to || "",
-    inventorySavedAt: inventory.savedAt || "", events, rows, stocks, details, sourceCells, preservedRows, pending,
+    inventorySavedAt: inventory.savedAt || "", events, rows, stocks, details, sourceCells, preservedRows, pending, externalReservationConflicts,
     rental: rows.filter(row => row.action === "RENTA" && row.shortage > 0), purchase: rows.filter(row => row.action === "COMPRA" && row.shortage > 0),
     counts: { events: events.length, equipmentRows: details.length, zeroQuantityRows: details.filter(row => row.quantity === 0).length, sourceCells: sourceCells.length, references: rows.length },
     originalEvents, originalInventory: inventory, transfers: list(draftLogistics.selectedTransfers), draftLogistics, physicalHistory, productionMutations: 0 };
@@ -345,7 +406,7 @@ function transferReportFromBase(model) {
   if (excluded.length) warnings.push("Los eventos con datos de logística pendientes se conservan en el detalle, pero no participan en las propuestas de trasiego.");
   if (!routes.length) warnings.push("No hay trasiegos propios seleccionados y válidos. Abra el listado de Generar trasiego y marque únicamente las rutas que realizará.");
   return { ...model, reportMode: "transfer", disclaimer: TRANSFER_DISCLAIMER, transferRoutes: routes, rentalTransferRoutes: [],
-    transferExcludedEvents: excluded, transferWarnings: [...new Set(warnings)], logistics: { routePairs: draft.routePairs, warnings: draft.warnings },
+    transferExcludedEvents: excluded, transferWarnings: [...new Set(warnings)], logistics: { routePairs: draft.routePairs, warnings: draft.warnings, routePolicy: draft.routePolicy, operationalCalendar: draft.operationalCalendar },
     transferPlanningEventIds: model.events.filter(event => !excluded.some(entry => entry.eventId === event.id)).map(event => event.id), productionMutations: 0 };
 }
 
@@ -486,6 +547,9 @@ async function createEquipmentMasterWorkbook(model) {
   ];
   addTableSheet(workbook, "Control", ["Concepto", "Detalle"], info, { widths: [42, 110] });
   addTableSheet(workbook, "Eventos", ["ID", "Ubicación", "Nombre", "Tipo", "Fecha", "Montaje", "Inicio", "Finalización", "Regreso a bodega", "Observaciones", "Ubicación Google Maps"], model.events.map(event => [event.id, event.place || "", event.name || "", event.type || "", event.date || "", eventScheduleLabel(event, "setupAt", "PENDIENTE"), eventScheduleLabel(event, "startAt", "PENDIENTE"), eventScheduleLabel(event, "endAt", "PENDIENTE"), eventScheduleLabel(event, "equipmentInAt", "PENDIENTE"), event.notes || "", event.mapUrl || ""]));
+  addTableSheet(workbook, "Calendario operativo", ["Fecha operativa", "Operación", "ID del evento vinculado", "Evento", "Ubicación", "Fecha y hora", "Ocupación"], operationalCalendarRows(model));
+  addTableSheet(workbook, "Comparativa de destinos", ["Origen", "Destino operativo", "Estado", "Coincidencia del cuadro de origen", "Referencias compartidas", "Unidades compartidas", "Cobertura del destino", "Explicación"], routingComparisonRows(model));
+  if (equipmentChangeRows(model).length) addTableSheet(workbook, "Sustituciones aceptadas", ["Evento", "Confirmación", "Equipo original", "ID original", "Cantidad original", "Reemplazo", "ID del reemplazo", "Cantidad del reemplazo", "Motivo", "Validación"], equipmentChangeRows(model));
   const headers = ["Categoría", "Descripción del equipo", "ID físico", ...model.events.map(event => `${event.date || "Sin fecha"}\n${event.place || event.name || event.id}`), "Total solicitado", "Inventario disponible", "Faltante provisional", "Acción", "Observaciones", "Descripciones originales", "Celdas de origen",
     "Consumo ya registrado", "Demanda pendiente", "Unidades físicas sin trasiego", "Cubierto por trasiego seleccionado", "Retención adicional por trasiego", "Capacidad propia para estos eventos"];
   const totalColumn = 4 + model.events.length;
@@ -535,11 +599,15 @@ function reportTable(headers, rows, className = "") {
   return `<table${classes ? ` class="${html(classes)}"` : ""}><thead><tr>${headers.map(value => `<th>${html(value)}</th>`).join("")}</tr></thead><tbody>${rows.length ? rows.map(row => `<tr>${row.map((value, index) => `<td${typeof value === "number" ? ' class="number"' : ""}>${html(value)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${headers.length}">No hay referencias en esta sección.</td></tr>`}</tbody></table>`;
 }
 function truckManifestRows(model) {
-  return list(model.draftLogistics?.routeBundles).filter(bundle => bundle.recommended).flatMap(bundle => {
+  const selectedRoutes = list(model.draftLogistics?.selectedTransfers);
+  const selectedOrigins = new Set(selectedRoutes.map(route => route.fromEventId));
+  return list(model.draftLogistics?.routeBundles).filter(bundle => selectedOrigins.has(bundle.fromEventId)
+    ? selectedRoutes.some(route => route.fromEventId === bundle.fromEventId && route.toEventId === bundle.toEventId)
+    : bundle.recommended).flatMap(bundle => {
     const proximity = bundle.proximity || {};
     const label = `${proximity.distanceKm === null || proximity.distanceKm === undefined ? '' : `${Number(proximity.distanceKm).toFixed(2)} km · `}${proximity.label || 'Cercanía por revisar'}`;
     const selected = list(model.draftLogistics?.selectedTransfers).filter(route => route.fromEventId === bundle.fromEventId && route.toEventId === bundle.toEventId);
-    const common = list(bundle.commonItems).filter(item => item.ownTransferQuantity > 0).map(item => {
+    const common = list(bundle.commonItems).filter(item => item.ownTransferQuantity > 0 || item.selectedQuantity > 0).map(item => {
       const actual = selected.find(route => route.warehouseInventoryId === item.warehouseInventoryId);
       return [bundle.fromPlace, bundle.toPlace, actual ? 'Trasiego seleccionado' : 'Propuesta de trasiego por revisar', item.description, actual?.quantity ?? item.ownTransferQuantity,
         actual ? `Mismas unidades propias del plan.${actual.note ? ` ${actual.note}` : ''}` : 'Seleccione este equipo en Generar trasiego antes de usarlo para reducir la renta.', label];
@@ -550,6 +618,48 @@ function truckManifestRows(model) {
       `${item.reason || ''} Revise las cantidades del reporte de renta o compra; esta fila no suma otro pedido.`, label]);
     return [...common, ...preload, ...missing];
   });
+}
+function operationalCalendarRows(model) {
+  return list(model.draftLogistics?.operationalCalendar).flatMap(day => list(day.operations).map(operation => [
+    displayOperationalTimestamp(day.date, true), operation.kind === "setup" ? "Montaje" : "Evento", operation.eventId, operation.name || operation.eventId,
+    operation.place || "Pendiente", displayOperationalTimestamp(operation.at), "Mismo evento y mismas unidades: el montaje no duplica la demanda."
+  ]));
+}
+function equipmentChangeRows(model) {
+  return model.events.flatMap(event => list(event.planEquipmentChanges).map(change => {
+    const before = Array.isArray(change.before) ? { quantity: change.before[0], description: change.before[1] } : change.before || {};
+    return [event.name || event.place || event.id,
+      displayOperationalTimestamp(change.confirmedAt), before.description || "", before.warehouseInventoryId || "", before.quantity ?? "",
+      change.after?.description || "", change.after?.warehouseInventoryId || change.operation?.replacementInventoryId || "",
+      change.after?.quantity ?? change.operation?.quantity ?? "", change.operation?.reason || change.note || "",
+      change.operation?.compatibilityConfirmed === true ? "Compatibilidad declarada por el usuario; disponibilidad recalculada para este plan."
+        : "Compatibilidad pendiente de verificar; no inferida por el nombre."
+    ];
+  }));
+}
+function renderEquipmentChanges(model) {
+  const rows = equipmentChangeRows(model);
+  return rows.length ? `<section class="equipment-change-audit"><h2>Sustituciones aceptadas en este plan</h2><p>Los datos y celdas de origen se conservan para revisar los cambios. La compatibilidad técnica se confirma expresamente; no se deduce de nombres parecidos.</p><div class="table-scroll">${reportTable(["Evento", "Confirmado", "Original", "ID original", "Cantidad", "Reemplazo", "ID reemplazo", "Cantidad", "Motivo", "Revisión"], rows)}</div></section>` : "";
+}
+function routingComparisonRows(model) {
+  const draft = model.draftLogistics || {}, selected = list(draft.selectedTransfers);
+  return list(draft.routeBundles).map(bundle => {
+    const chosen = selected.some(route => route.fromEventId === bundle.fromEventId && route.toEventId === bundle.toEventId);
+    const ownCoverage = bundle.sourceCoverage ?? bundle.sourceReuse ?? bundle.similarity;
+    const percentage = value => Number.isFinite(Number(value)) ? `${Math.round(Number(value) * 1000) / 10}%` : "Pendiente";
+    const explanation = bundle.similarityExplanation || bundle.coverageExplanation || (bundle.sourceCoverage !== undefined || bundle.sourceReuse !== undefined
+      ? "Porcentaje del cuadro de origen aprovechable en este destino."
+      : "Coincidencia: cantidades compartidas divididas entre la unión de cantidades de ambos cuadros; no es un porcentaje fijo.");
+    return [bundle.fromName || bundle.fromPlace, `${bundle.toOperation === "setup" ? "Montaje · " : ""}${bundle.toName || bundle.toPlace}`,
+      chosen ? "Elegido y validado" : bundle.recommended ? "Recomendado; pendiente de selección" : bundle.status === "blocked" ? "No viable" : bundle.status === "review" ? "Pendiente de verificar" : "Alternativa",
+      percentage(ownCoverage), bundle.sharedReferences ?? list(bundle.commonItems).length, bundle.sharedEquipmentQuantity ?? "Pendiente",
+      percentage(bundle.destinationCoverage), [explanation, ...list(bundle.reasons)].filter(Boolean).join(" ")];
+  });
+}
+function renderRoutingAnalysis(model) {
+  const calendar = operationalCalendarRows(model), comparisons = routingComparisonRows(model);
+  if (!calendar.length && !comparisons.length) return "";
+  return `<section class="routing-analysis"><h2>Calendario y comparación entre días consecutivos</h2><p>Se compara cada origen con los destinos del día siguiente, incluidos sus montajes. Un montaje y su celebración pertenecen al mismo evento y no duplican equipo. Las propuestas pendientes no reducen la renta.</p>${calendar.length ? `<div class="table-scroll">${reportTable(["Día", "Operación", "ID vinculado", "Evento", "Lugar", "Hora", "Ocupación"], calendar)}</div>` : ""}${comparisons.length ? `<h3>Destinos comparados para cada cuadro</h3><div class="table-scroll">${reportTable(["Origen", "Destino", "Decisión", "Coincidencia", "Referencias", "Unidades", "Cobertura destino", "Criterio y revisión"], comparisons)}</div>` : ""}</section>`;
 }
 function renderTruckManifest(model) {
   const rows = truckManifestRows(model);
@@ -581,7 +691,7 @@ function renderEquipmentTransferReportHtml(model) {
     return `<section class="event-detail"><h3>${html(event.client || event.name || event.place || event.id)}</h3>${schedule(event)}${reportTable(["Categoría", "Equipo solicitado", "Cantidad", "Observaciones", "Celdas"], lines.map(line => [line.category, line.description, line.quantity, line.notes, line.sourceRefs]), "transfer-item-table")}${notes.length ? `<h4>Encabezados y observaciones del archivo</h4>${reportTable(["Sección", "Tipo", "Contenido", "Observaciones", "Celdas"], notes.map(row => [row.section, row.type, row.description, row.notes, row.refs]), "transfer-note-table")}` : ""}</section>`;
   }).join("");
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Resumen de trasiego provisional</title><style>
-  @page{size:letter landscape;margin:12mm;@bottom-center{content:"PROPUESTA PROVISIONAL - Sin reservas ni movimientos de inventario";font:8px Arial,sans-serif;color:#586777}}*{box-sizing:border-box}body{font:10px Arial,sans-serif;color:#182638;margin:0}.equipment-pdf-document{width:100%;min-height:140px}.brand{letter-spacing:2px;font-weight:700;color:#53677d}h1{font-size:25px;margin:4px 0}h2{font-size:17px;margin:22px 0 8px}h3{font-size:14px;margin:18px 0 6px}h4{font-size:11px;margin:12px 0 4px}.meta{color:#53677d}.banner{border:2px solid #bd8600;background:#fff6dc;padding:9px;font-size:11px;margin:10px 0}p,li{line-height:1.45}table{width:100%;border-collapse:collapse;margin:8px 0;table-layout:auto}thead{display:table-header-group}th{background:#152b46;color:#fff;text-align:left;padding:4px}td{padding:4px;border-bottom:1px solid #d7e0e8;vertical-align:top;overflow-wrap:anywhere}tr:nth-child(even) td{background:#f3f6fa}tr{break-inside:avoid}h2,h3,h4{break-after:avoid}.route,.event-detail{margin:18px 0}.number{text-align:right;white-space:nowrap}.pending-table{table-layout:fixed}.pending-table th:nth-child(1){width:8%}.pending-table th:nth-child(2){width:15%}.pending-table th:nth-child(3){width:18%}.pending-table th:nth-child(4){width:6%}.pending-table th:nth-child(5){width:32%}.pending-table th:nth-child(6){width:21%}.transfer-item-table,.transfer-note-table{table-layout:fixed}.transfer-item-table th:nth-child(1){width:15%}.transfer-item-table th:nth-child(2){width:45%}.transfer-item-table th:nth-child(3){width:7%}.transfer-item-table th:nth-child(4){width:20%}.transfer-item-table th:nth-child(5){width:13%}.transfer-note-table th:nth-child(1){width:18%}.transfer-note-table th:nth-child(2){width:8%}.transfer-note-table th:nth-child(3){width:35%}.transfer-note-table th:nth-child(4){width:20%}.transfer-note-table th:nth-child(5){width:19%}</style></head><body><main class="equipment-pdf-document"><div class="brand">LIVE PRODUCTIONS · REQUERIMIENTO DE EQUIPO</div><h1>Resumen de trasiego · PROVISIONAL</h1><p class="meta">Generado: ${html(displayTimestamp(model.createdAt))} · Inventario consultado: ${html(displayTimestamp(model.inventorySavedAt))} · ${model.counts.events} eventos · ${model.counts.equipmentRows} renglones de equipo (${model.counts.zeroQuantityRows} en cero) · ${model.counts.sourceCells} celdas originales conservadas</p><div class="banner">${html(model.disclaimer)}</div><h2>Advertencias y revisión de logística</h2><ul>${list(model.transferWarnings).map(warning => `<li>${html(warning)}</li>`).join("") || "<li>Las propuestas requieren revisión y confirmación antes del traslado.</li>"}</ul><h2>Propuestas entre eventos · equipo propio (${model.transferRoutes.length})</h2>${renderRoutes(model.transferRoutes)}${renderTruckManifest(model)}<h2>Equipo rentado · coordinación con proveedor (${model.rentalTransferRoutes.length})</h2>${renderRoutes(model.rentalTransferRoutes, true)}<h2>Eventos pendientes de proponer una ruta (${model.transferExcludedEvents.length})</h2>${reportTable(["Evento", "Motivo"], model.transferExcludedEvents.map(event => [event.event, event.reason]))}<h2>Detalle del equipo por evento</h2><p>Las cantidades de esta sección son los requerimientos originales de cada evento, incluidas las cantidades en cero. No son cantidades confirmadas para trasegar. Las copias de referencia no añaden equipo.</p>${eventDetails}<h2>Pendientes por resolver (${model.pending.length})</h2>${reportTable(["Tipo", "Evento", "Descripción", "Cantidad", "Motivo / acción", "Celdas"], model.pending.map(row => [row.kind, row.event, row.description, row.quantity ?? "", row.reason, row.sourceRefs]))}</main></body></html>`;
+  @page{size:letter landscape;margin:12mm;@bottom-center{content:"PROPUESTA PROVISIONAL - Sin reservas ni movimientos de inventario";font:8px Arial,sans-serif;color:#586777}}*{box-sizing:border-box}body{font:10px Arial,sans-serif;color:#182638;margin:0}.equipment-pdf-document{width:100%;min-height:140px}.brand{letter-spacing:2px;font-weight:700;color:#53677d}h1{font-size:25px;margin:4px 0}h2{font-size:17px;margin:22px 0 8px}h3{font-size:14px;margin:18px 0 6px}h4{font-size:11px;margin:12px 0 4px}.meta{color:#53677d}.banner{border:2px solid #bd8600;background:#fff6dc;padding:9px;font-size:11px;margin:10px 0}p,li{line-height:1.45}table{width:100%;border-collapse:collapse;margin:8px 0;table-layout:auto}thead{display:table-header-group}th{background:#152b46;color:#fff;text-align:left;padding:4px}td{padding:4px;border-bottom:1px solid #d7e0e8;vertical-align:top;overflow-wrap:anywhere}tr:nth-child(even) td{background:#f3f6fa}tr{break-inside:avoid}h2,h3,h4{break-after:avoid}.route,.event-detail{margin:18px 0}.number{text-align:right;white-space:nowrap}.pending-table{table-layout:fixed}.pending-table th:nth-child(1){width:8%}.pending-table th:nth-child(2){width:15%}.pending-table th:nth-child(3){width:18%}.pending-table th:nth-child(4){width:6%}.pending-table th:nth-child(5){width:32%}.pending-table th:nth-child(6){width:21%}.transfer-item-table,.transfer-note-table{table-layout:fixed}.transfer-item-table th:nth-child(1){width:15%}.transfer-item-table th:nth-child(2){width:45%}.transfer-item-table th:nth-child(3){width:7%}.transfer-item-table th:nth-child(4){width:20%}.transfer-item-table th:nth-child(5){width:13%}.transfer-note-table th:nth-child(1){width:18%}.transfer-note-table th:nth-child(2){width:8%}.transfer-note-table th:nth-child(3){width:35%}.transfer-note-table th:nth-child(4){width:20%}.transfer-note-table th:nth-child(5){width:19%}</style></head><body><main class="equipment-pdf-document"><div class="brand">LIVE PRODUCTIONS · REQUERIMIENTO DE EQUIPO</div><h1>Resumen de trasiego · PROVISIONAL</h1><p class="meta">Generado: ${html(displayTimestamp(model.createdAt))} · Inventario consultado: ${html(displayTimestamp(model.inventorySavedAt))} · ${model.counts.events} eventos · ${model.counts.equipmentRows} renglones de equipo (${model.counts.zeroQuantityRows} en cero) · ${model.counts.sourceCells} celdas originales conservadas</p><div class="banner">${html(model.disclaimer)}</div><h2>Advertencias y revisión de logística</h2><ul>${list(model.transferWarnings).map(warning => `<li>${html(warning)}</li>`).join("") || "<li>Las propuestas requieren revisión y confirmación antes del traslado.</li>"}</ul><h2>Propuestas entre eventos · equipo propio (${model.transferRoutes.length})</h2>${renderRoutes(model.transferRoutes)}${renderRoutingAnalysis(model)}${renderEquipmentChanges(model)}${renderTruckManifest(model)}<h2>Equipo rentado · coordinación con proveedor (${model.rentalTransferRoutes.length})</h2>${renderRoutes(model.rentalTransferRoutes, true)}<h2>Eventos pendientes de proponer una ruta (${model.transferExcludedEvents.length})</h2>${reportTable(["Evento", "Motivo"], model.transferExcludedEvents.map(event => [event.event, event.reason]))}<h2>Detalle del equipo por evento</h2><p>Las cantidades de esta sección son los requerimientos originales de cada evento, incluidas las cantidades en cero. No son cantidades confirmadas para trasegar. Las copias de referencia no añaden equipo.</p>${eventDetails}<h2>Pendientes por resolver (${model.pending.length})</h2>${reportTable(["Tipo", "Evento", "Descripción", "Cantidad", "Motivo / acción", "Celdas"], model.pending.map(row => [row.kind, row.event, row.description, row.quantity ?? "", row.reason, row.sourceRefs]))}</main></body></html>`;
 }
 function renderEquipmentReportHtml(model, mode = "summary") {
   if (mode === "transfer") return renderEquipmentTransferReportHtml(model);
@@ -594,7 +704,7 @@ function renderEquipmentReportHtml(model, mode = "summary") {
   }).join("");
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${html(title)} provisional</title><style>
   @page{size:letter landscape;margin:12mm;@bottom-center{content:"PROVISIONAL - Sin reservas ni movimientos de inventario";font:8px Arial,sans-serif;color:#586777}}*{box-sizing:border-box}body{font:10px Arial,sans-serif;color:#182638;margin:0}.equipment-pdf-document{width:100%;min-height:140px}.banner{border:2px solid #bd8600;background:#fff6dc;padding:9px;font-size:11px;margin:10px 0}h1{font-size:25px;margin:4px 0}h2{font-size:15px;margin:18px 0 6px}p{line-height:1.45}.brand{letter-spacing:2px;font-weight:700;color:#53677d}.meta{color:#53677d}table{width:100%;border-collapse:collapse;table-layout:auto;margin:8px 0}thead{display:table-header-group}th{background:#152b46;color:#fff;text-align:left;padding:7px}td{padding:6px;border-bottom:1px solid #d7e0e8;vertical-align:top;overflow-wrap:anywhere}tr:nth-child(even) td{background:#f3f6fa}tr{break-inside:avoid}.category td{background:#dae3ef!important;font-weight:bold}.number{text-align:right;white-space:nowrap}.pending-table td:first-child,.pending-table th:first-child{white-space:nowrap}.pending td{background:#fff8e8}</style></head><body><main class="equipment-pdf-document"><div class="brand">LIVE PRODUCTIONS · REQUERIMIENTO DE EQUIPO</div><h1>${html(title)} · PROVISIONAL</h1><div class="meta">Generado: ${html(displayTimestamp(model.createdAt))} · Inventario consultado: ${html(displayTimestamp(model.inventorySavedAt))} · ${model.counts.events} eventos · ${model.counts.equipmentRows} renglones de equipo (${model.counts.zeroQuantityRows} en cero) · Fuente: Contabilidad de Equipo</div><div class="banner">${html(model.disclaimer)}</div>
-  <h2>Eventos incluidos</h2>${reportTable(["Fecha", "Ubicación", "Tipo", "Montaje", "Inicio", "Finalización", "Regreso a bodega"], model.events.map(event => [event.date || "Pendiente", event.place || event.name || event.id, event.type || "", eventScheduleLabel(event, "setupAt"), eventScheduleLabel(event, "startAt"), eventScheduleLabel(event, "endAt"), eventScheduleLabel(event, "equipmentInAt")]))}
+  ${renderEquipmentChanges(model)}<h2>Eventos incluidos</h2>${reportTable(["Fecha", "Ubicación", "Tipo", "Montaje", "Inicio", "Finalización", "Regreso a bodega"], model.events.map(event => [event.date || "Pendiente", event.place || event.name || event.id, event.type || "", eventScheduleLabel(event, "setupAt"), eventScheduleLabel(event, "startAt"), eventScheduleLabel(event, "endAt"), eventScheduleLabel(event, "equipmentInAt")]))}
   <h2>${html(title)}: ${selected.length} referencias</h2><table><thead><tr><th>Descripción</th><th>Total solicitado</th><th>Inventario disponible</th><th>Faltante provisional</th><th>Acción</th><th>Celdas de origen</th></tr></thead><tbody>${categoryRows || '<tr><td colspan="6">No hay faltantes confirmados en esta sección.</td></tr>'}</tbody></table>
   <h2>Pendientes por resolver (${model.pending.length})</h2><p>Estos casos se excluyen de las órdenes de compra o renta hasta identificarlos o confirmar su clasificación. Las cantidades con horarios pendientes son conservadoras y podrían disminuir al confirmar una logística viable.</p>${reportTable(["Tipo", "Evento", "Descripción", "Cantidad", "Motivo / acción", "Celdas"], model.pending.map(row => [row.kind, row.event, row.description, row.quantity ?? "", row.reason, row.sourceRefs]))}
   </main></body></html>`;
@@ -681,7 +791,7 @@ function renderEquipmentPlanningReportHtml(model, mode = "transfer") {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${html(titles[mode])} · Live Productions</title><style>
   @page{size:letter landscape;margin:12mm}*{box-sizing:border-box}body{margin:0;background:#fff;color:#172638;font:13px Arial,sans-serif;line-height:1.45}.equipment-pdf-document{max-width:1200px;padding:22px;margin:auto}.brand{font-weight:700;letter-spacing:2px;color:#52647a;font-size:11px}h1{font-size:26px;margin:8px 0}h2{font-size:18px;margin:22px 0 9px}h3{font-size:15px;margin:16px 0 6px}.meta{font-size:12px;color:#52647a}.banner,.warning{padding:12px;border:1px solid #d7bf80;background:#fff9e9;border-radius:7px}.lead{font-size:15px;font-weight:600}.table-scroll{max-width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse;margin:10px 0;table-layout:auto}th,td{padding:7px;text-align:left;vertical-align:top;overflow-wrap:anywhere;border-bottom:1px solid #d9e2eb}th{background:#18324f;color:#fff}thead{display:table-header-group}.number{text-align:right}tr:nth-child(even) td{background:#f3f6fa}.route{margin:18px 0}.route-repeat th{background:#e7edf4;color:#172638}.route-repeat h3{margin:0}.route-repeat p{margin:5px 0;font-weight:400}.route-items{table-layout:fixed}.route-items th:nth-child(1){width:20%}.route-items th:nth-child(2){width:65%}.route-items th:nth-child(3){width:15%}details{margin:18px 0;padding:12px;border:1px solid #d9e2eb;border-radius:7px}summary{cursor:pointer;font-weight:700}.rental-table{min-width:1100px;table-layout:fixed}.rental-table th:nth-child(1){width:10%}.rental-table th:nth-child(2){width:24%}.rental-table th:nth-child(3){width:10%}.rental-table th:nth-child(4),.rental-table th:nth-child(5),.rental-table th:nth-child(6){width:8%}.rental-table th:nth-child(7){width:17%}.rental-table th:nth-child(8){width:15%}.physical-summary-table{table-layout:fixed;min-width:850px}.physical-summary-table th:nth-child(1){width:12%}.physical-summary-table th:nth-child(2){width:32%}.physical-summary-table th:nth-child(n+3){width:14%}.consumables-table{table-layout:fixed;min-width:1100px}.consumables-table th:first-child{width:10%}.consumables-table th:nth-child(2){width:24%}.review-table{table-layout:fixed}.review-table th:nth-child(2){width:28%}.review-table th:nth-child(4){width:40%}.source-appendix td{font-size:11px}.pending-table{table-layout:fixed}.pending-table th:nth-child(5){width:35%}.pending-table th:nth-child(6){width:20%}
   @media(max-width:600px){.equipment-pdf-document{padding:14px}h1{font-size:23px}.events-table,.route-overview-table{min-width:850px}}@media print{body{font-size:10px}.equipment-pdf-document{padding:0;max-width:none}.table-scroll{overflow:visible}table,.rental-table,.events-table,.physical-summary-table,.consumables-table,.route-overview-table{min-width:0}th,td{padding:4px}tr{break-inside:avoid}h1,h2,h3{break-after:avoid}.route-items thead{display:table-header-group;break-inside:avoid}.route-items tbody tr:first-child{break-before:avoid}.optional-appendix:not([open]){display:none!important}details[open]>summary{display:none}.banner{padding:7px}.meta{font-size:9px}}
-  </style></head><body><main class="equipment-pdf-document"><div class="brand">LIVE PRODUCTIONS · REQUERIMIENTO DE EQUIPO</div><h1>${html(titles[mode])}</h1><p class="meta">${model.events.length} eventos · Generado: ${html(displayTimestamp(model.createdAt))} · Inventario consultado: ${html(displayTimestamp(model.inventorySavedAt))}</p><p class="banner">PROPUESTA PROVISIONAL · Plan para organizar el equipo. Revise los horarios y los tiempos de traslado antes de ejecutarlo. Abrir o imprimir este reporte no registra salidas de bodega, rentas ni compras.</p>${performedSection}${content}${pendingSection}<section><h2>Eventos incluidos</h2>${eventsTable}</section>${movementDetail}${assumptions}${sourcePending}${allSourceDetails}</main></body></html>`;
+  </style></head><body><main class="equipment-pdf-document"><div class="brand">LIVE PRODUCTIONS · REQUERIMIENTO DE EQUIPO</div><h1>${html(titles[mode])}</h1><p class="meta">${model.events.length} eventos · Generado: ${html(displayTimestamp(model.createdAt))} · Inventario consultado: ${html(displayTimestamp(model.inventorySavedAt))}</p><p class="banner">PROPUESTA PROVISIONAL · Plan para organizar el equipo. Revise los horarios y los tiempos de traslado antes de ejecutarlo. Abrir o imprimir este reporte no registra salidas de bodega, rentas ni compras.</p>${performedSection}${content}${mode !== "purchase" ? renderRoutingAnalysis(model) : ""}${renderEquipmentChanges(model)}${pendingSection}<section><h2>Eventos incluidos</h2>${eventsTable}</section>${movementDetail}${assumptions}${sourcePending}${allSourceDetails}</main></body></html>`;
 }
 
 module.exports = { createEquipmentReportModel, createEquipmentTransferReportModel, createEquipmentPlanningReportModel, createEquipmentMasterWorkbook, renderEquipmentReportHtml, renderEquipmentTransferReportHtml, renderEquipmentPlanningReportHtml, sourceCellsForEvent, warehouseRows, eventScheduleLabel, DISCLAIMER, TRANSFER_DISCLAIMER };

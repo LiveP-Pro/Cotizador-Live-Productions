@@ -90,7 +90,8 @@ test("el plan global conserva cadenas físicas sin asignar una unidad a destinos
   events.push(makeEvent("scenario-third", 3, { setupAt: "2026-11-27T08:00", startAt: "2026-11-27T12:00", endAt: "2026-11-27T20:00", equipmentInAt: "2026-11-28T10:00" }));
   const model = build(events, inventory), row = audioRow(model);
   assert.equal(row.requiredWithoutTransfer, 6); assert.equal(row.rentWithoutTransfer, 3);
-  assert.equal(row.requiredWithTransfer, 3); assert.equal(row.rentWithTransfer, 0);
+  assert.equal(row.requiredWithTransfer, 4); assert.equal(row.rentWithTransfer, 1);
+  assert.ok(model.transferRoutes.every(route => !(route.fromEventId === events[0].id && route.toEventId === events[2].id)), "The unused third unit may not bypass the intermediate day");
   const routes = [...model.transferRoutes, ...model.rentalTransferRoutes];
   for (const event of events) {
     const amount = event.sections[0].items[0].quantity;

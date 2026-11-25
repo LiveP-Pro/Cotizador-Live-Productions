@@ -163,7 +163,8 @@ test("an estimated or reviewed route cannot reduce a confirmed reservation short
   const options = { from: "2026-11-02", to: "2026-11-08", now: Date.parse(confirmedAt) };
   let result = calculateEquipmentAvailability(events, inventory, options);
   assert.equal(result.rows[0].missing, 3); assert.equal(result.rows[0].action, "RENTA");
-  assert.equal(result.rows[0].planning.rentalPotential, 0); assert.ok(result.rows[0].transfers.length > 0);
+  assert.equal(result.rows[0].planning.rentalPotential, 3); assert.equal(result.rows[0].transfers.length, 0);
+  assert.ok(result.rows[0].planning.alternativeRoutes.length > 0, "la alternativa estimada permanece visible para revisión");
   assert.equal(result.transfers.length, 0);
   result = calculateEquipmentAvailability(events, inventory, { ...options,
     routeEstimates: [{ fromPlace: "Lugar A", toPlace: "Lugar B", travelMinutes: 30, handlingMinutes: 30 }] });

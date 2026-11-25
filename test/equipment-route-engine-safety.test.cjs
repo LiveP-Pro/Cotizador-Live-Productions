@@ -17,7 +17,9 @@ test("el desempate conserva el kit B a E en lugar de separar consola y altavoces
     event("F", 14, 16, [item("console", 2), item("lamp", 100)]), event("E", 14, 16, [item("console", 2), item("speaker", 4), item("lamp", 1)])];
   const stock = inventory({ console: 2, speaker: 4, lamp: 100 }); const source = JSON.stringify({ events, stock });
   const plan = analyze(events, stock);
-  assert.deepEqual(plan.candidates.filter(route => route.fromEventId === "B").map(route => [route.toEventId, route.warehouseInventoryId]).sort(), [["E", "console"], ["E", "speaker"]]);
+  assert.ok(plan.candidates.some(route => route.fromEventId === "B" && route.toEventId === "F"), "The other legal destination stays visible as an exclusive alternative");
+  const recommended = new Set(plan.routeBundles.filter(bundle => bundle.recommended).flatMap(bundle => bundle.recommendedTransferIds));
+  assert.deepEqual(plan.candidates.filter(route => route.fromEventId === "B" && recommended.has(route.id)).map(route => [route.toEventId, route.warehouseInventoryId]).sort(), [["E", "console"], ["E", "speaker"]]);
   const bundle = plan.routeBundles.find(route => route.fromEventId === "B" && route.toEventId === "E");
   assert.equal(bundle.recommended, true); assert.equal(bundle.preloadItems.find(line => line.warehouseInventoryId === "lamp").quantity, 1);
   const selected = analyze(events, stock, { selectedTransferIds: bundle.recommendedTransferIds });

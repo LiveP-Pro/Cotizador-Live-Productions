@@ -75,7 +75,7 @@ test("Excel máster reabre con fórmulas, ceros tipados y fuente JSON completa s
   const model = reporting.createEquipmentReportModel({ events }, inventory);
   const workbook = await reporting.createEquipmentMasterWorkbook(model);
   const reopened = new ExcelJS.Workbook(); await reopened.xlsx.load(await workbook.xlsx.writeBuffer());
-  assert.equal(reopened.worksheets.length, 11);
+  for (const name of ["Control", "Eventos", "Calendario operativo", "Comparativa de destinos", "Resumen de equipo", "Renta provisional", "Compra provisional", "Trasiegos elegidos", "Preparar camión", "Pendientes", "Detalle por evento", "Inventario consultado", "Celdas fuente", "Filas originales", "Datos completos"]) assert.ok(reopened.getWorksheet(name), `Falta la hoja ${name}`);
   const summary = reopened.getWorksheet("Resumen de equipo");
   const row = summary.getRows(5, summary.rowCount - 4).find(row => row.getCell(3).value === "console");
   assert.equal(row.getCell(6).value.formula, `SUM(D${row.number}:E${row.number})`); assert.equal(row.getCell(6).value.result, 8);

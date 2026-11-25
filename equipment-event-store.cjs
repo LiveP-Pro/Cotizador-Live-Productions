@@ -6,6 +6,7 @@ const crypto = require("node:crypto");
 const equipmentIdentity = require("./equipment-identity.js");
 const routeBundles = require("./equipment-route-bundles.cjs");
 const equipmentLocation = require("./equipment-location.js");
+const routePolicy = require("./equipment-route-policy.cjs");
 
 function invalid(message, statusCode = 400) { return Object.assign(new Error(message), { statusCode }); }
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
@@ -42,7 +43,9 @@ function localTime(value) {
   return parsed;
 }
 function eventReservationStartAt(event) {
-  return event.setupApplies === false ? event.equipmentOutAt || event.startAt || "" : event.setupAt || event.equipmentOutAt || "";
+  const required = event.setupApplies === false ? event.startAt || "" : event.setupAt || "";
+  const out = localTime(event.equipmentOutAt), start = localTime(required);
+  return Number.isFinite(out) && (!Number.isFinite(start) || out < start) ? event.equipmentOutAt : required || event.equipmentOutAt || "";
 }
 function eventTiming(event) {
   const setup = localTime(eventReservationStartAt(event));
@@ -53,7 +56,8 @@ function eventTiming(event) {
   // Legacy windows already reserve from setup until return. Their missing
   // event start/end never makes their equipment available to another event.
   const complete = [setup, returned].every(Number.isFinite);
-  const supplied = [setup, start, end, teardown, returned].filter(Number.isFinite);
+  const actualSetup = event.setupApplies === false ? NaN : localTime(event.setupAt);
+  const supplied = [setup, actualSetup, start, end, teardown, returned].filter(Number.isFinite);
   if (supplied.some((value, index) => index && value < supplied[index - 1])) throw invalid("Revise las fechas: montaje, inicio, finalización y regreso a bodega deben seguir ese orden.");
   return { setup, start, end, returned, complete };
 }
@@ -299,7 +303,8 @@ function buildEquipmentLogisticsPlan(row, reservations, confirmedTransfers, opti
     while (index < physicalPoints.length && physicalPoints[index].at === at) { change += physicalPoints[index].change; index += 1; }
     physicalCurrent += change; confirmedOwnedPeak = Math.max(confirmedOwnedPeak, physicalCurrent);
   }
-  const candidates = [];
+  const candidates = []; const alternativeRoutes = [];
+  const primaryDestinations = new Map((options.routePolicy?.primaryDestinations || []).map(pair => [pair.fromEventId, pair.toEventId]));
   for (let from = 0; from < nodes.length; from += 1) for (let to = from + 1; to < nodes.length; to += 1) {
     const previous = nodes[from]; const next = nodes[to];
     if (previous.pendingLogistics || next.pendingLogistics || !Number.isFinite(previous.setup) || !Number.isFinite(next.setup)) continue;
@@ -311,10 +316,20 @@ function buildEquipmentLogisticsPlan(row, reservations, confirmedTransfers, opti
         handlingSource: route.handlingSource, requiresTimeConfirmation: route.requiresTimeConfirmation, samePlace: route.samePlace });
     }
     const warehouse = !previous.awaitingPhysicalReturn && !previous.overdueDispatch && previous.returned <= next.setup;
-    const direct = !row.external && !previous.awaitingPhysicalReturn && !previous.overdueDispatch && route.feasible;
-    if (!warehouse && !direct) continue;
-    candidates.push({ from, to, kind: warehouse ? "warehouse" : "direct", route: direct ? route : null,
-      cost: (warehouse ? 0 : 1 + route.requiredMinutes) + routeBundles.routePreferenceCost(options.kitPairProfiles?.get(`${previous.eventId}\u0000${next.eventId}`), route) });
+    const calendar = routePolicy.calendarPair({ ...previous, id: previous.eventId }, { ...next, id: next.eventId }, localTime);
+    const direct = !row.external && !previous.awaitingPhysicalReturn && !previous.overdueDispatch && route.feasible && calendar.allowed;
+    const outgoingFixed = fixed.filter(link => link.from === from).reduce((sum, link) => sum + link.quantity, 0);
+    const incomingFixed = fixed.filter(link => link.to === to).reduce((sum, link) => sum + link.quantity, 0);
+    const maxAlternative = Math.max(0, Math.min(previous.quantity - outgoingFixed, next.quantity - incomingFixed, ownedCapacity));
+    if (direct && maxAlternative > epsilon) alternativeRoutes.push({ fromEventId: previous.eventId, toEventId: next.eventId,
+      fromName: previous.name, toName: next.name, fromEventName: previous.name, toEventName: next.name,
+      ...route, ...calendar, warehouseInventoryId: row.warehouseInventoryId, quantity: maxAlternative,
+      requiresConfirmation: true, recommended: primaryDestinations.get(previous.eventId) === next.eventId,
+      reason: "Alternativa del día permitido. Su combinación y cantidad se revalidan contra la custodia física antes de reducir renta." });
+    const chosenDirect = direct && primaryDestinations.get(previous.eventId) === next.eventId;
+    if (!warehouse && !chosenDirect) continue;
+    candidates.push({ from, to, kind: warehouse ? "warehouse" : "direct", route: chosenDirect ? route : null,
+      cost: warehouse ? 0 : 1 + route.requiredMinutes });
   }
   const matched = matchEquipmentReuse(nodes, candidates, fixed);
   const incoming = Array(nodes.length).fill(0); const outgoing = Array.from({ length: nodes.length }, () => []);
@@ -378,9 +393,14 @@ function buildEquipmentLogisticsPlan(row, reservations, confirmedTransfers, opti
   if (physicalConflict) warnings.push("Las rutas confirmadas y las salidas físicas se superponen y exceden las existencias reales. Cancele o ajuste las rutas incompatibles.");
   else if (mandatoryShortage > epsilon) warnings.push("No se obtuvo una asignación completa de las rutas confirmadas con este plan. Revise la secuencia antes de confirmar más trasiegos; esta advertencia no prueba que falte inventario.");
   const proposed = mandatoryShortage > epsilon || physicalConflict ? [] : [...routes.values()];
+  for (const alternative of alternativeRoutes) {
+    const allocated = proposed.find(route => route.fromEventId === alternative.fromEventId && route.toEventId === alternative.toEventId);
+    alternative.recommendedQuantity = allocated?.quantity || 0;
+    alternative.recommended = alternative.recommended && alternative.recommendedQuantity > epsilon;
+  }
   if (proposed.some((route) => route.requiresTimeConfirmation)) warnings.push("Los tiempos indicados como estimación deben revisarse por origen y destino antes de confirmar el trasiego.");
   return { requiredFleet: Math.max(0, requiredFleet), rentalPotential: Math.max(0, requiredFleet - ownedCapacity), purchasePotential: 0, ownedCapacity,
-    allocations, routes: proposed, rentalRoutes: [...rentalRoutes.values()], warnings, assumptions, optimal: mandatoryShortage <= epsilon && !physicalConflict && !nodes.some((entry) => entry.pendingLogistics),
+    allocations, routes: proposed, alternativeRoutes: physicalConflict ? [] : alternativeRoutes, rentalRoutes: [...rentalRoutes.values()], warnings, assumptions, optimal: mandatoryShortage <= epsilon && !physicalConflict && !nodes.some((entry) => entry.pendingLogistics),
     mandatoryShortage, confirmedOwnedPeak, physicalConflict, allActiveEventCount: reservations.length, plannedEventCount: scopedReservations.length };
 }
 
@@ -564,7 +584,19 @@ function createEquipmentEventStore({ directory, now = Date.now } = {}) {
       if (current?.status === "cancelled") throw invalid("El trasiego fue cancelado. Cree una nueva ruta.", 409);
       if (current && !text(payload.expectedUpdatedAt)) throw invalid("Consulte la versión actual del trasiego antes de guardar.", 428);
       if (current && current.updatedAt !== payload.expectedUpdatedAt) throw invalid("El trasiego cambió en otro equipo. Actualice la lista antes de guardar.", 409);
-      validateTransfer(transfer, state.events, inventory, state.transfers);
+      const linked = validateTransfer(transfer, state.events, inventory, state.transfers);
+      // The read path deliberately honours old physical history. Only a new
+      // or modified persisted route must obey today's consecutive-day policy.
+      const calendar = routePolicy.calendarPair(linked.from, linked.to, localTime);
+      if (!calendar.allowed) throw invalid(`No se puede confirmar esta ruta: ${calendar.reason}`, 409);
+      if (payload.splitAuthorizedOrigins !== undefined && (!Array.isArray(payload.splitAuthorizedOrigins)
+          || payload.splitAuthorizedOrigins.some(value => typeof value !== "string" || !validId(value)))) throw invalid("La confirmación de división de equipo no es válida.");
+      const destinations = new Set(state.transfers.filter(entry => entry.id !== id && entry.status !== "cancelled" && entry.fromEventId === transfer.fromEventId).map(entry => entry.toEventId));
+      destinations.add(transfer.toEventId);
+      if (destinations.size > 1 && !(payload.splitAuthorizedOrigins || []).includes(transfer.fromEventId)) {
+        throw Object.assign(invalid("Esta ruta divide el cuadro entre varios destinos. Confirme expresamente la división antes de continuar.", 409), {
+          requiresSplitConfirmation: true, fromEventId: transfer.fromEventId, toEventIds: [...destinations].sort() });
+      }
       const proposedTransfers = [...state.transfers.filter((entry) => entry.id !== id), transfer];
       const physicalPlan = calculateEquipmentAvailability(state.events, inventory, { now: now(), transfers: proposedTransfers });
       if (physicalPlan.rows.some((row) => transfer.items.some((line) => line.warehouseInventoryId === row.warehouseInventoryId) && row.planning.physicalConflict)) {
@@ -718,7 +750,7 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
       const chunks = [{ quantity: Math.max(0, reserved - outgoing.reduce((sum, line) => sum + line.quantity, 0)), end: occupiedEnd }, ...outgoing];
       const intersects = Number.isFinite(occupiedStart) && occupiedStart <= to && chunks.some((chunk) => chunk.end >= from);
       const reservation = { eventId: event.id, name: event.name || "Evento", place: event.place || "", type: event.type || "", quantity: amount,
-        remainingQuantity: reserved, setupAt: eventReservationStartAt(event), setupApplies: event.setupApplies, startAt: event.startAt || "", endAt: event.endAt || "", teardownAt: event.teardownAt || "", equipmentInAt: event.equipmentInAt || "",
+        remainingQuantity: reserved, setupAt: eventReservationStartAt(event), operationalNeededAt: routePolicy.neededAt(event), setupApplies: event.setupApplies, startAt: event.startAt || "", endAt: event.endAt || "", teardownAt: event.teardownAt || "", equipmentInAt: event.equipmentInAt || "",
         mapUrl: event.mapUrl || "", location: event.location || event.coordinates || null,
         notes: event.notes || "", pendingLogistics: !timing.complete, alreadyDispatched: outstanding, alreadyConsumed: sent.consumed,
         preparationMinutes: consumable ? 0 : preparationMinutes,
@@ -738,7 +770,10 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
       }
     }
   }
-  options.kitPairProfiles = routeBundles.buildPairProfiles(activeEvents, [...rows.values()]);
+  const profileRows = [...rows.values()].map(row => ({ ...row, capacity: row.warehouseInventoryId ? Math.max(0, Math.min(stock.get(row.warehouseInventoryId).maximum, stock.get(row.warehouseInventoryId).available + stock.get(row.warehouseInventoryId).credited)) : 0, eventQuantities: Object.fromEntries((globalReservations.get(row.id) || []).map(reservation => [reservation.eventId, reservation.quantity])) }));
+  options.kitPairProfiles = routeBundles.buildPairProfiles(activeEvents, profileRows);
+  options.routePolicy = routePolicy.buildRoutePolicy(activeEvents, options.kitPairProfiles, options, {
+    localTime, reservationStartAt: eventReservationStartAt, routeTiming: logisticsRouteTiming });
   for (const row of rows.values()) {
     for (const hold of physicalHolds.get(row.warehouseInventoryId) || []) {
       if (hold.start > to) continue;
@@ -746,7 +781,7 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
       if (!reservation) {
         const amount = eventItemQuantity(hold.event, row.warehouseInventoryId, inventory);
         reservation = { eventId: hold.event.id, name: hold.event.name || "Evento", place: hold.event.place || "", quantity: amount,
-          setupAt: eventReservationStartAt(hold.event), setupApplies: hold.event.setupApplies, startAt: hold.event.startAt || "", endAt: hold.event.endAt || "", equipmentInAt: hold.event.equipmentInAt || "",
+          setupAt: eventReservationStartAt(hold.event), operationalNeededAt: routePolicy.neededAt(hold.event), setupApplies: hold.event.setupApplies, startAt: hold.event.startAt || "", endAt: hold.event.endAt || "", equipmentInAt: hold.event.equipmentInAt || "",
           alreadyDispatched: hold.quantity, pendingLogistics: false };
         row.events.push(reservation); row.reservations.push(reservation); row.quantity += amount; row.eventQuantities[hold.event.id] = amount;
       }
@@ -786,7 +821,7 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
       row.planning.warnings = [...new Set([...row.planning.warnings,
         ...(row.pendingIdentification ? ["Identifique el equipo físico antes de calcular una renta o compra; una identidad pendiente no equivale a existencia cero."] : []),
         ...row.classificationWarnings.map((warning) => warning.message)])];
-      row.planning.routes = []; row.planning.rentalRoutes = []; row.planning.allocations = [];
+      row.planning.routes = []; row.planning.alternativeRoutes = []; row.planning.rentalRoutes = []; row.planning.allocations = [];
     }
     row.transfers = row.planning.routes;
     row.action = row.pendingClassification ? "REVISAR" : row.procurementChoice === "save" || row.pendingIdentification ? "PENDIENTE" : row.missing > 0 ? row.itemType === "consumible" || row.procurementChoice === "purchase" || row.preferredPurchase ? "COMPRA" : "RENTA" : row.pendingLogistics ? "PENDIENTE" : row.confirmedTransfers?.length ? "TRASIEGO" : "DISPONIBLE";
@@ -794,8 +829,8 @@ function calculateEquipmentAvailability(events, inventory, options = {}) {
   }
   const visibleRows = [...rows.values()].filter((row) => row.events.length);
   return { rows: visibleRows, events: visibleEvents, transfers: confirmedTransfers, invalidTransfers,
-    logistics: { routePairs: [...routePairs.values()].sort((a, b) => key(a.fromPlace).localeCompare(key(b.fromPlace)) || key(a.toPlace).localeCompare(key(b.toPlace))),
-      warnings: [...new Set(visibleRows.flatMap((row) => row.planning.warnings))], allActiveEventCount: activeEvents.length,
+    logistics: { routePolicy: options.routePolicy, operationalCalendar: options.routePolicy.operationalCalendar, routePairs: [...routePairs.values()].sort((a, b) => key(a.fromPlace).localeCompare(key(b.fromPlace)) || key(a.toPlace).localeCompare(key(b.toPlace))),
+      warnings: [...new Set([...visibleRows.flatMap((row) => row.planning.warnings), ...options.routePolicy.exceptions.map(entry => entry.reason)])], allActiveEventCount: activeEvents.length,
       proposedRoutesRequireConfirmation: true }, inventorySavedAt: inventory?.savedAt || "", from: options.from || "", to: options.to || "" };
 }
 

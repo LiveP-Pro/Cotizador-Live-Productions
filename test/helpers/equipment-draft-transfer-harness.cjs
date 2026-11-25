@@ -88,8 +88,8 @@ function harness(settings = {}) {
     setStock: (value) => { stock = copy(value); }, stock: () => copy(stock), setPermission: (value) => { permission = value; } };
   const bridge = { events: () => events, inventory: () => stock, range: () => ({ from: "2026-11-23", to: "2026-11-29" }), transferOptions: () => ({ routeEstimates: baseEstimates }),
     updateEventDetails(patches) { updates.push(copy(patches)); for (const patch of patches) { const event = events.find((entry) => entry.id === patch.id); if (event) Object.assign(event, patch); } } };
-  state.planFor = (call) => Draft.analyze(call.body.events, stock, { now: Date.parse("2026-11-23T12:00:00Z"), routeEstimates: call.body.routeEstimates, selectedTransferIds: call.body.selectedTransferIds, transferEdits: call.body.transferEdits });
-  const context = vm.createContext({ console, Intl, Date, Set, Map, document, EquipmentLocation: require("../../equipment-location.js"), window: { LIVE_SESSION: { id: "synthetic" }, LiveAccess: { can: () => permission } } });
+  state.planFor = (call) => Draft.analyze(call.body.events, stock, { now: Date.parse("2026-11-23T12:00:00Z"), routeEstimates: call.body.routeEstimates, selectedTransferIds: call.body.selectedTransferIds, transferEdits: call.body.transferEdits, splitAuthorizedOrigins: call.body.splitAuthorizedOrigins });
+  const context = vm.createContext({ console, Intl, Date, Set, Map, document, EquipmentLocation: require("../../equipment-location.js"), EquipmentDraftSubstitutions: require("../../equipment-draft-substitutions.js"), window: { LIVE_SESSION: { id: "synthetic" }, LiveAccess: { can: () => permission } } });
   vm.runInContext(source(), context);
   state.api = context.EquipmentDraftTransfers.create({ document, bridge, fetch: async (url, init) => {
     const call = { url, init, body: JSON.parse(init.body) }; calls.push(call);

@@ -65,21 +65,18 @@ test("un trasiego confirmado conserva destinos fuera del período y no presta su
   assert.deepEqual(result.transfers, []);
 });
 
-test("el mínimo de renta incluye el itinerario de sus propias unidades sin ofrecer un trasiego de bodega ficticio", () => {
+test("sin equipo propio ni reutilización de renta confirmada no se inventa una unidad trasladable", () => {
   const result = row([event("origin"), later("destination")], inventory(0));
-  assert.equal(result.planning.rentalPotential, 1); assert.deepEqual(result.transfers, []);
-  assert.equal(result.planning.rentalRoutes.length, 1);
-  const suggested = result.planning.rentalRoutes[0];
-  assert.equal(suggested.fromEventId, "origin"); assert.equal(suggested.toEventId, "destination");
-  assert.equal(suggested.quantity, 1); assert.equal(suggested.source, "rental");
-  assert.equal(suggested.requiresRentalSupplierConfirmation, true);
+  assert.equal(result.planning.rentalPotential, 2); assert.deepEqual(result.transfers, []);
+  assert.deepEqual(result.planning.alternativeRoutes, []); assert.deepEqual(result.planning.rentalRoutes, []);
 });
 
 test("los tiempos estimados son visibles y cada par de lugares dirigido se muestra una sola vez", () => {
   const first = event("origin", 1, { place: "Sede Á" }); const second = later("destination", 1, { place: "Sede B" });
   const third = later("third", 1, { place: "SEDE b" });
   const result = plan([first, second, third]);
-  const suggested = result.rows[0].transfers[0];
+  assert.equal(result.rows[0].transfers.length, 0, "una estimación pendiente no integra el plan automático");
+  const suggested = result.rows[0].planning.alternativeRoutes[0];
   assert.equal(suggested.travelMinutes, 60); assert.equal(suggested.handlingMinutes, 120);
   assert.equal(suggested.travelSource, "estimate"); assert.equal(suggested.requiresTimeConfirmation, true);
   assert.equal(result.logistics.routePairs.length, 1);
@@ -90,8 +87,10 @@ test("los tiempos estimados son visibles y cada par de lugares dirigido se muest
 
 test("el mismo lugar sólo elimina transporte, mantiene desmontaje y preparación", () => {
   const result = row([event("origin", 1, { place: " SALÓN Á " }), later("destination", 1, { place: "salon a" })]);
-  assert.equal(result.transfers[0].travelMinutes, 0); assert.equal(result.transfers[0].handlingMinutes, 120);
-  assert.equal(result.transfers[0].travelSource, "same-place"); assert.equal(result.transfers[0].requiresTimeConfirmation, true);
+  assert.equal(result.transfers.length, 0, "incluso el mismo lugar requiere revisar desmontaje y preparación");
+  const alternative = result.planning.alternativeRoutes[0];
+  assert.equal(alternative.travelMinutes, 0); assert.equal(alternative.handlingMinutes, 120);
+  assert.equal(alternative.travelSource, "same-place"); assert.equal(alternative.requiresTimeConfirmation, true);
 });
 
 test("sin finalización nunca se inventa una salida para el trasiego y un evento legado sólo puede regresar a bodega", () => {
@@ -154,7 +153,7 @@ test("editar un evento no puede superponer dos rutas ya confirmadas sin stock pa
 test("una entrada rentada no roba la continuación de una cadena propia confirmada al compartir evento", () => {
   const rentedStart = event("a-rental"); const ownedStart = event("z-owned");
   const shared = later("shared", 2); const final = later("final", 1, { setupAt: "2026-10-20T20:00", startAt: "2026-10-20T21:00", endAt: "2026-10-20T22:00", equipmentInAt: "2026-10-21T12:00" });
-  const result = row([rentedStart, ownedStart, shared, final], inventory(1), { transfers: [route("owned-in", "z-owned", "shared"), route("owned-out", "shared", "final")] });
+  const result = row([rentedStart, ownedStart, shared, final], inventory(1), { routeEstimates: [{ fromPlace: "Sede sintética", toPlace: "Sede sintética", travelMinutes: 0, handlingMinutes: 120 }], transfers: [route("owned-in", "z-owned", "shared"), route("owned-out", "shared", "final")] });
   assert.equal(result.planning.requiredFleet, 2); assert.equal(result.planning.rentalPotential, 1);
   assert.equal(result.planning.mandatoryShortage, 0); assert.equal(result.planning.physicalConflict, false); assert.equal(result.planning.optimal, true);
   assert.deepEqual(result.planning.allocations.find((entry) => entry.source === "warehouse").eventIds, ["z-owned", "shared", "final"]);

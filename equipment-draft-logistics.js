@@ -116,6 +116,13 @@
       }
       const globalInventoryBlockReason = text(options.globalInventoryBlockReason);
       const originalEvents = normalizeInput(events, inventory, engine);
+      const activeIds = new Set(originalEvents.map((event) => event.id));
+      if (options.splitAuthorizedOrigins !== undefined && (!Array.isArray(options.splitAuthorizedOrigins)
+          || options.splitAuthorizedOrigins.some((id) => typeof id !== "string" || !activeIds.has(id))
+          || new Set(options.splitAuthorizedOrigins).size !== options.splitAuthorizedOrigins.length)) {
+        throw invalid("La autorización para dividir un cuadro debe identificar orígenes vigentes y únicos.");
+      }
+      const splitAuthorizedOrigins = [...(options.splitAuthorizedOrigins || [])];
       const timingIssues = new Map(originalEvents.map((event) => [event.id, scheduleIssue(event, engine)]));
       const calculationEvents = originalEvents.map((event) => timingIssues.get(event.id)
         ? { ...event, setupAt: "", startAt: "", endAt: "", teardownAt: "", equipmentInAt: "", equipmentOutAt: "" } : event);
@@ -123,13 +130,21 @@
         ...(options.now === undefined ? {} : { now: options.now }) };
       const baseline = engine.calculateAvailability(calculationEvents, inventory, calculationOptions);
       const baselineById = new Map(baseline.rows.map((row) => [row.id, row]));
-      const candidates = []; const identities = new Map();
+      const candidates = []; const identities = new Map(); const excludedByInventory = new Map();
       for (const row of baseline.rows) {
         const related = row.events.map((entry) => originalEvents.find((event) => event.id === entry.eventId)).filter(Boolean);
+        const inventoryReason = inventoryBlocks.get(row.warehouseInventoryId) || globalInventoryBlockReason;
+        if (inventoryReason) for (const route of list(row.planning?.alternativeRoutes ?? row.planning?.routes)) {
+          if (!row.warehouseInventoryId || !(Number(route.quantity) > 0)) continue;
+          const proposal = { ...copy(route), warehouseInventoryId: row.warehouseInventoryId }, id = routeId(proposal);
+          // Resolve only the exact canonical proposal derived from these
+          // current events and stock. Arbitrary IDs stay globally pending.
+          excludedByInventory.set(id, { ...proposal, id, rowId: row.id, maxQuantity: proposal.quantity, description: row.description, inventoryReason });
+        }
         if (row.itemType === "consumible" || row.procurementChoice || row.preferredPurchase || row.pendingIdentification || row.pendingClassification
             || row.planning?.optimal === false || inventoryBlocks.has(row.warehouseInventoryId) || globalInventoryBlockReason
             || related.some((event) => timingIssues.get(event.id) || !text(event.place))) continue;
-        for (const route of list(row.planning?.routes)) {
+        for (const route of list(row.planning?.alternativeRoutes ?? row.planning?.routes)) {
           if (!text(row.warehouseInventoryId) || !(Number(route.quantity) > 0)) continue;
           const proposal = { ...copy(route), warehouseInventoryId: row.warehouseInventoryId };
           const id = routeId(proposal); const canonical = stable(routeIdentity(proposal));
@@ -147,26 +162,50 @@
       candidates.sort((a, b) => text(a.departureAt).localeCompare(text(b.departureAt)) || text(a.fromEventId).localeCompare(text(b.fromEventId))
         || text(a.toEventId).localeCompare(text(b.toEventId)) || text(a.warehouseInventoryId).localeCompare(text(b.warehouseInventoryId)));
       const snapshotId = `draft-snapshot-${fingerprint({ events: originalEvents, inventory, transfers: actualTransfers,
-        routeEstimates: calculationOptions.routeEstimates, candidates: candidates.map((candidate) => ({ id: candidate.id, requiresManualReview: candidate.requiresManualReview })),
+        routeEstimates: calculationOptions.routeEstimates, routePolicy: baseline.logistics?.routePolicy, candidates: candidates.map((candidate) => ({ id: candidate.id, requiresManualReview: candidate.requiresManualReview })),
         baseline: baseline.rows.map((row) => ({ id: row.id, available: row.available, capacity: row.capacity, required: row.required, pendingLogistics: row.pendingLogistics, physicalConflict: row.planning?.physicalConflict })) })}`;
       const staleSelection = Boolean(requestedIds.length && options.expectedSnapshotId && options.expectedSnapshotId !== snapshotId);
       const byCandidateId = new Map(candidates.map((candidate) => [candidate.id, candidate]));
       const invalidSelections = [];
       for (const [id, edit] of transferEdits) {
-        const candidate = byCandidateId.get(id);
+        const candidate = byCandidateId.get(id) || excludedByInventory.get(id);
         if (candidate && edit.quantity > candidate.maxQuantity) throw invalid(`La cantidad editada supera el máximo comprobado (${candidate.maxQuantity}) para ${candidate.description}. No se aplicó ningún cambio.`, 409);
         if (!candidate && edit.quantity > 0 && !requestedIds.includes(id)) invalidSelections.push({ id, rowId: "", warehouseInventoryId: "", code: "proposal_unavailable", message: "Una edición ya no corresponde a las propuestas actuales. Revise la lista antes de aplicar los cambios." });
       }
       let selected = [];
       for (const id of requestedIds) {
-        const candidate = byCandidateId.get(id);
+        const candidate = byCandidateId.get(id) || excludedByInventory.get(id);
         if (candidate && transferEdits.get(id)?.quantity === 0) continue;
-        const code = staleSelection ? "stale_snapshot" : !candidate ? "proposal_unavailable" : candidate.requiresManualReview ? "time_review_required" : "";
+        const code = staleSelection ? "stale_snapshot" : excludedByInventory.has(id) ? "inventory_context_required" : !candidate ? "proposal_unavailable" : candidate.requiresManualReview ? "time_review_required" : "";
         if (code) invalidSelections.push({ id, rowId: candidate?.rowId || "", warehouseInventoryId: candidate?.warehouseInventoryId || "", code,
           message: code === "stale_snapshot" ? "El inventario o los eventos cambiaron. Revise la lista actual y vuelva a aplicar la selección."
-            : code === "time_review_required" ? candidate.reasons[0] : "Esta propuesta ya no corresponde al inventario, cantidades u horarios actuales. Vuelva a generar el listado." });
+            : code === "inventory_context_required" ? candidate.inventoryReason
+              : code === "time_review_required" ? candidate.reasons[0] : "Esta propuesta ya no corresponde al inventario, cantidades u horarios actuales. Vuelva a generar el listado." });
         else if ((transferEdits.get(id)?.quantity ?? candidate.quantity) > 0) selected.push({ ...candidate,
           quantity: transferEdits.get(id)?.quantity ?? candidate.quantity, note: transferEdits.get(id)?.note || "" });
+      }
+      // A manual alternative is valid, but silently spreading one truck kit
+      // over several destinations is not. Already confirmed history remains
+      // untouched; only new proposals require explicit split approval.
+      const destinations = new Map();
+      for (const transfer of actualTransfers.filter((entry) => entry.status !== "cancelled")) {
+        if (!list(transfer.items).some((item) => Number(item.quantity) > 0)) continue;
+        if (!destinations.has(transfer.fromEventId)) destinations.set(transfer.fromEventId, new Set());
+        destinations.get(transfer.fromEventId).add(transfer.toEventId);
+      }
+      for (const candidate of selected) {
+        if (!destinations.has(candidate.fromEventId)) destinations.set(candidate.fromEventId, new Set());
+        destinations.get(candidate.fromEventId).add(candidate.toEventId);
+      }
+      const unauthorizedOrigins = new Set([...destinations].filter(([origin, targets]) => targets.size > 1
+        && !splitAuthorizedOrigins.includes(origin)).map(([origin]) => origin));
+      if (unauthorizedOrigins.size) {
+        for (const candidate of selected.filter((entry) => unauthorizedOrigins.has(entry.fromEventId))) {
+          invalidSelections.push({ id: candidate.id, rowId: candidate.rowId, warehouseInventoryId: candidate.warehouseInventoryId,
+            fromEventId: candidate.fromEventId, code: "split_confirmation_required",
+            message: "Este cuadro se repartiría entre varios destinos. Confirme expresamente la división antes de aplicar sus trasiegos; el historial confirmado se conserva." });
+        }
+        selected = selected.filter((entry) => !unauthorizedOrigins.has(entry.fromEventId));
       }
       function calculateSelection() {
         return selected.length ? engine.calculateAvailability(calculationEvents, inventory, { ...calculationOptions,
@@ -264,11 +303,14 @@
       const rental = rows.filter((row) => row.rental > 0); const purchase = rows.filter((row) => row.purchase > 0);
       const bundles = typeof engine.buildEquipmentRouteBundles === "function" ? engine.buildEquipmentRouteBundles({
         events: originalEvents, rows, candidates, options: calculationOptions, timingIssues, routeTiming: engine.logisticsRouteTiming,
-        localTime: engine.localTime, reservationStartAt: engine.eventReservationStartAt, fingerprint
+        localTime: engine.localTime, reservationStartAt: engine.eventReservationStartAt, fingerprint,
+        routePolicy: baseline.logistics?.routePolicy
       }) : [];
 
       return { events: originalEvents, rows, candidates, selectedTransfers: selected.map((candidate) => ({ ...candidate, selected: true, transfer: routeTransfer(candidate) })),
         routeBundles: bundles, preloadsApplied: false,
+        routePolicy: copy(baseline.logistics?.routePolicy || {}), operationalCalendar: copy(baseline.logistics?.routePolicy?.operationalCalendar || []),
+        splitAuthorizedOrigins,
         transferEdits: [...transferEdits.values()].filter((edit) => byCandidateId.has(edit.id)).map(copy),
         selectedTransferIds: selected.map((candidate) => candidate.id), invalidSelections, staleSelection, snapshotId, pending, rental, rent: rental, purchase,
         routeEstimates: copy(calculationOptions.routeEstimates), routePairs: copy(baseline.logistics?.routePairs || []),

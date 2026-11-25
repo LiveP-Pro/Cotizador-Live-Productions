@@ -119,20 +119,34 @@ test("una unidad origen no abastece dos destinos simultáneos y las precargas re
   assert.ok(reserved <= 1, `se recomendó precargar ${reserved} con existencia 1`);
   const oneOrigin = [event("B", 8, 10, [line("console", 1)]), event("E", 14, 16, [line("console", 1)]),
     event("F", 14, 16, [line("console", 1)])];
-  const proposal = analyze(oneOrigin, stock), picked = analyze(oneOrigin, stock, { selectedTransferIds: readyIds(proposal) });
-  assert.ok(picked.selectedTransfers.filter(route => route.fromEventId === "B").reduce((sum, route) => sum + route.quantity, 0) <= 1);
+  const proposal = analyze(oneOrigin, stock), refused = analyze(oneOrigin, stock, { selectedTransferIds: readyIds(proposal) });
+  assert.equal(refused.selectedTransfers.filter(route => route.fromEventId === "B").length, 0, "una división no aceptada no reduce renta");
+  assert.ok(refused.invalidSelections.some(entry => entry.code === "split_confirmation_required"));
+  const firstDestination = proposal.candidates.find(route => route.fromEventId === "B" && route.toEventId === "E");
+  assert.ok(firstDestination);
+  const picked = analyze(oneOrigin, stock, { selectedTransferIds: [firstDestination.id] });
+  assert.equal(picked.selectedTransfers.filter(route => route.fromEventId === "B").reduce((sum, route) => sum + route.quantity, 0), 1);
   assert.equal(row(picked, "console").rental, 1);
+  const excessive = analyze(oneOrigin, stock, { selectedTransferIds: readyIds(proposal), splitAuthorizedOrigins: ["B"] });
+  assert.ok(excessive.selectedTransfers.filter(route => route.fromEventId === "B").reduce((sum, route) => sum + route.quantity, 0) <= 1,
+    "aceptar dividir no autoriza duplicar la única unidad física");
+  assert.ok(excessive.invalidSelections.length > 0);
 });
 
-test("cercanía compara kilómetros verificables sin cambiar la cobertura por el orden del archivo", () => {
+test("equipo coincidente conserva su puntuación y el viaje verificado desempata sin depender del orden del archivo", () => {
   const stock = inventory({ console: 1, zero: 0 });
   const events = [event("B", 8, 10, [line("console", 1)]), event("E", 14, 16, [line("console", 1)]),
     event("F", 14, 16, [line("console", 1)], { coordinates: { lat: 15.6, lng: -91.5 }, mapUrl: "https://maps.google.com/?q=15.6,-91.5" })];
-  const first = analyze(events, stock), reversed = analyze([...events].reverse(), stock);
+  const reviewedRoutes = estimates(events).map(route => ({ ...route,
+    travelMinutes: route.fromPlace === "Sede B" && route.toPlace === "Sede F" ? 120 : 30 }));
+  const first = analyze(events, stock, { routeEstimates: reviewedRoutes }), reversed = analyze([...events].reverse(), stock, { routeEstimates: reviewedRoutes });
   assert.equal(row(first, "console").baselineRequired, row(reversed, "console").baselineRequired);
   const near = bundle(first, "B", "E"), far = bundle(first, "B", "F");
   assert.ok(near && far); assert.ok(near.proximity.distanceKm < far.proximity.distanceKm);
-  assert.ok(near.score > far.score, "con el mismo kit y horarios se recomienda la sede cercana");
+  assert.equal(near.score, far.score, "el porcentaje del mismo kit no se altera por distancia ni puntuaciones ocultas");
+  assert.equal(near.recommended, true, "el viaje confirmado más corto desempata el mismo kit y preparación adicional");
+  assert.equal(far.recommended, false);
+  assert.deepEqual(first.routePolicy.primaryDestinations, reversed.routePolicy.primaryDestinations);
   assert.ok(first.candidates.some(route => route.fromEventId === "B" && route.toEventId === "E"));
 });
 

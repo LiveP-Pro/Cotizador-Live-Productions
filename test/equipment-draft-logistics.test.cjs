@@ -19,18 +19,19 @@ function event(id, quantity = 3, hour = 8, extra = {}) {
 function analyze(events, stock = inventory(), options = {}) { return Draft.analyze(events, stock, { now, ...options }); }
 function row(result) { return result.rows.find((entry) => entry.warehouseInventoryId === "synthetic-unit"); }
 function allIds(result) { return result.candidates.map((candidate) => candidate.id); }
+function chainIds(result, order) { return order.slice(0, -1).flatMap((from, index) => result.candidates.filter(route => route.fromEventId === from && route.toEventId === order[index + 1]).map(route => route.id)); }
 
 test("sin selección la demanda conserva su faltante y las rutas siguen siendo propuestas", () => {
   const result = analyze([event("a"), event("b", 3, 12), event("c", 3, 16)], inventory(), { routeEstimates: estimates });
   assert.equal(row(result).demand, 9); assert.equal(row(result).baselineRequired, 9); assert.equal(row(result).required, 9);
-  assert.equal(row(result).rental, 6); assert.equal(result.candidates.length, 2); assert.equal(result.selectedTransfers.length, 0);
+  assert.equal(row(result).rental, 6); assert.equal(result.candidates.length, 3); assert.equal(result.selectedTransfers.length, 0);
   assert.ok(result.candidates.every((candidate) => candidate.status === "ready" && !candidate.selected));
 });
 
 test("A → B → C usa las mismas tres unidades propias una vez y elimina sólo la renta que cubren", () => {
   const events = [event("a"), event("b", 3, 12), event("c", 3, 16)];
   const baseline = analyze(events, inventory(), { routeEstimates: estimates });
-  const result = analyze(events, inventory(), { routeEstimates: estimates, selectedTransferIds: allIds(baseline), expectedSnapshotId: baseline.snapshotId });
+  const result = analyze(events, inventory(), { routeEstimates: estimates, selectedTransferIds: chainIds(baseline, ["a", "b", "c"]), expectedSnapshotId: baseline.snapshotId });
   assert.equal(row(result).required, 3); assert.equal(row(result).rental, 0); assert.equal(row(result).selectedTransferReduction, 6);
   assert.equal(result.selectedTransfers.length, 2); assert.equal(result.rental.length, 0); assert.equal(result.productionMutations, 0);
   assert.deepEqual(result.actualTransfers, []); assert.equal(result.invalidSelections.length, 0);
@@ -38,7 +39,7 @@ test("A → B → C usa las mismas tres unidades propias una vez y elimina sólo
 
 test("desmarcar una pierna recalcula la renta sin usar una ruta alternativa invisible", () => {
   const events = [event("a"), event("b", 3, 12), event("c", 3, 16)];
-  const first = analyze(events, inventory(), { routeEstimates: estimates }); const ids = allIds(first);
+  const first = analyze(events, inventory(), { routeEstimates: estimates }); const ids = chainIds(first, ["a", "b", "c"]);
   for (const keep of [ids.slice(0, 1), ids.slice(1)]) {
     const partial = analyze(events, inventory(), { routeEstimates: estimates, selectedTransferIds: keep });
     assert.equal(row(partial).required, 6); assert.equal(row(partial).rental, 3); assert.equal(partial.selectedTransfers.length, 1);
@@ -49,8 +50,9 @@ test("desmarcar una pierna recalcula la renta sin usar una ruta alternativa invi
 test("una unidad de origen no abastece dos destinos simultáneos y el faltante restante sí se renta", () => {
   const events = [event("a", 3), event("b", 3, 12), event("c", 2, 12)];
   const proposed = analyze(events, inventory(), { routeEstimates: estimates });
-  assert.ok(proposed.candidates.filter((route) => route.fromEventId === "a").reduce((sum, route) => sum + route.quantity, 0) <= 3);
-  const result = analyze(events, inventory(), { routeEstimates: estimates, selectedTransferIds: allIds(proposed) });
+  assert.equal(proposed.candidates.filter(route => route.fromEventId === "a").length, 2, "Both exclusive destinations remain available for comparison");
+  assert.ok(proposed.candidates.every(route => route.quantity <= 3));
+  const result = analyze(events, inventory(), { routeEstimates: estimates, selectedTransferIds: chainIds(proposed, ["a", "b"]) });
   assert.equal(row(result).required, 5); assert.equal(row(result).rental, 2);
 });
 

@@ -190,7 +190,7 @@ test("each import report action loads exactly once and reports from the consumed
   for (const mode of ["transfer", "rent", "purchase"]) {
     let imports = 0, after = 0, finish;
     const harness = batchHarness({ bridge: { importEvents(events) { imports++; assert.equal(events[0].sections[0].items[0].quantity, 0); return new Promise((resolve) => { finish = resolve; }); }, afterImport(receivedMode, context) {
-      after++; assert.equal(receivedMode, mode); assert.equal(context.result.count, 1); assert.equal(context.events.length, 1); assert.equal(harness.dialog.open, true); assert.equal(harness.api.getPreview(), null);
+      after++; assert.equal(receivedMode, mode); assert.equal(context.result.count, 1); assert.equal(context.events.length, 1); assert.equal(harness.dialog.open, mode !== 'transfer', 'el diálogo nativo cede su capa al editor de trasiego'); assert.equal(harness.api.getPreview(), null);
     } } });
     harness.api.open(); await harness.api.read(syntheticFile());
     const applying = harness.action(`apply-${mode}`);
@@ -198,11 +198,12 @@ test("each import report action loads exactly once and reports from the consumed
     assert.equal(imports, 1); assert.equal(after, 0);
     finish({ count: 1 }); await applying;
     assert.equal(after, 1); assert.equal(imports, 1);
-    assert.equal(harness.dialog.open, true, "the loaded batch stays available behind every report viewer");
+    assert.equal(harness.dialog.open, mode !== 'transfer', 'el lote se conserva y el editor de trasiego recibe la capa superior');
     assert.notEqual(harness.get("equipmentBatchStatus").dataset.error, "true");
+    harness.api.open();
     await harness.action(`apply-${mode}`);
     assert.equal(after, 2); assert.equal(imports, 1);
-    assert.equal(harness.dialog.open, true);
+    assert.equal(harness.dialog.open, mode !== 'transfer');
   }
 });
 test("a failed report callback retries only the report and retains imported events", async () => {

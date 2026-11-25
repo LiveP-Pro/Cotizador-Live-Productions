@@ -7,7 +7,7 @@ test("el modal usa el endpoint único en mode plan y sólo marca propuestas list
   const h = harness(); await h.api.show();
   assert.equal(h.calls.length, 2); assert.ok(h.calls.every((call) => call.url === "/api/cuadros-equipo/reportes/provisional" && call.init.method === "POST" && call.body.mode === "plan" && call.body.format === "json"));
   assert.ok(h.calls.every((call) => call.init.credentials === "same-origin"));
-  const checkboxes = h.modal().querySelectorAll("[data-draft-route]"); assert.equal(checkboxes.length, 2); assert.ok(checkboxes.every((input) => input.checked && !input.disabled));
+  const checkboxes = h.modal().querySelectorAll("[data-draft-route]"); assert.equal(checkboxes.length, 3); assert.equal(checkboxes.filter((input) => input.checked).length, 2); assert.ok(checkboxes.every((input) => !input.disabled));
   assert.equal(h.calls[1].body.selectedTransferIds.length, 2); assert.equal(h.api.selection().selectedTransferIds.length, 0); assert.equal(h.updates.length, 0);
 });
 

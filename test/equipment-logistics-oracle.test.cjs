@@ -16,8 +16,14 @@ function event(id, setupHours, endHours, quantity = 1, extra = {}) {
     setupAt: at(setupHours), startAt: at(setupHours + 0.25), endAt: at(endHours), equipmentInAt: at(Math.max(endHours + 12, 72)),
     sections: [{ id: `section-${id}`, title: "Pruebas", items: [{ id: `line-${id}`, description: "Unidad sintética para oráculo", warehouseInventoryId: "oracle-unit", quantity }] }], ...extra };
 }
+function verifiedOptions(events, options = {}) {
+  const places = [...new Map(events.map(event => [normalizePlace(event.place), event.place])).values()];
+  const routeEstimates = places.flatMap(fromPlace => places.map(toPlace => ({ fromPlace, toPlace,
+    travelMinutes: normalizePlace(fromPlace) === normalizePlace(toPlace) ? 0 : 60, handlingMinutes: 120 })));
+  return { routeEstimates, ...options };
+}
 function rowFor(events, quantity = 1, options = {}, itemType = "equipo") {
-  const result = calculateEquipmentAvailability(events, inventory(quantity, itemType), { now: NOW, ...options });
+  const result = calculateEquipmentAvailability(events, inventory(quantity, itemType), { now: NOW, ...verifiedOptions(events, options) });
   const row = result.rows.find(value => value.warehouseInventoryId === "oracle-unit");
   assert.ok(row, "el resumen debe conservar la fila de inventario");
   return row;
@@ -27,26 +33,41 @@ function planningFor(events, quantity = 1, options = {}) {
   assert.ok(row.planning, "se requiere planificación global independiente del faltante sin confirmar");
   return row.planning;
 }
-function feasibility(events, options = {}) {
+function feasibility(events, options = {}, stock = 1) {
+  options = verifiedOptions(events, options);
+  const primary = new Map();
+  const qty = event => event.sections[0].items[0].quantity;
+  function direct(before, after) {
+    if (before.id === after.id || !before.endAt || stock <= 0) return null;
+    const next = localTime(after.setupAt), end = localTime(before.endAt);
+    const delta = Math.floor((next - 6 * 3600000) / 86400000) - Math.floor((end - 6 * 3600000) / 86400000);
+    if (delta < 0 || delta > 1) return null;
+    const specified = options.routeEstimates.find(route => normalizePlace(route.fromPlace) === normalizePlace(before.place) && normalizePlace(route.toPlace) === normalizePlace(after.place));
+    if (!specified) return null;
+    const minutes = Number(specified.travelMinutes) + Number(specified.handlingMinutes);
+    return end + minutes * 60000 <= next ? { event: after, shared: Math.min(qty(before), qty(after), stock), additional: Math.max(0, qty(after) - qty(before)), minutes, next, delta } : null;
+  }
+  for (const before of events) {
+    const alternatives = events.map(after => direct(before, after)).filter(value => value?.shared > 0);
+    const better = (a, b) => a.shared > b.shared || a.shared === b.shared && (a.additional < b.additional
+      || a.additional === b.additional && (a.minutes < b.minutes || a.minutes === b.minutes && a.delta === 0 && b.delta === 0 && a.next < b.next));
+    const frontier = alternatives.filter(a => !alternatives.some(b => b !== a && better(b, a)));
+    if (frontier.length === 1) primary.set(before.id, frontier[0].event.id);
+  }
   return (before, after) => {
     if (before.id === after.id) return false;
     const next = localTime(after.setupAt);
     if (localTime(before.equipmentInAt) + Math.max(120, Number(before.preparationMinutes) || 120) * 60000 <= next) return true;
-    if (!before.endAt) return false;
-    const samePlace = normalizePlace(before.place) && normalizePlace(before.place) === normalizePlace(after.place);
-    const specified = (options.routeEstimates || []).find(route => normalizePlace(route.fromPlace) === normalizePlace(before.place) && normalizePlace(route.toPlace) === normalizePlace(after.place));
-    const travel = specified ? Number(specified.travelMinutes) : samePlace ? 0 : 60;
-    const handling = specified?.handlingMinutes === undefined ? 120 : Number(specified.handlingMinutes);
-    return localTime(before.endAt) + (travel + handling) * 60000 <= next;
+    return primary.get(before.id) === after.id;
   };
 }
 
 // This deliberately uses a tiny exhaustive labelled-unit matching, not the
 // production solver. Every unit has at most one predecessor and successor.
 // Minimum path cover in a temporal DAG = demand units minus maximum matching.
-function exhaustiveFleet(events, options = {}) {
+function exhaustiveFleet(events, options = {}, stock = 1) {
   const units = events.flatMap(evt => Array.from({ length: evt.sections[0].items[0].quantity }, () => evt));
-  const canFollow = feasibility(events, options), memo = new Map();
+  const canFollow = feasibility(events, options, stock), memo = new Map();
   function search(index, usedDestinations) {
     if (index === units.length) return 0;
     const key = `${index}:${usedDestinations}`;
@@ -86,7 +107,7 @@ test("oráculo independiente compara 160 agendas pequeñas con cobertura exhaust
       const start = next(6) * 4;
       return event(`case-${sample}-${index}`, start, start + 1 + next(3) * 4, 1 + next(2));
     });
-    const expected = exhaustiveFleet(events), plan = planningFor(events, stock);
+    const expected = exhaustiveFleet(events, {}, stock), plan = planningFor(events, stock);
     assert.equal(plan.requiredFleet, expected, `agenda ${sample}`);
     assert.equal(plan.rentalPotential, Math.max(0, expected - stock), `renta agenda ${sample}`);
     checkAllocationConservation(events, plan, stock);
@@ -117,12 +138,15 @@ test("se busca A → C aunque B esté intercalado y siga ocupado", () => {
 test("la misma unidad origen no abastece dos destinos simultáneos", () => {
   const events = [event("a", 0, 1), event("b", 4, 8), event("c", 4, 8)];
   const plan = planningFor(events, 1);
-  assert.equal(plan.requiredFleet, 2); assert.equal(plan.rentalPotential, 1);
-  assert.ok(plan.routes.filter(route => route.fromEventId === "a").reduce((sum, route) => sum + route.quantity, 0) <= 1);
-  checkAllocationConservation(events, plan, 1);
+  assert.equal(plan.requiredFleet, 3); assert.equal(plan.rentalPotential, 2);
+  assert.equal(plan.routes.length, 0, "destinos empatados requieren elección manual");
+  const selected = planningFor(events, 1, { transfers: [{ id: "eleccion-explicita", fromEventId: "a", toEventId: "b", travelMinutes: 0, handlingMinutes: 120,
+    items: [{ warehouseInventoryId: "oracle-unit", quantity: 1 }] }] });
+  assert.equal(selected.requiredFleet, 2); assert.equal(selected.rentalPotential, 1);
+  checkAllocationConservation(events, selected, 1);
 });
 
-test("la elección global evita el emparejamiento voraz que bloquea al segundo origen", () => {
+test("una elección manual resuelve el empate de un origen sin duplicar la asignación del segundo", () => {
   const events = [event("a", 0, 1, 1, { place: "Sede A" }), event("b", 0, 1, 1, { place: "Sede B" }),
     event("c", 4, 5, 1, { place: "Sede C" }), event("d", 4, 5, 1, { place: "Sede D" })];
   const routeEstimates = [
@@ -131,17 +155,19 @@ test("la elección global evita el emparejamiento voraz que bloquea al segundo o
     { fromPlace: "Sede B", toPlace: "Sede C", travelMinutes: 60, handlingMinutes: 120 },
     { fromPlace: "Sede B", toPlace: "Sede D", travelMinutes: 500, handlingMinutes: 120 }
   ];
-  const plan = planningFor(events, 2, { routeEstimates });
-  assert.equal(plan.requiredFleet, exhaustiveFleet(events, { routeEstimates }));
+  const pending = planningFor(events, 2, { routeEstimates });
+  assert.equal(pending.requiredFleet, 3, "el origen A tiene dos alternativas empatadas");
+  const plan = planningFor(events, 2, { routeEstimates, transfers: [{ id: "eleccion-a-d", fromEventId: "a", toEventId: "d", travelMinutes: 60, handlingMinutes: 120,
+    items: [{ warehouseInventoryId: "oracle-unit", quantity: 1 }] }] });
   assert.equal(plan.requiredFleet, 2); assert.equal(plan.rentalPotential, 0);
-  assert.ok(plan.routes.some(route => route.fromEventId === "a" && route.toEventId === "d"));
+  assert.ok(plan.allocations.some(path => path.eventIds.includes("a") && path.eventIds.includes("d")));
   assert.ok(plan.routes.some(route => route.fromEventId === "b" && route.toEventId === "c"));
 });
 
 test("sin existencia no se propone trasladar una unidad ficticia de bodega", () => {
   const events = [event("a", 0, 1), event("b", 4, 5), event("c", 8, 9)];
   const row = rowFor(events, 0);
-  assert.equal(row.planning.requiredFleet, 1); assert.equal(row.planning.rentalPotential, 1);
+  assert.equal(row.planning.requiredFleet, 3); assert.equal(row.planning.rentalPotential, 3);
   assert.deepEqual(row.transfers, []); assert.deepEqual(row.planning.routes, []);
   checkAllocationConservation(events, row.planning, 0);
 });

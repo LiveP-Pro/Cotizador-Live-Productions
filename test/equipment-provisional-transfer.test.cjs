@@ -28,15 +28,20 @@ function fixture(quantity = 3) {
   return { events, inventory };
 }
 
-test("trasiego provisional calcula cantidades propias y horarios de borradores sin alterar renta conservadora", () => {
+function selectReviewed(payload, inventory) {
+  const preview = reporting.createEquipmentReportModel(payload, inventory);
+  return { ...payload, selectedTransferIds: preview.draftLogistics.candidates.filter(route => route.status === "ready").map(route => route.id) };
+}
+
+test("trasiego provisional muestra propuestas revisables sin acreditar rutas no elegidas ni alterar renta conservadora", () => {
   const { events, inventory } = fixture(), before = JSON.stringify({ events, inventory });
   const ordinary = reporting.createEquipmentReportModel({ events }, inventory);
   const model = reporting.createEquipmentTransferReportModel({ events }, inventory);
   assert.equal(model.reportMode, "transfer");
   assert.equal(model.productionMutations, 0);
   assert.equal(model.provisional, true);
-  assert.equal(model.transferRoutes.length, 1);
-  const route = model.transferRoutes[0];
+  assert.equal(model.transferRoutes.length, 0);
+  const route = model.draftLogistics.candidates[0];
   assert.equal(route.fromEventId, events[0].id);
   assert.equal(route.toEventId, events[1].id);
   assert.equal(route.warehouseInventoryId, "audio-synthetic");
@@ -49,8 +54,8 @@ test("trasiego provisional calcula cantidades propias y horarios de borradores s
   assert.equal(route.handlingMinutes, 120);
   assert.equal(route.requiresTimeConfirmation, true);
   assert.equal(route.requiresConfirmation, true);
-  assert.match(route.sourceRefs, /origen-sintetico!A1/);
-  assert.match(route.sourceRefs, /destino-sintetico!B1/);
+  assert.ok(model.details.some(line => line.sourceRefs.includes("origen-sintetico!A1")));
+  assert.ok(model.details.some(line => line.sourceRefs.includes("destino-sintetico!B1")));
   assert.equal(model.rentalTransferRoutes.length, 0);
   assert.equal(model.counts.events, 2);
   assert.equal(model.counts.equipmentRows, 2);
@@ -68,22 +73,22 @@ test("un intervalo insuficiente entre eventos queda sin propuesta hasta revisar 
   assert.equal(model.transferRoutes.length, 0, "two available hours cannot satisfy default three-hour logistics");
   assert.equal(model.rentalTransferRoutes.length, 0);
   assert.equal(model.counts.events, 2);
-  const reviewed = reporting.createEquipmentTransferReportModel({ events, routeEstimates: [
+  const reviewedPayload = { events, routeEstimates: [
     { fromPlace: events[0].place, toPlace: events[1].place, travelMinutes: 30, handlingMinutes: 30 }
-  ] }, inventory);
+  ] };
+  const reviewed = reporting.createEquipmentTransferReportModel(selectReviewed(reviewedPayload, inventory), inventory);
   assert.equal(reviewed.transferRoutes[0].quantity, 2);
   assert.equal(reviewed.transferRoutes[0].requiresTimeConfirmation, false);
 });
 
-test("rutas propias y traslados de unidades rentadas se mantienen separados y los minutos revisados pueden ser cero", () => {
+test("sólo la continuidad propia elegida reduce renta y los minutos revisados pueden ser cero", () => {
   const { events, inventory } = fixture(1);
   const payload = { events, routeEstimates: [{ fromPlace: events[0].place, toPlace: events[1].place, travelMinutes: 0, handlingMinutes: 0 }] };
-  const model = reporting.createEquipmentTransferReportModel(payload, inventory);
+  const model = reporting.createEquipmentTransferReportModel(selectReviewed(payload, inventory), inventory);
   assert.equal(model.transferRoutes.length, 1);
   assert.equal(model.transferRoutes[0].quantity, 1);
-  assert.equal(model.rentalTransferRoutes.length, 1);
-  assert.equal(model.rentalTransferRoutes[0].quantity, 1);
-  assert.equal(model.rentalTransferRoutes[0].requiresRentalSupplierConfirmation, true);
+  assert.equal(model.rentalTransferRoutes.length, 0, "No unselected continuity of supplier units is silently credited");
+  assert.equal(model.rows[0].rental, 3);
   assert.equal(model.transferRoutes[0].travelMinutes, 0);
   assert.equal(model.transferRoutes[0].handlingMinutes, 0);
   assert.equal(model.transferRoutes[0].requiresTimeConfirmation, false);
@@ -154,7 +159,8 @@ test("ceros y cuadro de referencia conservan su evidencia sin duplicar demanda; 
   copy.sections = [{ title: "Audio", items: [{ quantity: 3, description: "Unidad sintética de audio" }], rows: [{ type: "item", quantity: 3, description: "Unidad sintética de audio", cells: copy.sourceCells }] }];
   events[0].sourceImport = { referenceTables: [copy] };
   const before = JSON.stringify({ events, inventory });
-  const model = reporting.createEquipmentTransferReportModel({ events }, inventory);
+  const payload = { events, routeEstimates: [{ fromPlace: events[0].place, toPlace: events[1].place, travelMinutes: 60, handlingMinutes: 120 }] };
+  const model = reporting.createEquipmentTransferReportModel(selectReviewed(payload, inventory), inventory);
   assert.equal(model.counts.events, 2); assert.equal(model.counts.equipmentRows, 3); assert.equal(model.counts.zeroQuantityRows, 1);
   assert.equal(model.counts.sourceCells, 8); assert.equal(model.transferRoutes[0].quantity, 2);
   assert.ok(model.preservedRows.some(row => row.section.startsWith("Referencia del archivo")));
@@ -182,7 +188,10 @@ test("endpoint de trasiego usa inventario vigente, entrega PDF autenticado y no 
       assert.match(markup, /Unidad sintética de audio/);
       tempPaths.push(path.dirname(target)); await fs.promises.writeFile(target, "%PDF-synthetic-transfer-report");
     },
-    equipmentEventStore: new Proxy({}, { get() { throw new Error("A provisional transfer report must not touch the event store"); } }),
+    equipmentEventStore: new Proxy({ readEvents: () => ({ events: [], transfers: [] }) }, { get(target, name) {
+      if (name === "readEvents") return target[name];
+      throw new Error("A provisional transfer report must not write to the event store");
+    } }),
     async receiveEquipmentBoardInWarehouse() { throw new Error("A provisional transfer report must not dispatch stock"); }
   });
   vm.runInContext(serverFunctionSource("downloadProvisionalEquipmentReport"), h.api);

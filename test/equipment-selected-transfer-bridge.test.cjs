@@ -101,13 +101,13 @@ function integration({ source = [] } = {}) {
   context.fetch = async (url, init={}) => {
     if(url!=="/api/cuadros-equipo/reportes/provisional"||init.method!=="POST"){writes.push({url,init});throw new Error("No stock or event writes allowed");}
     const body=JSON.parse(init.body);calls.push({url,init,body});
-    const plan=Draft.analyze(body.events,inventory,{now:Date.parse("2026-11-23T12:00:00Z"),selectedTransferIds:body.selectedTransferIds,transferEdits:body.transferEdits,routeEstimates:body.routeEstimates});
+    const plan=Draft.analyze(body.events,inventory,{now:Date.parse("2026-11-23T12:00:00Z"),selectedTransferIds:body.selectedTransferIds,transferEdits:body.transferEdits,routeEstimates:body.routeEstimates,splitAuthorizedOrigins:body.splitAuthorizedOrigins});
     if(body.mode==="plan")return {ok:true,status:200,json:async()=>copy(plan)};
     if(["transfer","rent","purchase"].includes(body.mode))return {ok:true,status:200,headers:{get(name){return {"Content-Type":"text/html; charset=utf-8","X-Equipment-Report-Status":"provisional"}[name]||null;}},text:async()=>`<html><body>${JSON.stringify(plan.rows.map(row=>({rental:row.rental,purchase:row.purchase})))}</body></html>`};
     return {ok:true,status:200,headers:{get(name){return name==="Content-Type"?"application/octet-stream":name==="Content-Disposition"?`attachment; filename="current.${body.mode==="master"?"xlsx":"pdf"}"`:null;}},blob:async()=>new Blob([body.mode==="master"?"PKsynthetic":"%PDF-synthetic"])};
   };
   const run = code => vm.runInContext(code,context);
-  for(const file of ["equipment-location.js","equipment-identity.js","equipment-import-identity.js","equipment-document-audit.js","equipment-draft-transfers.js","equipment-planner.js","equipment.js"])run(fs.readFileSync(require.resolve(`../${file}`),"utf8"));
+  for(const file of ["equipment-location.js","equipment-identity.js","equipment-import-identity.js","equipment-document-audit.js","equipment-draft-substitutions.js","equipment-draft-transfers.js","equipment-planner.js","equipment.js"])run(fs.readFileSync(require.resolve(`../${file}`),"utf8"));
   run(`renderEquipmentModule=()=>{if(window.testPlanner)window.testPlanner.render();};
     loadEquipmentEvent=id=>{equipmentState.selectedEventId=id;const event=selectedEquipmentEvent();if(event){restoreEquipmentEventSnapshot(event);populateEquipmentEventFields(event);}equipmentState.activeWindow='summary';renderEquipmentModule();return !!event;};
     equipmentSharedWorkspace.state={events:[],transfers:[],routeEstimates:[],loaded:true};
@@ -214,4 +214,27 @@ test('cantidades y notas editadas requieren aceptar y llegan iguales a los cinco
   const calls=h.calls.filter(call=>call.body.mode!=='plan');assert.equal(calls.length,5);
   for(const call of calls){assert.equal(call.body.transferEdits.length,1);assert.equal(call.body.transferEdits[0].quantity,2);assert.match(call.body.transferEdits[0].note,/dos unidades/);assert.equal(call.body.selectedTransferIds.length,1);}
   assert.equal(h.writes.length,0);
+});
+
+test('sustituir una referencia en el puente es atómico y conserva notas, filas cero y celdas originales',()=>{
+  const Changes=require('../equipment-draft-substitutions.js');
+  const first=sourceEvent(0,1),second=sourceEvent(1,0);
+  first.sections[0].items.push({id:'zero-literal',description:'Fila cero preservada',quantity:0});
+  const h=integration({source:[first,second]}),inventory=stock(1);
+  inventory.state.items.push({id:'replacement',name:'Otra referencia sintética',category:'Pruebas',itemType:'equipo',quantity:1});h.applyStock(inventory);
+  const events=h.events(),changed=Changes.replace(events,{eventId:events[0].id,sectionIndex:0,itemIndex:0,replacementInventoryId:'replacement',quantity:1,compatibilityConfirmed:true,reason:'Compatibilidad revisada para el evento.'},inventory),before=h.snapshot();
+  assert.throws(()=>h.bridge.updateEventDetails([changed[0],{...events[1],id:'missing-event'}]),/ya no está cargado/);
+  assert.equal(h.snapshot(),before);
+  h.bridge.updateEventDetails([changed[0]]);
+  const after=h.events()[0];assert.equal(after.sections[0].items[0].warehouseInventoryId,'replacement');
+  assert.equal(after.sections[0].items[1].quantity,0);assert.equal(after.planEquipmentChanges.length,1);
+  assert.deepEqual(after.sections[0].rows,events[0].sections[0].rows);assert.deepEqual(after.sourceImport,events[0].sourceImport);assert.deepEqual(after.sourceCells,events[0].sourceCells);
+  assert.equal(h.writes.length,0);assert.equal(inventory.state.movements.length,0);
+});
+
+test('el puente rechaza una sustitución que intenta borrar una nota o cambiar otra línea fuera de revisión',()=>{
+  const Changes=require('../equipment-draft-substitutions.js'),h=integration({source:[sourceEvent(0,1)]}),inventory=stock(1);
+  inventory.state.items.push({id:'replacement',name:'Otra referencia sintética',category:'Pruebas',itemType:'equipo',quantity:1});h.applyStock(inventory);
+  const events=h.events(),changed=Changes.replace(events,{eventId:events[0].id,sectionIndex:0,itemIndex:0,replacementInventoryId:'replacement',quantity:1,compatibilityConfirmed:true,reason:'Compatibilidad manual revisada.'},inventory)[0],before=h.snapshot();
+  changed.sections[0].rows.pop();assert.throws(()=>h.bridge.updateEventDetails([changed]),/otros cambios/);assert.equal(h.snapshot(),before);assert.equal(h.writes.length,0);
 });

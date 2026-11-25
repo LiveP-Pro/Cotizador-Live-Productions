@@ -7719,6 +7719,8 @@ function initEquipmentPlannerBridge() {
     updateEventDetails:patches=>{
       if(equipmentSharedWorkspace.saving)throw new Error("Espere a que termine el guardado actual.");
       if(!Array.isArray(patches))throw new Error("Los horarios del plan no son válidos.");
+      const currentDrafts=new Map(plannerEvents().map(event=>[event.id,event]));
+      if(new Set(patches.map(patch=>patch?.id)).size!==patches.length)throw new Error("Hay eventos repetidos en los cambios del plan.");
       const checked=patches.map(patch=>{
         const event=equipmentState.events.find(entry=>entry.id===patch.id);
         if(!event)throw new Error("Un evento del plan ya no está cargado. Vuelva a generar el listado.");
@@ -7737,6 +7739,11 @@ function initEquipmentPlannerBridge() {
           const value=String(patch[field]||'');
           if(value&&!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?$/.test(value))throw new Error("Hay un horario no válido. Revise el evento antes de aplicar.");
           fields[field]=value;
+        }
+        if(Object.hasOwn(patch,'sections')||Object.hasOwn(patch,'planEquipmentChanges')){
+          const helper=window.EquipmentDraftSubstitutions;
+          if(typeof helper?.validatePatch!=='function')throw new Error('No se pudo revisar la sustitución. Actualice la página antes de aplicar.');
+          Object.assign(fields,helper.validatePatch(currentDrafts.get(event.id)||event,patch,equipmentWarehouseInventoryState.records));
         }
         return {event,fields,clearLocation};
       });
