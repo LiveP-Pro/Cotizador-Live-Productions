@@ -4136,14 +4136,14 @@ function serveStatic(request, response, pathname) {
           data
             .toString("utf8")
             .replace(
-              /(app\.js|live-access\.(?:js|css)|equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|import-identity|draft-transfers|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import|handoffs|report-viewer)\.(?:js|css)|equipment\.js|inventory\.js|warehouse-import-(?:review|corrections)\.js)\?v=[^"'&<>\s]+/g,
+              /(app\.js|live-access\.(?:js|css)|equipment-catalog\.js|equipment-inventory\.js|equipment-name-picker\.(?:js|css)|equipment-(?:identity|import-identity|draft-transfers|transfer-presentation|document-audit|planner|batch-events|event-personalizer|extras-library|workspace|service-import|handoffs|report-viewer)\.(?:js|css)|equipment\.js|inventory\.js|warehouse-import-(?:review|corrections)\.js)\?v=[^"'&<>\s]+/g,
               `$1?v=${warehouseAssetVersion}`
             ),
           "utf8"
         )
       : data;
     const headers = { "Content-Type": contentType };
-    if (requestedPath === "/index.html" || ["app.js", "live-access.js", "equipment-identity.js", "equipment-import-identity.js", "equipment-draft-transfers.js", "equipment-draft-transfers.css", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "equipment-handoffs.js", "equipment-report-viewer.js", "equipment-report-viewer.css", "warehouse-import-review.js", "warehouse-import-corrections.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
+    if (requestedPath === "/index.html" || ["app.js", "live-access.js", "equipment-identity.js", "equipment-import-identity.js", "equipment-draft-transfers.js", "equipment-draft-transfers.css", "equipment-transfer-presentation.js", "equipment-document-audit.js", "equipment-planner.js", "equipment-planner.css", "equipment-batch-events.js", "equipment-batch-events.css", "equipment-catalog.js", "equipment-inventory.js", "equipment-name-picker.js", "equipment-name-picker.css", "equipment.js", "inventory.js", "equipment-handoffs.js", "equipment-report-viewer.js", "equipment-report-viewer.css", "warehouse-import-review.js", "warehouse-import-corrections.js", "equipment-service-import.js", "equipment-event-personalizer.js", "equipment-event-personalizer.css", "equipment-extras-library.js", "equipment-extras-library.css", "equipment-workspace.js", "equipment-workspace.css"].some(
       (asset) => requestedPath === `/${asset}`
     )) {
       headers["Cache-Control"] = "no-store";

@@ -154,7 +154,7 @@ test("equipo coincidente conserva su puntuación y el viaje verificado desempata
 
 test("cancelar la confirmación conserva borrador editable, aceptar aplica una sola vez y no toca el inventario", async () => {
   const h = harness(), beforeEvents = JSON.stringify(h.events()), beforeStock = JSON.stringify(h.stock());
-  await h.api.show();
+  await h.api.show(); await h.openEditor();
   const quantity = h.get('[data-draft-quantity="0"]'); assert.ok(quantity); quantity.value = "1";
   const note = h.get('[data-draft-note="0"]'); assert.ok(note); note.value = "  Nota editada del trasiego  ";
   await h.click('[data-draft-save-edit="0"]');
@@ -171,7 +171,7 @@ test("cancelar la confirmación conserva borrador editable, aceptar aplica una s
 });
 
 test("cerrar con X una edición de Maps no mantiene cambios ni selección", async () => {
-  const h = harness(), before = JSON.stringify(h.events()); await h.api.show();
+  const h = harness(), before = JSON.stringify(h.events()); await h.api.show(); await h.openEditor();
   const map = h.get('[data-draft-event="0"][data-draft-field="mapUrl"]'); assert.ok(map);
   map.value = "https://www.google.com/maps?q=14.6,-90.5"; await h.click("[data-draft-recalculate]");
   await h.click("[data-draft-apply]"); await h.click("[data-draft-confirm-close]");
@@ -182,10 +182,10 @@ test("cerrar con X una edición de Maps no mantiene cambios ni selección", asyn
 });
 
 test("una respuesta de aceptar tras cerrar no puede confirmar el plan de otra ventana", async () => {
-  const h = harness(); await h.api.show(); await h.click("[data-draft-apply]");
+  const h = harness(); await h.api.show(); await h.openEditor(); await h.click("[data-draft-apply]");
   const gate = deferred(); h.responses.push(gate.promise);
   const accepting = h.get("[data-draft-confirm-accept]").emit("click"); await flush(); const request = h.calls.at(-1);
-  h.api.close(); await h.api.show(); const newModal = h.modal();
+  h.api.close(); await h.api.show(); await h.openEditor(); const newModal = h.modal();
   gate.resolve(response(h.planFor(request))); await accepting; await flush();
   assert.equal(h.updates.length, 0); assert.equal(h.modal(), newModal); assert.equal(h.api.isOpen(), true);
   assert.equal(h.api.selection().selectedTransferIds.length, 0);
@@ -193,7 +193,7 @@ test("una respuesta de aceptar tras cerrar no puede confirmar el plan de otra ve
 
 test("un pin de Maps editado no sigue calculando la distancia con las coordenadas anteriores", async () => {
   const events = fixtureEvents().map(event => ({ ...event, mapUrl: "https://www.google.com/maps?q=14.6,-90.5", location: { lat: 14.6, lng: -90.5 } }));
-  const h = harness({ events }); await h.api.show();
+  const h = harness({ events }); await h.api.show(); await h.openEditor();
   h.get('[data-draft-event="0"][data-draft-field="mapUrl"]').value = "https://www.google.com/maps?q=14.7,-90.6";
   await h.click("[data-draft-recalculate]");
   const current = h.calls.at(-1).body.events[0];
@@ -205,7 +205,7 @@ test("un pin de Maps editado no sigue calculando la distancia con las coordenada
 });
 
 test("editar o reservar un evento desde otra ventana invalida la confirmación antes de aplicar", async () => {
-  const h = harness(); await h.api.show(); await h.click("[data-draft-apply]");
+  const h = harness(); await h.api.show(); await h.openEditor(); await h.click("[data-draft-apply]");
   const events = h.events(); events[0].place = "Sede corregida en otra ventana"; h.setEvents(events);
   const calls = h.calls.length; await h.click("[data-draft-confirm-accept]");
   assert.equal(h.updates.length, 0); assert.equal(h.calls.length, calls);
@@ -215,7 +215,7 @@ test("editar o reservar un evento desde otra ventana invalida la confirmación a
 });
 
 test("un cambio de inventario mientras el servidor valida nunca publica la renta reducida anterior", async () => {
-  const h = harness(); await h.api.show(); await h.click("[data-draft-apply]");
+  const h = harness(); await h.api.show(); await h.openEditor(); await h.click("[data-draft-apply]");
   const gate = deferred(); h.responses.push(gate.promise);
   const accepting = h.get("[data-draft-confirm-accept]").emit("click"); await flush(); const request = h.calls.at(-1);
   const oldResponse = response(h.planFor(request)); h.setStock(fixtureInventory(1));
@@ -226,8 +226,8 @@ test("un cambio de inventario mientras el servidor valida nunca publica la renta
 
 test("la recomendación distingue la demanda compartida de unidades propias y distancia vial indicada", async () => {
   const h = harness({ quantity: 1, estimates: [{ fromPlace: "Sede sintética", toPlace: "Sede sintética", travelMinutes: 15, handlingMinutes: 30, distanceKm: 9 }] });
-  await h.api.show();
-  const content = h.get("[data-draft-routes]").textContent;
+  await h.api.show(); await h.openEditor();
+  const content = h.get("[data-draft-edit-routes]").textContent;
   assert.match(content, /Propio propuesto: 1/); assert.match(content, /Elegido: 1/);
   assert.match(content, /9\.0 km · distancia indicada/);
   assert.doesNotMatch(content, /9\.0 km · distancia en línea recta/);

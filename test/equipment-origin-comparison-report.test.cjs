@@ -19,7 +19,7 @@ function fixture() {
 function model(input, options = {}) { return Reporting.createEquipmentPlanningReportModel({ events: input.events, routeEstimates: input.routeEstimates, ...options }, input.inventory, { now }); }
 function targetRows(sheet) { return sheet.getRows(5, Math.max(0, sheet.rowCount - 4)).filter(row => row.getCell(1).value === "Montaje · Sitio de destino"); }
 
-test("HTML y Excel comparan los tres orígenes y explican el cuadro prioritario sin sumar equipo duplicado", async () => {
+test("el HTML presenta solo el origen elegido y Excel conserva la comparativa completa sin duplicar equipo", async () => {
   const input = fixture(), before = clone(input), plan = model(input);
   const origins = plan.draftLogistics.routePolicy.originComparisons.find(group => group.toEventId === "target");
   assert.equal(origins.comparisons.length, 3);
@@ -28,11 +28,11 @@ test("HTML y Excel comparan los tres orígenes y explican el cuadro prioritario 
   assert.equal(preferred.fromDate, "2026-11-26");
   assert.equal(preferred.destinationCoverage, 0.8);
   const html = Reporting.renderEquipmentPlanningReportHtml(plan);
-  assert.match(html, /Orígenes comparados para cada montaje o evento/);
-  assert.match(html, /Origen prioritario recomendado/);
+  assert.doesNotMatch(html, /Orígenes comparados para cada montaje o evento|Liberación real del origen/);
+  assert.match(html, /Recomendación por coincidencia; verificar traslado/);
   assert.match(html, /Sitio grande &lt;ruta&gt;/);
-  assert.match(html, /Liberación real del origen/);
-  assert.match(html, /terminar después de medianoche no cambia el día operativo/);
+  assert.match(html, /jueves 26\/11\/2026/);
+  assert.match(html, /viernes 27\/11\/2026/);
   const workbook = await Reporting.createEquipmentMasterWorkbook(plan), reopened = new ExcelJS.Workbook();
   await reopened.xlsx.load(await workbook.xlsx.writeBuffer());
   const sheet = reopened.getWorksheet("Comparativa de orígenes");
@@ -65,7 +65,7 @@ test("la tabla de orígenes identifica exactamente el trasiego elegido y compart
   const workbook = await Reporting.createEquipmentMasterWorkbook(plan), rows = targetRows(workbook.getWorksheet("Comparativa de orígenes"));
   assert.equal(rows.find(row => row.getCell(3).value === "Sitio grande <ruta>").getCell(8).value, "Elegido y validado");
   assert.ok(rows.filter(row => row.getCell(3).value !== "Sitio grande <ruta>").every(row => row.getCell(8).value !== "Elegido y validado"));
-  assert.match(Reporting.renderEquipmentPlanningReportHtml(plan), /Elegido y validado/);
+  assert.match(Reporting.renderEquipmentPlanningReportHtml(plan), /Trasiego elegido para este plan/);
   assert.equal(plan.productionMutations, 0);
 });
 

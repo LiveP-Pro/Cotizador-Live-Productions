@@ -32,11 +32,14 @@ test('the same physical units at A and B count once, with additional need rented
     assert.equal(row.uniquePhysicalNeeded, unique); assert.equal(row.ownUnitsPlanned, ownUsed); assert.equal(row.rentalUnitsNeeded, rented);
     assert.equal(row.ownUnitsPlanned + row.rentalUnitsNeeded, row.uniquePhysicalNeeded);
     assert.equal(report.productionMutations, 0); assert.equal(JSON.stringify(input), before);
-    for (const mode of ['transfer', 'rent']) {
+    // The physical arithmetic remains available in Renta; the transfer-only
+    // document now deliberately contains the two requested equipment lists.
+    for (const mode of ['rent']) {
       const markup = reporting.renderEquipmentPlanningReportHtml(report, mode);
       assert.match(markup, /Resumen final: equipo físico/); assert.match(markup, /2 unidades físicas, no 4/);
       assert.match(markup, /Solo se renta el faltante real/);
     }
+    assert.doesNotMatch(reporting.renderEquipmentPlanningReportHtml(report, 'transfer'), /Resumen final: equipo físico/);
   }
 });
 
@@ -45,8 +48,8 @@ test('two legs of a three-event chain are movements, not duplicated physical uni
   assert.equal(row.totalRequested, 6); assert.equal(row.uniquePhysicalNeeded, 2); assert.equal(row.ownUnitsPlanned, 2); assert.equal(row.rentalUnitsNeeded, 0);
   assert.equal(row.transferMovements, 4);
   const markup = reporting.renderEquipmentPlanningReportHtml(report, 'transfer');
-  assert.match(markup, /movimientos entre eventos \(no son unidades nuevas de bodega\)/);
-  assert.match(markup, /aparece en dos movimientos, pero sigue siendo una sola unidad física/);
+  assert.equal((markup.match(/class="transfer-card"/g) || []).length, 2);
+  assert.doesNotMatch(markup, /movimientos entre eventos|Resumen final/);
 });
 
 test('consumption is shown per event and total, including zero rows, while only the remaining shortage is bought', () => {
@@ -96,21 +99,24 @@ test('consumption from another event is a stock change, not fulfillment of this 
 test('printed route tables repeat readable identities and preserve literal source dates separately', () => {
   const input = fixture(), before = JSON.stringify(input), report = model(input), markup = reporting.renderEquipmentPlanningReportHtml(report, 'transfer');
   const visible = markup.split('<details class="source-appendix')[0];
-  assert.match(visible, /De dónde sale y a dónde va/);
-  assert.match(visible, /<thead><tr class="route-repeat"><th colspan="3"><h3>Evento A → Evento B/);
-  assert.match(visible, /25 de noviembre.*9:00 p\. m\./); assert.doesNotMatch(visible, /2026-11-\d\dT/);
+  assert.match(visible, /Evento A · Lugar 0 → Montaje · Evento B · Lugar 1/);
+  assert.match(visible, /<thead><tr><th>Cantidad<\/th><th>Equipo/);
+  assert.match(visible, /miércoles 25\/11\/2026 → jueves 26\/11\/2026/); assert.doesNotMatch(visible, /2026-11-\d\dT/);
   assert.doesNotMatch(visible, /celdas originales conservadas|códigos E1/);
-  assert.match(markup, /2026-11-25/); assert.equal(JSON.stringify(input), before);
+  assert.equal(report.events[0].date, '2026-11-25'); assert.equal(JSON.stringify(input), before);
 });
 
-test('unresolved items print their names and reasons in the report rather than a hidden appendix', () => {
+test('unresolved items retain their review in renta and the transfer-only document keeps a brief notice', () => {
   const input = fixture();
   input.events[0].sections[0].items.push({ quantity: 1, description: 'Equipo pendiente sintético <script>' });
-  const report = model(input), markup = reporting.renderEquipmentPlanningReportHtml(report, 'transfer');
+  const report = model(input), markup = reporting.renderEquipmentPlanningReportHtml(report, 'rent');
   const review = markup.match(/<section class="report-pending">([\s\S]*?)<\/section>/)?.[1];
   assert.ok(review); assert.match(review, /Equipo pendiente sintético &lt;script&gt;/); assert.match(review, /Identifique esta referencia/);
   assert.doesNotMatch(review, /<details/); assert.match(markup, /Sus cantidades|cantidades finales/);
   assert.equal(report.physicalSummary.find(row => row.description.includes('pendiente')).uniquePhysicalNeeded, null);
+  const transfer = reporting.renderEquipmentPlanningReportHtml(report, 'transfer');
+  assert.doesNotMatch(transfer, /Equipo pendiente sintético|Datos por revisar/);
+  assert.match(transfer, /rutas pendientes de verificar/);
 });
 
 function performedFixture() {

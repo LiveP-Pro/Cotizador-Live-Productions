@@ -110,14 +110,18 @@ test("la cadena de tres días mantiene las mismas dos unidades y editar una pier
   assert.equal(partial.selectedTransfers.find(route => route.id === selectedTransferIds[1]).quantity, 1);
 });
 
-test("HTML y Excel conservan el mismo plan dividido, las cantidades editadas, el calendario y todas las celdas", async () => {
+test("el HTML breve conserva el plan dividido y Excel mantiene calendario y todas las celdas", async () => {
   const events = [event("source", "26"), event("left", "27", [1]), event("right", "27", [1])], inventory = stock();
   const preview = analyze(events, inventory), selectedTransferIds = [...idsFor(preview, "source", "left"), ...idsFor(preview, "source", "right")];
   const payload = { events, routeEstimates: estimates(events), selectedTransferIds, splitAuthorizedOrigins: ["source"], transferEdits: [{ id: selectedTransferIds[0], quantity: 1, note: "Nota exacta <segura>" }] };
   const model = Reporting.createEquipmentPlanningReportModel(payload, inventory, { now });
   assert.equal(model.transferRoutes.length, 2); assert.equal(model.rows[0].rental, 0);
   const html = Reporting.renderEquipmentPlanningReportHtml(model);
-  assert.match(html, /Calendario y comparación entre días consecutivos/);
+  assert.doesNotMatch(html, /Calendario y comparación entre días consecutivos|Resumen final|Celdas originales/);
+  assert.equal((html.match(/class="transfer-card"/g) || []).length, 2);
+  assert.match(html, /Evento source · Lugar source → Montaje · Evento left · Lugar left/);
+  assert.match(html, /Evento source · Lugar source → Montaje · Evento right · Lugar right/);
+  assert.match(html, /jueves 26\/11\/2026 → viernes 27\/11\/2026/);
   assert.match(html, /Nota exacta &lt;segura&gt;/);
   assert.equal(model.counts.sourceCells, 6);
   const master = await Reporting.createEquipmentMasterWorkbook(model);
@@ -149,7 +153,7 @@ test("un traslado confirmado que saltaba una fecha se conserva como excepción y
   assert.equal(plan.rows.find(row => row.warehouseInventoryId === "ref-0").rental, 0);
 });
 
-test("la auditoría de una sustitución aceptada aparece en HTML y Excel sin modificar celdas originales", async () => {
+test("la auditoría de sustitución permanece en renta y Excel, sin extender el documento breve de trasiego", async () => {
   const events = [event("first", "26", [1])], inventory = stock([2]);
   events[0].planEquipmentChanges = [{ type: "manual-compatible-replacement", confirmedAt: "2026-11-25T12:00:00Z",
     operation: { eventId: "first", sectionIndex: 0, itemIndex: 0, replacementInventoryId: "ref-0", quantity: 1,
@@ -157,8 +161,9 @@ test("la auditoría de una sustitución aceptada aparece en HTML y Excel sin mod
     before: { description: "Original literal", warehouseInventoryId: "original-id", quantity: 1 },
     after: { description: "Equipo sintético 0", warehouseInventoryId: "ref-0", quantity: 1 } }];
   const before = JSON.stringify(events), model = Reporting.createEquipmentPlanningReportModel({ events }, inventory, { now });
-  const html = Reporting.renderEquipmentPlanningReportHtml(model);
+  const html = Reporting.renderEquipmentPlanningReportHtml(model, "rent");
   assert.match(html, /Original literal/); assert.match(html, /Revisión técnica aceptada &lt;manual&gt;/);
+  assert.doesNotMatch(Reporting.renderEquipmentPlanningReportHtml(model), /Original literal|Revisión técnica aceptada|Sustituciones aceptadas/);
   const master = await Reporting.createEquipmentMasterWorkbook(model);
   assert.equal(master.getWorksheet("Sustituciones aceptadas").getRow(5).getCell(3).value, "Original literal");
   assert.equal(model.counts.sourceCells, 2); assert.equal(JSON.stringify(events), before);
@@ -173,7 +178,7 @@ test("la auditoría conserva descripción y cantidad de líneas originales en fo
   const audit = master.getWorksheet("Sustituciones aceptadas").getRow(5);
   assert.equal(audit.getCell(3).value, "Equipo sintético 0"); assert.equal(audit.getCell(5).value, 1);
   assert.equal(audit.getCell(6).value, "Equipo sintético 1");
-  const visible = Reporting.renderEquipmentPlanningReportHtml(model).split('<details class="source-appendix')[0];
+  const visible = Reporting.renderEquipmentPlanningReportHtml(model, "rent").split('<details class="source-appendix')[0];
   assert.doesNotMatch(visible, /2026-11-\d\dT/);
   assert.match(visible, /26 de noviembre de 2026/);
   assert.deepEqual(events[0].sourceCells, original[0].sourceCells);

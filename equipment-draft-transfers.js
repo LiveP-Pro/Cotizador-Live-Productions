@@ -50,7 +50,7 @@
     const fetcher = options.fetch || ((...args)=>fetch(...args));
     const location = () => root.EquipmentLocation || root.window?.EquipmentLocation;
     let committedIds = [], committedEstimates = [], committedEdits = [], committedSplitOrigins = [], committedExplicit = false, cached = null, cachedKey = '', requestVersion = 0, resetVersion = 0, lastError='';
-    let overlay = null, confirmation = null, workEvents = null, workIds = [], workEstimates = [], workEdits = [], workSplitOrigins = [], workPlan = null, workBusy = false, modalVersion = 0, lastFocus = null, openedSourceKey = '', initialDraftKey = '';
+    let overlay = null, confirmation = null, workEvents = null, workIds = [], workEstimates = [], workEdits = [], workSplitOrigins = [], workPlan = null, workBusy = false, modalVersion = 0, lastFocus = null, openedSourceKey = '', initialDraftKey = '', editorOpen = false;
     const currentEvents = () => copy(bridge.events());
     const estimates = edits => mergeEstimates(bridge.transferOptions?.()?.routeEstimates || [],edits);
     const dataKey = (events,ids,routes,edits,splitOrigins=[]) => JSON.stringify([events,bridge.inventory(),bridge.range?.(),ids,routes,edits,splitOrigins]);
@@ -189,19 +189,18 @@
         if(value===0)workIds=workIds.filter(id=>id!==route.id);
       }
     }
-    function renderPlan() {
+    function renderEditorPlan() {
       if(!overlay)return;
-      const host=overlay.querySelector('[data-draft-routes]'),totals=overlay.querySelector('[data-draft-totals]');
-      if(!workPlan){host.innerHTML='<p>Calcule los trasiegos para ver las propuestas.</p>';totals.innerHTML='';for(const selector of ['[data-draft-calendar]','[data-draft-substitutions]']){const element=overlay.querySelector(selector);if(element)element.innerHTML='';}overlay.querySelector('[data-draft-apply]').disabled=true;return;}
+      const host=overlay.querySelector('[data-draft-edit-routes]');
+      if(!host)return;
+      if(!workPlan){host.innerHTML='<p>Calcule los trasiegos para ver las propuestas.</p>';for(const selector of ['[data-draft-calendar]','[data-draft-substitutions]']){const element=overlay.querySelector(selector);if(element)element.innerHTML='';}overlay.querySelector('[data-draft-apply]').disabled=true;return;}
       renderCalendar();renderSubstitutions();
-      const rent=list(workPlan.rental||workPlan.rent),purchase=list(workPlan.purchase);
-      totals.innerHTML=`<span><strong>${list(workPlan.selectedTransfers).length}</strong> trasiegos elegidos</span><span><strong>${rent.length}</strong> referencias para renta</span><span><strong>${purchase.length}</strong> referencias para compra</span>`;
       const warnings=[...list(workPlan.invalidSelections).map(row=>row.message),...list(workPlan.pending).map(row=>`${row.description}: ${list(row.reasons).join(' ')}`)];
       const routeRows=list(workPlan.candidates).map((route,index)=>{
         const edit=editFor(route),max=Number(route.maxQuantity??route.quantity),quantity=edit?.quantity??route.requestedQuantity??(workIds.includes(route.id)?route.selectedQuantity:undefined)??route.quantity;
         return `<article class="equipment-draft-route ${route.requiresManualReview?'needs-review':''}"><label class="equipment-draft-route-check"><input type="checkbox" data-draft-route="${index}" ${workIds.includes(route.id)?'checked':''} ${workBusy||route.requiresManualReview?'disabled':''}><span><strong>${esc(workIds.includes(route.id)?quantity:route.quantity)} × ${esc(route.description)}</strong><span>${esc(routeLabel(route))}</span><small>Salida: ${esc(localTime(route.departureAt).replace('T',' '))} · Llegada: ${esc(localTime(route.arrivalAt).replace('T',' '))}</small><small>${esc(route.requiresManualReview?list(route.reasons).join(' '):'Equipo propio. Marque para incluir o desmarque para quitar este trasiego.')}</small></span></label><div class="equipment-draft-route-editor"><label>Cantidad a trasegar<input type="number" min="0" max="${esc(max)}" step="any" data-draft-quantity="${index}" value="${esc(quantity)}" ${workBusy?'disabled':''}></label><label>Nota para transporte<textarea rows="2" maxlength="2000" data-draft-note="${index}" ${workBusy?'disabled':''}>${esc(edit?.note??route.note??'')}</textarea></label><button type="button" data-draft-save-edit="${index}" ${workBusy?'disabled':''}>Revisar cambio</button></div></article>`;
       }).join('');
-      host.innerHTML=`${renderBundles()}<h3>Editar los equipos del trasiego</h3><p>Puede reducir cantidades, escribir instrucciones o quitar equipos. El servidor comprueba las existencias antes de aplicar. La cantidad 0 quita el equipo del trasiego.</p>${routeRows||'<p>No hay trasiegos propios viables con los datos actuales. Complete los horarios y revise las existencias; no se inventaron rutas.</p>'}${warnings.length?`<details class="equipment-draft-warnings"><summary>${warnings.length} pendientes del plan</summary><ul>${warnings.map(message=>`<li>${esc(message)}</li>`).join('')}</ul></details>`:''}<div class="equipment-draft-order"><section><h3>Renta con esta selección</h3>${rent.length?`<ul>${rent.map(row=>`<li><strong>${esc(row.rental)} ×</strong> ${esc(row.description)}${row.rentalProvisional?' · provisional, faltan horarios':''}</li>`).join('')}</ul>`:'<p>Sin faltantes de renta cuantificados. Revise los pendientes antes de cerrar el pedido.</p>'}</section><section><h3>Compra pendiente</h3>${purchase.length?`<ul>${purchase.map(row=>`<li><strong>${esc(row.purchase)} ×</strong> ${esc(row.description)}</li>`).join('')}</ul>`:'<p>Sin compras cuantificadas. Las clasificaciones pendientes se indican arriba.</p>'}</section></div>`;
+      host.innerHTML=`${renderBundles()}<h3>Editar los equipos del trasiego</h3><p>Puede reducir cantidades, escribir instrucciones o quitar equipos. El servidor comprueba las existencias antes de aplicar. La cantidad 0 quita el equipo del trasiego.</p>${routeRows||'<p>No hay trasiegos propios viables con los datos actuales. Complete los horarios y revise las existencias; no se inventaron rutas.</p>'}${warnings.length?`<details class="equipment-draft-warnings"><summary>${warnings.length} pendientes del plan</summary><ul>${warnings.map(message=>`<li>${esc(message)}</li>`).join('')}</ul></details>`:''}`;
       host.querySelectorAll('[data-draft-route]').forEach(input=>input.addEventListener('change',()=>{
         const route=workPlan.candidates[Number(input.dataset.draftRoute)];
         try {readTransferEdits();}catch(error){input.checked=workIds.includes(route.id);status(error.message,true);return;}
@@ -240,6 +239,37 @@
         workEstimates=mergeEstimates(workEstimates,[{fromPlace:route.fromPlace,toPlace:route.toPlace,travelMinutes:Number(rawTravel),handlingMinutes:Number(rawHandling),...(rawDistance===''?{}:{distanceKm:Number(rawDistance)})}]);recalculate(false);
       }));
       const apply=overlay.querySelector('[data-draft-apply]');if(apply)apply.disabled=workBusy||list(workPlan.invalidSelections).length>0;
+    }
+    function presentation() { return root.EquipmentTransferPresentation || root.window?.EquipmentTransferPresentation; }
+    function renderPlan() {
+      if(!overlay)return;
+      const host=overlay.querySelector('[data-draft-routes]'),total=overlay.querySelector('[data-draft-totals]');
+      const helper=presentation();
+      if(!workPlan){host.innerHTML='<p>Calculando recomendaciones de trasiego…</p>';total.textContent=`Tienes ${workEvents.length} eventos`;overlay.querySelector('[data-draft-apply]').disabled=true;if(editorOpen)renderEditorPlan();return;}
+      if(!helper?.build){host.innerHTML='<p>No se pudo mostrar el trasiego. Actualice la página para cargar la versión actual.</p>';overlay.querySelector('[data-draft-apply]').disabled=true;return;}
+      const view=helper.build(workPlan,workEvents);
+      total.textContent=`Tienes ${view.eventCount} ${view.eventCount===1?'evento':'eventos'}`;
+      const equipment=items=>list(items).length?`<ul>${list(items).map(item=>`<li><strong>${esc(item.quantity)} ×</strong> <span>${esc(item.description)}</span>${item.note?`<small class="equipment-draft-item-note">${esc(item.note)}</small>`:''}</li>`).join('')}</ul>`:'<p>Ninguno.</p>';
+      host.innerHTML=list(view.cards).length?list(view.cards).map(card=>`<article class="equipment-draft-recommendation ${card.status==='verify'?'needs-review':''}" data-draft-recommendation="${esc(card.id)}"><div class="equipment-draft-recommendation-heading"><h3><span>${esc(card.fromLabel)} · ${esc(card.fromDayLabel)}</span><span aria-hidden="true">→</span><span>${esc(card.toLabel)} · ${esc(card.toDayLabel)}</span></h3><strong class="equipment-draft-coincidence">${esc(card.percentageLabel)}${card.percentage===null?'':' de coincidencia'}</strong></div><p>${esc(card.recommendation)}</p><div class="equipment-draft-equipment-lists"><section><h4>Equipo que se utilizará</h4>${equipment(card.usedItems)}</section><section><h4>Equipo que no se utilizará</h4>${equipment(card.unusedItems)}</section></div></article>`).join(''):`<p>${esc(view.pendingMessage||'No hay un trasiego recomendado con los datos actuales.')}</p>`;
+      const apply=overlay.querySelector('[data-draft-apply]');apply.textContent=list(workPlan.selectedTransfers).length?'Aplicar trasiegos':'Guardar sin trasiegos';apply.disabled=workBusy||list(workPlan.invalidSelections).length>0;
+      if(editorOpen)renderEditorPlan();
+    }
+    function toggleEditor() {
+      if(workBusy||confirmation)return;
+      const host=overlay.querySelector('[data-draft-editor]'),button=overlay.querySelector('[data-draft-toggle-editor]');
+      if(editorOpen){host.hidden=true;editorOpen=false;button.textContent='Editar trasiego';button.setAttribute?.('aria-expanded','false');return;}
+      editorOpen=true;host.hidden=false;button.textContent='Ocultar edición';button.setAttribute?.('aria-expanded','true');
+      if(host.querySelector('[data-draft-event]'))return;
+      host.innerHTML=`<details class="equipment-draft-events" ${workEvents.some(event=>!event.mapUrl||!event.startAt||!event.endAt||!event.equipmentInAt||event.setupApplies!==false&&!event.setupAt)?'open':''}><summary>Horarios, lugares y Google Maps de los eventos</summary><p>El equipo se libera al finalizar o al desmontaje programado, si es posterior; debe llegar antes del montaje. El regreso a bodega permite comprobar otras reservas. Use horarios de Guatemala. Pegue la ubicación de Google Maps y confirme los minutos entre lugares; el enlace no proporciona tráfico ni tiempos automáticos.</p>${workEvents.map((event,index)=>`<fieldset><legend>${esc(event.place||event.name||'Evento')} · ${esc(dateLabelForModal(event.date))}</legend><label>Ubicación<input data-draft-event="${index}" data-draft-field="place" value="${esc(event.place||'')}"></label><label>Ubicación en Google Maps (opcional)<input type="url" inputmode="url" data-draft-event="${index}" data-draft-field="mapUrl" placeholder="https://www.google.com/maps/..." value="${esc(event.mapUrl||'')}"></label><label class="equipment-draft-check"><input type="checkbox" data-draft-event="${index}" data-draft-field="setupApplies" ${event.setupApplies!==false?'checked':''}>Requiere montaje</label>${[['setupAt','Montaje'],['startAt','Inicio del evento'],['endAt','Finalización'],['teardownAt','Desmontaje (opcional)'],['equipmentInAt','Regreso a bodega']].map(([field,label])=>`<label>${label}<input type="datetime-local" data-draft-event="${index}" data-draft-field="${field}" value="${esc(localTime(event[field]))}"></label>`).join('')}</fieldset>`).join('')}<button type="button" data-draft-recalculate>Recalcular con estos datos</button></details><div data-draft-calendar></div><div data-draft-substitutions></div><div data-draft-travel></div><div class="equipment-draft-select"><button type="button" data-draft-select-all>Elegir destinos recomendados</button><button type="button" data-draft-select-none>Quitar todos los trasiegos</button></div><div data-draft-edit-routes></div>`;
+      overlay.querySelector('[data-draft-recalculate]').addEventListener('click',()=>recalculate(false));
+      overlay.querySelector('[data-draft-select-all]').addEventListener('click',()=>recalculate(true));
+      overlay.querySelector('[data-draft-select-none]').addEventListener('click',()=>{workIds=[];workSplitOrigins=[];recalculate(false);});
+      overlay.querySelectorAll('[data-draft-field="setupApplies"]').forEach(input=>{
+        const setup=overlay.querySelector(`[data-draft-event="${input.dataset.draftEvent}"][data-draft-field="setupAt"]`);setup.disabled=!input.checked;
+        input.addEventListener('change',()=>{if(!input.checked)setup.value='';setup.disabled=!input.checked;});
+      });
+
+      renderEditorPlan();
     }
     function readEvents() {
       overlay.querySelectorAll('[data-draft-event]').forEach(input=>{
@@ -283,7 +313,7 @@
       if(!overlay||workBusy||confirmation)return;
       try {readEvents();readTransferEdits();readEstimateChanges();}catch(error){status(error.message,true);return;}
       setBusy(true);const version=modalVersion,eventsToCalculate=copy(workEvents),idsToCalculate=[...workIds],estimatesToCalculate=estimates(workEstimates),editsToCalculate=copy(workEdits),splitOriginsToCalculate=[...workSplitOrigins],previousCandidates=copy(workPlan?.candidates||[]);
-      status('Comprobando inventario, horarios, cercanía y unidades físicas…');
+      status('Analizando eventos y equipo…');
       try {
         let plan=await calculate(eventsToCalculate,idsToCalculate,estimatesToCalculate,editsToCalculate,splitOriginsToCalculate);
         if(!overlay||version!==modalVersion)return;
@@ -293,7 +323,7 @@
           if(!reconciled.overLimit){const selected=selectAll?recommendedIds(plan,workEdits):reconciled.ids;if(selectAll){workSplitOrigins=[];workEdits=recommendedEdits(plan,selected,reconciled.edits);}plan=await calculate(eventsToCalculate,selected,estimatesToCalculate,selectAll?workEdits:reconciled.edits,selectAll?[]:splitOriginsToCalculate);}
         }
         if(!overlay||version!==modalVersion)return;
-        workPlan=plan;if(!reconciled.overLimit)workIds=plan.selectedTransfers.map(route=>route.id);status(reconciled.overLimit?'La cantidad editada supera el nuevo máximo disponible. Redúzcala en el cuadro antes de continuar.':list(plan.invalidSelections).length?'Algunos trasiegos ya no son válidos. Revise la lista y vuelva a calcular.':'Lista actualizada. Al quitar un trasiego o reducir cantidades se recalcula la renta.');
+        workPlan=plan;if(!reconciled.overLimit)workIds=plan.selectedTransfers.map(route=>route.id);status(reconciled.overLimit?'La cantidad editada supera el nuevo máximo disponible. Redúzcala en el cuadro antes de continuar.':list(plan.invalidSelections).length?'Algunos trasiegos ya no son válidos. Revise la lista y vuelva a calcular.':'Recomendaciones actualizadas.');
       } catch(error){if(overlay&&version===modalVersion){workPlan=null;status(error.message,true);}}
       finally{if(overlay&&version===modalVersion){setBusy(false);renderPlan();}}
     }
@@ -315,7 +345,7 @@
       confirmation.querySelector('[data-draft-confirm-cancel]').focus?.();
     }
     function close() {
-      modalVersion++;confirmation?.remove();confirmation=null;overlay?.remove();overlay=null;workEvents=null;workIds=[];workEdits=[];workEstimates=[];workSplitOrigins=[];workPlan=null;workBusy=false;lastFocus?.focus?.();
+      modalVersion++;confirmation?.remove();confirmation=null;overlay?.remove();overlay=null;workEvents=null;workIds=[];workEdits=[];workEstimates=[];workSplitOrigins=[];workPlan=null;workBusy=false;editorOpen=false;lastFocus?.focus?.();
     }
     function reset() {
       // A new plan must not inherit a pending response or an accepted choice
@@ -366,17 +396,11 @@
       if(!allowed()){options.onStatus?.('Su usuario no tiene permiso para generar reportes de equipo.');return;}
       workEvents=currentEvents();if(!workEvents.length){options.onStatus?.('Cargue al menos un evento con equipo.');return;}
       workIds=[...committedIds];workEstimates=copy(committedEstimates);workEdits=copy(committedEdits);workSplitOrigins=[...committedSplitOrigins];openedSourceKey=sourceKey();initialDraftKey=draftKey();lastFocus=doc.activeElement;
-      overlay=doc.createElement('div');overlay.className='equipment-draft-overlay';overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="equipmentDraftTransferTitle" class="equipment-draft-dialog"><header><div><h2 id="equipmentDraftTransferTitle">Generar trasiego</h2><p>Seleccione y edite el equipo propio que pasará entre eventos. La renta se calcula con esta misma selección.</p></div><button type="button" data-draft-close aria-label="Cerrar sin aplicar">×</button></header><div class="equipment-draft-body"><details class="equipment-draft-events" ${workEvents.some(event=>!event.mapUrl||!event.startAt||!event.endAt||!event.equipmentInAt||event.setupApplies!==false&&!event.setupAt)?'open':''}><summary>Horarios, lugares y Google Maps de los eventos</summary><p>El equipo se libera al finalizar o al desmontaje programado, si es posterior; debe llegar antes del montaje. El regreso a bodega permite comprobar otras reservas. Use horarios de Guatemala. Pegue la ubicación de Google Maps y confirme los minutos entre lugares; el enlace no proporciona tráfico ni tiempos automáticos.</p>${workEvents.map((event,index)=>`<fieldset><legend>${esc(event.place||event.name||'Evento')} · ${esc(dateLabelForModal(event.date))}</legend><label>Ubicación<input data-draft-event="${index}" data-draft-field="place" value="${esc(event.place||'')}"></label><label>Ubicación en Google Maps (opcional)<input type="url" inputmode="url" data-draft-event="${index}" data-draft-field="mapUrl" placeholder="https://www.google.com/maps/..." value="${esc(event.mapUrl||'')}"></label><label class="equipment-draft-check"><input type="checkbox" data-draft-event="${index}" data-draft-field="setupApplies" ${event.setupApplies!==false?'checked':''}>Requiere montaje</label>${[['setupAt','Montaje'],['startAt','Inicio del evento'],['endAt','Finalización'],['teardownAt','Desmontaje (opcional)'],['equipmentInAt','Regreso a bodega']].map(([field,label])=>`<label>${label}<input type="datetime-local" data-draft-event="${index}" data-draft-field="${field}" value="${esc(localTime(event[field]))}"></label>`).join('')}</fieldset>`).join('')}<button type="button" data-draft-recalculate>Recalcular con estos datos</button></details><div data-draft-calendar></div><div data-draft-substitutions></div><div data-draft-travel></div><div class="equipment-draft-totals" data-draft-totals></div><div class="equipment-draft-select"><button type="button" data-draft-select-all>Elegir destinos recomendados</button><button type="button" data-draft-select-none>Quitar todos los trasiegos</button></div><div data-draft-routes></div></div><footer><p role="status" aria-live="polite" data-draft-status></p><div><button type="button" data-draft-close>Cancelar</button><button type="button" data-draft-apply disabled>Aplicar trasiegos y recalcular renta</button></div></footer></section>`;
+      overlay=doc.createElement('div');overlay.className='equipment-draft-overlay';overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="equipmentDraftTransferTitle" class="equipment-draft-dialog"><header><div><h2 id="equipmentDraftTransferTitle">Generar trasiego</h2></div><button type="button" data-draft-close aria-label="Cerrar sin aplicar">×</button></header><div class="equipment-draft-body"><p class="equipment-draft-event-count" data-draft-totals></p><div data-draft-routes></div><button type="button" data-draft-toggle-editor aria-expanded="false" aria-controls="equipmentDraftTransferEditor">Editar trasiego</button><div id="equipmentDraftTransferEditor" data-draft-editor hidden></div></div><footer><p role="status" aria-live="polite" data-draft-status></p><div><button type="button" data-draft-close>Cancelar</button><button type="button" data-draft-apply disabled>Aplicar trasiegos</button></div></footer></section>`;
       doc.body.append(overlay);
       overlay.querySelectorAll('[data-draft-close]').forEach(button=>button.addEventListener('click',close));
-      overlay.querySelector('[data-draft-recalculate]').addEventListener('click',()=>recalculate(false));
-      overlay.querySelector('[data-draft-select-all]').addEventListener('click',()=>recalculate(true));
-      overlay.querySelector('[data-draft-select-none]').addEventListener('click',()=>{workIds=[];workSplitOrigins=[];recalculate(false);});
       overlay.querySelector('[data-draft-apply]').addEventListener('click',apply);
-      overlay.querySelectorAll('[data-draft-field="setupApplies"]').forEach(input=>{
-        const setup=overlay.querySelector(`[data-draft-event="${input.dataset.draftEvent}"][data-draft-field="setupAt"]`);setup.disabled=!input.checked;
-        input.addEventListener('change',()=>{if(!input.checked)setup.value='';setup.disabled=!input.checked;});
-      });
+      overlay.querySelector('[data-draft-toggle-editor]').addEventListener('click',toggleEditor);
       overlay.addEventListener('keydown',event=>{
         if(event.key==='Escape'){event.preventDefault();if(confirmation)dismissConfirmation();else close();return;}
         if(event.key==='Tab'){

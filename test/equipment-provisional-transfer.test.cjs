@@ -93,7 +93,9 @@ test("sólo la continuidad propia elegida reduce renta y los minutos revisados p
   assert.equal(model.transferRoutes[0].handlingMinutes, 0);
   assert.equal(model.transferRoutes[0].requiresTimeConfirmation, false);
   const markup = reporting.renderEquipmentReportHtml(model, "transfer");
-  assert.match(markup, /proveedor/i);
+  assert.doesNotMatch(markup, /proveedor|Resumen final|Unidades por rentar/i);
+  assert.match(markup, /Equipo que se utilizará/);
+  assert.match(markup, /<td class="number">1<\/td><td>Unidad sintética de audio/);
   assert.throws(() => reporting.createEquipmentTransferReportModel({ ...payload, routeEstimates: [{ ...payload.routeEstimates[0], travelMinutes: "" }] }, inventory), /número/);
   assert.throws(() => reporting.createEquipmentTransferReportModel({ ...payload, routeEstimates: [{ ...payload.routeEstimates[0], handlingMinutes: -1 }] }, inventory), /mayor o igual/);
 });
@@ -118,9 +120,12 @@ test("horarios ausentes, inválidos o contradictorios no impiden descargar y nun
     assert.equal(model.counts.sourceCells, 4);
     assert.ok(model.pending.some(entry => entry.eventId === events[0].id));
     const markup = reporting.renderEquipmentReportHtml(model, "transfer");
-    assert.match(markup, /Unidad sintética de audio/);
-    assert.ok(markup.includes(events[0].name));
-    if (patch.endAt === "fecha por confirmar") assert.match(markup, /fecha por confirmar/);
+    assert.match(markup, /2 eventos analizados/);
+    assert.match(markup, /No hay un trasiego recomendado verificable/);
+    assert.doesNotMatch(markup, /class="transfer-card"|Detalle del equipo por evento|Pendientes por resolver/);
+    assert.ok(model.events.some(event => event.name === events[0].name));
+    assert.ok(model.details.some(row => row.description === "Unidad sintética de audio"));
+    if (patch.endAt === "fecha por confirmar") assert.equal(model.originalEvents[0].endAt, "fecha por confirmar");
     assert.equal(JSON.stringify(events), before);
   }
 });
@@ -140,14 +145,18 @@ test("sin inventario identificado, con consumibles o clasificación pendiente no
     const model = reporting.createEquipmentTransferReportModel({ events }, inventory);
     assert.equal(model.transferRoutes.length, 0, kind);
     assert.equal(model.rentalTransferRoutes.length, 0, kind);
-    assert.match(reporting.renderEquipmentReportHtml(model, "transfer"), /PROVISIONAL/);
+    const markup = reporting.renderEquipmentReportHtml(model, "transfer");
+    assert.match(markup, /Trasiego de equipo/);
+    assert.match(markup, /No hay un trasiego recomendado verificable/);
+    assert.doesNotMatch(markup, /class="transfer-card"|Resumen final/);
+    assert.equal(model.provisional, true);
     assert.equal(model.counts.equipmentRows, 2);
     if (kind === "unknown") assert.ok(model.pending.some(row => row.kind === "IDENTIDAD"));
     if (kind === "classification") assert.ok(model.pending.some(row => row.kind === "CLASIFICACIÓN"));
   }
 });
 
-test("ceros y cuadro de referencia conservan su evidencia sin duplicar demanda; el PDF escapa el contenido", () => {
+test("ceros y cuadro de referencia permanecen en modelo y Excel; el PDF breve escapa sólo el trasiego", async () => {
   const { events, inventory } = fixture();
   events[0].place = '<script>origen</script>'; events[1].name = '<img src=x onerror=1>';
   const zeroCells = [{ sheet: events[0].id, ref: `${events[0].id}!A2`, address: "A2", value: 0 }, { sheet: events[0].id, ref: `${events[0].id}!B2`, address: "B2", value: "Línea cero sintética" }];
@@ -167,7 +176,15 @@ test("ceros y cuadro de referencia conservan su evidencia sin duplicar demanda; 
   const markup = reporting.renderEquipmentReportHtml(model, "transfer");
   assert.ok(!markup.includes('<script>origen</script>')); assert.ok(!markup.includes('<img src=x onerror=1>'));
   assert.match(markup, /&lt;script&gt;origen&lt;\/script&gt;/); assert.match(markup, /&lt;img src=x onerror=1&gt;/);
-  assert.match(markup, /Línea cero sintética/); assert.match(markup, /PROVISIONAL/);
+  assert.doesNotMatch(markup, /Línea cero sintética|Celdas originales|Filas originales|Detalle del equipo por evento/);
+  assert.match(markup, /Equipo que se utilizará/);
+  assert.equal(model.provisional, true);
+  assert.ok(model.details.some(row => row.description === "Línea cero sintética" && row.quantity === 0));
+  const master = await reporting.createEquipmentMasterWorkbook(model);
+  const originals = master.getWorksheet("Celdas fuente"), detail = master.getWorksheet("Detalle por evento");
+  assert.equal(originals.rowCount - 4, 8);
+  assert.ok(originals.getRows(5, originals.rowCount - 4).some(row => row.getCell(3).value === `${events[0].id}!A2` && row.getCell(4).value === 0));
+  assert.ok(detail.getRows(5, detail.rowCount - 4).some(row => row.getCell(4).value === 0 && row.getCell(5).value === "Línea cero sintética"));
   assert.equal(JSON.stringify({ events, inventory }), before);
 });
 
@@ -184,7 +201,9 @@ test("endpoint de trasiego usa inventario vigente, entrega PDF autenticado y no 
   const before = fs.readFileSync(h.paths.warehouseInventoryPath); let printed = 0; const tempPaths = [];
   Object.assign(h.api, reporting, { os,
     async generatePdf(markup, target) {
-      printed++; assert.match(markup, /trasiego/i); assert.match(markup, /PROVISIONAL/);
+      printed++; assert.match(markup, /trasiego/i); assert.match(markup, /2 eventos analizados/);
+      assert.match(markup, /verificar traslado/i);
+      assert.doesNotMatch(markup, /Resumen final|Pendientes por resolver|Detalle del equipo por evento/);
       assert.match(markup, /Unidad sintética de audio/);
       tempPaths.push(path.dirname(target)); await fs.promises.writeFile(target, "%PDF-synthetic-transfer-report");
     },

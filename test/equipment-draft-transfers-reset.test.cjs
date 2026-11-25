@@ -15,7 +15,7 @@ async function editFirstRoute(h, quantity = 1) {
 
 test('reiniciar elimina una selección parcial confirmada, notas, tiempos locales y caché sin tocar inventario', async () => {
   const h = harness(), stock = JSON.stringify(h.stock());
-  await h.api.show();
+  await h.api.show(); await h.openEditor();
   await editFirstRoute(h);
   h.get('[data-draft-travel="0"]').value = '1';
   await h.click('[data-draft-confirm-time="0"]');
@@ -75,7 +75,7 @@ test('reiniciar cierra un cálculo abierto y una respuesta tardía no modifica e
   h.setEvents([]); h.api.reset();
   assert.equal(h.api.isOpen(), false);
   h.setEvents(newPlanEvents());
-  await h.api.show();
+  await h.api.show(); await h.openEditor();
   const currentModal = h.modal(), text = currentModal.textContent, callCount = h.calls.length;
   delayed.resolve(response(oldPlan)); await oldShow;
   assert.equal(h.modal(), currentModal);
@@ -86,13 +86,13 @@ test('reiniciar cierra un cálculo abierto y una respuesta tardía no modifica e
 });
 
 test('una confirmación cancelada y desprendida no puede aplicarse tras reiniciar ni cerrar otra confirmación', async () => {
-  const h = harness(); await h.api.show(); await editFirstRoute(h);
+  const h = harness(); await h.api.show(); await h.openEditor(); await editFirstRoute(h);
   await h.click('[data-draft-apply]');
   const oldAccept = h.get('[data-draft-confirm-accept]');
   const oldCancel = h.get('[data-draft-confirm-cancel]');
   await h.click('[data-draft-confirm-cancel]');
   h.setEvents([]); h.api.reset(); h.setEvents(newPlanEvents());
-  await h.api.show(); await editFirstRoute(h, 2); await h.click('[data-draft-apply]');
+  await h.api.show(); await h.openEditor(); await editFirstRoute(h, 2); await h.click('[data-draft-apply]');
   const currentConfirmation = h.get('[data-draft-confirm-accept]');
   const calls = h.calls.length;
   await oldAccept.emit('click'); await oldCancel.emit('click'); await flush();
@@ -103,7 +103,7 @@ test('una confirmación cancelada y desprendida no puede aplicarse tras reinicia
 });
 
 test('reiniciar mientras se valida Aceptar impide que el cálculo antiguo guarde sus cambios', async () => {
-  const h = harness(); await h.api.show(); await editFirstRoute(h);
+  const h = harness(); await h.api.show(); await h.openEditor(); await editFirstRoute(h);
   await h.click('[data-draft-apply]');
   const delayed = deferred(); h.responses.push(() => delayed.promise);
   const accepting = h.get('[data-draft-confirm-accept]').emit('click');
@@ -117,7 +117,7 @@ test('reiniciar mientras se valida Aceptar impide que el cálculo antiguo guarde
 });
 
 test('un refresco posterior a Aplicar no anuncia ni restaura el plan si ya se reinició', async () => {
-  const h = harness(); await h.api.show(); await editFirstRoute(h);
+  const h = harness(); await h.api.show(); await h.openEditor(); await editFirstRoute(h);
   await h.click('[data-draft-apply]');
   const delayed = deferred();
   h.responses.push(call => response(h.planFor(call)), () => delayed.promise);
@@ -151,7 +151,7 @@ test('una autorización de dividir el camión tampoco se conserva después de re
     { id: 'synthetic-a', name: 'Referencia A', itemType: 'equipo', quantity: 1 },
     { id: 'synthetic-b', name: 'Referencia B', itemType: 'equipo', quantity: 1 }
   ], movements: [] } });
-  await h.api.show();
+  await h.api.show(); await h.openEditor();
   let plan = h.planFor(h.calls.at(-1));
   await h.click(`[data-draft-choose-bundle="${plan.routeBundles.findIndex(bundle => bundle.toEventId === 'event-1')}"]`);
   plan = h.planFor(h.calls.at(-1));
@@ -164,11 +164,11 @@ test('una autorización de dividir el camión tampoco se conserva después de re
 });
 
 test('reabrir tras reiniciar propone sólo rutas del archivo nuevo, sin recuperar cantidades anteriores', async () => {
-  const h = harness(); await h.api.show(); await editFirstRoute(h); await h.apply();
+  const h = harness(); await h.api.show(); await h.openEditor(); await editFirstRoute(h); await h.apply();
   const priorIds = copy(h.api.selection().selectedTransferIds);
   const firstCall = h.calls.length;
   h.setEvents([]); h.api.reset(); h.setEvents(newPlanEvents());
-  await h.api.show();
+  await h.api.show(); await h.openEditor();
   const requests = h.calls.slice(firstCall);
   assert.deepEqual(requests[0].body.selectedTransferIds, []);
   assert.deepEqual(requests[0].body.transferEdits, []);
@@ -185,7 +185,7 @@ test('reabrir tras reiniciar propone sólo rutas del archivo nuevo, sin recupera
 test('reiniciar es idempotente y borra un error previo incluso sin eventos', async () => {
   const h = harness(); h.responses.push(response({ error: 'Fallo del plan anterior' }, 500));
   await h.api.refresh(); assert.match(h.api.error(), /Fallo del plan anterior/);
-  h.setEvents([]); h.api.reset(); h.api.reset(); await h.api.show();
+  h.setEvents([]); h.api.reset(); h.api.reset(); await h.api.show(); await h.openEditor();
   assert.equal(h.api.error(), '');
   assert.deepEqual(copy(h.api.selection()), emptySelection);
   assert.equal(h.api.result(), null);

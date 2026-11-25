@@ -14,7 +14,7 @@ const inventory={savedAt:'current-synthetic',state:{items:['a','b'].map(id=>({id
 
 test('muestra los tres orígenes por destino y concentra el kit completo antes de repartir referencias',async()=>{
  const events=[event('Parcial A','25',{a:1}),event('Completo AB','25',{a:1,b:1}),event('Parcial B','25',{b:1}),event('Destino','26',{a:1,b:1})];
- const h=harness({events});h.setStock(inventory);const before=copy(h.events());await h.api.show();
+ const h=harness({events});h.setStock(inventory);const before=copy(h.events());await h.api.show(); await h.openEditor();
  const comparisons=h.get('.equipment-draft-origin-comparisons');assert.ok(comparisons);
  const text=comparisons.textContent;assert.match(text,/3 orígenes comparados/);
  for(const name of ['Parcial A','Completo AB','Parcial B'])assert.match(text,new RegExp(name));
@@ -34,7 +34,7 @@ test('muestra los tres orígenes por destino y concentra el kit completo antes d
 test('separa día del evento y liberación tras medianoche; montaje y celebración siguen vinculados',async()=>{
  const events=[event('Origen <variable>','25',{a:1},{startAt:'2026-11-25T22:00',endAt:'2026-11-26T02:00'}),
   event('Destino','27',{a:1},{setupAt:'2026-11-26T08:00'})];
- const h=harness({events});h.setStock(inventory);await h.api.show();
+ const h=harness({events});h.setStock(inventory);await h.api.show(); await h.openEditor();
  const host=h.get('.equipment-draft-origin-comparisons');assert.ok(host);
  assert.match(host.textContent,/25\/11\/2026/);assert.match(host.textContent,/2026-11-26 02:00/);
  assert.match(host.textContent,/Origen <variable>/);assert.equal(host.querySelector('variable'),null);

@@ -38,7 +38,7 @@ test('selección automática usa sólo el destino principal y nunca todas las al
 
 test('calendario muestra montaje en su fecha real, sin cambiar las fuentes al renombrar eventos',async()=>{
  const events=setupFixture();events[1].sourceImport={sourceCells:[{ref:'fixture:A1',value:'Nombre literal original'}]};const before=copy(events);
- const h=harness({events});await h.api.show();
+ const h=harness({events});await h.api.show(); await h.openEditor();
  const calendar=h.get('[data-draft-calendar]').textContent;
  assert.match(calendar,/26\/11\/2026/);assert.match(calendar,/Montaje/);assert.match(calendar,/27\/11\/2026/);assert.match(calendar,/Destino variable 0/);
  assert.deepEqual(h.events(),before);assert.equal(h.updates.length,0);
@@ -46,7 +46,7 @@ test('calendario muestra montaje en su fecha real, sin cambiar las fuentes al re
 });
 
 test('elegir alternativa reemplaza el destino del origen; dividir requiere Aceptar y Cancelar descarta',async()=>{
- const {events,inventory}=splitFixture(),h=harness({events});h.setStock(inventory);await h.api.show();
+ const {events,inventory}=splitFixture(),h=harness({events});h.setStock(inventory);await h.api.show(); await h.openEditor();
  let plan=h.planFor(h.calls.at(-1));
  const bundleIndex=plan.routeBundles.findIndex(bundle=>bundle.fromEventId==='event-0'&&bundle.toEventId==='event-1');assert.ok(bundleIndex>=0);
  await h.click(`[data-draft-choose-bundle="${bundleIndex}"]`);
@@ -62,7 +62,7 @@ test('elegir alternativa reemplaza el destino del origen; dividir requiere Acept
 });
 
 test('elegir destino alternativo concentra el cuadro y elimina una autorización de división previa',async()=>{
- const {events,inventory}=splitFixture(),h=harness({events});h.setStock(inventory);await h.api.show();
+ const {events,inventory}=splitFixture(),h=harness({events});h.setStock(inventory);await h.api.show(); await h.openEditor();
  let plan=h.planFor(h.calls.at(-1)),index=plan.routeBundles.findIndex(bundle=>bundle.toEventId==='event-1');await h.click(`[data-draft-choose-bundle="${index}"]`);
  plan=h.planFor(h.calls.at(-1));const routeIndex=plan.candidates.findIndex(route=>route.toEventId==='event-2');await h.toggle(routeIndex,true);await h.click('[data-draft-confirm-accept]');
  plan=h.planFor(h.calls.at(-1));index=plan.routeBundles.findIndex(bundle=>bundle.toEventId==='event-2');await h.click(`[data-draft-choose-bundle="${index}"]`);
@@ -71,7 +71,7 @@ test('elegir destino alternativo concentra el cuadro y elimina una autorización
 
 test('sustitución se previsualiza con IDs vigentes, conserva ceros y fuente, y Cancelar la descarta',async()=>{
  const events=fixtureEvents();events[0].sections[0].items.push({id:'zero',description:'Fila cero conservada',quantity:0});events[0].sourceImport={sourceCells:[{ref:'fixture:B2',value:0},{ref:'fixture:C2',value:'  Nota literal  '}]};
- const h=harness({events});h.setStock(stockWithReplacement());const before=JSON.stringify(h.events()),stock=JSON.stringify(h.stock());await h.api.show();
+ const h=harness({events});h.setStock(stockWithReplacement());const before=JSON.stringify(h.events()),stock=JSON.stringify(h.stock());await h.api.show(); await h.openEditor();
  const quantity=h.get('[data-draft-substitution-quantity="0"]');assert.equal(quantity.value,'');
  await previewReplacement(h);
  const requested=h.calls.at(-1).body.events[0];assert.equal(requested.sections[0].items[0].warehouseInventoryId,'synthetic-replacement');assert.equal(requested.sections[0].items[1].quantity,0);assert.deepEqual(requested.sourceImport,events[0].sourceImport);
@@ -81,14 +81,14 @@ test('sustitución se previsualiza con IDs vigentes, conserva ceros y fuente, y 
 });
 
 test('aceptar sustitución requiere confirmación final y aplica la revisión al cuadro sin tocar inventario',async()=>{
- const h=harness();h.setStock(stockWithReplacement());const stock=JSON.stringify(h.stock());await h.api.show();await previewReplacement(h);
+ const h=harness();h.setStock(stockWithReplacement());const stock=JSON.stringify(h.stock());await h.api.show(); await h.openEditor();await previewReplacement(h);
  await h.click('[data-draft-apply]');assert.ok(h.get('[data-draft-confirm-accept]'));assert.equal(h.updates.length,0);
  await h.click('[data-draft-confirm-close]');assert.equal(h.updates.length,0);assert.ok(h.api.isOpen());
  await h.apply();assert.equal(h.updates.length,1);assert.equal(h.events()[0].sections[0].items[0].warehouseInventoryId,'synthetic-replacement');assert.equal(h.events()[0].planEquipmentChanges.length,1);assert.equal(JSON.stringify(h.stock()),stock);
 });
 
 test('no permite sustitución sin compatibilidad y un inventario cambiado impide aceptar el borrador',async()=>{
- const h=harness();h.setStock(stockWithReplacement());await h.api.show();
+ const h=harness();h.setStock(stockWithReplacement());await h.api.show(); await h.openEditor();
  h.get('[data-draft-substitution-line="0"]').value='0:0';h.get('[data-draft-substitution-inventory="0"]').value='synthetic-replacement';h.get('[data-draft-substitution-quantity="0"]').value='3';h.get('[data-draft-substitution-reason="0"]').value='Revisión técnica';
  const count=h.calls.length;await h.click('[data-draft-substitute="0"]');assert.equal(h.calls.length,count);assert.match(h.get('[data-draft-status]').textContent,/Confirme/);assert.equal(h.updates.length,0);
  await previewReplacement(h);const changed=stockWithReplacement();changed.state.items[1].quantity=0;h.setStock(changed);await h.apply();assert.equal(h.updates.length,0);assert.ok(h.api.isOpen());assert.match(h.get('[data-draft-status]').textContent,/cambiaron/);

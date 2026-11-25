@@ -206,8 +206,8 @@ test("vistas de un clic comparan escenarios y mantienen detalles cerrados con te
   assert.match(rent, /PROVISIONAL/);
   const transfer = reporting.renderEquipmentPlanningReportHtml(model, "transfer");
   assert.match(transfer, /Lugar scenario-origin/); assert.match(transfer, /Lugar scenario-destination/);
-  assert.match(transfer, /25 de noviembre/); assert.match(transfer, /26 de noviembre/);
-  assert.match(transfer, /8:00/);
+  assert.match(transfer, /miércoles 25\/11\/2026/); assert.match(transfer, /jueves 26\/11\/2026/);
+  assert.match(transfer, /Coincidencia de equipo/);
   assert.match(transfer, /&lt;img/); assert.ok(!transfer.includes("<img src=x"));
 });
 
@@ -236,6 +236,7 @@ test("cantidades calculadas aparecen primero y los pendientes permanecen accesib
   assert.match(purchase, /Datos por revisar/);
   assert.ok(purchase.includes("Consumible pendiente sintético"));
   const transfer = reporting.renderEquipmentPlanningReportHtml(model, "transfer");
-  assert.match(transfer, /<section class="report-pending"><h2>Datos por revisar \(2\)/);
+  assert.doesNotMatch(transfer, /report-pending|Referencia pendiente sintética|Consumible pendiente sintético/);
+  assert.match(transfer, /rutas pendientes de verificar/);
   assert.equal(JSON.stringify(model), before);
 });

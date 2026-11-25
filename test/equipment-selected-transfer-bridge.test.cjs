@@ -107,7 +107,7 @@ function integration({ source = [] } = {}) {
     return {ok:true,status:200,headers:{get(name){return name==="Content-Type"?"application/octet-stream":name==="Content-Disposition"?`attachment; filename="current.${body.mode==="master"?"xlsx":"pdf"}"`:null;}},blob:async()=>new Blob([body.mode==="master"?"PKsynthetic":"%PDF-synthetic"])};
   };
   const run = code => vm.runInContext(code,context);
-  for(const file of ["equipment-location.js","equipment-identity.js","equipment-import-identity.js","equipment-document-audit.js","equipment-draft-substitutions.js","equipment-draft-transfers.js","equipment-planner.js","equipment.js"])run(fs.readFileSync(require.resolve(`../${file}`),"utf8"));
+  for(const file of ["equipment-location.js","equipment-identity.js","equipment-import-identity.js","equipment-document-audit.js","equipment-draft-substitutions.js","equipment-transfer-presentation.js","equipment-draft-transfers.js","equipment-planner.js","equipment.js"])run(fs.readFileSync(require.resolve(`../${file}`),"utf8"));
   run(`renderEquipmentModule=()=>{if(window.testPlanner)window.testPlanner.render();};
     loadEquipmentEvent=id=>{equipmentState.selectedEventId=id;const event=selectedEquipmentEvent();if(event){restoreEquipmentEventSnapshot(event);populateEquipmentEventFields(event);}equipmentState.activeWindow='summary';renderEquipmentModule();return !!event;};
     equipmentSharedWorkspace.state={events:[],transfers:[],routeEstimates:[],loaded:true};
@@ -168,6 +168,7 @@ test("actualizar horarios valida todas las referencias antes de cambiar un event
 
 test("aplicar trasiegos actualiza horarios, resumen y todas las solicitudes de reporte con la misma selección", async () => {
   const h=integration({source:[sourceEvent(0),sourceEvent(1),sourceEvent(2)]});await flush();await h.planner.openTransfers();
+  await h.click('[data-draft-toggle-editor]');
   h.modal().querySelector('[data-draft-event="0"][data-draft-field="endAt"]').value="2026-11-25T09:30";
   await h.click("[data-draft-recalculate]");await h.click("[data-draft-select-all]");await h.click("[data-draft-apply]");await h.click("[data-draft-confirm-accept]");await flush();
   assert.equal(h.events()[0].endAt,"2026-11-25T09:30");assert.equal(h.planner.model().rows[0].plan.rental,0);assert.equal(h.planner.model().rows[0].required,3);
@@ -206,6 +207,7 @@ test('Maps se valida de forma atómica y reemplaza coordenadas anteriores sin to
 
 test('cantidades y notas editadas requieren aceptar y llegan iguales a los cinco reportes',async()=>{
   const h=integration({source:[sourceEvent(0),sourceEvent(1)]});await flush();await h.planner.openTransfers();
+  await h.click('[data-draft-toggle-editor]');
   const quantity=h.modal().querySelector('[data-draft-quantity="0"]'),note=h.modal().querySelector('[data-draft-note="0"]');
   quantity.value='2';note.value='Camión de prueba: dos unidades, nota literal';
   await h.click('[data-draft-save-edit="0"]');await h.click('[data-draft-apply]');

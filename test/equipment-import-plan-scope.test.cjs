@@ -121,7 +121,7 @@ function integration({ source = [] } = {}) {
     return {ok:true,status:200,headers:{get(name){return name==="Content-Type"?"application/octet-stream":name==="Content-Disposition"?`attachment; filename="current.${body.mode==="master"?"xlsx":"pdf"}"`:null;}},blob:async()=>new Blob([body.mode==="master"?"PKsynthetic":"%PDF-synthetic"])};
   };
   const run = code => vm.runInContext(code,context);
-  for(const file of ["equipment-workspace.js","equipment-location.js","equipment-identity.js","equipment-import-identity.js","equipment-document-audit.js","equipment-draft-substitutions.js","equipment-draft-transfers.js","equipment-planner.js","equipment.js"])run(fs.readFileSync(require.resolve(`../${file}`),"utf8"));
+  for(const file of ["equipment-workspace.js","equipment-location.js","equipment-identity.js","equipment-import-identity.js","equipment-document-audit.js","equipment-draft-substitutions.js","equipment-transfer-presentation.js","equipment-draft-transfers.js","equipment-planner.js","equipment.js"])run(fs.readFileSync(require.resolve(`../${file}`),"utf8"));
   run(`renderEquipmentModule=()=>{if(window.testPlanner)window.testPlanner.render();};
     loadEquipmentEvent=id=>{equipmentState.selectedEventId=id;const event=selectedEquipmentEvent();if(event){restoreEquipmentEventSnapshot(event);populateEquipmentEventFields(event);}equipmentState.activeWindow='summary';renderEquipmentModule();return !!event;};
     equipmentSharedWorkspace.state={events:[],transfers:[],routeEstimates:[],loaded:true};
@@ -201,6 +201,8 @@ test("un refresco tardío de la agenda no añade una séptima reserva al archivo
 test("generar trasiego y sus reportes conserva el alcance del archivo y la reserva externa sólo bloquea disponibilidad", async () => {
   const h = await delayedSavedReservation();
   await h.planner.openTransfers();
+  assert.equal(h.modal().querySelectorAll('[data-draft-field="place"]').length, 0, "la recomendación inicial no monta el editor completo");
+  await h.click('[data-draft-toggle-editor]');
   const locationInputs = h.modal().querySelectorAll('[data-draft-field="place"]');
   assert.equal(locationInputs.length, 6, "el editor no muestra dos veces la ubicación por un registro ajeno al archivo");
   assert.equal(locationInputs.filter(input => input.value === "Antigua sintética").length, 1);
@@ -223,6 +225,7 @@ test("Cancelar y la X del trasiego descartan horarios editados y preservan notas
   const h = await delayedSavedReservation(), original = h.events(), saved = copy(h.server.events);
   for (const index of [0, 1]) {
     await h.planner.openTransfers();
+    await h.click('[data-draft-toggle-editor]');
     h.modal().querySelector('[data-draft-event="0"][data-draft-field="place"]').value = "Cambio que no se acepta";
     const dismiss = h.modal().querySelectorAll('[data-draft-close]')[index];
     assert.ok(dismiss); await dismiss.emit("click"); await flush();

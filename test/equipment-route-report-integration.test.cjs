@@ -33,7 +33,9 @@ test('edición parcial se valida igual en el cálculo, HTML, PDF fuente y Excel,
   assert.equal(model.purchase.find(row=>row.warehouseInventoryId==='own-consume').purchase,3);
   const browser=Reporting.renderEquipmentPlanningReportHtml(model,'transfer');
   const native=Reporting.renderEquipmentReportHtml(Reporting.createEquipmentTransferReportModel(edited,inventory),'transfer');
-  for(const html of [browser,native]){assert.match(html,/Preparar el camión/);assert.ok(html.includes('&lt;script&gt;no ejecutar&lt;/script&gt;'));assert.ok(!html.includes('<script>'));assert.match(html,/Extra sintético/);assert.match(html,/recomendación|Recomendación/);}
+  // The transfer document is intentionally brief; preloads and original cells
+  // remain in the master below, while the exact selected amount/note is shown.
+  for(const html of [browser,native]){assert.match(html,/Equipo que se utilizará/);assert.ok(html.includes('&lt;script&gt;no ejecutar&lt;/script&gt;'));assert.ok(!html.includes('<script>'));assert.doesNotMatch(html,/Extra sintético|Preparar el camión|Resumen final/);assert.match(html,/Trasiego elegido/);assert.match(html,/<td class="number">1<\/td><td>Audio sintético/);}
   const master=await Reporting.createEquipmentMasterWorkbook(Reporting.createEquipmentReportModel(edited,inventory));
   const reopened=new ExcelJS.Workbook();await reopened.xlsx.load(await master.xlsx.writeBuffer());
   const transfers=reopened.getWorksheet('Trasiegos elegidos');assert.equal(transfers.getRow(5).getCell(5).value,1);assert.equal(transfers.getRow(5).getCell(9).value,note);

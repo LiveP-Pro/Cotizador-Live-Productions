@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const { harness, fixtureEvents, fixtureInventory, response, deferred, flush } = require("./helpers/equipment-draft-transfer-harness.cjs");
 
 test("el modal usa el endpoint único en mode plan y sólo marca propuestas listas la primera vez", async () => {
-  const h = harness(); await h.api.show();
+  const h = harness(); await h.api.show(); await h.openEditor();
   assert.equal(h.calls.length, 2); assert.ok(h.calls.every((call) => call.url === "/api/cuadros-equipo/reportes/provisional" && call.init.method === "POST" && call.body.mode === "plan" && call.body.format === "json"));
   assert.ok(h.calls.every((call) => call.init.credentials === "same-origin"));
   const checkboxes = h.modal().querySelectorAll("[data-draft-route]"); assert.equal(checkboxes.length, 3); assert.equal(checkboxes.filter((input) => input.checked).length, 2); assert.ok(checkboxes.every((input) => !input.disabled));
@@ -12,7 +12,7 @@ test("el modal usa el endpoint único en mode plan y sólo marca propuestas list
 });
 
 test("desmarcar recalcula renta y aplicar conserva únicamente esa selección", async () => {
-  const h = harness(); const beforeStock = JSON.stringify(h.stock()); await h.api.show(); await h.toggle(0, false);
+  const h = harness(); const beforeStock = JSON.stringify(h.stock()); await h.api.show(); await h.openEditor(); await h.toggle(0, false);
   assert.equal(h.calls.at(-1).body.selectedTransferIds.length, 1); assert.match(h.get("[data-draft-routes]").textContent, /3 ×.*Unidad sintética/);
   await h.apply();
   assert.equal(h.api.isOpen(), false); assert.equal(h.api.selection().selectedTransferIds.length, 1); assert.equal(h.updates.length, 1);
@@ -21,14 +21,14 @@ test("desmarcar recalcula renta y aplicar conserva únicamente esa selección", 
 });
 
 test("quitar todos y aplicar mantiene selección vacía al volver a abrir", async () => {
-  const h = harness(); await h.api.show(); await h.click("[data-draft-select-none]"); await h.apply();
+  const h = harness(); await h.api.show(); await h.openEditor(); await h.click("[data-draft-select-none]"); await h.apply();
   assert.equal(h.api.selection().selectedTransferIds.length, 0); assert.equal(h.api.result().rows[0].rental, 6);
-  const callCount = h.calls.length; await h.api.show();
+  const callCount = h.calls.length; await h.api.show(); await h.openEditor();
   assert.equal(h.calls.length, callCount + 1); assert.ok(h.modal().querySelectorAll("[data-draft-route]").every((input) => !input.checked));
 });
 
 test("cancelar descarta horarios y selección temporales sin modificar los cuadros ni el inventario", async () => {
-  const h = harness(); const beforeEvents = JSON.stringify(h.events()), beforeStock = JSON.stringify(h.stock()); await h.api.show();
+  const h = harness(); const beforeEvents = JSON.stringify(h.events()), beforeStock = JSON.stringify(h.stock()); await h.api.show(); await h.openEditor();
   h.get('[data-draft-event="0"][data-draft-field="place"]').value = "Otro lugar temporal";
   h.get('[data-draft-event="0"][data-draft-field="endAt"]').value = "2026-11-25T10:30";
   await h.click("[data-draft-recalculate]"); await h.click("[data-draft-close]");
@@ -37,7 +37,7 @@ test("cancelar descarta horarios y selección temporales sin modificar los cuadr
 });
 
 test("los minutos estimados se muestran deshabilitados y confirmar un par habilita una propuesta revisada", async () => {
-  const h = harness({ estimates: [] }); await h.api.show();
+  const h = harness({ estimates: [] }); await h.api.show(); await h.openEditor();
   assert.ok(h.modal().querySelectorAll("[data-draft-route]").every((input) => !input.checked && input.disabled));
   await h.click('[data-draft-confirm-time="0"]');
   assert.equal(h.calls.at(-1).body.routeEstimates.length, 1); assert.ok(h.modal().querySelectorAll("[data-draft-route]").every((input) => !input.disabled));
@@ -45,7 +45,7 @@ test("los minutos estimados se muestran deshabilitados y confirmar un par habili
 });
 
 test("un campo de minutos vacío no se interpreta como cero ni envía una validación", async () => {
-  const h = harness({ estimates: [] }); await h.api.show(); const count = h.calls.length;
+  const h = harness({ estimates: [] }); await h.api.show(); await h.openEditor(); const count = h.calls.length;
   h.get('[data-draft-handling="0"]').value = ""; await h.click('[data-draft-confirm-time="0"]');
   assert.equal(h.calls.length, count); assert.match(h.get("[data-draft-status]").textContent, /minutos enteros/);
   assert.ok(h.modal().querySelectorAll("[data-draft-route]").every((input) => input.disabled));
@@ -60,38 +60,38 @@ test("un error de red en refresh no produce un bucle de reintentos durante rende
 });
 
 test("un error del modal conserva el borrador y no aplica ni reintenta al dibujar", async () => {
-  const h = harness(); h.responses.push(response({ error: "No disponible" }, 503)); await h.api.show(); await flush();
+  const h = harness(); h.responses.push(response({ error: "No disponible" }, 503)); await h.api.show(); await h.openEditor(); await flush();
   assert.equal(h.calls.length, 1); assert.equal(h.get("[data-draft-apply]").disabled, true); assert.match(h.get("[data-draft-status]").textContent, /No disponible/);
   assert.equal(h.updates.length, 0); assert.equal(h.api.selection().selectedTransferIds.length, 0); assert.equal(h.api.isOpen(), true);
 });
 
 test("un cambio del inventario invalida el resultado cacheado y recalcula contra el estado actual", async () => {
-  const h = harness(); await h.api.show(); await h.apply(); assert.equal(h.api.result().rows[0].rental, 0);
+  const h = harness(); await h.api.show(); await h.openEditor(); await h.apply(); assert.equal(h.api.result().rows[0].rental, 0);
   h.setStock(fixtureInventory(2)); assert.equal(h.api.result(), null); await h.api.refresh();
   assert.ok(h.api.result().invalidSelections.length > 0); assert.equal(h.api.result().rows[0].rental, null); assert.equal(h.updates.length, 1);
 });
 
 test("un permiso denegado no envía cálculo ni muestra una renta reducida", async () => {
-  const h = harness(); h.setPermission(false); await h.api.refresh(); await h.api.show();
+  const h = harness(); h.setPermission(false); await h.api.refresh(); await h.api.show(); await h.openEditor();
   assert.equal(h.calls.length, 0); assert.equal(h.api.result(), null); assert.equal(h.api.isOpen(), false);
   assert.equal(h.get("[data-draft-apply]"), undefined); assert.equal(h.updates.length, 0);
   assert.match(h.statuses.at(-1), /permiso/);
 });
 
 test("revocar permiso oculta inmediatamente el plan que antes tenía renta reducida", async () => {
-  const h = harness(); await h.api.show(); await h.apply(); assert.equal(h.api.result().rows[0].rental, 0);
+  const h = harness(); await h.api.show(); await h.openEditor(); await h.apply(); assert.equal(h.api.result().rows[0].rental, 0);
   h.setPermission(false); assert.equal(h.api.result(), null);
   await h.api.refresh(); assert.equal(h.api.result(), null); assert.equal(h.notices.at(-1), null);
 });
 
 test("un 403 del servidor deja el pedido sin aplicar y conserva sus eventos", async () => {
-  const h = harness(); const before = JSON.stringify(h.events()); h.responses.push(response({ error: "Sesión sin permiso" }, 403)); await h.api.show();
+  const h = harness(); const before = JSON.stringify(h.events()); h.responses.push(response({ error: "Sesión sin permiso" }, 403)); await h.api.show(); await h.openEditor();
   assert.equal(h.calls.length, 1); assert.equal(h.api.result(), null); assert.equal(h.get("[data-draft-apply]").disabled, true);
   assert.equal(JSON.stringify(h.events()), before); assert.match(h.get("[data-draft-status]").textContent, /sin permiso/);
 });
 
 test("una respuesta incompleta no se acepta como pedido sin faltantes", async () => {
-  const h = harness(); h.responses.push(response({ rows: [] })); await h.api.show();
+  const h = harness(); h.responses.push(response({ rows: [] })); await h.api.show(); await h.openEditor();
   assert.equal(h.api.result(), null); assert.equal(h.updates.length, 0); assert.equal(h.get("[data-draft-apply]").disabled, true);
   assert.match(h.get("[data-draft-status]").textContent, /plan válido/);
 });
@@ -113,9 +113,9 @@ test("revocar permiso durante refresh invalida la respuesta pendiente y su cober
 });
 
 test("cerrar durante Aplicar impide que una respuesta anterior modifique o cierre el modal nuevo", async () => {
-  const h = harness(); await h.api.show(); const gate = deferred(); h.responses.push(gate.promise);
+  const h = harness(); await h.api.show(); await h.openEditor(); const gate = deferred(); h.responses.push(gate.promise);
   await h.click("[data-draft-apply]"); const applying = h.get("[data-draft-confirm-accept]").emit("click"); await flush(); const applyCall = h.calls.at(-1);
-  h.api.close(); await h.api.show(); const newerModal = h.modal();
+  h.api.close(); await h.api.show(); await h.openEditor(); const newerModal = h.modal();
   gate.resolve(response(h.planFor(applyCall))); await applying; await flush();
   assert.equal(h.updates.length, 0); assert.equal(h.api.isOpen(), true); assert.equal(h.modal(), newerModal); assert.equal(h.api.selection().selectedTransferIds.length, 0);
 });
@@ -129,7 +129,7 @@ test("cerrar durante el primer cálculo no dispara una segunda consulta para un 
 test("un cálculo del modal descartado no altera los checks de un modal nuevo con otros datos", async () => {
   const h = harness(); const gate = deferred(); h.responses.push(gate.promise); const oldOpening = h.api.show(); await flush();
   const oldCall = h.calls[0]; h.api.close(); const modified = h.events(); modified[0].sections[0].items[0].quantity = 2; h.setEvents(modified);
-  await h.api.show(); const currentModal = h.modal(); await h.toggle(0, false);
+  await h.api.show(); await h.openEditor(); const currentModal = h.modal(); await h.toggle(0, false);
   const before = h.modal().querySelectorAll("[data-draft-route]").map((input) => input.checked); const calls = h.calls.length;
   gate.resolve(response(h.planFor(oldCall))); await oldOpening; await flush();
   assert.equal(h.calls.length, calls); assert.equal(h.modal(), currentModal);
@@ -141,7 +141,7 @@ test("descripciones, lugares y errores maliciosos se muestran como texto escapad
   const bad = '<img src=x onerror="alert(1)"><script>alert(2)</script>';
   const events = fixtureEvents(); for (const event of events) { event.place = bad; event.sections[0].items[0].description = bad; }
   const h = harness({ events, estimates: [{ fromPlace: bad, toPlace: bad, travelMinutes: 0, handlingMinutes: 120 }] });
-  const stock = h.stock(); stock.state.items[0].name = bad; h.setStock(stock); await h.api.show();
+  const stock = h.stock(); stock.state.items[0].name = bad; h.setStock(stock); await h.api.show(); await h.openEditor();
   assert.equal(h.modal().querySelectorAll("img,script").length, 0); assert.match(h.get("[data-draft-routes]").innerHTML, /&lt;img/);
   assert.match(h.modal().textContent, /<img src=x onerror="alert\(1\)">/);
   h.responses.push(response({ error: bad }, 503)); await h.click("[data-draft-recalculate]");
@@ -149,12 +149,12 @@ test("descripciones, lugares y errores maliciosos se muestran como texto escapad
 });
 
 test("Escape cierra y devuelve el foco sin guardar ningún cambio", async () => {
-  const h = harness(); const priorFocus = h.document.activeElement; await h.api.show();
+  const h = harness(); const priorFocus = h.document.activeElement; await h.api.show(); await h.openEditor();
   await h.modal().emit("keydown", { key: "Escape" }); assert.equal(h.api.isOpen(), false); assert.equal(h.document.activeElement, priorFocus); assert.equal(h.updates.length, 0);
 });
 
 test("aplicar recoge cantidades y minutos editados aunque no se pulse Revisar cambio", async () => {
-  const h = harness(); await h.api.show();
+  const h = harness(); await h.api.show(); await h.openEditor();
   h.get('[data-draft-quantity="0"]').value = "1";
   h.get('[data-draft-note="0"]').value = "Cargar primero en el camión";
   h.get('[data-draft-travel="0"]').value = "10";
@@ -170,7 +170,7 @@ test("aplicar recoge cantidades y minutos editados aunque no se pulse Revisar ca
 });
 
 test("una cantidad fuera del máximo no abre confirmación ni guarda cambios", async () => {
-  const h = harness(); await h.api.show(); const calls = h.calls.length;
+  const h = harness(); await h.api.show(); await h.openEditor(); const calls = h.calls.length;
   h.get('[data-draft-quantity="0"]').value = "4";
   await h.click('[data-draft-apply]');
   assert.equal(h.get('[data-draft-confirm-accept]'), null); assert.equal(h.updates.length, 0);
@@ -182,14 +182,14 @@ test("desmontaje opcional se edita y confirma sin cambiar fuente; cancelar lo de
   const events = fixtureEvents();
   events[0].teardownAt = "2026-11-25T09:30";
   events[0].sourceImport = { sourceCells: [{ ref: "synthetic:A1", value: "Nota original literal" }] };
-  const h = harness({events}); const before = JSON.stringify(h.events()); await h.api.show();
+  const h = harness({events}); const before = JSON.stringify(h.events()); await h.api.show(); await h.openEditor();
   const field = h.get('[data-draft-event="0"][data-draft-field="teardownAt"]');
   assert.ok(field); assert.equal(field.value, "2026-11-25T09:30");
   assert.equal(h.get('[data-draft-event="1"][data-draft-field="teardownAt"]').value, "");
   field.value = "2026-11-25T10:00";
   await h.click('[data-draft-recalculate]'); await h.click('[data-draft-close]');
   assert.equal(JSON.stringify(h.events()), before); assert.equal(h.updates.length, 0);
-  await h.api.show();
+  await h.api.show(); await h.openEditor();
   h.get('[data-draft-event="0"][data-draft-field="teardownAt"]').value = "2026-11-25T10:00";
   await h.click('[data-draft-recalculate]'); await h.apply();
   assert.equal(h.updates.length, 1); assert.equal(h.events()[0].teardownAt, "2026-11-25T10:00");

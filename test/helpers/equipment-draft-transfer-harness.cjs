@@ -89,7 +89,7 @@ function harness(settings = {}) {
   const bridge = { events: () => events, inventory: () => stock, range: () => ({ from: "2026-11-23", to: "2026-11-29" }), transferOptions: () => ({ routeEstimates: baseEstimates }),
     updateEventDetails(patches) { updates.push(copy(patches)); for (const patch of patches) { const event = events.find((entry) => entry.id === patch.id); if (event) Object.assign(event, patch); } } };
   state.planFor = (call) => Draft.analyze(call.body.events, stock, { now: Date.parse("2026-11-23T12:00:00Z"), routeEstimates: call.body.routeEstimates, selectedTransferIds: call.body.selectedTransferIds, transferEdits: call.body.transferEdits, splitAuthorizedOrigins: call.body.splitAuthorizedOrigins });
-  const context = vm.createContext({ console, Intl, Date, Set, Map, document, EquipmentLocation: require("../../equipment-location.js"), EquipmentDraftSubstitutions: require("../../equipment-draft-substitutions.js"), window: { LIVE_SESSION: { id: "synthetic" }, LiveAccess: { can: () => permission } } });
+  const context = vm.createContext({ console, Intl, Date, Set, Map, document, EquipmentTransferPresentation: require("../../equipment-transfer-presentation.js"), EquipmentLocation: require("../../equipment-location.js"), EquipmentDraftSubstitutions: require("../../equipment-draft-substitutions.js"), window: { LIVE_SESSION: { id: "synthetic" }, LiveAccess: { can: () => permission } } });
   vm.runInContext(source(), context);
   state.api = context.EquipmentDraftTransfers.create({ document, bridge, fetch: async (url, init) => {
     const call = { url, init, body: JSON.parse(init.body) }; calls.push(call);
@@ -99,6 +99,7 @@ function harness(settings = {}) {
   state.modal = () => document.querySelector(".equipment-draft-overlay");
   state.get = (selector) => state.modal()?.querySelector(selector);
   state.click = async (selector) => { const element = state.get(selector); assert.ok(element, selector); await element.emit("click"); await flush(); };
+  state.openEditor = async () => { if (state.modal() && !state.get("[data-draft-event]")) await state.click("[data-draft-toggle-editor]"); };
   state.apply = async () => { await state.click("[data-draft-apply]"); if (state.get("[data-draft-confirm-accept]")) await state.click("[data-draft-confirm-accept]"); };
   state.toggle = async (index, checked) => { const element = state.get(`[data-draft-route="${index}"]`); assert.ok(element); element.checked = checked; await element.emit("change"); await flush(); };
   return state;

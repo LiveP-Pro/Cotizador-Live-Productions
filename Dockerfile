@@ -29,6 +29,7 @@ COPY equipment-handoffs.js ./
 COPY equipment-import-identity.js equipment-pdf-ocr.cjs equipment-draft-logistics.js equipment-draft-transfers.js equipment-draft-transfers.css ./
 COPY equipment-location.js equipment-route-bundles.cjs equipment-route-policy.cjs ./
 COPY equipment-draft-substitutions.js ./
+COPY equipment-transfer-presentation.js ./
 COPY assets ./assets
 COPY luxury/package.json luxury/server.js ./luxury/
 COPY luxury/lib ./luxury/lib
