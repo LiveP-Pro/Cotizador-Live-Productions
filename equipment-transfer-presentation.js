@@ -48,7 +48,8 @@
     for (const bundle of bundles) for (const item of list(bundle.commonItems)) if (text(item.warehouseInventoryId)) descriptions.set(text(item.warehouseInventoryId), text(item.description));
     const flatten = (routes, confirmed = false) => list(routes).filter(route => route.status !== "cancelled").flatMap(route => {
       const items = Array.isArray(route.items) ? route.items : [route];
-      return items.map(item => ({ ...route, ...item, confirmed, fromEventId: text(route.fromEventId), toEventId: text(route.toEventId) }));
+      return items.map(item => ({ ...route, ...item, id: route.id || route.transferId || item.transferId || item.id,
+        confirmed, fromEventId: text(route.fromEventId), toEventId: text(route.toEventId) }));
     });
     const selected = flatten(input.transferRoutes || plan.selectedTransfers);
     const confirmed = flatten(plan.actualTransfers, true);
@@ -142,6 +143,71 @@
         usedItems: [...used.values()], unusedItems: unused, bundleIndex });
     }
     cards.sort((a, b) => a.fromDate.localeCompare(b.fromDate) || a.toDate.localeCompare(b.toDate) || a.fromEventId.localeCompare(b.fromEventId) || a.toEventId.localeCompare(b.toEventId));
+    // Complete each destination once, after every accepted/displayed route has
+    // passed the calendar and feasibility guards. These are preparation needs,
+    // not rental, purchase, stock movements, or another copy of event demand.
+    const demandRows = Array.isArray(plan.rows) ? plan.rows : Array.isArray(input.rows) ? input.rows : null;
+    const arrivals = new Map(), arrivalIds = new Set(), provisionalDestinations = new Set();
+    for (const card of cards) {
+      if (["recommended", "verify"].includes(card.status)) provisionalDestinations.add(card.toEventId);
+      for (const item of card.usedItems) {
+        const id = text(item.warehouseInventoryId);
+        const identity = JSON.stringify([item.transferId || card.id, card.fromEventId, card.toEventId, id]);
+        if (!id || arrivalIds.has(identity)) continue;
+        arrivalIds.add(identity);
+        const key = pairKey(card.toEventId, id);
+        arrivals.set(key, (arrivals.get(key) || 0) + positive(item.quantity));
+      }
+    }
+    const completionByDestination = new Map();
+    function completionFor(toEventId) {
+      if (completionByDestination.has(toEventId)) return completionByDestination.get(toEventId);
+      const requirements = new Map();
+      function addRequirement(row, fallbackId) {
+        const quantity = positive(row.quantity), id = text(row.warehouseInventoryId), rowId = text(row.id) || fallbackId;
+        if (!quantity) return;
+        const key = id ? `physical:${id}` : `unresolved:${rowId}`;
+        const previous = requirements.get(key);
+        requirements.set(key, { warehouseInventoryId: id, rowId, description: text(row.description) || id || "Referencia por identificar",
+          itemType: row.itemType === "consumible" || row.consumable === true ? "consumible" : "equipo",
+          pendingIdentification: !id || row.pendingIdentification === true,
+          pendingClassification: row.pendingClassification === true,
+          preferredPurchase: row.preferredPurchase === true || row.procurementPreference === "purchase",
+          procurementChoice: text(row.procurementChoice), requiredQuantity: quantity + (previous?.requiredQuantity || 0) });
+      }
+      if (demandRows !== null) {
+        demandRows.forEach((row, index) => addRequirement({ ...row, quantity: row.eventQuantities?.[toEventId] }, `row-${index}`));
+      } else {
+        // Legacy view inputs may lack an analyzed row table. Read only actual
+        // requested items, never mirror rows, reference tables, or old data.
+        const destination = byEvent.get(toEventId) || {};
+        list(destination.sections).forEach((section, sectionIndex) => list(section.items).forEach((raw, itemIndex) => {
+          const line = Array.isArray(raw) ? { quantity: raw[0], description: raw[1] } : raw;
+          if (line && typeof line === "object") addRequirement(line, `${toEventId}-${sectionIndex}-${itemIndex}`);
+        }));
+      }
+      const items = [...requirements.values()].map(row => {
+        // Consumables and unresolved identities cannot be fulfilled by a
+        // reusable-unit transfer, even if their descriptions look alike.
+        const incomingQuantity = row.warehouseInventoryId && row.itemType !== "consumible" && !row.pendingIdentification
+          && !row.pendingClassification && !row.preferredPurchase && !row.procurementChoice
+          ? Math.min(row.requiredQuantity, arrivals.get(pairKey(toEventId, row.warehouseInventoryId)) || 0) : 0;
+        const quantity = Math.max(0, Number((row.requiredQuantity - incomingQuantity).toPrecision(15)));
+        return { ...row, incomingQuantity, quantity };
+      }).filter(row => row.quantity > 0);
+      const result = { items, provisional: provisionalDestinations.has(toEventId) };
+      completionByDestination.set(toEventId, result);
+      return result;
+    }
+    const shownDestinations = new Set();
+    for (const card of cards) {
+      const completion = completionFor(card.toEventId);
+      card.additionalItems = completion.items;
+      card.additionalIsProvisional = completion.provisional;
+      card.additionalExplanation = completion.provisional ? "Adicional si se realiza el trasiego propuesto." : "";
+      card.showAdditionalItems = !shownDestinations.has(card.toEventId);
+      shownDestinations.add(card.toEventId);
+    }
     const pending = omitted || list(plan.invalidSelections).length || list(policy.ambiguousOrigins).length || bundles.some(bundle => bundle.status === "review")
       || list(plan.pending).length || !cards.length && events.length > 1;
     return { eventCount: byEvent.size, cards, pendingMessage: pending ? cards.length

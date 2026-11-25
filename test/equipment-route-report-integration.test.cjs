@@ -33,9 +33,15 @@ test('edición parcial se valida igual en el cálculo, HTML, PDF fuente y Excel,
   assert.equal(model.purchase.find(row=>row.warehouseInventoryId==='own-consume').purchase,3);
   const browser=Reporting.renderEquipmentPlanningReportHtml(model,'transfer');
   const native=Reporting.renderEquipmentReportHtml(Reporting.createEquipmentTransferReportModel(edited,inventory),'transfer');
-  // The transfer document is intentionally brief; preloads and original cells
-  // remain in the master below, while the exact selected amount/note is shown.
-  for(const html of [browser,native]){assert.match(html,/Equipo que se utilizará/);assert.ok(html.includes('&lt;script&gt;no ejecutar&lt;/script&gt;'));assert.ok(!html.includes('<script>'));assert.doesNotMatch(html,/Extra sintético|Preparar el camión|Resumen final/);assert.match(html,/Trasiego elegido/);assert.match(html,/<td class="number">1<\/td><td>Audio sintético/);}
+  // The brief document shows the selected amount and the destination's
+  // remaining needs; the preload instructions and source audit stay in master.
+  for(const html of [browser,native]){
+    assert.match(html,/Equipo que se utilizará/);assert.ok(html.includes('&lt;script&gt;no ejecutar&lt;/script&gt;'));assert.ok(!html.includes('<script>'));
+    assert.doesNotMatch(html,/Preparar el camión|Resumen final/);assert.match(html,/Trasiego elegido/);assert.match(html,/<td class="number">1<\/td><td>Audio sintético/);
+    const completion=html.match(/<h3>Equipo adicional para completar el evento<\/h3>([\s\S]*?)<\/section>/)?.[1];
+    assert.ok(completion);assert.match(completion,/<td class="number">1<\/td><td>Audio sintético/);
+    assert.match(completion,/<td class="number">1<\/td><td>Extra sintético/);assert.match(completion,/<td class="number">4<\/td><td>Consumible sintético/);
+  }
   const master=await Reporting.createEquipmentMasterWorkbook(Reporting.createEquipmentReportModel(edited,inventory));
   const reopened=new ExcelJS.Workbook();await reopened.xlsx.load(await master.xlsx.writeBuffer());
   const transfers=reopened.getWorksheet('Trasiegos elegidos');assert.equal(transfers.getRow(5).getCell(5).value,1);assert.equal(transfers.getRow(5).getCell(9).value,note);
