@@ -82,6 +82,9 @@ let equipmentExtraEntryBusy = false;
 const equipmentSharedWorkspace = { enabled: false, client: null, state: null, dirty: false, saving: false, refreshTimer: null, personalizer: null, batchImport: null, extras: null, purchaseSyncPromise: null, renderFingerprint: null };
 
 const equipmentPlannerDirtyIds = new Set();
+// null follows the agenda. A set is the explicitly assembled/imported plan;
+// a background agenda refresh must never add another booking to that plan.
+let equipmentPlanEventIds = null;
 let equipmentPlannerInstance = null;
 const EQUIPMENT_TRANSFER_BUFFER_MINUTES = 120;
 
@@ -92,6 +95,18 @@ function createEquipmentWarehouseDispatchId() {
 
 function equipmentQuery(selector) {
   return document.querySelector(selector);
+}
+
+function equipmentEventsInCurrentPlan(events) {
+  return equipmentPlanEventIds === null ? events : events.filter(event => equipmentPlanEventIds.has(event.id));
+}
+
+function includeEquipmentPlanEvents(events) {
+  if (equipmentPlanEventIds === null) {
+    equipmentPlanEventIds = new Set(equipmentState.events.filter(event => !event.updatedAt || equipmentPlannerDirtyIds.has(event.id)).map(event => event.id));
+  }
+  events.forEach(event => equipmentPlanEventIds.add(event.id));
+  equipmentState.events = equipmentEventsInCurrentPlan(equipmentState.events);
 }
 
 function invalidateEquipmentRentalPreview() {
@@ -6116,6 +6131,7 @@ function saveCurrentEquipmentWindow(options = {}) {
       warehouseDispatchId: equipmentState.draftWarehouseDispatchId
     };
     equipmentState.events.push(event);
+    equipmentPlanEventIds?.add(event.id);
     equipmentState.selectedEventId = event.id;
   } else {
     updateEquipmentEventFromCurrent(event);
@@ -6169,6 +6185,7 @@ function removeEquipmentEventById(eventId, options = {}) {
   const wasSelected = equipmentState.selectedEventId === eventId;
   invalidateEquipmentRentalPreview();
   equipmentState.events.splice(index, 1);
+  equipmentPlanEventIds?.delete(eventId);
   equipmentState.summaryTransferRoutes.forEach((route) => {
     route.eventIds = route.eventIds.filter((routeEventId) => routeEventId !== eventId);
   });
@@ -6198,6 +6215,7 @@ function removeEquipmentActiveWindow() {
 function clearEquipmentWorkingArea() {
   if (!window.confirm(equipmentSharedWorkspace.enabled ? "¿Limpiar esta vista? Los eventos y sus reservas se conservarán en la agenda compartida." : "¿Está seguro que desea limpiar todo a 0?")) return;
   equipmentState.events = [];
+  equipmentPlanEventIds = new Set();
   resetEquipmentWindowDraft();
   equipmentState.summaryTransferRoutes = [];
   equipmentState.activeSummaryTransferRouteId = "";
@@ -7058,6 +7076,7 @@ function importEquipmentEditablePayload(payload) {
     }
   }
   equipmentState.events = events;
+  equipmentPlanEventIds = new Set(events.map(event => event.id));
   invalidateEquipmentRentalPreview();
   equipmentState.inventory = equipmentSimpleEntriesToMap(payload.inventory);
   equipmentState.observations = equipmentSimpleEntriesToMap(payload.observations);
@@ -7168,7 +7187,7 @@ async function equipmentSharedBeforeOpen() {
 
 function equipmentApplySharedPlanning(rows) {
   const shared = equipmentSharedWorkspace;
-  if (!shared.enabled || shared.dirty || !shared.state?.plan?.rows) return rows;
+  if (!shared.enabled || shared.dirty || equipmentPlanEventIds !== null || !shared.state?.plan?.rows) return rows;
   const plans = shared.state.plan.rows;
   return rows.map(row => {
     if (row.type === "category") return row;
@@ -7196,6 +7215,7 @@ function equipmentSharedRenderFingerprint(state) {
     ? { ...event, ...currentEquipmentEventDraft(), ...captureEquipmentEventSnapshot(), id: event.id } : event);
   return JSON.stringify({
     events,
+    planEventIds: equipmentPlanEventIds === null ? null : [...equipmentPlanEventIds].sort(),
     selectedEventId: equipmentState.selectedEventId,
     activeWindow: equipmentState.activeWindow,
     dirty: equipmentSharedWorkspace.dirty,
@@ -7234,12 +7254,15 @@ function applyEquipmentSharedState(state) {
   if (equipmentSharedWorkspace.dirty && equipmentState.selectedEventId) { equipmentPlannerDirtyIds.add(equipmentState.selectedEventId); syncActiveEquipmentEvent(); }
   const current = new Map(equipmentState.events.map(event => [event.id, event]));
   const selected = selectedEquipmentEvent();
-  const remote = state.events.filter(event => window.EquipmentWorkspace.intersects(event, state.range));
+  const remote = equipmentEventsInCurrentPlan(state.events).filter(event => window.EquipmentWorkspace.intersects(event, state.range));
   const remoteIds = new Set(state.events.map(event => event.id));
   equipmentState.events = remote.map(event => equipmentPlannerDirtyIds.has(event.id) && current.has(event.id)
     ? current.get(event.id) : event);
   current.forEach(event => {
-    if ((!event.updatedAt && !remoteIds.has(event.id)) || (equipmentPlannerDirtyIds.has(event.id) && !equipmentState.events.some(item => item.id === event.id))) equipmentState.events.push(event);
+    if ((!event.updatedAt && !remoteIds.has(event.id)) || (equipmentPlannerDirtyIds.has(event.id) && !equipmentState.events.some(item => item.id === event.id))) {
+      equipmentState.events.push(event);
+      equipmentPlanEventIds?.add(event.id);
+    }
   });
   const refreshed = selectedEquipmentEvent();
   if (selected && refreshed && !equipmentSharedWorkspace.dirty && selected.updatedAt !== refreshed.updatedAt && !equipmentSharedWorkspace.saving) {
@@ -7280,6 +7303,7 @@ async function showAllEquipmentSharedEvents() {
     .map(value => String(value || "").slice(0, 10)).filter(value => /^\d{4}-\d{2}-\d{2}$/.test(value)).sort();
   if (!dates.length) { equipmentSharedStatus("Todavía no hay eventos guardados con fechas. Puede agregar un evento personalizado."); return false; }
   client.setRange({ from: dates[0], to: dates.at(-1) });
+  equipmentPlanEventIds = null;
   await client.refresh();
   switchEquipmentWindow("summary");
   return true;
@@ -7289,8 +7313,8 @@ function renderEquipmentSharedPlan() {
   const host = equipmentQuery("#equipmentSharedRecommendations");
   if (!host) return;
   const state = equipmentSharedWorkspace.state;
-  if (!state?.plan || equipmentSharedWorkspace.dirty) {
-    host.innerHTML = equipmentSharedWorkspace.dirty ? '<p class="equipment-summary-notice">Puede generar trasiego, renta y compra con los eventos cargados. Los reportes incluyen los datos pendientes; confirme el evento cuando desee reservar equipo.</p>' : "";
+  if (!state?.plan || equipmentSharedWorkspace.dirty || equipmentPlanEventIds !== null) {
+    host.innerHTML = equipmentSharedWorkspace.dirty || equipmentPlanEventIds !== null ? '<p class="equipment-summary-notice">Puede generar trasiego, renta y compra con los eventos cargados. Los reportes incluyen los datos pendientes; confirme el evento cuando desee reservar equipo.</p>' : "";
     return;
   }
   const rows = state.plan.rows || [];
@@ -7464,13 +7488,14 @@ async function persistEquipmentSharedEvent(event, options = {}) {
   if (equipmentSharedWorkspace.saving) throw new Error("Hay un guardado en curso. Espere un momento.");
   equipmentSharedWorkspace.saving = true;
   try {
+    equipmentPlanEventIds?.add(event.id);
     const saved = await equipmentSharedWorkspace.client.save(equipmentBindSharedInventory({ ...event, snapshotLocked: true }));
     equipmentPlannerDirtyIds.delete(saved.id);
     equipmentSharedWorkspace.dirty = false;
     const localDrafts = equipmentState.events.filter(item => item.id !== saved.id && (!item.updatedAt || equipmentPlannerDirtyIds.has(item.id)));
     const range = window.EquipmentWorkspace.weekFor((saved.startAt || saved.date || saved.setupAt).slice(0, 10));
     if (!window.EquipmentWorkspace.intersects(saved, equipmentSharedWorkspace.client.getState().range)) equipmentSharedWorkspace.client.setRange(range);
-    equipmentState.events = equipmentSharedWorkspace.client.visibleEvents().map(item => localDrafts.find(local => local.id === item.id) || item);
+    equipmentState.events = equipmentEventsInCurrentPlan(equipmentSharedWorkspace.client.visibleEvents()).map(item => localDrafts.find(local => local.id === item.id) || item);
     localDrafts.forEach(item => { if (!equipmentState.events.some(existing => existing.id === item.id)) equipmentState.events.push(item); });
     equipmentState.selectedEventId = saved.id;
     restoreEquipmentEventSnapshot(saved);
@@ -7609,6 +7634,7 @@ async function initEquipmentSharedWorkspace() {
     if (equipmentSharedWorkspace.dirty && equipmentState.selectedEventId) { equipmentSharedStatus("Guarde los cambios de la ventana antes de cambiar de período.", true); return; }
     try {
       equipmentSharedWorkspace.client.setRange({ from: equipmentQuery("#equipmentAgendaFrom").value, to: equipmentQuery("#equipmentAgendaTo").value });
+      equipmentPlanEventIds = null;
       await equipmentSharedWorkspace.client.refresh();
     } catch (error) { equipmentSharedStatus(error.message, true); }
   };
@@ -7697,6 +7723,7 @@ function initEquipmentPlannerBridge() {
       else {equipmentState.events.push(event);addedCount++;}
       equipmentPlannerDirtyIds.add(event.id);
     });
+    includeEquipmentPlanEvents(events);
     const dates = events.flatMap(event => [event.setupAt, event.startAt, event.endAt, event.equipmentInAt, event.date])
       .map(value => String(value || "").slice(0, 10)).filter(value => /^\d{4}-\d{2}-\d{2}$/.test(value)).sort();
     if (dates.length) {
